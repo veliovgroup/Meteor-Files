@@ -248,7 +248,7 @@ class Meteor.Files
   @property {File|Object} file             - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
   @property {Object}      meta             - Additional data as object, use later for search
   @property {Function}    onUploaded       - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-  @property {Function}    onProggress      - Callback triggered when chunk is sent, with only argument `progress`
+  @property {Function}    onProgress       - Callback triggered when chunk is sent, with only argument `progress`
   @property {Function}    onBeforeUpload   - Callback triggered right before upload is started, with only `FileReader` argument:
                                              context is `File` - so you are able to check for extension, mime-type, size and etc.
                                              return true to continue
@@ -257,12 +257,12 @@ class Meteor.Files
   @url https://developer.mozilla.org/en-US/docs/Web/API/FileReader
   @returns {FileReader}
   ###
-  insert: (file, meta, onUploaded, onProggress, onBeforeUpload) ->
+  insert: (file, meta, onUploaded, onProgress, onBeforeUpload) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
     check file, Match.OneOf File, Object
     check meta, Match.Optional Object
     check onUploaded, Match.Optional Function
-    check onProggress, Match.Optional Function
+    check onProgress, Match.Optional Function
     check onBeforeUpload, Match.Optional Function
 
     window.onbeforeunload = (e) ->
@@ -303,7 +303,7 @@ class Meteor.Files
         return false
 
     fileReader.onload = (chunk) ->
-      onProggress and onProggress((currentChunk / chunksQty) * 100)
+      onProgress and onProgress((currentChunk / chunksQty) * 100)
 
       if chunksQty is 1
         Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->

@@ -1,6 +1,6 @@
 Meteor-Files
 ========
-This package allow to:
+This package allows to:
  - Upload file(s) via DDP
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
@@ -59,7 +59,7 @@ myFiles = new Meteor.Files '/assets/app/uploads/myFiles', 'myFiles', '/downloads
 myFiles.insert(file) # Upload file
 
 myFiles.find({'meta.userId': Meteor.userId()}).cursor   # Current collection cursor
-myFiles.find({'meta.userId': Meteor.userId()}).get()    # Array or fetched rows
+myFiles.find({'meta.userId': Meteor.userId()}).get()    # Array of fetched rows
 myFiles.find({'meta.userId': Meteor.userId()}).remove() # Remove all files on the cursor
 
 myFiles.remove({'meta.userId': Meteor.userId()})        # Remove all files returned by passed search
@@ -118,14 +118,14 @@ size:
 
 Methods
 ==========
-##### `insert(file, [meta], [onUploaded], [onProggress], [onBeforeUpload])` [*Client*]
+##### `insert(file, [meta], [onUploaded], [onProgress], [onBeforeUpload])` [*Client*]
 Returns `FileReader` instance, so you can call `abort()` or any other method to control, `pause` or `resume` upload process, read more: [FileReader](https://developer.mozilla.org/en-US/docs/Web/API/FileReader).
  - `file` __File__ or __Object__ - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
  - `meta` __Object__ - Additional data as object, use later for search
  - `onUploaded` __Function__ - Callback triggered when upload is finished, with two arguments:
     * `error`
     * `fileRef` - see __Current schema__ section above
- - `onProggress` __Function__ - Callback triggered when chunk is sent, with only argument:
+ - `onProgress` __Function__ - Callback triggered when chunk is sent, with only argument:
     * `progress` __Number__ - Current progress from `0` to `100`
  - `onBeforeUpload` __Function__ - Callback triggered right before upload is started, with only argument:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
@@ -160,6 +160,7 @@ if Meteor is client
 
             prgrs.set false
             $(e.target).val('')
+            UIBlock.unblock()
         ,
           (progress) ->
             prgrs.set progress
