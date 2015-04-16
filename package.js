@@ -9,6 +9,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.1');
   api.addFiles('files.coffee');
+  api.use('templating', 'client');
   api.use(['underscore', 'sha', 'ostrio:jsextensions@0.0.4', 'coffeescript', 'iron:router@1.0.5', 'aldeed:collection2@2.3.3'], ['client', 'server']);
 });
 

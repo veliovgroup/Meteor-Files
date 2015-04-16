@@ -16,6 +16,7 @@ This package allows to:
     * You may use `Meteor-Files` as temporary storage
     * After file is uploaded and stored on FS you able to `mv` or `cp` it's content 
  - Support of non-latin (non-Roman) file names
+ - Subscribe on files you need
 
 
 Why `Meteor-Files`?
@@ -55,6 +56,13 @@ API
 myFiles.cacheControl = 'public, max-age=31536000' # Set 'Cache-Control' header for downloads
 
 myFiles = new Meteor.Files '/assets/app/uploads/myFiles', 'myFiles', '/downloads/myFiles'
+
+if Meteor.isClient
+  myFiles.collection.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    myFiles.collection.find {'meta.postId': postId}
 
 myFiles.insert(file) # Upload file
 
@@ -112,8 +120,21 @@ meta:
 userId:
   type: String
   optional: true
+isVideo:
+  type: Boolean
+isAudio:
+  type: Boolean
+isImage:
+  type: Boolean
 size:
   type: Number
+```
+
+Template Helper
+==========
+To get download URL for file, you only need `fileRef` object, so there is no need for subscription
+```jade
+a(href="{{fileURL fileRef}}?download=true" download) {{fileRef.name}}
 ```
 
 Methods
@@ -213,6 +234,13 @@ Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ t
 
 ```coffeescript
 uploads = new Meteor.Files()
+
+if Meteor.isClient
+  Meteor.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    uploads.collection.find {'meta.postId': postId}
 
 uploads.collection.find({'meta.post': post._id})
 uploads.collection.findOne('hdjJDSHW6784kJS')

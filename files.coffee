@@ -99,8 +99,22 @@ class Meteor.Files
         userId:
           type: String
           optional: true
+        isVideo:
+          type: Boolean
+        isAudio:
+          type: Boolean
+        isImage:
+          type: Boolean
         size:
           type: Number
+        _prefix:
+          type: String
+        _collectionName:
+          type: String
+        _storagePath:
+          type: String
+        _downloadRoute:
+          type: String
 
     @collection.attachSchema @schema
 
@@ -125,18 +139,8 @@ class Meteor.Files
       MeteorFileFindOne:  "MeteorFileFindOne#{@_prefix}"
       MeteorFileUnlink:   "MeteorFileUnlink#{@_prefix}"
 
-    if Meteor.isClient
-      Meteor.subscribe "MeteorFileSubs#{@_prefix}"
-
     if Meteor.isServer
-      Meteor.publish "MeteorFileSubs#{@_prefix}", () ->
-        self.collection.find {}
-
       _methods = {}
-
-      _methods[self.methodNames.MeteorFileRead] = (inst) ->
-        console.info "Meteor.Files Debugger: [MeteorFileRead]" if @debug
-        self.read.call cp(_insts[inst._prefix], inst)
 
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
         console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
@@ -168,6 +172,13 @@ class Meteor.Files
           type:       fileData.type
           size:       fileData.size
           chunk:      currentChunk
+          isVideo:    fileData.type.toLowerCase().indexOf("video") > -1
+          isAudio:    fileData.type.toLowerCase().indexOf("audio") > -1
+          isImage:    fileData.type.toLowerCase().indexOf("image") > -1
+          _prefix:    self._prefix
+          _collectionName: self.collectionName
+          _storagePath:    self.storagePath
+          _downloadRoute:  self.downloadRoute
         
         if first
           fs.outputFileSync path, file, 'binary'
@@ -409,3 +420,14 @@ class Meteor.Files
     console.info "Meteor.Files Debugger: [link()]" if @debug
     if @currentFile
       return  "#{@downloadRoute}/#{@currentFile._id}/#{@collectionName}"
+
+if Meteor.isClient
+  ###
+  @description Get download URL for file by fileRef, even without subscription
+  @example {{fileURL fileRef}}
+  ###
+  Template.registerHelper 'fileURL', (fileRef) ->
+    if fileRef._id
+      return "#{fileRef._downloadRoute}/#{fileRef._id}/#{fileRef._collectionName}"
+    else
+      null
