@@ -2,7 +2,7 @@ Package.describe({
   name: 'ostrio:files',
   version: '1.0.2',
   summary: 'Upload, Store and Download small and huge files to/from file system (FS) via DDP and HTTP',
-  git: 'https://github.com/VeliovGroup/Meteor-File',
+  git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
 
