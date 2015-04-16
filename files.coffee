@@ -99,8 +99,22 @@ class Meteor.Files
         userId:
           type: String
           optional: true
+        isVideo:
+          type: Boolean
+        isAudio:
+          type: Boolean
+        isImage:
+          type: Boolean
         size:
           type: Number
+        _prefix:
+          type: String
+        _collectionName:
+          type: String
+        _storagePath:
+          type: String
+        _downloadRoute:
+          type: String
 
     @collection.attachSchema @schema
 
@@ -125,18 +139,8 @@ class Meteor.Files
       MeteorFileFindOne:  "MeteorFileFindOne#{@_prefix}"
       MeteorFileUnlink:   "MeteorFileUnlink#{@_prefix}"
 
-    if Meteor.isClient
-      Meteor.subscribe "MeteorFileSubs#{@_prefix}"
-
     if Meteor.isServer
-      Meteor.publish "MeteorFileSubs#{@_prefix}", () ->
-        self.collection.find {}
-
       _methods = {}
-
-      _methods[self.methodNames.MeteorFileRead] = (inst) ->
-        console.info "Meteor.Files Debugger: [MeteorFileRead]" if @debug
-        self.read.call cp(_insts[inst._prefix], inst)
 
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
         console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
@@ -168,6 +172,13 @@ class Meteor.Files
           type:       fileData.type
           size:       fileData.size
           chunk:      currentChunk
+          isVideo:    fileData.type.toLowerCase().indexOf("video") > -1
+          isAudio:    fileData.type.toLowerCase().indexOf("audio") > -1
+          isImage:    fileData.type.toLowerCase().indexOf("image") > -1
+          _prefix:    self._prefix
+          _collectionName: self.collectionName
+          _storagePath:    self.storagePath
+          _downloadRoute:  self.downloadRoute
         
         if first
           fs.outputFileSync path, file, 'binary'
@@ -248,7 +259,7 @@ class Meteor.Files
   @property {File|Object} file             - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
   @property {Object}      meta             - Additional data as object, use later for search
   @property {Function}    onUploaded       - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-  @property {Function}    onProggress      - Callback triggered when chunk is sent, with only argument `progress`
+  @property {Function}    onProgress       - Callback triggered when chunk is sent, with only argument `progress`
   @property {Function}    onBeforeUpload   - Callback triggered right before upload is started, with only `FileReader` argument:
                                              context is `File` - so you are able to check for extension, mime-type, size and etc.
                                              return true to continue
@@ -257,12 +268,12 @@ class Meteor.Files
   @url https://developer.mozilla.org/en-US/docs/Web/API/FileReader
   @returns {FileReader}
   ###
-  insert: (file, meta, onUploaded, onProggress, onBeforeUpload) ->
+  insert: (file, meta, onUploaded, onProgress, onBeforeUpload) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
     check file, Match.OneOf File, Object
     check meta, Match.Optional Object
     check onUploaded, Match.Optional Function
-    check onProggress, Match.Optional Function
+    check onProgress, Match.Optional Function
     check onBeforeUpload, Match.Optional Function
 
     window.onbeforeunload = (e) ->
@@ -303,7 +314,7 @@ class Meteor.Files
         return false
 
     fileReader.onload = (chunk) ->
-      onProggress and onProggress((currentChunk / chunksQty) * 100)
+      onProgress and onProgress((currentChunk / chunksQty) * 100)
 
       if chunksQty is 1
         Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
@@ -409,3 +420,14 @@ class Meteor.Files
     console.info "Meteor.Files Debugger: [link()]" if @debug
     if @currentFile
       return  "#{@downloadRoute}/#{@currentFile._id}/#{@collectionName}"
+
+if Meteor.isClient
+  ###
+  @description Get download URL for file by fileRef, even without subscription
+  @example {{fileURL fileRef}}
+  ###
+  Template.registerHelper 'fileURL', (fileRef) ->
+    if fileRef._id
+      return "#{fileRef._downloadRoute}/#{fileRef._id}/#{fileRef._collectionName}"
+    else
+      null

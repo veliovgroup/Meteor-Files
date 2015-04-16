@@ -1,6 +1,6 @@
 Meteor-Files
 ========
-This package allow to:
+This package allows to:
  - Upload file(s) via DDP
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
@@ -16,6 +16,7 @@ This package allow to:
     * You may use `Meteor-Files` as temporary storage
     * After file is uploaded and stored on FS you able to `mv` or `cp` it's content 
  - Support of non-latin (non-Roman) file names
+ - Subscribe on files you need
 
 
 Why `Meteor-Files`?
@@ -56,10 +57,17 @@ myFiles.cacheControl = 'public, max-age=31536000' # Set 'Cache-Control' header f
 
 myFiles = new Meteor.Files '/assets/app/uploads/myFiles', 'myFiles', '/downloads/myFiles'
 
+if Meteor.isClient
+  myFiles.collection.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    myFiles.collection.find {'meta.postId': postId}
+
 myFiles.insert(file) # Upload file
 
 myFiles.find({'meta.userId': Meteor.userId()}).cursor   # Current collection cursor
-myFiles.find({'meta.userId': Meteor.userId()}).get()    # Array or fetched rows
+myFiles.find({'meta.userId': Meteor.userId()}).get()    # Array of fetched rows
 myFiles.find({'meta.userId': Meteor.userId()}).remove() # Remove all files on the cursor
 
 myFiles.remove({'meta.userId': Meteor.userId()})        # Remove all files returned by passed search
@@ -112,20 +120,33 @@ meta:
 userId:
   type: String
   optional: true
+isVideo:
+  type: Boolean
+isAudio:
+  type: Boolean
+isImage:
+  type: Boolean
 size:
   type: Number
 ```
 
+Template Helper
+==========
+To get download URL for file, you only need `fileRef` object, so there is no need for subscription
+```jade
+a(href="{{fileURL fileRef}}?download=true" download) {{fileRef.name}}
+```
+
 Methods
 ==========
-##### `insert(file, [meta], [onUploaded], [onProggress], [onBeforeUpload])` [*Client*]
+##### `insert(file, [meta], [onUploaded], [onProgress], [onBeforeUpload])` [*Client*]
 Returns `FileReader` instance, so you can call `abort()` or any other method to control, `pause` or `resume` upload process, read more: [FileReader](https://developer.mozilla.org/en-US/docs/Web/API/FileReader).
  - `file` __File__ or __Object__ - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
  - `meta` __Object__ - Additional data as object, use later for search
  - `onUploaded` __Function__ - Callback triggered when upload is finished, with two arguments:
     * `error`
     * `fileRef` - see __Current schema__ section above
- - `onProggress` __Function__ - Callback triggered when chunk is sent, with only argument:
+ - `onProgress` __Function__ - Callback triggered when chunk is sent, with only argument:
     * `progress` __Number__ - Current progress from `0` to `100`
  - `onBeforeUpload` __Function__ - Callback triggered right before upload is started, with only argument:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
@@ -160,6 +181,7 @@ if Meteor is client
 
             prgrs.set false
             $(e.target).val('')
+            UIBlock.unblock()
         ,
           (progress) ->
             prgrs.set progress
@@ -212,6 +234,13 @@ Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ t
 
 ```coffeescript
 uploads = new Meteor.Files()
+
+if Meteor.isClient
+  Meteor.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    uploads.collection.find {'meta.postId': postId}
 
 uploads.collection.find({'meta.post': post._id})
 uploads.collection.findOne('hdjJDSHW6784kJS')
