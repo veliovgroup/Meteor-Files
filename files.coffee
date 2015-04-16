@@ -1,0 +1,411 @@
+if Meteor.isServer
+  ###
+  @description Require "fs-extra" npm package
+  ###
+  fs = Npm.require "fs-extra"
+
+###
+@object
+@name _insts
+@description Object of Meteor.Files instances
+###
+_insts = {}
+
+###
+@function
+@name rcp
+@property {Object} obj - Initial object
+@description Create object with only needed props
+###
+rcp = (obj) ->
+  o = {
+    currentFile:    obj.currentFile
+    search:         obj.search
+    storagePath:    obj.storagePath
+    collectionName: obj.collectionName
+    downloadRoute:  obj.downloadRoute
+    chunkSize:      obj.chunkSize
+    debug:          obj.debug
+    _prefix:        obj._prefix
+    cacheControl:   obj.cacheControl
+  }
+  return o
+
+###
+@function
+@name cp
+@property {Object} to   - Destanation
+@property {Object} from - Source
+@description Copy-Paste only needed props from one to another object
+###
+cp = (to, from) ->
+  to.currentFile    = from.currentFile
+  to.search         = from.search
+  to.storagePath    = from.storagePath
+  to.collectionName = from.collectionName
+  to.downloadRoute  = from.downloadRoute
+  to.chunkSize      = from.chunkSize
+  to.debug          = from.debug
+  to._prefix        = from._prefix
+  to.cacheControl   = from.cacheControl
+  return to
+
+###
+@class
+@namespace Meteor
+@name Files
+@property {String}    storagePath     - Storage path on file system
+@property {String}    collectionName  - Collection name
+@property {String}    downloadRoute   - Server Route used to retrieve files
+@property {Object}    schema          - Collection Schema
+@property {Number}    chunkSize       - Upload chunk size
+@property {Function}  namingFunction  - Function which returns `String`
+@property {Boolean}   debug            - Turn on/of debugging and extra logging
+@description Create new instance of Meteor.Files
+###
+class Meteor.Files
+  constructor: (@storagePath =  "/assets/app/uploads", @collectionName = 'MeteorUploadFiles', @downloadRoute = '/cdn/storage', @schema, @chunkSize = 272144, @namingFunction = String.rand, @debug = false) ->
+    check @storagePath, String
+    check @collectionName, String
+    check @downloadRoute, String
+    check @chunkSize, Number
+    check @namingFunction, Function
+    check @debug, Boolean
+
+    @storagePath    = @storagePath.replace /\/$/, ""
+    @downloadRoute  = @downloadRoute.replace /\/$/, ""
+    @collection     = new Mongo.Collection @collectionName
+
+    self          = @
+    @currentFile  = null
+    @cursor       = null
+    @search       = {}
+    @cacheControl = 'public, max-age=31536000'
+
+    if not @schema
+      @schema = 
+        name:
+          type: String
+        type:
+          type: String
+        extension:
+          type: String
+        path:
+          type: String
+        meta:
+          type: Object
+          blackbox: true
+          optional: true
+        userId:
+          type: String
+          optional: true
+        size:
+          type: Number
+
+    @collection.attachSchema @schema
+
+    @collection.deny
+      insert: ->
+        true
+      update: ->
+        true
+      remove: ->
+        true
+
+    Router.route "#{@downloadRoute}/:_id/#{@collectionName}", ->
+      self.findOne(this.params._id).download.call @, self
+    , {where: 'server'}
+
+    @_prefix = SHA256 @collectionName + @storagePath + @downloadRoute
+    _insts[@_prefix] = @
+
+    @methodNames =
+      MeteorFileWrite:    "MeteorFileWrite#{@_prefix}"
+      MeteorFileFind:     "MeteorFileFind#{@_prefix}"
+      MeteorFileFindOne:  "MeteorFileFindOne#{@_prefix}"
+      MeteorFileUnlink:   "MeteorFileUnlink#{@_prefix}"
+
+    if Meteor.isClient
+      Meteor.subscribe "MeteorFileSubs#{@_prefix}"
+
+    if Meteor.isServer
+      Meteor.publish "MeteorFileSubs#{@_prefix}", () ->
+        self.collection.find {}
+
+      _methods = {}
+
+      _methods[self.methodNames.MeteorFileRead] = (inst) ->
+        console.info "Meteor.Files Debugger: [MeteorFileRead]" if @debug
+        self.read.call cp(_insts[inst._prefix], inst)
+
+      _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
+        console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
+        self.remove.call cp(_insts[inst._prefix], inst), inst.search
+
+      _methods[self.methodNames.MeteorFileWrite] = (file, fileData, meta, first, chunksQty, currentChunk, randFileName) ->
+        console.info "Meteor.Files Debugger: [MeteorFileWrite]" if @debug
+        check file, String
+        check fileData, Object
+        check meta, Match.Optional Object
+        check first, Boolean
+        check chunksQty, Number
+        check currentChunk, Number
+        check randFileName, String
+
+        console.info 'Receive chunk #' + currentChunk + ' of ' + chunksQty + ' chunks, file: ' + fileData.name or fileData.fileName if self.debug
+
+        cleanName = (str) ->
+          str.replace(/\.\./g, '').replace /\//g, ''
+
+        fileName  = cleanName(fileData.name or fileData.fileName)
+        ext       = fileName.split('.').pop()
+        path      = "#{self.storagePath}/#{randFileName}.#{ext}"
+        result    = 
+          name:       fileName
+          extension:  ext
+          path:       path
+          meta:       meta
+          type:       fileData.type
+          size:       fileData.size
+          chunk:      currentChunk
+        
+        if first
+          fs.outputFileSync path, file, 'binary'
+        else
+          fs.appendFileSync path, file, 'binary'
+
+
+        if chunksQty - 1 is currentChunk
+          delete result.chunk
+          result._id = self.collection.insert result
+          console.info 'The file ' + fileName + ' (binary) was saved to ' + path if self.debug
+
+        return result
+
+      Meteor.methods _methods
+
+  ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name findOne
+  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @description Load file
+  @returns {Files} - Return this
+  ###
+  findOne: (search) ->
+    console.info "Meteor.Files Debugger: [findOne(#{search})]" if @debug
+    check search, Match.OneOf Object, String
+    if _.isString search
+      @search = 
+        _id: search
+    else
+      @search = search
+
+    @currentFile = @collection.findOne @search
+    return @
+
+  ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name find
+  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @description Load file or bunch of files
+  @returns {Files} - Return this
+  ###
+  find: (search) ->
+    console.info "Meteor.Files Debugger: [find(#{search})]" if @debug
+    check search, Match.OneOf Object, String
+    if _.isString search
+      @search = 
+        _id: search
+    else
+      @search = search
+
+    @cursor = @collection.find @search
+
+    return @
+
+  ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name get
+  @description Return value of current cursor or file
+  @returns {Object|[Object]}
+  ###
+  get: () ->
+    console.info "Meteor.Files Debugger: [get()]" if @debug
+    return @cursor.fetch() if @cursor
+    return @currentFile
+
+  ###
+  @client
+  @function
+  @class Meteor.Files
+  @name insert
+  @property {File|Object} file             - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+  @property {Object}      meta             - Additional data as object, use later for search
+  @property {Function}    onUploaded       - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
+  @property {Function}    onProggress      - Callback triggered when chunk is sent, with only argument `progress`
+  @property {Function}    onBeforeUpload   - Callback triggered right before upload is started, with only `FileReader` argument:
+                                             context is `File` - so you are able to check for extension, mime-type, size and etc.
+                                             return true to continue
+                                             return false to abort upload
+  @description Upload file to server over DDP
+  @url https://developer.mozilla.org/en-US/docs/Web/API/FileReader
+  @returns {FileReader}
+  ###
+  insert: (file, meta, onUploaded, onProggress, onBeforeUpload) ->
+    console.info "Meteor.Files Debugger: [insert()]" if @debug
+    check file, Match.OneOf File, Object
+    check meta, Match.Optional Object
+    check onUploaded, Match.Optional Function
+    check onProggress, Match.Optional Function
+    check onBeforeUpload, Match.Optional Function
+
+    window.onbeforeunload = (e) ->
+      message = "Upload in progress..."
+      if e
+        e.returnValue = message
+      return message
+
+    fileReader    = new FileReader
+    fileData      =
+      size: file.size
+      type: file.type
+      name: file.name
+      ext:  file.name.split('.').pop()
+      extension: file.name.split('.').pop()
+
+    file = _.extend file, fileData
+
+    startTime = performance.now() if @debug
+    console.time('insert') if @debug
+
+    randFileName  = @namingFunction.call null, true
+    currentChunk  = 0
+    first         = true
+    chunksQty     = if @chunkSize < file.size then Math.ceil(file.size / @chunkSize) else 1
+    self          = @
+
+    end = (error, data) ->
+      endTime = performance.now() if self.debug
+      console.timeEnd('insert') if self.debug
+      console.info "Meteor.Files Debugger: [EXECUTION TIME]: " + (endTime - startTime) if self.debug
+      window.onbeforeunload = null
+      onUploaded and onUploaded.call self, error, data
+
+    if onBeforeUpload
+      if not onBeforeUpload.call file, fileReader
+        end new Meteor.Error(500, "FORBIDDEN"), null
+        return false
+
+    fileReader.onload = (chunk) ->
+      onProggress and onProggress((currentChunk / chunksQty) * 100)
+
+      if chunksQty is 1
+        Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
+          end error, data
+      else
+        Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
+          if data.chunk <= chunksQty
+            currentChunk = data.chunk + 1
+            from         = currentChunk * self.chunkSize
+            to           = from + self.chunkSize
+            fileReader.readAsBinaryString file.slice from, to
+          else
+            end error, data
+      first = false
+
+    if chunksQty is 1
+      fileReader.readAsBinaryString file
+    else
+      fileReader.readAsBinaryString file.slice 0, @chunkSize
+    
+    return fileReader
+
+  ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name remove
+  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @description Remove file(s) on cursor or find and remove file(s) if search is set
+  @returns {undefined}
+  ###
+  remove: (search) ->
+    console.info "Meteor.Files Debugger: [remove(#{search})]" if @debug
+    check search, Match.Optional Match.OneOf Object, String
+    if search and _.isString search
+      @search = 
+        _id: search
+    else
+      @search = search
+
+    if Meteor.isClient 
+      Meteor.call @methodNames.MeteorFileUnlink, rcp(@)
+      undefined
+
+    if Meteor.isServer 
+      files = @collection.find @search
+      files.forEach (file) ->
+        fs.removeSync file.path
+      @collection.remove(@search)
+      undefined
+
+  ###
+  @server
+  @function
+  @class Meteor.Files
+  @name download
+  @property {Object|Files} self - Instance of MEteor.Files
+  @description Initiates the HTTP response
+  @returns {undefined}
+  ###
+  download: (self) ->
+    console.info "Meteor.Files Debugger: [download()]" if @debug
+    check self.currentFile, Object
+    if Meteor.isServer
+      resp = @response
+      if fs.existsSync self.currentFile.path
+        if @params.query.download and @params.query.download == 'true'
+          file = fs.readFileSync self.currentFile.path
+          resp.writeHead 200, 
+            'Cache-Control': self.cacheControl
+            'Content-Type': self.currentFile.type
+            'Content-Encoding': 'binary'
+            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
+            'Content-Length': self.currentFile.size
+          resp.write file
+          resp.end()
+        else
+          stream = fs.createReadStream self.currentFile.path
+          resp.writeHead 200, 
+            'Cache-Control': self.cacheControl
+            'Content-Type': self.currentFile.type
+            'Content-Encoding': 'binary'
+            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
+            'Content-Length': self.currentFile.size
+          stream.pipe resp
+      else
+        resp.writeHead 404,
+          "Content-Type": "text/plain"
+        resp.write "File Not Found :("
+        resp.end()
+    else
+      new Meteor.Error 500, "Can't [download()] on client!"
+
+  ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name link
+  @description Returns link
+  @returns {String}
+  ###
+  link: () ->
+    console.info "Meteor.Files Debugger: [link()]" if @debug
+    if @currentFile
+      return  "#{@downloadRoute}/#{@currentFile._id}/#{@collectionName}"
