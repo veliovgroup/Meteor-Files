@@ -60,7 +60,7 @@ cp = (to, from) ->
 @property {Object}    schema          - Collection Schema
 @property {Number}    chunkSize       - Upload chunk size
 @property {Function}  namingFunction  - Function which returns `String`
-@property {Boolean}   debug            - Turn on/of debugging and extra logging
+@property {Boolean}   debug           - Turn on/of debugging and extra logging
 @description Create new instance of Meteor.Files
 ###
 class Meteor.Files
@@ -126,7 +126,7 @@ class Meteor.Files
       remove: ->
         true
 
-    Router.route "#{@downloadRoute}/:_id/#{@collectionName}", ->
+    Router.route "#{@downloadRoute}/#{@collectionName}/:_id/:name", ->
       self.findOne(this.params._id).download.call @, self
     , {where: 'server'}
 
@@ -270,7 +270,6 @@ class Meteor.Files
   ###
   insert: (file, meta, onUploaded, onProgress, onBeforeUpload) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
-    check file, Match.OneOf File, Object
     check meta, Match.Optional Object
     check onUploaded, Match.Optional Function
     check onProgress, Match.Optional Function
@@ -292,7 +291,6 @@ class Meteor.Files
 
     file = _.extend file, fileData
 
-    startTime = performance.now() if @debug
     console.time('insert') if @debug
 
     randFileName  = @namingFunction.call null, true
@@ -302,9 +300,7 @@ class Meteor.Files
     self          = @
 
     end = (error, data) ->
-      endTime = performance.now() if self.debug
       console.timeEnd('insert') if self.debug
-      console.info "Meteor.Files Debugger: [EXECUTION TIME]: " + (endTime - startTime) if self.debug
       window.onbeforeunload = null
       onUploaded and onUploaded.call self, error, data
 
@@ -391,6 +387,39 @@ class Meteor.Files
             'Content-Length': self.currentFile.size
           resp.write file
           resp.end()
+        else if @params.query.play and @params.query.play == 'true'
+          if @request.headers.range
+            array = @request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
+            start = parseInt array[1]
+            end = parseInt array[2]
+            result =
+              Start: if isNaN(start) then 0 else start
+              End: if isNaN(end) then (self.currentFile.size - 1) else end
+            
+            if not isNaN(start) and isNaN(end)
+              result.Start = start
+              result.End = self.currentFile.size - 1
+
+            if isNaN(start) and not isNaN(end) 
+              result.Start = self.currentFile.size - end
+              result.End = self.currentFile.size - 1
+
+          if not @request.headers.range or (result.Start >= self.currentFile.size or result.End >= self.currentFile.size)
+            resp.writeHead 416,
+              'Content-Range': "bytes */#{self.currentFile.size}"
+            resp.end()
+            return null
+
+          stream = fs.createReadStream self.currentFile.path, {start: result.Start, end: result.End}
+          resp.writeHead 206, 
+            'Content-Range': "bytes #{result.Start}-#{result.End}/#{self.currentFile.size}"
+            'Cache-Control': 'no-cache'
+            'Content-Type': self.currentFile.type
+            'Content-Encoding': 'binary'
+            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
+            'Content-Length': if result.Start == result.End then 0 else (result.End - result.Start + 1);
+            'Accept-Ranges': 'bytes'
+          stream.pipe resp
         else
           stream = fs.createReadStream self.currentFile.path
           resp.writeHead 200, 
@@ -428,6 +457,6 @@ if Meteor.isClient
   ###
   Template.registerHelper 'fileURL', (fileRef) ->
     if fileRef._id
-      return "#{fileRef._downloadRoute}/#{fileRef._id}/#{fileRef._collectionName}"
+      return "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{fileRef._id}.#{fileRef.extension}"
     else
       null
