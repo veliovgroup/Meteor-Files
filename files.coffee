@@ -148,7 +148,7 @@ class Meteor.Files
 
       _methods[self.methodNames.MeteorFileWrite] = (file, fileData, meta, first, chunksQty, currentChunk, randFileName) ->
         console.info "Meteor.Files Debugger: [MeteorFileWrite]" if @debug
-        check file, String
+        # check file, Object
         check fileData, Object
         check meta, Match.Optional Object
         check first, Boolean
@@ -157,6 +157,12 @@ class Meteor.Files
         check randFileName, String
 
         console.info 'Receive chunk #' + currentChunk + ' of ' + chunksQty + ' chunks, file: ' + fileData.name or fileData.fileName if self.debug
+
+        i = 0
+        binary = ''
+        while i < file.byteLength
+          binary += String.fromCharCode(file.buffer[i])
+          i++
 
         cleanName = (str) ->
           str.replace(/\.\./g, '').replace /\//g, ''
@@ -181,9 +187,9 @@ class Meteor.Files
           _downloadRoute:  self.downloadRoute
         
         if first
-          fs.outputFileSync path, file, 'binary'
+          fs.outputFileSync path, binary, 'binary'
         else
-          fs.appendFileSync path, file, 'binary'
+          fs.appendFileSync path, binary, 'binary'
 
 
         if chunksQty - 1 is currentChunk
@@ -311,27 +317,30 @@ class Meteor.Files
 
     fileReader.onload = (chunk) ->
       onProgress and onProgress((currentChunk / chunksQty) * 100)
-      binary = chunk.srcElement or chunk.target
-      binary = binary.result
+
+      binary      = chunk.srcElement or chunk.target
+      arrayBuffer = new Uint8Array binary.result
 
       if chunksQty is 1
-        Meteor.call self.methodNames.MeteorFileWrite, binary, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
+        Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
           end error, data
       else
-        Meteor.call self.methodNames.MeteorFileWrite, binary, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
+        Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
           if data.chunk <= chunksQty
             currentChunk = data.chunk + 1
             from         = currentChunk * self.chunkSize
             to           = from + self.chunkSize
-            fileReader.readAsBinaryString file.slice from, to
+            fileReader.readAsArrayBuffer file.slice from, to
           else
             end error, data
       first = false
 
+
+
     if chunksQty is 1
-      fileReader.readAsBinaryString file
+      fileReader.readAsArrayBuffer file
     else
-      fileReader.readAsBinaryString file.slice 0, @chunkSize
+      fileReader.readAsArrayBuffer file.slice 0, @chunkSize
     
     return fileReader
 
@@ -378,17 +387,23 @@ class Meteor.Files
     check self.currentFile, Object
     if Meteor.isServer
       resp = @response
+
+      if self.debug
+        console.info "======================|Headers for: #{self.currentFile.path}|======================"
+        console.info @request.headers
+
       if fs.existsSync self.currentFile.path
         if @params.query.download and @params.query.download == 'true'
           file = fs.readFileSync self.currentFile.path
           resp.writeHead 200, 
-            'Cache-Control': self.cacheControl
-            'Content-Type': self.currentFile.type
-            'Content-Encoding': 'binary'
-            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
-            'Content-Length': self.currentFile.size
+            'Cache-Control':        self.cacheControl
+            'Content-Type':         self.currentFile.type
+            'Content-Encoding':     'binary'
+            'Content-Disposition':  'attachment; filename=' + encodeURI self.currentFile.name + '; charset=utf-8'
+            'Content-Length':       self.currentFile.size
           resp.write file
           resp.end()
+
         else if @params.query.play and @params.query.play == 'true'
           if @request.headers.range
             array = @request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
@@ -406,36 +421,51 @@ class Meteor.Files
               result.Start = self.currentFile.size - end
               result.End = self.currentFile.size - 1
 
-          if not @request.headers.range or (result.Start >= self.currentFile.size or result.End >= self.currentFile.size)
-            resp.writeHead 416,
-              'Content-Range': "bytes */#{self.currentFile.size}"
-            resp.end()
-            return null
+            if result.Start >= self.currentFile.size or result.End >= self.currentFile.size
+              resp.writeHead 416,
+                'Content-Range': "bytes */#{self.currentFile.size}"
+              resp.end()
 
-          stream = fs.createReadStream self.currentFile.path, {start: result.Start, end: result.End}
-          resp.writeHead 206, 
-            'Content-Range': "bytes #{result.Start}-#{result.End}/#{self.currentFile.size}"
-            'Cache-Control': 'no-cache'
-            'Content-Type': self.currentFile.type
-            'Content-Encoding': 'binary'
-            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
-            'Content-Length': if result.Start == result.End then 0 else (result.End - result.Start + 1);
-            'Accept-Ranges': 'bytes'
-          stream.pipe resp
+            else
+              stream = fs.createReadStream self.currentFile.path, {start: result.Start, end: result.End}
+              resp.writeHead 206, 
+                'Content-Range':        "bytes #{result.Start}-#{result.End}/#{self.currentFile.size}"
+                'Cache-Control':        'no-cache'
+                'Content-Type':         self.currentFile.type
+                'Content-Encoding':     'binary'
+                'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+                'Content-Length':       if result.Start == result.End then 0 else (result.End - result.Start + 1);
+                'Accept-Ranges':        'bytes'
+              stream.pipe resp
+
+          else
+            stream = fs.createReadStream self.currentFile.path
+            resp.writeHead 200, 
+              'Content-Range':        "bytes 0-#{self.currentFile.size}/#{self.currentFile.size}"
+              'Cache-Control':        self.cacheControl
+              'Content-Type':         self.currentFile.type
+              'Content-Encoding':     'binary'
+              'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+              'Content-Length':       self.currentFile.size
+              'Accept-Ranges':        'bytes'
+            stream.pipe resp
+
         else
           stream = fs.createReadStream self.currentFile.path
           resp.writeHead 200, 
-            'Cache-Control': self.cacheControl
-            'Content-Type': self.currentFile.type
-            'Content-Encoding': 'binary'
-            'Content-Disposition': 'attachment; filename=' + encodeURI self.currentFile.name + ';'
-            'Content-Length': self.currentFile.size
+            'Cache-Control':        self.cacheControl
+            'Content-Type':         self.currentFile.type
+            'Content-Encoding':     'binary'
+            'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+            'Content-Length':       self.currentFile.size
           stream.pipe resp
+
       else
         resp.writeHead 404,
           "Content-Type": "text/plain"
         resp.write "File Not Found :("
         resp.end()
+
     else
       new Meteor.Error 500, "Can't [download()] on client!"
 
