@@ -311,12 +311,14 @@ class Meteor.Files
 
     fileReader.onload = (chunk) ->
       onProgress and onProgress((currentChunk / chunksQty) * 100)
+      binary = chunk.srcElement or chunk.target
+      binary = binary.result
 
       if chunksQty is 1
-        Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
+        Meteor.call self.methodNames.MeteorFileWrite, binary, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
           end error, data
       else
-        Meteor.call self.methodNames.MeteorFileWrite, chunk.srcElement.result, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
+        Meteor.call self.methodNames.MeteorFileWrite, binary, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
           if data.chunk <= chunksQty
             currentChunk = data.chunk + 1
             from         = currentChunk * self.chunkSize
