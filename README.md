@@ -8,6 +8,9 @@ This package allows to:
  - Write file in file system
     * Automatically writes uploaded files on FS and special Collection
     * You able to specify `path`, collection name, schema, chunk size and naming function
+ - File streaming from server via HTTP
+    * Correct `mime-type` and `Content-Range` headers
+    * Correct `206` and `416` responses
  - Download uploaded files from server via HTTP
     * You able to specify `route`
     * Download huge files via stream `pipe`, tested on 100GB
@@ -78,9 +81,29 @@ myFiles.findOne(fileRef._id).link()   # Get download link
 myFiles.findOne(fileRef._id).remove() # Remove file
 ```
 
+##### File streaming:
+To stream file add `?play=true` query to download link.
+```coffeescript
+audio = new Meteor.Files()
+
+if Meteor.isClient
+  Template.my.helpers
+    audiofiles: ->
+      audio.find({'meta.post': postId}).cursor
+```
+
+In template:
+```jade
+template(name="my")
+  ul
+    each audiofiles
+      li 
+        audio(preload="auto" controls="true")
+          source(src="{{fileURL this}}?play=true" type="{{type}}")
+```
+
 ##### File download:
-To download file simply return result of `link()` method to template. Data will be transfered via pipe, add `?download=true` query to link, to send file directly.
-Use `?download=true` query for smaller files, for big files, video and audio files (including streaming) - just use plain link without query.
+To download file use `fileURL` template helper. Data will be transfered via pipe, - just add `?download=true` query to link, so server will send file directly. Use `?download=true` query for smaller files, for big files - just use plain link without query.
 ```coffeescript
 uploads = new Meteor.Files()
 
@@ -88,9 +111,6 @@ if Meteor.isClient
   Template.my.helpers
     files: ->
       uploads.find({'meta.post': postId}).cursor
-
-    link: ->
-      uploads.findOne(@_id).link() 
 ```
 
 In template:
@@ -99,7 +119,7 @@ template(name="my")
   ul
     each files
       li 
-        a(href="{{link}}?download=true") name
+        a(href="{{fileURL this}}?download=true") name
 ```
 
 
