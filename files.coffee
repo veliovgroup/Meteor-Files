@@ -160,13 +160,11 @@ class Meteor.Files
 
         i = 0
         binary = ''
-        # console.log file.byteLength
         while i < file.byteLength
           binary += String.fromCharCode(file.buffer[i])
           i++
 
         last = (chunksQty * partsQty <= totalSentChunks)
-        # console.log "LAST", last, chunksQty * partsQty, totalSentChunks
 
         cleanName = (str) ->
           str.replace(/\.\./g, '').replace /\//g, ''
@@ -193,7 +191,6 @@ class Meteor.Files
           _storagePath:    self.storagePath
           _downloadRoute:  self.downloadRoute
 
-        # console.log "Last, First", last, first
         
         if first
           fs.outputFileSync pathPart, binary, 'binary'
@@ -338,10 +335,8 @@ class Meteor.Files
         size: partSize
         part: i
         chunksQty: if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
-      # console.log "if #{@chunkSize} < #{partSize} then Math.ceil(partSize / @chunkSize) else 1", if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
       i++
 
-    # console.log parts
 
     end = (error, data) ->
       console.timeEnd('insert') if self.debug
@@ -360,16 +355,13 @@ class Meteor.Files
 
       fileReader.onload = (chunk) ->
         ++totalSentChunks
-        # console.log "currentChunk", currentChunk
         onProgress and onProgress((uploaded / file.size) * 100)
-        # console.log "PROGRESS: ", (uploaded / file.size) * 100
 
         uploaded   += self.chunkSize
         binary      = chunk.srcElement or chunk.target
         arrayBuffer = new Uint8Array binary.result
         last        = (part is streams and currentChunk >= chunksQtyInPart)
 
-        # console.log "isLastPart?", last, "#{currentChunk} >= #{chunksQtyInPart}"
 
         if chunksQtyInPart is 1
           Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
@@ -377,19 +369,16 @@ class Meteor.Files
               end error, data
         else
           Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
-            # console.log "DATA.last", data.last, error, data
             if data.chunk + 1 <= chunksQtyInPart
               from         = currentChunk * self.chunkSize
               to           = from + self.chunkSize
 
-              # console.log "Send chunk ##{currentChunk} of part ##{part} | #{from} #{to}"
               fileReader.readAsArrayBuffer filePart.slice from, to
               currentChunk = ++data.chunk
             else if data.last
               end error, data
         first = false
 
-      # console.log "Send first chunk of part"
       fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
 
     # for part, index in parts
@@ -398,9 +387,7 @@ class Meteor.Files
       Meteor.setTimeout ((parts, i) ->
         return () ->
           part = parts[i]
-          # console.log "Upload part#", part
           fileReader = new FileReader
-          # console.log "Slice file to parts: #{index}"
           upload(file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader)
       )(parts, i)
       ,
