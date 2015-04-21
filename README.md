@@ -61,7 +61,7 @@ __config is optional object with next properties:__
 ```coffeescript
 myFiles.cacheControl = 'public, max-age=31536000' # Set 'Cache-Control' header for downloads
 
-myFiles = new Meteor.Files '/assets/app/uploads/myFiles', 'myFiles', '/downloads/myFiles'
+myFiles = new Meteor.Files
   storagePath: 'assets/app/uploads/myFiles'
   collectionName: 'myFiles'
   chunkSize: 256*128
