@@ -162,7 +162,7 @@ Template Helper
 ==========
 To get download URL for file, you only need `fileRef` object, so there is no need for subscription
 ```jade
-a(href="{{fileURL fileRef}}?download=true" download) {{fileRef.name}}
+a(href="{{fileURL fileRef}}?download=true" target-"_parent" download) {{fileRef.name}}
 ```
 
 Methods
@@ -185,6 +185,7 @@ __config is object with next properties:__
 
 Returns **Object**, with properties:
  - `onPause` **ReactiveVar** - Is upload process on the pause?
+ - `progress` **ReactiveVar** - Upload progress in pro-cents 
  - `pause` **Function** - Pause upload process
  - `continue` **Function** - Continue paused upload process
  - `toggleUpload` **Function** - Toggle `continue`/`pause` if upload process

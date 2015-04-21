@@ -386,7 +386,7 @@ class Meteor.Files
     if onBeforeUpload
       chres = onBeforeUpload.call file
       if chres isnt true
-        end new Meteor.Error(500, if _.isString(chres) then chres else "FORBIDDEN"), null
+        end new Meteor.Error(500, if _.isString(chres) then chres else "onBeforeUpload() returned false"), null
         return false
 
     upload = (filePart, part, chunksQtyInPart, fileReader) ->
