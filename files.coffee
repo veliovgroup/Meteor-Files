@@ -54,33 +54,28 @@ cp = (to, from) ->
 @class
 @namespace Meteor
 @name Files
-@property {String}    storagePath     - Storage path on file system
-@property {String}    collectionName  - Collection name
-@property {String}    downloadRoute   - Server Route used to retrieve files
-@property {Object}    schema          - Collection Schema
-@property {Number}    chunkSize       - Upload chunk size
-@property {Function}  namingFunction  - Function which returns `String`
-@property {Boolean}   debug           - Turn on/of debugging and extra logging
+@property {Object} config - Configuration object with next properties:
+  {String}    storagePath     - Storage path on file system
+  {String}    collectionName  - Collection name
+  {String}    downloadRoute   - Server Route used to retrieve files
+  {Object}    schema          - Collection Schema
+  {Number}    chunkSize       - Upload chunk size
+  {Function}  namingFunction  - Function which returns `String`
+  {Boolean}   debug           - Turn on/of debugging and extra logging
+  {String|Function} onbeforeunloadMessage - Message shown to user when closing browser's window or tab while upload process is running
 @description Create new instance of Meteor.Files
 ###
 class Meteor.Files
-  constructor: (@storagePath =  "/assets/app/uploads", @collectionName = 'MeteorUploadFiles', @downloadRoute = '/cdn/storage', @schema, @chunkSize = 272144, @namingFunction = String.rand, @debug = false) ->
-    check @storagePath, String
-    check @collectionName, String
-    check @downloadRoute, String
-    check @chunkSize, Number
-    check @namingFunction, Function
-    check @debug, Boolean
+  constructor: (config) ->
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage} = config
 
-    @storagePath    = @storagePath.replace /\/$/, ""
-    @downloadRoute  = @downloadRoute.replace /\/$/, ""
-    @collection     = new Mongo.Collection @collectionName
-
-    self          = @
-    @currentFile  = null
-    @cursor       = null
-    @search       = {}
-    @cacheControl = 'public, max-age=31536000'
+    @storagePath      = '/assets/app/uploads' if not @storagePath
+    @collectionName   = 'MeteorUploadFiles' if not @collectionName
+    @downloadRoute    = '/cdn/storage' if not @downloadRoute
+    @chunkSize        = 272144 if not @chunkSize
+    @namingFunction   = String.rand if not @namingFunction
+    @debug            = false if not @debug
+    @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
 
     if not @schema
       @schema = 
@@ -116,6 +111,25 @@ class Meteor.Files
         _downloadRoute:
           type: String
 
+    check @storagePath, String
+    check @collectionName, String
+    check @downloadRoute, String
+    check @chunkSize, Number
+    check @namingFunction, Function
+    check @debug, Boolean
+    check @onbeforeunloadMessage, Match.OneOf String, Function
+    
+    @storagePath    = @storagePath.replace /\/$/, ''
+    @downloadRoute  = @downloadRoute.replace /\/$/, ''
+    @collection     = new Mongo.Collection @collectionName
+
+    self          = @
+    @currentFile  = null
+    @cursor       = null
+    @search       = {}
+    @cacheControl = 'public, max-age=31536000'
+
+
     @collection.attachSchema @schema
 
     @collection.deny
@@ -146,30 +160,33 @@ class Meteor.Files
         console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
         self.remove.call cp(_insts[inst._prefix], inst), inst.search
 
-      _methods[self.methodNames.MeteorFileWrite] = (file, fileData, meta, first, chunksQty, currentChunk, randFileName) ->
+      _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize, permissions) ->
         console.info "Meteor.Files Debugger: [MeteorFileWrite]" if @debug
-        # check file, Object
+        check unitArray, Match.OneOf Uint8Array, Object
         check fileData, Object
         check meta, Match.Optional Object
         check first, Boolean
         check chunksQty, Number
         check currentChunk, Number
         check randFileName, String
+        check part, Number
+        check partsQty, Number
+        check fileSize, Number
+        check permissions, Number
 
-        console.info 'Receive chunk #' + currentChunk + ' of ' + chunksQty + ' chunks, file: ' + fileData.name or fileData.fileName if self.debug
+        console.info "Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
-        i = 0
-        binary = ''
-        while i < file.byteLength
-          binary += String.fromCharCode(file.buffer[i])
-          i++
+        binary = String.fromCharCode.apply null, unitArray
+        last   = (chunksQty * partsQty <= totalSentChunks)
 
         cleanName = (str) ->
           str.replace(/\.\./g, '').replace /\//g, ''
 
         fileName  = cleanName(fileData.name or fileData.fileName)
         ext       = fileName.split('.').pop()
+        pathName  = "#{self.storagePath}/#{randFileName}"
         path      = "#{self.storagePath}/#{randFileName}.#{ext}"
+        pathPart  = if partsQty > 1 then "#{self.storagePath}/#{randFileName}_#{part}.#{ext}" else path
         result    = 
           name:       fileName
           extension:  ext
@@ -178,6 +195,7 @@ class Meteor.Files
           type:       fileData.type
           size:       fileData.size
           chunk:      currentChunk
+          last:       last
           isVideo:    fileData.type.toLowerCase().indexOf("video") > -1
           isAudio:    fileData.type.toLowerCase().indexOf("audio") > -1
           isImage:    fileData.type.toLowerCase().indexOf("image") > -1
@@ -185,18 +203,31 @@ class Meteor.Files
           _collectionName: self.collectionName
           _storagePath:    self.storagePath
           _downloadRoute:  self.downloadRoute
+
         
         if first
-          fs.outputFileSync path, binary, 'binary'
+          fs.outputFileSync pathPart, binary, 'binary'
         else
-          fs.appendFileSync path, binary, 'binary'
+          fs.appendFileSync pathPart, binary, 'binary'
 
+        if (chunksQty is currentChunk) and self.debug
+          console.info "The part ##{part} of file #{fileName} (binary) was saved to #{pathPart}"
 
-        if chunksQty - 1 is currentChunk
-          delete result.chunk
-          result._id = self.collection.insert result
-          console.info 'The file ' + fileName + ' (binary) was saved to ' + path if self.debug
+        if last
+          if partsQty > 1
+            buffers = []
+            i = 1
+            while i <= partsQty
+              buffers.push fs.readFileSync pathName + '_' + i + '.' + ext
+              fs.unlink pathName + '_' + i + '.' + ext
+              i++
 
+            buffer = new Buffer fileSize 
+            fs.outputFileSync path, Buffer.concat(buffers), 'binary'
+
+          fs.chmod path, permissions
+          result._id = self.collection.insert _.clone result
+          console.info "The file #{fileName} (binary) was saved to #{path}" if self.debug
         return result
 
       Meteor.methods _methods
@@ -262,32 +293,54 @@ class Meteor.Files
   @function
   @class Meteor.Files
   @name insert
-  @property {File|Object} file             - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
-  @property {Object}      meta             - Additional data as object, use later for search
-  @property {Function}    onUploaded       - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-  @property {Function}    onProgress       - Callback triggered when chunk is sent, with only argument `progress`
-  @property {Function}    onBeforeUpload   - Callback triggered right before upload is started, with only `FileReader` argument:
-                                             context is `File` - so you are able to check for extension, mime-type, size and etc.
-                                             return true to continue
-                                             return false to abort upload
+  @property {Object} config - Configuration object with next properties:
+    {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+    {Object}      meta           - Additional data as object, use later for search
+    {Number}      streams        - Quantity of parallel upload streams
+    {Number}      permissions    - Permissions or access rights in octal, like `0755` or `0777`
+    {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
+    {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
+    {Function}    onBeforeUpload - Callback triggered right before upload is started, with only `FileReader` argument:
+                                   context is `File` - so you are able to check for extension, mime-type, size and etc.
+                                   return true to continue
+                                   return false to abort upload
   @description Upload file to server over DDP
   @url https://developer.mozilla.org/en-US/docs/Web/API/FileReader
-  @returns {FileReader}
+  @returns {Object} with next properties:
+    {ReactiveVar} onPause      - Is upload process on the pause?
+    {Function}    pause        - Pause upload process
+    {Function}    continue     - Continue paused upload process
+    {Function}    toggle       - Toggle continue/pause if upload process
   ###
-  insert: (file, meta, onUploaded, onProgress, onBeforeUpload) ->
+  insert: (config) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
+    {file, meta, onUploaded, onProgress, onBeforeUpload, streams, permissions} = config
     check meta, Match.Optional Object
     check onUploaded, Match.Optional Function
     check onProgress, Match.Optional Function
     check onBeforeUpload, Match.Optional Function
+    check streams, Match.Optional Number
+    check permissions, Match.Optional Number
 
-    window.onbeforeunload = (e) ->
-      message = "Upload in progress..."
-      if e
-        e.returnValue = message
-      return message
+    result  = 
+      onPause: new ReactiveVar false
+      continueFrom: []
+      pause: () ->
+        @onPause.set true
+      continue: () ->
+        @onPause.set false
+        for func in @continueFrom
+          func.call null
+        @continueFrom = []
+      toggle: () ->
+        if @onPause.get() then @continue() else @pause()
+      progress: new ReactiveVar 0
 
-    fileReader    = new FileReader
+
+    streams         = 1 if not streams
+    permissions     = 0o777 if not permissions
+    totalSentChunks = 0
+
     fileData      =
       size: file.size
       type: file.type
@@ -300,49 +353,100 @@ class Meteor.Files
     console.time('insert') if @debug
 
     randFileName  = @namingFunction.call null, true
-    currentChunk  = 0
-    first         = true
-    chunksQty     = if @chunkSize < file.size then Math.ceil(file.size / @chunkSize) else 1
     self          = @
+    partSize      = Math.ceil file.size / streams
+    parts         = []
+    uploaded      = 0
+    last          = false
+
+    window.onbeforeunload = (e) ->
+      message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
+
+      if e
+        e.returnValue = message
+      return message
+
+    i = 1
+    while i <= streams
+      parts.push
+        from: partSize * (i-1)
+        to:   partSize * i
+        size: partSize
+        part: i
+        chunksQty: if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
+      i++
+
 
     end = (error, data) ->
       console.timeEnd('insert') if self.debug
       window.onbeforeunload = null
+      result.progress.set 0
       onUploaded and onUploaded.call self, error, data
 
     if onBeforeUpload
-      if not onBeforeUpload.call file, fileReader
-        end new Meteor.Error(500, "FORBIDDEN"), null
+      chres = onBeforeUpload.call file
+      if chres isnt true
+        end new Meteor.Error(500, if _.isString(chres) then chres else "FORBIDDEN"), null
         return false
 
-    fileReader.onload = (chunk) ->
-      onProgress and onProgress((currentChunk / chunksQty) * 100)
+    upload = (filePart, part, chunksQtyInPart, fileReader) ->
+      currentChunk = 1
+      first = true
+      console.time("insertPart#{part}") if @debug
 
-      binary      = chunk.srcElement or chunk.target
-      arrayBuffer = new Uint8Array binary.result
+      fileReader.onload = (chunk) ->
+        ++totalSentChunks
+        progress = (uploaded / file.size) * 100
+        result.progress.set progress
+        onProgress and onProgress(progress)
 
-      if chunksQty is 1
-        Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data) ->
-          end error, data
-      else
-        Meteor.call self.methodNames.MeteorFileWrite, arrayBuffer, fileData, meta, first, chunksQty, currentChunk, randFileName, (error, data)->
-          if data.chunk <= chunksQty
-            currentChunk = data.chunk + 1
-            from         = currentChunk * self.chunkSize
-            to           = from + self.chunkSize
-            fileReader.readAsArrayBuffer file.slice from, to
-          else
-            end error, data
-      first = false
+        uploaded   += self.chunkSize
+        arrayBuffer = chunk.srcElement or chunk.target
+        unitArray   = new Uint8Array arrayBuffer.result
+        last        = (part is streams and currentChunk >= chunksQtyInPart)
 
+        if chunksQtyInPart is 1
+          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, permissions, (error, data) ->
+            if data.last
+              end error, data
+        else
+          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, permissions, (error, data)->
+            if not result.onPause.get()
+              if data.chunk + 1 <= chunksQtyInPart
+                from         = currentChunk * self.chunkSize
+                to           = from + self.chunkSize
 
+                fileReader.readAsArrayBuffer filePart.slice from, to
+                currentChunk = ++data.chunk
+              else if data.last
+                end error, data
+            else
+              result.continueFrom.push () ->
+                if data.chunk + 1 <= chunksQtyInPart
+                  from         = currentChunk * self.chunkSize
+                  to           = from + self.chunkSize
 
-    if chunksQty is 1
-      fileReader.readAsArrayBuffer file
-    else
-      fileReader.readAsArrayBuffer file.slice 0, @chunkSize
-    
-    return fileReader
+                  fileReader.readAsArrayBuffer filePart.slice from, to
+                  currentChunk = ++data.chunk
+                else if data.last
+                  end error, data
+        first = false
+
+      fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
+
+    i = parts.length - 1
+    while i >= 0
+      Meteor.setTimeout ((parts, i) ->
+        return () ->
+          part = parts[i]
+          fileReader = new FileReader
+          upload(file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader)
+      )(parts, i)
+      ,
+        0
+      --i
+
+    return result
 
   ###
   @isomorphic

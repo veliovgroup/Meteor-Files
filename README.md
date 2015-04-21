@@ -5,6 +5,7 @@ This package allows to:
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
     * Pause / Resume upload
+    * Multi-stream async upload (faster than ever)
  - Write file in file system
     * Automatically writes uploaded files on FS and special Collection
     * You able to specify `path`, collection name, schema, chunk size and naming function
@@ -39,26 +40,33 @@ meteor add ostrio:files
 
 API
 ========
-##### `new Meteor.Files([storagePath], [collectionName], [downloadRoute], [schema], [chunkSize], [namingFunction], [debug])` [*Isomorphic*]
+##### `new Meteor.Files([config])` [*Isomorphic*]
 
- - `storagePath` __String__ - Storage path on file system
+__config is optional object with next properties:__
+ - `storagePath` **String** - Storage path on file system
     * Default value: `/assets/app/uploads`
- - `collectionName` __String__ - Collection name
+ - `collectionName` **String** - Collection name
     * Default value: `MeteorUploadFiles`
- - `downloadRoute` __String__ - Server Route used to retrieve files
+ - `downloadRoute` **String** - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` __Object__ - Collection Schema (*Not editable for current release*)
- - `chunkSize` __Number__ - Upload chunk size
+ - `schema` **Object** - Collection Schema (*Not editable for current release*)
+ - `chunkSize` **Number** - Upload chunk size
     * Default value: `272144`
- - `namingFunction` __Function__ - Function which returns `String`
+ - `namingFunction` **Function** - Function which returns `String`
     * Default value: `String.rand`
- - `debug` __Boolean__ - Turn on/of debugging and extra logging
+ - `onbeforeunloadMessage` **String** or **Function** - Message shown to user when closing browser's window or tab, while upload in the progress
+ - `debug` **Boolean** - Turn on/of debugging and extra logging
     * Default value: `false`
 
 ```coffeescript
 myFiles.cacheControl = 'public, max-age=31536000' # Set 'Cache-Control' header for downloads
 
-myFiles = new Meteor.Files '/assets/app/uploads/myFiles', 'myFiles', '/downloads/myFiles'
+myFiles = new Meteor.Files
+  storagePath: 'assets/app/uploads/myFiles'
+  collectionName: 'myFiles'
+  chunkSize: 256*128
+  onbeforeunloadMessage: ->
+    i18n.get '_app.abortUpload' # See 'ostrio:i18n' package
 
 if Meteor.isClient
   myFiles.collection.subscribe "MeteorFileSubs", postId.get()
@@ -119,7 +127,7 @@ template(name="my")
   ul
     each files
       li 
-        a(href="{{fileURL this}}?download=true") name
+        a(href="{{fileURL this}}?download=true" target="_parent") name
 ```
 
 
@@ -159,20 +167,28 @@ a(href="{{fileURL fileRef}}?download=true" download) {{fileRef.name}}
 
 Methods
 ==========
-##### `insert(file, [meta], [onUploaded], [onProgress], [onBeforeUpload])` [*Client*]
-Returns `FileReader` instance, so you can call `abort()` or any other method to control, `pause` or `resume` upload process, read more: [FileReader](https://developer.mozilla.org/en-US/docs/Web/API/FileReader).
- - `file` __File__ or __Object__ - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
- - `meta` __Object__ - Additional data as object, use later for search
- - `onUploaded` __Function__ - Callback triggered when upload is finished, with two arguments:
+##### `insert(settings)` [*Client*]
+__config is object with next properties:__
+ - `file` __File__ or **Object** - [REQUIRED] HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+ - `meta` **Object** - Additional data as object, use later for search
+ - `onUploaded` **Function** - Callback triggered when upload is finished, with two arguments:
     * `error`
     * `fileRef` - see __Current schema__ section above
- - `onProgress` __Function__ - Callback triggered when chunk is sent, with only argument:
-    * `progress` __Number__ - Current progress from `0` to `100`
- - `onBeforeUpload` __Function__ - Callback triggered right before upload is started, with only argument:
+ - `onProgress` **Function** - Callback triggered when chunk is sent, with only argument:
+    * `progress` **Number** - Current progress from `0` to `100`
+ - `onBeforeUpload` **Function** - Callback triggered right before upload is started, with __no arguments__:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
-    * `FileReader` __FileReader__ - Current progress from `0` to `100`
     * __return__ `true` to continue
     * __return__ `false` to abort upload
+ - `streams` **Number** - Quantity of parallel upload streams
+ - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
+
+Returns **Object**, with properties:
+ - `onPause` **ReactiveVar** - Is upload process on the pause?
+ - `pause` **Function** - Pause upload process
+ - `continue` **Function** - Continue paused upload process
+ - `toggleUpload` **Function** - Toggle `continue`/`pause` if upload process
+  
 
 ```coffeescript
 # For example we upload file for blog post
@@ -192,23 +208,28 @@ if Meteor is client
 
       _.each e.currentTarget.files, (file) ->
         uploads.insert file
-        ,
-          post: post._id # Add meta object with reference to blog post
-        , 
-          (error, fileRef) ->
+          file: file
+          meta:
+            post: post._id # Add meta object with reference to blog post
+
+          onUploaded: (error, fileObj) ->
             if not error
               doSomething fileRef.path, post._id, fileRef
-
             prgrs.set false
             $(e.target).val('')
             UIBlock.unblock()
-        ,
-          (progress) ->
+          
+          onProgress: _.throttle (progress) ->
             prgrs.set progress
-        ,
-          () ->
+          ,
+            500
+
+          onBeforeUpload: () ->
             # Set Allowed Extensions and max file size
             ['mp3', 'm4a'].inArray(@ext) and @size < 26214400 # See `ostrio:jsextensions` package
+
+          streams: 8
+          permissions: 0o777
 ```
 
 Progress bar in template (TWBS):
@@ -223,7 +244,7 @@ template(name="my")
 ```
 
 ##### `findOne(search)`  [*Isomorphic*]
- - `search` __String__ or __Object__ - `_id` of the file or `Object`
+ - `search` **String** or **Object** - `_id` of the file or `Object`
 
 ```coffeescript
 uploads = new Meteor.Files()
@@ -238,7 +259,7 @@ uploads.findOne({'meta.post': post._id}).link()   # Get download link
 ```
 
 ##### `find(search)`  [*Isomorphic*]
- - `search` __String__ or __Object__ - `_id` of the file or `Object`
+ - `search` **String** or **Object** - `_id` of the file or `Object`
 
 ```coffeescript
 uploads = new Meteor.Files()
