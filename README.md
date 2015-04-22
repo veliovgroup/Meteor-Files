@@ -54,6 +54,7 @@ __config is optional object with next properties:__
     * Default value: `272144`
  - `namingFunction` **Function** - Function which returns `String`
     * Default value: `String.rand`
+ - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
  - `onbeforeunloadMessage` **String** or **Function** - Message shown to user when closing browser's window or tab, while upload in the progress
  - `debug` **Boolean** - Turn on/of debugging and extra logging
     * Default value: `false`
@@ -65,6 +66,7 @@ myFiles = new Meteor.Files
   storagePath: 'assets/app/uploads/myFiles'
   collectionName: 'myFiles'
   chunkSize: 256*128
+  permissions: 0o777
   onbeforeunloadMessage: ->
     i18n.get '_app.abortUpload' # See 'ostrio:i18n' package
 
@@ -181,7 +183,6 @@ __config is object with next properties:__
     * __return__ `true` to continue
     * __return__ `false` to abort upload
  - `streams` **Number** - Quantity of parallel upload streams
- - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
 
 Returns **Object**, with properties:
  - `onPause` **ReactiveVar** - Is upload process on the pause?
@@ -230,7 +231,6 @@ if Meteor is client
             ['mp3', 'm4a'].inArray(@ext) and @size < 26214400 # See `ostrio:jsextensions` package
 
           streams: 8
-          permissions: 0o777
 ```
 
 Progress bar in template (TWBS):

@@ -67,7 +67,7 @@ cp = (to, from) ->
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage} = config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions} = config
 
     @storagePath      = '/assets/app/uploads' if not @storagePath
     @collectionName   = 'MeteorUploadFiles' if not @collectionName
@@ -75,6 +75,7 @@ class Meteor.Files
     @chunkSize        = 272144 if not @chunkSize
     @namingFunction   = String.rand if not @namingFunction
     @debug            = false if not @debug
+    @permissions      = 0o777 if not @permissions
     @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
 
     if not @schema
@@ -118,6 +119,7 @@ class Meteor.Files
     check @namingFunction, Function
     check @debug, Boolean
     check @onbeforeunloadMessage, Match.OneOf String, Function
+
     
     @storagePath    = @storagePath.replace /\/$/, ''
     @downloadRoute  = @downloadRoute.replace /\/$/, ''
@@ -160,7 +162,7 @@ class Meteor.Files
         console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
         self.remove.call cp(_insts[inst._prefix], inst), inst.search
 
-      _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize, permissions) ->
+      _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize) ->
         console.info "Meteor.Files Debugger: [MeteorFileWrite]" if @debug
         check unitArray, Match.OneOf Uint8Array, Object
         check fileData, Object
@@ -172,7 +174,6 @@ class Meteor.Files
         check part, Number
         check partsQty, Number
         check fileSize, Number
-        check permissions, Number
 
         console.info "Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
@@ -225,7 +226,7 @@ class Meteor.Files
             buffer = new Buffer fileSize 
             fs.outputFileSync path, Buffer.concat(buffers), 'binary'
 
-          fs.chmod path, permissions
+          fs.chmod path, self.permissions
           result._id = self.collection.insert _.clone result
           console.info "The file #{fileName} (binary) was saved to #{path}" if self.debug
         return result
@@ -297,7 +298,6 @@ class Meteor.Files
     {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
     {Object}      meta           - Additional data as object, use later for search
     {Number}      streams        - Quantity of parallel upload streams
-    {Number}      permissions    - Permissions or access rights in octal, like `0755` or `0777`
     {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
     {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
     {Function}    onBeforeUpload - Callback triggered right before upload is started, with only `FileReader` argument:
@@ -314,13 +314,12 @@ class Meteor.Files
   ###
   insert: (config) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
-    {file, meta, onUploaded, onProgress, onBeforeUpload, streams, permissions} = config
+    {file, meta, onUploaded, onProgress, onBeforeUpload, streams} = config
     check meta, Match.Optional Object
     check onUploaded, Match.Optional Function
     check onProgress, Match.Optional Function
     check onBeforeUpload, Match.Optional Function
     check streams, Match.Optional Number
-    check permissions, Match.Optional Number
 
     result  = 
       onPause: new ReactiveVar false
@@ -338,7 +337,6 @@ class Meteor.Files
 
 
     streams         = 1 if not streams
-    permissions     = 0o777 if not permissions
     totalSentChunks = 0
 
     fileData      =
@@ -406,11 +404,11 @@ class Meteor.Files
         last        = (part is streams and currentChunk >= chunksQtyInPart)
 
         if chunksQtyInPart is 1
-          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, permissions, (error, data) ->
+          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
             if data.last
               end error, data
         else
-          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, permissions, (error, data)->
+          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
             if not result.onPause.get()
               if data.chunk + 1 <= chunksQtyInPart
                 from         = currentChunk * self.chunkSize
