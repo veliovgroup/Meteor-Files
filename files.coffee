@@ -14,7 +14,7 @@ _insts = {}
 ###
 @function
 @name rcp
-@property {Object} obj - Initial object
+@param {Object} obj - Initial object
 @description Create object with only needed props
 ###
 rcp = (obj) ->
@@ -34,8 +34,8 @@ rcp = (obj) ->
 ###
 @function
 @name cp
-@property {Object} to   - Destanation
-@property {Object} from - Source
+@param {Object} to   - Destanation
+@param {Object} from - Source
 @description Copy-Paste only needed props from one to another object
 ###
 cp = (to, from) ->
@@ -54,7 +54,7 @@ cp = (to, from) ->
 @class
 @namespace Meteor
 @name Files
-@property {Object} config - Configuration object with next properties:
+@param {Object} config - Configuration object with next properties:
   {String}    storagePath     - Storage path on file system
   {String}    collectionName  - Collection name
   {String}    downloadRoute   - Server Route used to retrieve files
@@ -67,7 +67,7 @@ cp = (to, from) ->
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions} = config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions} = config if config
 
     @storagePath      = '/assets/app/uploads' if not @storagePath
     @collectionName   = 'MeteorUploadFiles' if not @collectionName
@@ -141,18 +141,16 @@ class Meteor.Files
         true
       remove: ->
         true
+    
+    @_prefix = SHA256 @collectionName + @storagePath + @downloadRoute
+    _insts[@_prefix] = @
 
     Router.route "#{@downloadRoute}/#{@collectionName}/:_id/:name", ->
       self.findOne(this.params._id).download.call @, self
     , {where: 'server'}
 
-    @_prefix = SHA256 @collectionName + @storagePath + @downloadRoute
-    _insts[@_prefix] = @
-
     @methodNames =
       MeteorFileWrite:    "MeteorFileWrite#{@_prefix}"
-      MeteorFileFind:     "MeteorFileFind#{@_prefix}"
-      MeteorFileFindOne:  "MeteorFileFindOne#{@_prefix}"
       MeteorFileUnlink:   "MeteorFileUnlink#{@_prefix}"
 
     if Meteor.isServer
@@ -177,7 +175,11 @@ class Meteor.Files
 
         console.info "Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
-        binary = String.fromCharCode.apply null, unitArray
+        i = 0
+        binary = ''
+        while i < unitArray.byteLength
+          binary += String.fromCharCode unitArray[i]
+          i++
         last   = (chunksQty * partsQty <= totalSentChunks)
 
         cleanName = (str) ->
@@ -217,14 +219,13 @@ class Meteor.Files
         if last
           if partsQty > 1
             buffers = []
-            i = 1
+            i = 2
             while i <= partsQty
-              buffers.push fs.readFileSync pathName + '_' + i + '.' + ext
+              fs.appendFileSync pathName + '_1.' + ext, fs.readFileSync(pathName + '_' + i + '.' + ext), 'binary'
               fs.unlink pathName + '_' + i + '.' + ext
               i++
 
-            buffer = new Buffer fileSize 
-            fs.outputFileSync path, Buffer.concat(buffers), 'binary'
+            fs.renameSync pathName + '_1.' + ext, path
 
           fs.chmod path, self.permissions
           result._id = self.collection.insert _.clone result
@@ -233,25 +234,127 @@ class Meteor.Files
 
       Meteor.methods _methods
 
+  srch: (search) ->
+    if search and _.isString search
+      @search =
+        _id: search
+    else
+      @search = search
+
+  ###
+  @server
+  @function
+  @class Meteor.Files
+  @name write
+  @param {String} path - Path to file
+  @param {String} path - Path to file
+  @description Write buffer to FS and add to Meteor.Files Collection
+  @returns {Files} - Return this
+  ###
+  write: if Meteor.isServer then (buffer, opts, callback) ->
+    console.info "[write(buffer, #{opts}, callback)]" if @debug
+    check opts, Match.Optional Object
+    check callback, Match.Optional Function
+
+    randFileName  = @namingFunction.call null, true
+    fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
+    extension     = fileName.split('.').pop()
+    path          = "#{@storagePath}/#{randFileName}.#{extension}"
+
+    result        = 
+      name:       fileName
+      extension:  extension
+      path:       path
+      meta:       opts.meta
+      type:       if opts.type then opts.type else 'application/*'
+      size:       if opts.size then opts.size else buffer.length
+      isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
+      isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
+      isImage:    if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
+      _prefix:    @_prefix
+      _collectionName: @collectionName
+      _storagePath:    @storagePath
+      _downloadRoute:  @downloadRoute
+
+    console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
+
+    callback and callback null, result
+
+    if callback
+      fs.outputFile path, buffer, 'binary', callback
+    else
+      fs.outputFileSync path, buffer, 'binary'
+
+    result._id = @collection.insert _.clone result
+    return result
+  else
+    undefined
+
+  ###
+  @server
+  @function
+  @class Meteor.Files
+  @name addFile
+  @param {String} path - Path to file
+  @param {String} path - Path to file
+  @description Add file from FS to Meteor.Files
+  @returns {Files} - Return this
+  ###
+  # addFile: if Meteor.isServer then (path, opts, callback) ->
+  #   console.info "[addFile(#{path})]" if @debug
+  #   check path, String
+  #   check opts, Match.Optional Object
+  #   check callback, Match.Optional Function
+
+  #   try
+  #     fs.statSync path
+  #     buffer    = fs.readFileSync path
+  #     pathParts = path.split '/'
+  #     fileName  = pathParts[pathParts.length - 1]
+  #     ext       = fileName.split('.').pop()
+  #     result    = 
+  #       name:       fileName
+  #       extension:  ext
+  #       path:       path
+  #       meta:       opts.meta
+  #       type:       if opts.type then opts.type else 'application/*'
+  #       size:       if opts.size then opts.size else buffer.length
+  #       isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
+  #       isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
+  #       isImage:    if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
+  #       _prefix:    @_prefix
+  #       _collectionName: @collectionName
+  #       _storagePath:    path.replace "/#{fileName}", ''
+  #       _downloadRoute:  @downloadRoute
+
+  #     result._id = @collection.insert _.clone result
+  #     console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
+
+  #     callback and callback null, result
+  #     return result
+
+  #   catch error
+  #     callback and callback error, undefined
+  #     return error
+  # else
+  #   undefined
+
   ###
   @isomorphic
   @function
   @class Meteor.Files
   @name findOne
-  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @description Load file
   @returns {Files} - Return this
   ###
   findOne: (search) ->
     console.info "Meteor.Files Debugger: [findOne(#{search})]" if @debug
     check search, Match.OneOf Object, String
-    if _.isString search
-      @search = 
-        _id: search
-    else
-      @search = search
+    @srch search
 
     @currentFile = @collection.findOne @search
+    @cursor      = null
     return @
 
   ###
@@ -259,21 +362,17 @@ class Meteor.Files
   @function
   @class Meteor.Files
   @name find
-  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @description Load file or bunch of files
   @returns {Files} - Return this
   ###
   find: (search) ->
     console.info "Meteor.Files Debugger: [find(#{search})]" if @debug
     check search, Match.OneOf Object, String
-    if _.isString search
-      @search = 
-        _id: search
-    else
-      @search = search
+    @srch search
 
+    @currentFile = null
     @cursor = @collection.find @search
-
     return @
 
   ###
@@ -290,11 +389,27 @@ class Meteor.Files
     return @currentFile
 
   ###
+  @isomorphic
+  @function
+  @class Meteor.Files
+  @name fetch
+  @description Alias for `get()` method
+  @returns {[Object]}
+  ###
+  fetch: () ->
+    console.info "Meteor.Files Debugger: [fetch()]" if @debug
+    data = @get()
+    if not _.isArray data
+      return [data]
+    else
+      data
+
+  ###
   @client
   @function
   @class Meteor.Files
   @name insert
-  @property {Object} config - Configuration object with next properties:
+  @param {Object} config - Configuration object with next properties:
     {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
     {Object}      meta           - Additional data as object, use later for search
     {Number}      streams        - Quantity of parallel upload streams
@@ -312,7 +427,7 @@ class Meteor.Files
     {Function}    continue     - Continue paused upload process
     {Function}    toggle       - Toggle continue/pause if upload process
   ###
-  insert: (config) ->
+  insert: if Meteor.isClient then (config) ->
     console.info "Meteor.Files Debugger: [insert()]" if @debug
     {file, meta, onUploaded, onProgress, onBeforeUpload, streams} = config
     check meta, Match.Optional Object
@@ -321,6 +436,7 @@ class Meteor.Files
     check onBeforeUpload, Match.Optional Function
     check streams, Match.Optional Number
 
+    self    = @
     result  = 
       onPause: new ReactiveVar false
       continueFrom: []
@@ -335,6 +451,13 @@ class Meteor.Files
         if @onPause.get() then @continue() else @pause()
       progress: new ReactiveVar 0
 
+    Tracker.autorun ->
+      if Meteor.status().connected
+        result.continue()
+        console.info "Meteor.Files Debugger: Connection established continue() upload" if self.debug
+      else
+        result.pause()
+        console.info "Meteor.Files Debugger: Connection error set upload on pause()" if self.debug
 
     streams         = 1 if not streams
     totalSentChunks = 0
@@ -351,7 +474,6 @@ class Meteor.Files
     console.time('insert') if @debug
 
     randFileName  = @namingFunction.call null, true
-    self          = @
     partSize      = Math.ceil file.size / streams
     parts         = []
     uploaded      = 0
@@ -403,6 +525,7 @@ class Meteor.Files
         unitArray   = new Uint8Array arrayBuffer.result
         last        = (part is streams and currentChunk >= chunksQtyInPart)
 
+
         if chunksQtyInPart is 1
           Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
             if data.last
@@ -432,38 +555,30 @@ class Meteor.Files
 
       fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
 
-    i = parts.length - 1
-    while i >= 0
-      Meteor.setTimeout ((parts, i) ->
-        return () ->
-          part = parts[i]
-          fileReader = new FileReader
-          upload(file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader)
-      )(parts, i)
-      ,
-        0
+    for part, i in parts
+      part = parts[i]
+      fileReader = new FileReader
+      upload.call null, file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader
       --i
 
     return result
+  else
+    undefined
 
   ###
   @isomorphic
   @function
   @class Meteor.Files
   @name remove
-  @property {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @description Remove file(s) on cursor or find and remove file(s) if search is set
   @returns {undefined}
   ###
   remove: (search) ->
     console.info "Meteor.Files Debugger: [remove(#{search})]" if @debug
     check search, Match.Optional Match.OneOf Object, String
-    if search and _.isString search
-      @search = 
-        _id: search
-    else
-      @search = search
 
+    @srch search
     if Meteor.isClient 
       Meteor.call @methodNames.MeteorFileUnlink, rcp(@)
       undefined
@@ -471,8 +586,8 @@ class Meteor.Files
     if Meteor.isServer 
       files = @collection.find @search
       files.forEach (file) ->
-        fs.removeSync file.path
-      @collection.remove(@search)
+        fs.remove file.path
+      @collection.remove @search
       undefined
 
   ###
@@ -480,11 +595,11 @@ class Meteor.Files
   @function
   @class Meteor.Files
   @name download
-  @property {Object|Files} self - Instance of MEteor.Files
+  @param {Object|Files} self - Instance of MEteor.Files
   @description Initiates the HTTP response
   @returns {undefined}
   ###
-  download: (self) ->
+  download: if Meteor.isServer then (self) ->
     console.info "Meteor.Files Debugger: [download()]" if @debug
     check self.currentFile, Object
     if Meteor.isServer
@@ -570,19 +685,23 @@ class Meteor.Files
 
     else
       new Meteor.Error 500, "Can't [download()] on client!"
+  else
+    undefined
 
   ###
   @isomorphic
   @function
   @class Meteor.Files
   @name link
+  @param {Object} fileRef - File reference object
   @description Returns link
   @returns {String}
   ###
-  link: () ->
+  link: (fileRef) ->
     console.info "Meteor.Files Debugger: [link()]" if @debug
-    if @currentFile
-      return  "#{@downloadRoute}/#{@currentFile._id}/#{@collectionName}"
+    check @currentFile or fileRef, Object
+    console.log @currentFile, fileRef
+    return if fileRef then "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{fileRef._id}.#{fileRef.extension}" else "#{@currentFile._downloadRoute}/#{@currentFile._collectionName}/#{@currentFile._id}/#{@currentFile._id}.#{@currentFile.extension}"
 
 if Meteor.isClient
   ###

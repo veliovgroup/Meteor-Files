@@ -5,6 +5,7 @@ This package allows to:
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
     * Pause / Resume upload
+    * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
  - Write file in file system
     * Automatically writes uploaded files on FS and special Collection
@@ -244,6 +245,24 @@ template(name="my")
         span.sr-only {{progress}}%
 ```
 
+##### `collection`  [*Isomorphic*]
+Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ this collection
+
+```coffeescript
+uploads = new Meteor.Files()
+
+if Meteor.isClient
+  # postId.get() is some ReactiveVar or session
+  Meteor.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    uploads.collection.find {'meta.postId': postId}
+
+uploads.collection.find({'meta.post': post._id})
+uploads.collection.findOne('hdjJDSHW6784kJS')
+```
+
 ##### `findOne(search)`  [*Isomorphic*]
  - `search` **String** or **Object** - `_id` of the file or `Object`
 
@@ -266,24 +285,35 @@ uploads.findOne({'meta.post': post._id}).link()   # Get download link
 uploads = new Meteor.Files()
 
 uploads.find({'meta.post': post._id}).cursor   # Current cursor
+uploads.find({'meta.post': post._id}).fetch()  # Get cursor as Array (Array of objects)
 uploads.find('hdjJDSHW6784kJS').get()          # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).get()    # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
 ```
 
-##### `collection`  [*Isomorphic*]
-Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ this collection
+##### `write(buffer, [options], [callback])`  [*Server*]
+ - `buffer` **Buffer** - Binary data
+ - `options` **Object** - Object with next properties:
+    * `type` - File mime-type
+    * `size` - File size
+    * `meta` - Additional data as object, use later for search
+    * `name` or `fileName` - File name
+ - `callback(error, fileObj)`
+
+Returns:
+ - `fileObj` **Object**
 
 ```coffeescript
 uploads = new Meteor.Files()
-
-if Meteor.isClient
-  Meteor.subscribe "MeteorFileSubs", postId.get()
-
-if Meteor.isServer
-  Meteor.publish "MeteorFileSubs", (postId) ->
-    uploads.collection.find {'meta.postId': postId}
-
-uploads.collection.find({'meta.post': post._id})
-uploads.collection.findOne('hdjJDSHW6784kJS')
+buffer = fs.readFileSync 'path/to/file.jpg'
+uploads.write buffer
+, 
+  type: 'image/jpeg'
+  name: 'MyImage.jpg'
+  meta: 
+    post: post._id
+,
+  (err, fileObj) ->
+    # Download File
+    window.open uploads.link(fileObj), '_parent'
 ```
