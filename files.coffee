@@ -157,11 +157,11 @@ class Meteor.Files
       _methods = {}
 
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
-        console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if @debug
+        console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if self.debug
         self.remove.call cp(_insts[inst._prefix], inst), inst.search
 
       _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize) ->
-        console.info "Meteor.Files Debugger: [MeteorFileWrite]" if @debug
+        console.info "Meteor.Files Debugger: [MeteorFileWrite]" if self.debug
         check unitArray, Match.OneOf Uint8Array, Object
         check fileData, Object
         check meta, Match.Optional Object
@@ -436,6 +436,7 @@ class Meteor.Files
     check streams, Match.Optional Number
 
     if file
+      console.time('insert') if @debug
       self    = @
       result  = 
         onPause: new ReactiveVar false
@@ -469,10 +470,7 @@ class Meteor.Files
         ext:  file.name.split('.').pop()
         extension: file.name.split('.').pop()
 
-      file = _.extend file, fileData
-
-      console.time('insert') if @debug
-
+      file          = _.extend file, fileData
       randFileName  = @namingFunction.call null, true
       partSize      = Math.ceil file.size / streams
       parts         = []
@@ -481,7 +479,6 @@ class Meteor.Files
 
       window.onbeforeunload = (e) ->
         message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
-
         if e
           e.returnValue = message
         return message
@@ -495,7 +492,6 @@ class Meteor.Files
           part: i
           chunksQty: if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
         i++
-
 
       end = (error, data) ->
         console.timeEnd('insert') if self.debug
@@ -524,7 +520,6 @@ class Meteor.Files
           arrayBuffer = chunk.srcElement or chunk.target
           unitArray   = new Uint8Array arrayBuffer.result
           last        = (part is streams and currentChunk >= chunksQtyInPart)
-
 
           if chunksQtyInPart is 1
             Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
@@ -700,7 +695,6 @@ class Meteor.Files
   link: (fileRef) ->
     console.info "Meteor.Files Debugger: [link()]" if @debug
     check @currentFile or fileRef, Object
-    console.log @currentFile, fileRef
     return if fileRef then "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{fileRef._id}.#{fileRef.extension}" else "#{@currentFile._downloadRoute}/#{@currentFile._collectionName}/#{@currentFile._id}/#{@currentFile._id}.#{@currentFile.extension}"
 
 if Meteor.isClient
