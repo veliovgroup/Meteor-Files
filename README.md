@@ -5,6 +5,7 @@ This package allows to:
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
     * Pause / Resume upload
+    * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
  - Write file in file system
     * Automatically writes uploaded files on FS and special Collection
@@ -54,6 +55,7 @@ __config is optional object with next properties:__
     * Default value: `272144`
  - `namingFunction` **Function** - Function which returns `String`
     * Default value: `String.rand`
+ - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
  - `onbeforeunloadMessage` **String** or **Function** - Message shown to user when closing browser's window or tab, while upload in the progress
  - `debug` **Boolean** - Turn on/of debugging and extra logging
     * Default value: `false`
@@ -65,6 +67,7 @@ myFiles = new Meteor.Files
   storagePath: 'assets/app/uploads/myFiles'
   collectionName: 'myFiles'
   chunkSize: 256*128
+  permissions: 0o777
   onbeforeunloadMessage: ->
     i18n.get '_app.abortUpload' # See 'ostrio:i18n' package
 
@@ -162,7 +165,7 @@ Template Helper
 ==========
 To get download URL for file, you only need `fileRef` object, so there is no need for subscription
 ```jade
-a(href="{{fileURL fileRef}}?download=true" download) {{fileRef.name}}
+a(href="{{fileURL fileRef}}?download=true" target-"_parent" download) {{fileRef.name}}
 ```
 
 Methods
@@ -181,10 +184,10 @@ __config is object with next properties:__
     * __return__ `true` to continue
     * __return__ `false` to abort upload
  - `streams` **Number** - Quantity of parallel upload streams
- - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
 
 Returns **Object**, with properties:
  - `onPause` **ReactiveVar** - Is upload process on the pause?
+ - `progress` **ReactiveVar** - Upload progress in pro-cents 
  - `pause` **Function** - Pause upload process
  - `continue` **Function** - Continue paused upload process
  - `toggleUpload` **Function** - Toggle `continue`/`pause` if upload process
@@ -229,7 +232,6 @@ if Meteor is client
             ['mp3', 'm4a'].inArray(@ext) and @size < 26214400 # See `ostrio:jsextensions` package
 
           streams: 8
-          permissions: 0o777
 ```
 
 Progress bar in template (TWBS):
@@ -241,6 +243,24 @@ template(name="my")
     .progress
       .progress-bar.progress-bar-striped.active(style="width:{{progress}}%")
         span.sr-only {{progress}}%
+```
+
+##### `collection`  [*Isomorphic*]
+Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ this collection
+
+```coffeescript
+uploads = new Meteor.Files()
+
+if Meteor.isClient
+  # postId.get() is some ReactiveVar or session
+  Meteor.subscribe "MeteorFileSubs", postId.get()
+
+if Meteor.isServer
+  Meteor.publish "MeteorFileSubs", (postId) ->
+    uploads.collection.find {'meta.postId': postId}
+
+uploads.collection.find({'meta.post': post._id})
+uploads.collection.findOne('hdjJDSHW6784kJS')
 ```
 
 ##### `findOne(search)`  [*Isomorphic*]
@@ -265,24 +285,35 @@ uploads.findOne({'meta.post': post._id}).link()   # Get download link
 uploads = new Meteor.Files()
 
 uploads.find({'meta.post': post._id}).cursor   # Current cursor
+uploads.find({'meta.post': post._id}).fetch()  # Get cursor as Array (Array of objects)
 uploads.find('hdjJDSHW6784kJS').get()          # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).get()    # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
 ```
 
-##### `collection`  [*Isomorphic*]
-Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ this collection
+##### `write(buffer, [options], [callback])`  [*Server*]
+ - `buffer` **Buffer** - Binary data
+ - `options` **Object** - Object with next properties:
+    * `type` - File mime-type
+    * `size` - File size
+    * `meta` - Additional data as object, use later for search
+    * `name` or `fileName` - File name
+ - `callback(error, fileObj)`
+
+Returns:
+ - `fileObj` **Object**
 
 ```coffeescript
 uploads = new Meteor.Files()
-
-if Meteor.isClient
-  Meteor.subscribe "MeteorFileSubs", postId.get()
-
-if Meteor.isServer
-  Meteor.publish "MeteorFileSubs", (postId) ->
-    uploads.collection.find {'meta.postId': postId}
-
-uploads.collection.find({'meta.post': post._id})
-uploads.collection.findOne('hdjJDSHW6784kJS')
+buffer = fs.readFileSync 'path/to/file.jpg'
+uploads.write buffer
+, 
+  type: 'image/jpeg'
+  name: 'MyImage.jpg'
+  meta: 
+    post: post._id
+,
+  (err, fileObj) ->
+    # Download File
+    window.open uploads.link(fileObj), '_parent'
 ```
