@@ -224,7 +224,6 @@ class Meteor.Files
               fs.appendFileSync pathName + '_1.' + ext, fs.readFileSync(pathName + '_' + i + '.' + ext), 'binary'
               fs.unlink pathName + '_' + i + '.' + ext
               i++
-
             fs.renameSync pathName + '_1.' + ext, path
 
           fs.chmod path, self.permissions
@@ -436,113 +435,104 @@ class Meteor.Files
     check onBeforeUpload, Match.Optional Function
     check streams, Match.Optional Number
 
-    self    = @
-    result  = 
-      onPause: new ReactiveVar false
-      continueFrom: []
-      pause: () ->
-        @onPause.set true
-      continue: () ->
-        @onPause.set false
-        for func in @continueFrom
-          func.call null
-        @continueFrom = []
-      toggle: () ->
-        if @onPause.get() then @continue() else @pause()
-      progress: new ReactiveVar 0
+    if file
+      self    = @
+      result  = 
+        onPause: new ReactiveVar false
+        continueFrom: []
+        pause: () ->
+          @onPause.set true
+        continue: () ->
+          @onPause.set false
+          for func in @continueFrom
+            func.call null
+          @continueFrom = []
+        toggle: () ->
+          if @onPause.get() then @continue() else @pause()
+        progress: new ReactiveVar 0
 
-    Tracker.autorun ->
-      if Meteor.status().connected
-        result.continue()
-        console.info "Meteor.Files Debugger: Connection established continue() upload" if self.debug
-      else
-        result.pause()
-        console.info "Meteor.Files Debugger: Connection error set upload on pause()" if self.debug
-
-    streams         = 1 if not streams
-    totalSentChunks = 0
-
-    fileData      =
-      size: file.size
-      type: file.type
-      name: file.name
-      ext:  file.name.split('.').pop()
-      extension: file.name.split('.').pop()
-
-    file = _.extend file, fileData
-
-    console.time('insert') if @debug
-
-    randFileName  = @namingFunction.call null, true
-    partSize      = Math.ceil file.size / streams
-    parts         = []
-    uploaded      = 0
-    last          = false
-
-    window.onbeforeunload = (e) ->
-      message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
-
-      if e
-        e.returnValue = message
-      return message
-
-    i = 1
-    while i <= streams
-      parts.push
-        from: partSize * (i-1)
-        to:   partSize * i
-        size: partSize
-        part: i
-        chunksQty: if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
-      i++
-
-
-    end = (error, data) ->
-      console.timeEnd('insert') if self.debug
-      window.onbeforeunload = null
-      result.progress.set 0
-      onUploaded and onUploaded.call self, error, data
-
-    if onBeforeUpload
-      chres = onBeforeUpload.call file
-      if chres isnt true
-        end new Meteor.Error(500, if _.isString(chres) then chres else "onBeforeUpload() returned false"), null
-        return false
-
-    upload = (filePart, part, chunksQtyInPart, fileReader) ->
-      currentChunk = 1
-      first = true
-      console.time("insertPart#{part}") if @debug
-
-      fileReader.onload = (chunk) ->
-        ++totalSentChunks
-        progress = (uploaded / file.size) * 100
-        result.progress.set progress
-        onProgress and onProgress(progress)
-
-        uploaded   += self.chunkSize
-        arrayBuffer = chunk.srcElement or chunk.target
-        unitArray   = new Uint8Array arrayBuffer.result
-        last        = (part is streams and currentChunk >= chunksQtyInPart)
-
-
-        if chunksQtyInPart is 1
-          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
-            if data.last
-              end error, data
+      Tracker.autorun ->
+        if Meteor.status().connected
+          result.continue()
+          console.info "Meteor.Files Debugger: Connection established continue() upload" if self.debug
         else
-          Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
-            if not result.onPause.get()
-              if data.chunk + 1 <= chunksQtyInPart
-                from         = currentChunk * self.chunkSize
-                to           = from + self.chunkSize
+          result.pause()
+          console.info "Meteor.Files Debugger: Connection error set upload on pause()" if self.debug
 
-                fileReader.readAsArrayBuffer filePart.slice from, to
-                currentChunk = ++data.chunk
-              else if data.last
+      streams         = 1 if not streams
+      totalSentChunks = 0
+
+      fileData      =
+        size: file.size
+        type: file.type
+        name: file.name
+        ext:  file.name.split('.').pop()
+        extension: file.name.split('.').pop()
+
+      file = _.extend file, fileData
+
+      console.time('insert') if @debug
+
+      randFileName  = @namingFunction.call null, true
+      partSize      = Math.ceil file.size / streams
+      parts         = []
+      uploaded      = 0
+      last          = false
+
+      window.onbeforeunload = (e) ->
+        message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
+
+        if e
+          e.returnValue = message
+        return message
+
+      i = 1
+      while i <= streams
+        parts.push
+          from: partSize * (i-1)
+          to:   partSize * i
+          size: partSize
+          part: i
+          chunksQty: if @chunkSize < partSize then Math.ceil(partSize / @chunkSize) else 1
+        i++
+
+
+      end = (error, data) ->
+        console.timeEnd('insert') if self.debug
+        window.onbeforeunload = null
+        result.progress.set 0
+        onUploaded and onUploaded.call self, error, data
+
+      if onBeforeUpload
+        chres = onBeforeUpload.call file
+        if chres isnt true
+          end new Meteor.Error(500, if _.isString(chres) then chres else "onBeforeUpload() returned false"), null
+          return false
+
+      upload = (filePart, part, chunksQtyInPart, fileReader) ->
+        currentChunk = 1
+        first = true
+        console.time("insertPart#{part}") if @debug
+
+        fileReader.onload = (chunk) ->
+          ++totalSentChunks
+          progress = (uploaded / file.size) * 100
+          result.progress.set progress
+          onProgress and onProgress(progress)
+
+          uploaded   += self.chunkSize
+          arrayBuffer = chunk.srcElement or chunk.target
+          unitArray   = new Uint8Array arrayBuffer.result
+          last        = (part is streams and currentChunk >= chunksQtyInPart)
+
+
+          if chunksQtyInPart is 1
+            Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
+              if data.last
                 end error, data
-            else
-              result.continueFrom.push () ->
+          else
+            Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
+              if not result.onPause.get()
                 if data.chunk + 1 <= chunksQtyInPart
                   from         = currentChunk * self.chunkSize
                   to           = from + self.chunkSize
@@ -551,17 +541,27 @@ class Meteor.Files
                   currentChunk = ++data.chunk
                 else if data.last
                   end error, data
-        first = false
+              else
+                result.continueFrom.push () ->
+                  if data.chunk + 1 <= chunksQtyInPart
+                    from         = currentChunk * self.chunkSize
+                    to           = from + self.chunkSize
 
-      fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
+                    fileReader.readAsArrayBuffer filePart.slice from, to
+                    currentChunk = ++data.chunk
+                  else if data.last
+                    end error, data
+          first = false
 
-    for part, i in parts
-      part = parts[i]
-      fileReader = new FileReader
-      upload.call null, file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader
-      --i
+        fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
 
-    return result
+      for part, i in parts
+        part = parts[i]
+        fileReader = new FileReader
+        upload.call null, file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader
+        --i
+
+      return result
   else
     undefined
 
