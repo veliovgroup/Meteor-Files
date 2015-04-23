@@ -43,7 +43,7 @@ API
 ========
 ##### `new Meteor.Files([config])` [*Isomorphic*]
 
-__config is optional object with next properties:__
+__`config` is optional object with next properties:__
  - `storagePath` **String** - Storage path on file system
     * Default value: `/assets/app/uploads`
  - `collectionName` **String** - Collection name
@@ -165,7 +165,7 @@ Template Helper
 ==========
 To get download URL for file, you only need `fileRef` object, so there is no need for subscription
 ```jade
-a(href="{{fileURL fileRef}}?download=true" target-"_parent" download) {{fileRef.name}}
+a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.name}}
 ```
 
 Methods
