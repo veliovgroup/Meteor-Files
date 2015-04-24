@@ -611,7 +611,7 @@ class Meteor.Files
             'Cache-Control':        self.cacheControl
             'Content-Type':         self.currentFile.type
             'Content-Encoding':     'binary'
-            'Content-Disposition':  'attachment; filename=' + encodeURI self.currentFile.name + '; charset=utf-8'
+            'Content-Disposition':  "attachment; filename=\"#{encodeURI self.currentFile.name}\"; charset=utf-8"
             'Content-Length':       self.currentFile.size
           resp.write file
           resp.end()
@@ -645,7 +645,7 @@ class Meteor.Files
                 'Cache-Control':        'no-cache'
                 'Content-Type':         self.currentFile.type
                 'Content-Encoding':     'binary'
-                'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+                'Content-Disposition':  "attachment; filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
                 'Content-Length':       if result.Start == result.End then 0 else (result.End - result.Start + 1);
                 'Accept-Ranges':        'bytes'
               stream.pipe resp
@@ -657,7 +657,7 @@ class Meteor.Files
               'Cache-Control':        self.cacheControl
               'Content-Type':         self.currentFile.type
               'Content-Encoding':     'binary'
-              'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+              'Content-Disposition':  "attachment; filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
               'Content-Length':       self.currentFile.size
               'Accept-Ranges':        'bytes'
             stream.pipe resp
@@ -668,7 +668,7 @@ class Meteor.Files
             'Cache-Control':        self.cacheControl
             'Content-Type':         self.currentFile.type
             'Content-Encoding':     'binary'
-            'Content-Disposition':  "attachment; filename=#{encodeURI(self.currentFile.name)}; charset=utf-8"
+            'Content-Disposition':  "attachment; filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
             'Content-Length':       self.currentFile.size
           stream.pipe resp
 
