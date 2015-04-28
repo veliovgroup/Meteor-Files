@@ -596,15 +596,25 @@ class Meteor.Files
   ###
   download: if Meteor.isServer then (self) ->
     console.info "Meteor.Files Debugger: [download()]" if @debug
-    check self.currentFile, Object
+
     if Meteor.isServer
       resp = @response
 
-      if self.debug
-        console.info "======================|Headers for: #{self.currentFile.path}|======================"
-        console.info @request.headers
+      unless _.isObject(self.currentFile) and fs.existsSync self.currentFile.path
+        if self.debug
+          console.info "======================|404|======================"
+          console.info @request.headers
 
-      if fs.existsSync self.currentFile.path
+        resp.writeHead 404,
+          "Content-Type": "text/plain"
+        resp.write "File Not Found :("
+        resp.end()
+      else
+
+        if self.debug
+          console.info "======================|Headers for: #{self.currentFile.path}|======================"
+          console.info @request.headers
+
         if @params.query.download and @params.query.download == 'true'
           file = fs.readFileSync self.currentFile.path
           resp.writeHead 200, 
@@ -671,12 +681,6 @@ class Meteor.Files
             'Content-Disposition':  "attachment; filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
             'Content-Length':       self.currentFile.size
           stream.pipe resp
-
-      else
-        resp.writeHead 404,
-          "Content-Type": "text/plain"
-        resp.write "File Not Found :("
-        resp.end()
 
     else
       new Meteor.Error 500, "Can't [download()] on client!"
