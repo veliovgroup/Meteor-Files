@@ -41,9 +41,9 @@ meteor add ostrio:files
 
 API
 ========
-##### `new Meteor.Files([config])` [*Isomorphic*]
+###### `new Meteor.Files([config])` [*Isomorphic*]
 
-__`config` is optional object with next properties:__
+`config` is __optional__ object with next properties:
  - `storagePath` **String** - Storage path on file system
     * Default value: `/assets/app/uploads`
  - `collectionName` **String** - Collection name
@@ -92,7 +92,7 @@ myFiles.findOne(fileRef._id).link()   # Get download link
 myFiles.findOne(fileRef._id).remove() # Remove file
 ```
 
-##### File streaming:
+###### File streaming:
 To stream file add `?play=true` query to download link.
 ```coffeescript
 audio = new Meteor.Files()
@@ -113,7 +113,7 @@ template(name="my")
           source(src="{{fileURL this}}?play=true" type="{{type}}")
 ```
 
-##### File download:
+###### File download:
 To download file use `fileURL` template helper. Data will be transfered via pipe, - just add `?download=true` query to link, so server will send file directly. Use `?download=true` query for smaller files, for big files - just use plain link without query.
 ```coffeescript
 uploads = new Meteor.Files()
@@ -134,7 +134,7 @@ template(name="my")
 ```
 
 
-##### Current schema:
+###### Current schema:
 ```coffeescript
 name:
   type: String
@@ -170,8 +170,8 @@ a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.
 
 Methods
 ==========
-##### `insert(settings)` [*Client*]
-__config is object with next properties:__
+###### `insert(settings)` [*Client*]
+`settings` is __required__ object with next properties:
  - `file` __File__ or **Object** - [REQUIRED] HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
  - `meta` **Object** - Additional data as object, use later for search
  - `onUploaded` **Function** - Callback triggered when upload is finished, with two arguments:
@@ -245,7 +245,7 @@ template(name="my")
         span.sr-only {{progress}}%
 ```
 
-##### `collection`  [*Isomorphic*]
+###### `collection`  [*Isomorphic*]
 Mongo Collection Instance - Use to fetch data. __Do not `remove` or `update`__ this collection
 
 ```coffeescript
@@ -263,7 +263,7 @@ uploads.collection.find({'meta.post': post._id})
 uploads.collection.findOne('hdjJDSHW6784kJS')
 ```
 
-##### `findOne(search)`  [*Isomorphic*]
+###### `findOne(search)`  [*Isomorphic*]
  - `search` **String** or **Object** - `_id` of the file or `Object`
 
 ```coffeescript
@@ -278,7 +278,7 @@ uploads.findOne({'meta.post': post._id}).remove() # Remove file
 uploads.findOne({'meta.post': post._id}).link()   # Get download link
 ```
 
-##### `find(search)`  [*Isomorphic*]
+###### `find(search)`  [*Isomorphic*]
  - `search` **String** or **Object** - `_id` of the file or `Object`
 
 ```coffeescript
@@ -291,7 +291,7 @@ uploads.find({'meta.post': post._id}).get()    # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
 ```
 
-##### `write(buffer, [options], [callback])`  [*Server*]
+###### `write(buffer, [options], [callback])`  [*Server*]
  - `buffer` **Buffer** - Binary data
  - `options` **Object** - Object with next properties:
     * `type` - File mime-type
