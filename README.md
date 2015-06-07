@@ -210,7 +210,7 @@ if Meteor is client
       UIBlock.block i18n.get '_app.uploading' # See 'ostrio:uiblocker' and 'ostrio:i18n' packages
 
       _.each e.currentTarget.files, (file) ->
-        uploads.insert file
+        uploads.insert
           file: file
           meta:
             post: post._id # Add meta object with reference to blog post
