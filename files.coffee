@@ -18,7 +18,7 @@ _insts = {}
 @description Create object with only needed props
 ###
 rcp = (obj) ->
-  o = {
+  o =
     currentFile:    obj.currentFile
     search:         obj.search
     storagePath:    obj.storagePath
@@ -28,7 +28,6 @@ rcp = (obj) ->
     debug:          obj.debug
     _prefix:        obj._prefix
     cacheControl:   obj.cacheControl
-  }
   return o
 
 ###
@@ -157,6 +156,7 @@ class Meteor.Files
       _methods = {}
 
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
+        check inst, Object
         console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if self.debug
         self.remove.call cp(_insts[inst._prefix], inst), inst.search
 
@@ -168,6 +168,7 @@ class Meteor.Files
         check first, Boolean
         check chunksQty, Number
         check currentChunk, Number
+        check totalSentChunks, Number
         check randFileName, String
         check part, Number
         check partsQty, Number
