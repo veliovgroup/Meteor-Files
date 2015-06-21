@@ -41,23 +41,24 @@ meteor add ostrio:files
 
 API
 ========
-###### `new Meteor.Files([config])` [*Isomorphic*]
+###### `new Meteor.Files([config])` [{*Isomorphic*}]
 
 `config` is __optional__ object with next properties:
- - `storagePath` **String** - Storage path on file system
+ - `storagePath` {*String*} - Storage path on file system
     * Default value: `/assets/app/uploads`
- - `collectionName` **String** - Collection name
+ - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
- - `downloadRoute` **String** - Server Route used to retrieve files
+ - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` **Object** - Collection Schema (*Not editable for current release*)
- - `chunkSize` **Number** - Upload chunk size
+ - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
+ - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
- - `namingFunction` **Function** - Function which returns `String`
+ - `namingFunction` {*Function*} - Function which returns `String`
     * Default value: `String.rand`
- - `permissions` **Number** - Permissions or access rights in octal, like `0755` or `0777`
- - `onbeforeunloadMessage` **String** or **Function** - Message shown to user when closing browser's window or tab, while upload in the progress
- - `debug` **Boolean** - Turn on/of debugging and extra logging
+ - `permissions` {*Number*} - Permissions or access rights in octal, like `0755` or `0777`
+ - `onbeforeunloadMessage` {*String* or *Function*} - Message shown to user when closing browser's window or tab, while upload in the progress
+ - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client
+ - `debug` {*Boolean*} - Turn on/of debugging and extra logging
     * Default value: `false`
 
 ```coffeescript
@@ -68,6 +69,7 @@ myFiles = new Meteor.Files
   collectionName: 'myFiles'
   chunkSize: 256*128
   permissions: 0o777
+  allowClientCode: true
   onbeforeunloadMessage: ->
     i18n.get '_app.abortUpload' # See 'ostrio:i18n' package
 
@@ -148,6 +150,25 @@ meta:
   type: Object
   blackbox: true
   optional: true
+versions:
+  type: Object
+  blackbox: true
+
+  ###
+  Example
+  original:
+    path: String
+    size: Number
+    type: String
+    extension: String
+  ...
+  other:
+    path: String
+    size: Number
+    type: String
+    extension: String
+  ###
+
 userId:
   type: String
   optional: true
@@ -163,34 +184,120 @@ size:
 
 Template Helper
 ==========
-To get download URL for file, you only need `fileRef` object, so there is no need for subscription
+To get download URL for file, you only need `fileRef` object, so there is no need for subscription:
 ```jade
 a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.name}}
+```
+
+To get specific version of the file use second argument `version`:
+```jade
+a(href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download) {{fileRef.name}}
+```
+
+To display thumbnail:
+```jade
+img(src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}")
+```
+
+To stream video:
+```jade
+video(width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'videoPoster'}}")
+  source(src="{{fileURL fileRef 'ogg'}}?play=true" type="{{fileRef.versions.ogg.type}}")
+  source(src="{{fileURL fileRef 'mp4'}}?play=true" type="{{fileRef.versions.mp4.type}}")
+  source(src="{{fileURL fileRef 'webm'}}?play=true" type="{{fileRef.versions.webm.type}}")
+```
+
+__Note!__: There is no build-in way for image or video resizing, encoding and re-sampling, below example how you can multiple file versions:
+```coffeescript
+FilesCollection = new Meteor.Files()
+
+if Meteor.isClient
+  'change #upload': (e, template) ->
+    _.each e.currentTarget.files, (file) ->
+      Collections.PostsFiles.insert 
+        file: file
+        onUploaded: (error, fileObj) ->
+          if error
+            alert error.message
+            throw Meteor.log.warn "File Upload Error", error
+  
+          template.$(e.target).val('')
+          template.$(e.currentTarget).val('')
+
+          Meteor.call 'convertVideo', fileObj, () ->
+            alert "File \"#{fileObj.name}\" successfully uploaded"
+        onProgress: _.throttle (progress) ->
+          template.$('input#progress').val progress
+        ,
+          500
+        onBeforeUpload: () ->
+          if ['ogg', 'mp4', 'avi', 'webm'].inArray(@ext) and @size < 512 * 1048 * 1048
+            true
+          else
+            "Please upload file in next formats: 'ogg', 'mp4', 'avi', 'webm' with size less than 512 Mb. You have tried to upload file with \"#{@ext}\" extension and with \"#{Math.round((@size/(1024*1024)) * 100) / 100}\" Mb"
+        streams: 8
+
+if Meteor.isServer
+  ###
+  @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
+  ###
+  bound = Meteor.bindEnvironment (callback) ->
+    return callback()
+
+  ###
+  @description Require "fs-extra" npm package
+  ###
+  fs = Npm.require "fs-extra"
+
+  Meteor.methods
+    convertVideo: (fileRef) ->
+      check fileRef, Object
+
+      sourceFile = ffmpeg(fileRef.path).noProfile()
+
+      formats =
+        ogg: true
+        mp4: true
+        webm: true
+
+      _.each formats, (convert, format) ->
+        file = _.clone sourceFile
+        bound ->
+          version = file.comeHowConvertVideoAndReturnFileData(format)
+          upd = 
+            $set: {}
+          upd['$set']['versions.' + name] = 
+            path: version.path
+            size: version.size
+            type: version.type
+            extension: version.extension
+          FilesCollection.collection.update fileRef._id, upd
+      return true
 ```
 
 Methods
 ==========
 ###### `insert(settings)` [*Client*]
 `settings` is __required__ object with next properties:
- - `file` __File__ or **Object** - [REQUIRED] HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
- - `meta` **Object** - Additional data as object, use later for search
- - `onUploaded` **Function** - Callback triggered when upload is finished, with two arguments:
+ - `file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+ - `meta` {*Object*} - Additional data as object, use later for search
+ - `onUploaded` {*Function*} - Callback triggered when upload is finished, with two arguments:
     * `error`
     * `fileRef` - see __Current schema__ section above
- - `onProgress` **Function** - Callback triggered when chunk is sent, with only argument:
-    * `progress` **Number** - Current progress from `0` to `100`
- - `onBeforeUpload` **Function** - Callback triggered right before upload is started, with __no arguments__:
+ - `onProgress` {*Function*} - Callback triggered when chunk is sent, with only argument:
+    {* `progress` *Number*} - Current progress from `0` to `100`
+ - `onBeforeUpload` {*Function*} - Callback triggered right before upload is started, with __no arguments__:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
     * __return__ `true` to continue
     * __return__ `false` to abort upload
- - `streams` **Number** - Quantity of parallel upload streams
+ - `streams` {*Number*} - Quantity of parallel upload streams
 
-Returns **Object**, with properties:
- - `onPause` **ReactiveVar** - Is upload process on the pause?
- - `progress` **ReactiveVar** - Upload progress in pro-cents 
- - `pause` **Function** - Pause upload process
- - `continue` **Function** - Continue paused upload process
- - `toggleUpload` **Function** - Toggle `continue`/`pause` if upload process
+Returns {*Object*}, with properties:
+ - `onPause` {*ReactiveVar*} - Is upload process on the pause?
+ - `progress` {*ReactiveVar*} - Upload progress in percents
+ - `pause` {*Function*} - Pause upload process
+ - `continue` {*Function*} - Continue paused upload process
+ - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload process
   
 
 ```coffeescript
@@ -200,10 +307,10 @@ uploads = new Meteor.Files() # Create Meteor.Files instance
 
 if Meteor is client
   # Let's create progress-bar
-  prgrs = new ReactiveVar false
+  currentUploadProgress = new ReactiveVar false
   Template.my.helpers
     progress: ->
-      prgrs.get()
+      currentUploadProgress.get()
 
   Template.my.events
     'change #file': (e) ->
@@ -218,12 +325,12 @@ if Meteor is client
           onUploaded: (error, fileObj) ->
             if not error
               doSomething fileRef.path, post._id, fileRef
-            prgrs.set false
+            currentUploadProgress.set false
             $(e.target).val('')
             UIBlock.unblock()
           
           onProgress: _.throttle (progress) ->
-            prgrs.set progress
+            currentUploadProgress.set progress
           ,
             500
 
@@ -264,7 +371,7 @@ uploads.collection.findOne('hdjJDSHW6784kJS')
 ```
 
 ###### `findOne(search)`  [*Isomorphic*]
- - `search` **String** or **Object** - `_id` of the file or `Object`
+ - `search` {*String* or *Object*} - `_id` of the file or `Object`
 
 ```coffeescript
 uploads = new Meteor.Files()
@@ -279,7 +386,7 @@ uploads.findOne({'meta.post': post._id}).link()   # Get download link
 ```
 
 ###### `find(search)`  [*Isomorphic*]
- - `search` **String** or **Object** - `_id` of the file or `Object`
+ - `search` {*String* or *Object*} - `_id` of the file or `Object`
 
 ```coffeescript
 uploads = new Meteor.Files()
@@ -292,8 +399,8 @@ uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
 ```
 
 ###### `write(buffer, [options], [callback])`  [*Server*]
- - `buffer` **Buffer** - Binary data
- - `options` **Object** - Object with next properties:
+ - `buffer` {*Buffer*} - Binary data
+ - `options` {*Object*} - Object with next properties:
     * `type` - File mime-type
     * `size` - File size
     * `meta` - Additional data as object, use later for search
@@ -301,7 +408,7 @@ uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
  - `callback(error, fileObj)`
 
 Returns:
- - `fileObj` **Object**
+ - `fileObj` {*Object*}
 
 ```coffeescript
 uploads = new Meteor.Files()
