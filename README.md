@@ -50,7 +50,7 @@ API
     * Default value: `MeteorUploadFiles`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` {*Object* - Collection Schema (*Not editable for current release*})
+ - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
  - `namingFunction` {*Function*} - Function which returns `String`
@@ -218,23 +218,23 @@ if Meteor.isClient
         file: file
         onUploaded: (error, fileObj) ->
           if error
-            toastr.error error.message, "Wrong file"
+            alert error.message
             throw Meteor.log.warn "File Upload Error", error
   
           template.$(e.target).val('')
           template.$(e.currentTarget).val('')
 
           Meteor.call 'convertVideo', fileObj, () ->
-            alert "\"#{fileObj.name}\" successfully uploaded", "File uploaded"
+            alert "File \"#{fileObj.name}\" successfully uploaded"
         onProgress: _.throttle (progress) ->
           template.$('input#progress').val progress
         ,
           500
         onBeforeUpload: () ->
-          if ['ogg', 'mp4', 'avi', 'webm'].inArray(@ext) and @size < 512 {* 1048 *} 1048
+          if ['ogg', 'mp4', 'avi', 'webm'].inArray(@ext) and @size < 512 * 1048 * 1048
             true
           else
-            "Please upload file in next formats: 'ogg', 'mp4', 'avi', 'webm' with size less than 512 Mb. You have tried to upload file with \"#{@ext}\" extension and with \"#{Math.round((@size/(1024{*1024)) *} 100) / 100}\" Mb"
+            "Please upload file in next formats: 'ogg', 'mp4', 'avi', 'webm' with size less than 512 Mb. You have tried to upload file with \"#{@ext}\" extension and with \"#{Math.round((@size/(1024*1024)) * 100) / 100}\" Mb"
         streams: 8
 
 if Meteor.isServer
@@ -261,9 +261,9 @@ if Meteor.isServer
         webm: true
 
       _.each formats, (convert, format) ->
-        img = _.clone image
+        file = _.clone sourceFile
         bound ->
-          version = sourceFile.comeHowConvertVideoAndReturnFileData(format)
+          version = file.comeHowConvertVideoAndReturnFileData(format)
           upd = 
             $set: {}
           upd['$set']['versions.' + name] = 
@@ -294,7 +294,7 @@ Methods
 
 Returns {*Object*}, with properties:
  - `onPause` {*ReactiveVar*} - Is upload process on the pause?
- - `progress` {*ReactiveVar*} - Upload progress in pro-cents 
+ - `progress` {*ReactiveVar*} - Upload progress in percents
  - `pause` {*Function*} - Pause upload process
  - `continue` {*Function*} - Continue paused upload process
  - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload process
