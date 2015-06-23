@@ -626,7 +626,7 @@ class Meteor.Files
       if self.currentFile
         fileRef = if not version or version is 'original' then {path: self.currentFile.path, size: self.currentFile.size} else self.currentFile.versions[version]
       else
-        fileRef = falset
+        fileRef = false
 
       unless _.isObject(fileRef) and fs.existsSync fileRef.path
         if self.debug
