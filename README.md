@@ -73,6 +73,8 @@ myFiles = new Meteor.Files
   onbeforeunloadMessage: ->
     i18n.get '_app.abortUpload' # See 'ostrio:i18n' package
 
+fileObject = myFiles.findOne 'recordId'
+
 if Meteor.isClient
   myFiles.collection.subscribe "MeteorFileSubs", postId.get()
 
@@ -89,9 +91,12 @@ myFiles.find({'meta.userId': Meteor.userId()}).remove() # Remove all files on th
 myFiles.remove({'meta.userId': Meteor.userId()})        # Remove all files returned by passed search
 myFiles.remove(fileRef._id)           # Remove file by ID
 
-myFiles.findOne(fileRef._id).get()    # Get fileRef
-myFiles.findOne(fileRef._id).link()   # Get download link
-myFiles.findOne(fileRef._id).remove() # Remove file
+myFiles.findOne(fileRef._id).get()            # Get fileRef
+myFiles.findOne(fileRef._id).link()           # Get download link
+myFiles.findOne(fileRef._id).link('version')  # Get download link of specific version
+myFiles.link(fileObject)                      # Get download link
+myFiles.link(fileObject, 'version')           # Get download link of specific version
+myFiles.findOne(fileRef._id).remove()         # Remove file
 ```
 
 ###### File streaming:
@@ -378,7 +383,7 @@ uploads = new Meteor.Files()
 
 uploads.findOne('hdjJDSHW6784kJS').get()    # Get fileRef
 uploads.findOne('hdjJDSHW6784kJS').remove() # Remove file
-uploads.findOne('hdjJDSHW6784kJS').link()   # Get download link
+uploads.findOne('hdjJDSHW6784kJS').link('version')   # Get download link
 
 uploads.findOne({'meta.post': post._id}).get()    # Get fileRef
 uploads.findOne({'meta.post': post._id}).remove() # Remove file
@@ -422,5 +427,5 @@ uploads.write buffer
 ,
   (err, fileObj) ->
     # Download File
-    window.open uploads.link(fileObj), '_parent'
+    window.open uploads.link(fileObj, 'original'), '_parent'
 ```
