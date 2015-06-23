@@ -185,7 +185,7 @@ class Meteor.Files
         check partsQty, Number
         check fileSize, Number
 
-        console.info "Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
+        console.info "Meteor.Files Debugger: Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
         i = 0
         binary = ''
@@ -232,7 +232,7 @@ class Meteor.Files
           fs.appendFileSync pathPart, binary, 'binary'
 
         if (chunksQty is currentChunk) and self.debug
-          console.info "The part ##{part} of file #{fileName} (binary) was saved to #{pathPart}"
+          console.info "Meteor.Files Debugger: The part ##{part} of file #{fileName} (binary) was saved to #{pathPart}"
 
         if last
           if partsQty > 1
@@ -246,7 +246,7 @@ class Meteor.Files
 
           fs.chmod path, self.permissions
           result._id = self.collection.insert _.clone result
-          console.info "The file #{fileName} (binary) was saved to #{path}" if self.debug
+          console.info "Meteor.Files Debugger: The file #{fileName} (binary) was saved to #{path}" if self.debug
         return result
 
       Meteor.methods _methods
@@ -257,6 +257,8 @@ class Meteor.Files
         _id: search
     else
       @search = search
+
+    @search
 
   ###
   @server
@@ -269,7 +271,7 @@ class Meteor.Files
   @returns {Files} - Return this
   ###
   write: if Meteor.isServer then (buffer, opts, callback) ->
-    console.info "[write(buffer, #{opts}, callback)]" if @debug
+    console.info "Meteor.Files Debugger: [write(buffer, #{opts}, callback)]" if @debug
     check opts, Match.Optional Object
     check callback, Match.Optional Function
 
@@ -293,7 +295,7 @@ class Meteor.Files
       _storagePath:    @storagePath
       _downloadRoute:  @downloadRoute
 
-    console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
+    console.info "Meteor.Files Debugger: The file #{fileName} (binary) was added to #{@collectionName}" if @debug
 
     callback and callback null, result
 
@@ -726,10 +728,13 @@ class Meteor.Files
   @description Returns link
   @returns {String}
   ###
-  link: (fileRef, version = original) ->
+  link: (fileRef, version = 'original') ->
     console.info "Meteor.Files Debugger: [link()]" if @debug
-    check @currentFile or fileRef, Object
-    return if fileRef then "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{fileRef._id}.#{fileRef.extension}" else "#{@currentFile._downloadRoute}/#{@currentFile._collectionName}/#{@currentFile._id}/#{version}/#{@currentFile._id}.#{@currentFile.extension}"
+    if _.isString fileRef
+      version = fileRef 
+      fileRef = undefined
+    return undefined if not fileRef or @currentFile
+    return if fileRef and _.isObject fileRef then "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}" else "#{@currentFile._downloadRoute}/#{@currentFile._collectionName}/#{@currentFile._id}/#{version}/#{@currentFile._id}.#{@currentFile.extension}"
 
 if Meteor.isClient
   ###
