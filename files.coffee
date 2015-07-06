@@ -624,10 +624,9 @@ class Meteor.Files
 
     if Meteor.isServer
       resp = @response
-      
       if self.currentFile
-        if _.has self.currentFile, 'versions'
-          fileRef = if not version or version is 'original' or not _.has self.currentFile.versions, version then {path: self.currentFile.path, size: self.currentFile.size} else self.currentFile.versions[version]
+        if _.has(self.currentFile, 'versions') and _.has self.currentFile.versions, version
+          fileRef = self.currentFile.versions[version]
         else
           fileRef = self.currentFile
       else
@@ -638,14 +637,13 @@ class Meteor.Files
           console.info "======================|404|======================"
           console.info @request.headers
 
+        text = "File Not Found :("
         resp.writeHead 404,
-          "Content-Type": "text/plain"
-        resp.write "File Not Found :("
-        resp.end()
+          'Content-Length': text.length
+          'Content-Type':   "text/plain"
+        resp.end text
 
       else if self.currentFile
-
-
         if self.debug
           console.info "======================|Headers for: #{self.currentFile.path}|======================"
           console.info @request.headers
@@ -658,8 +656,7 @@ class Meteor.Files
             'Content-Encoding':     'binary'
             'Content-Disposition':  "attachment; filename=\"#{encodeURI self.currentFile.name}\"; charset=utf-8"
             'Content-Length':       fileRef.size
-          resp.write file
-          resp.end()
+          resp.end file
 
         else if @params.query.play and @params.query.play == 'true'
           if @request.headers.range
@@ -713,7 +710,7 @@ class Meteor.Files
             'Cache-Control':        self.cacheControl
             'Content-Type':         fileRef.type
             'Content-Encoding':     'binary'
-            'Content-Disposition':  "attachment; filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
+            'Content-Disposition':  "filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
             'Content-Length':       fileRef.size
           stream.pipe resp
 
@@ -728,6 +725,7 @@ class Meteor.Files
   @class Meteor.Files
   @name link
   @param {Object} fileRef - File reference object
+  @param {String} version - [Optional] Version of file you would like to request
   @description Returns link
   @returns {String}
   ###
@@ -741,8 +739,14 @@ class Meteor.Files
 
 if Meteor.isClient
   ###
+  @client
+  @TemplateHelper
+  @name fileURL
+  @param {Object} fileRef - File reference object
+  @param {String} version - [Optional] Version of file you would like to request
   @description Get download URL for file by fileRef, even without subscription
   @example {{fileURL fileRef}}
+  @returns {String}
   ###
   Template.registerHelper 'fileURL', (fileRef, version) ->
     version = if not _.isString version then 'original' else version

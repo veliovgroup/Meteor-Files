@@ -195,11 +195,13 @@ a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.
 ```
 
 To get specific version of the file use second argument `version`:
+__Note:__ If requested version of file is not available - the original file will be returned
 ```jade
 a(href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download) {{fileRef.name}}
 ```
 
 To display thumbnail:
+__Note:__ If thumbnail (basically version of the file) is not available the original file will be returned
 ```jade
 img(src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}")
 ```
@@ -207,9 +209,9 @@ img(src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}")
 To stream video:
 ```jade
 video(width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'videoPoster'}}")
-  source(src="{{fileURL fileRef 'ogg'}}?play=true" type="{{fileRef.versions.ogg.type}}")
-  source(src="{{fileURL fileRef 'mp4'}}?play=true" type="{{fileRef.versions.mp4.type}}")
-  source(src="{{fileURL fileRef 'webm'}}?play=true" type="{{fileRef.versions.webm.type}}")
+  source(src="{{fileURL fileRef 'ogg'}}?play=true" type="video/ogg")
+  source(src="{{fileURL fileRef 'mp4'}}?play=true" type="video/mp4")
+  source(src="{{fileURL fileRef 'webm'}}?play=true" type="video/webm")
 ```
 
 __Note!__: There is no build-in way for image or video resizing, encoding and re-sampling, below example how you can multiple file versions:
@@ -219,22 +221,23 @@ FilesCollection = new Meteor.Files()
 if Meteor.isClient
   'change #upload': (e, template) ->
     _.each e.currentTarget.files, (file) ->
-      Collections.PostsFiles.insert 
+      Collections.FilesCollection.insert 
         file: file
         onUploaded: (error, fileObj) ->
           if error
             alert error.message
             throw Meteor.log.warn "File Upload Error", error
-  
           template.$(e.target).val('')
           template.$(e.currentTarget).val('')
 
           Meteor.call 'convertVideo', fileObj, () ->
             alert "File \"#{fileObj.name}\" successfully uploaded"
+
         onProgress: _.throttle (progress) ->
           template.$('input#progress').val progress
         ,
           500
+
         onBeforeUpload: () ->
           if ['ogg', 'mp4', 'avi', 'webm'].inArray(@ext) and @size < 512 * 1048 * 1048
             true
@@ -268,7 +271,7 @@ if Meteor.isServer
       _.each formats, (convert, format) ->
         file = _.clone sourceFile
         bound ->
-          version = file.comeHowConvertVideoAndReturnFileData(format)
+          version = file.someHowConvertVideoAndReturnFileData(format)
           upd = 
             $set: {}
           upd['$set']['versions.' + name] = 
@@ -284,7 +287,7 @@ Methods
 ==========
 ###### `insert(settings)` [*Client*]
 `settings` is __required__ object with next properties:
- - `file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+ - `file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `event.currentTarget.files[0]`
  - `meta` {*Object*} - Additional data as object, use later for search
  - `onUploaded` {*Function*} - Callback triggered when upload is finished, with two arguments:
     * `error`
@@ -302,7 +305,7 @@ Returns {*Object*}, with properties:
  - `progress` {*ReactiveVar*} - Upload progress in percents
  - `pause` {*Function*} - Pause upload process
  - `continue` {*Function*} - Continue paused upload process
- - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload process
+ - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
   
 
 ```coffeescript
@@ -319,7 +322,6 @@ if Meteor is client
 
   Template.my.events
     'change #file': (e) ->
-      UIBlock.block i18n.get '_app.uploading' # See 'ostrio:uiblocker' and 'ostrio:i18n' packages
 
       _.each e.currentTarget.files, (file) ->
         uploads.insert
@@ -332,7 +334,6 @@ if Meteor is client
               doSomething fileRef.path, post._id, fileRef
             currentUploadProgress.set false
             $(e.target).val('')
-            UIBlock.unblock()
           
           onProgress: _.throttle (progress) ->
             currentUploadProgress.set progress
@@ -341,7 +342,13 @@ if Meteor is client
 
           onBeforeUpload: () ->
             # Set Allowed Extensions and max file size
-            ['mp3', 'm4a'].inArray(@ext) and @size < 26214400 # See `ostrio:jsextensions` package
+            allowedExt = ['mp3', 'm4a']
+            allowedMaxSize = 26214400
+            
+            if allowedExt.inArray(@ext) and @size < allowedMaxSize # See `ostrio:jsextensions` package
+              true
+            else
+              "Max upload size is #{Math.round((allowedMaxSize/(1024*1024)) * 100) / 100} Mb. Allowed extensions is #{allowedExt.join(', ')}"
 
           streams: 8
 ```
