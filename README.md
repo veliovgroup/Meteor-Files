@@ -88,8 +88,8 @@ myFiles.find({'meta.userId': Meteor.userId()}).cursor   # Current collection cur
 myFiles.find({'meta.userId': Meteor.userId()}).get()    # Array of fetched rows
 myFiles.find({'meta.userId': Meteor.userId()}).remove() # Remove all files on the cursor
 
-myFiles.remove({'meta.userId': Meteor.userId()})        # Remove all files returned by passed search
-myFiles.remove(fileRef._id)           # Remove file by ID
+myFiles.remove({'meta.userId': Meteor.userId()}) # Remove all files returned by passed search
+myFiles.remove(fileRef._id)                      # Remove file by ID
 
 myFiles.findOne(fileRef._id).get()            # Get fileRef
 myFiles.findOne(fileRef._id).link()           # Get download link
@@ -189,24 +189,24 @@ size:
 
 Template Helper
 ==========
-To get download URL for file, you only need `fileRef` object, so there is no need for subscription:
+###### To get download URL for file, you only need `fileRef` object, so there is no need for subscription:
 ```jade
 a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.name}}
 ```
 
-To get specific version of the file use second argument `version`:
+###### To get specific version of the file use second argument `version`:
 __Note:__ If requested version of file is not available - the original file will be returned
 ```jade
 a(href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download) {{fileRef.name}}
 ```
 
-To display thumbnail:
+###### To display thumbnail:
 __Note:__ If thumbnail (basically version of the file) is not available the original file will be returned
 ```jade
 img(src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}")
 ```
 
-To stream video:
+###### To stream video:
 ```jade
 video(width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'videoPoster'}}")
   source(src="{{fileURL fileRef 'ogg'}}?play=true" type="video/ogg")
@@ -344,7 +344,7 @@ if Meteor is client
             # Set Allowed Extensions and max file size
             allowedExt = ['mp3', 'm4a']
             allowedMaxSize = 26214400
-            
+
             if allowedExt.inArray(@ext) and @size < allowedMaxSize # See `ostrio:jsextensions` package
               true
             else
@@ -388,9 +388,9 @@ uploads.collection.findOne('hdjJDSHW6784kJS')
 ```coffeescript
 uploads = new Meteor.Files()
 
-uploads.findOne('hdjJDSHW6784kJS').get()    # Get fileRef
-uploads.findOne('hdjJDSHW6784kJS').remove() # Remove file
-uploads.findOne('hdjJDSHW6784kJS').link('version')   # Get download link
+uploads.findOne('hdjJDSHW6784kJS').get()            # Get fileRef
+uploads.findOne('hdjJDSHW6784kJS').remove()         # Remove file
+uploads.findOne('hdjJDSHW6784kJS').link('version')  # Get download link
 
 uploads.findOne({'meta.post': post._id}).get()    # Get fileRef
 uploads.findOne({'meta.post': post._id}).remove() # Remove file
