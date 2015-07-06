@@ -626,7 +626,10 @@ class Meteor.Files
       resp = @response
       
       if self.currentFile
-        fileRef = if not version or version is 'original' then {path: self.currentFile.path, size: self.currentFile.size} else self.currentFile.versions[version]
+        if _.has self.currentFile, 'versions'
+          fileRef = if not version or version is 'original' or not _.has self.currentFile.versions, version then {path: self.currentFile.path, size: self.currentFile.size} else self.currentFile.versions[version]
+        else
+          fileRef = self.currentFile
       else
         fileRef = false
 
