@@ -3,7 +3,7 @@ Meteor-Files
 This package allows to:
  - Upload file(s) via DDP
     * Small files
-    * Huge files, tested on 100GB (<small>Note Browser will eat 7%-10% RAM of the file size</small>)
+    * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
@@ -195,13 +195,13 @@ a(href="{{fileURL fileRef}}?download=true" target="_parent" download) {{fileRef.
 ```
 
 ###### To get specific version of the file use second argument `version`:
-<small>__Note:__ If requested version of file is not available - the original file will be returned</small>
+__Note:__ If requested version of file is not available - the original file will be returned
 ```jade
 a(href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download) {{fileRef.name}}
 ```
 
 ###### To display thumbnail:
-<small>__Note:__ If thumbnail (basically version of the file) is not available the original file will be returned</small>
+__Note:__ If thumbnail (basically version of the file) is not available the original file will be returned
 ```jade
 img(src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}")
 ```
@@ -214,7 +214,7 @@ video(width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'v
   source(src="{{fileURL fileRef 'webm'}}?play=true" type="video/webm")
 ```
 
-<small>__Note!__: There is no build-in way for image or video resizing, encoding and re-sampling, below example how you can multiple file versions:</small>
+__Note!__: There is no build-in way for image or video resizing, encoding and re-sampling, below example how you can multiple file versions:
 ```coffeescript
 FilesCollection = new Meteor.Files()
 
