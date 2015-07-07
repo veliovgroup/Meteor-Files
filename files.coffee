@@ -287,6 +287,12 @@ class Meteor.Files
       meta:       opts.meta
       type:       if opts.type then opts.type else 'application/*'
       size:       if opts.size then opts.size else buffer.length
+      versions:
+        original:
+          path: path
+          size: if opts.size then opts.size else buffer.length
+          type: if opts.type then opts.type else 'application/*'
+          extension: extension
       isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
       isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
       isImage:    if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
