@@ -3,6 +3,13 @@ if Meteor.isServer
   @description Require "fs-extra" npm package
   ###
   fs = Npm.require "fs-extra"
+  request = Npm.require "request"
+
+  ###
+  @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
+  ###
+  bound = Meteor.bindEnvironment (callback) ->
+    return callback()
 
 ###
 @object
@@ -265,8 +272,9 @@ class Meteor.Files
   @function
   @class Meteor.Files
   @name write
-  @param {String} path - Path to file
-  @param {String} path - Path to file
+  @param {Buffer} buffer - Binary File's Buffer
+  @param {Object} opts - {fileName: '', type: '', size: 0, meta: {...}}
+  @param {Function} callback - function(error, fileObj){...}
   @description Write buffer to FS and add to Meteor.Files Collection
   @returns {Files} - Return this
   ###
@@ -290,8 +298,8 @@ class Meteor.Files
       versions:
         original:
           path: path
-          size: if opts.size then opts.size else buffer.length
           type: if opts.type then opts.type else 'application/*'
+          size: if opts.size then opts.size else buffer.length
           extension: extension
       isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
       isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
@@ -303,7 +311,6 @@ class Meteor.Files
 
     console.info "Meteor.Files Debugger: The file #{fileName} (binary) was added to #{@collectionName}" if @debug
 
-    callback and callback null, result
 
     if callback
       fs.outputFile path, buffer, 'binary', callback
@@ -311,7 +318,68 @@ class Meteor.Files
       fs.outputFileSync path, buffer, 'binary'
 
     result._id = @collection.insert _.clone result
+
+    callback and callback null, result
     return result
+  else
+    undefined
+
+  ###
+  @server
+  @function
+  @class Meteor.Files
+  @name load
+  @param {String} url - URL to file
+  @param {Object} opts - {fileName: '', meta: {...}}
+  @param {Function} callback - function(error, fileObj){...}
+  @description Download file, write stream to FS and add to Meteor.Files Collection
+  @returns {Files} - Return this
+  ###
+  load: if Meteor.isServer then (url, opts, callback) ->
+    console.info "Meteor.Files Debugger: [load(#{url}, #{opts}, callback)]" if @debug
+    check url, String
+    check opts, Match.Optional Object
+    check callback, Match.Optional Function
+
+    self = @
+
+    randFileName  = @namingFunction.call null, true
+    fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
+    extension     = fileName.split('.').pop()
+    path          = "#{@storagePath}/#{randFileName}.#{extension}"
+
+    request.get(url).on('error', (error)->
+      throw new Meteor.Error 500, "Error on [load(#{url}, #{opts})]; Error:" + JSON.stringify error
+    ).on('response', (response) ->
+      bound ->
+        result        = 
+          name:       fileName
+          extension:  extension
+          path:       path
+          meta:       opts.meta
+          type:       response.headers['content-type']
+          size:       response.headers['content-length']
+          versions:
+            original:
+              path: path
+              type: response.headers['content-type']
+              size: response.headers['content-length']
+              extension: extension
+          isVideo:    response.headers['content-type'].toLowerCase().indexOf("video") > -1
+          isAudio:    response.headers['content-type'].toLowerCase().indexOf("audio") > -1
+          isImage:    response.headers['content-type'].toLowerCase().indexOf("image") > -1
+          _prefix:    self._prefix
+          _collectionName: self.collectionName
+          _storagePath:    self.storagePath
+          _downloadRoute:  self.downloadRoute
+
+        console.info "Meteor.Files Debugger: The file #{fileName} (binary) was loaded to #{@collectionName}" if @debug
+
+        result._id = self.collection.insert _.clone result
+        callback and callback null, result
+
+    ).pipe fs.createOutputStream path
+
   else
     undefined
 

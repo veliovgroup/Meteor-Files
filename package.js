@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.2.5',
+  version: '1.3.0',
   summary: 'Upload, Store and Download small and huge files to/from file system (FS) via DDP and HTTP',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -14,5 +14,6 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  'fs-extra': '0.18.1'
+  'fs-extra': '0.18.1',
+  'request': '2.58.0'
 });

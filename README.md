@@ -19,6 +19,7 @@
    * [findOne()](#findonesearch--isomorphic) [*Isomorphic*]
    * [find()](#findsearch--isomorphic) [*Isomorphic*]
    * [write()](#writebuffer-options-callback--server) [*Server*]
+   * [load()](#loadurl-options-callback--server) [*Server*]
 
 Meteor-Files
 ========
@@ -451,6 +452,29 @@ uploads.write buffer
 , 
   type: 'image/jpeg'
   name: 'MyImage.jpg'
+  meta: 
+    post: post._id
+,
+  (err, fileObj) ->
+    # Download File
+    window.open uploads.link(fileObj, 'original'), '_parent'
+```
+
+###### `load(url, options, callback)`  [*Server*]
+ - `url` {*String*} - Binary data
+ - `options` {*Object*} - Object with next properties:
+    * `meta` - Additional data as object, use later for search
+    * `name` or `fileName` - File name
+ - `callback(error, fileObj)`
+
+Returns:
+ - `fileObj` {*Object*}
+
+```coffeescript
+uploads = new Meteor.Files()
+uploads.load 'http://domain.com/small.png'
+, 
+  name: 'small.png'
   meta: 
     post: post._id
 ,
