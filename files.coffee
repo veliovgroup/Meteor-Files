@@ -288,7 +288,7 @@ class Meteor.Files
     extension     = fileName.split('.').pop()
     path          = "#{@storagePath}/#{randFileName}.#{extension}"
 
-    result        = 
+    result = 
       name:       fileName
       extension:  extension
       path:       path
@@ -301,16 +301,15 @@ class Meteor.Files
           type: if opts.type then opts.type else 'application/*'
           size: if opts.size then opts.size else buffer.length
           extension: extension
-      isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
-      isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
-      isImage:    if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
-      _prefix:    @_prefix
+      isVideo: if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
+      isAudio: if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
+      isImage: if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
+      _prefix: @_prefix
       _collectionName: @collectionName
       _storagePath:    @storagePath
       _downloadRoute:  @downloadRoute
 
     console.info "Meteor.Files Debugger: The file #{fileName} (binary) was added to #{@collectionName}" if @debug
-
 
     if callback
       fs.outputFile path, buffer, 'binary', callback
@@ -352,7 +351,7 @@ class Meteor.Files
       throw new Meteor.Error 500, "Error on [load(#{url}, #{opts})]; Error:" + JSON.stringify error
     ).on('response', (response) ->
       bound ->
-        result        = 
+        result = 
           name:       fileName
           extension:  extension
           path:       path
@@ -365,10 +364,10 @@ class Meteor.Files
               type: response.headers['content-type']
               size: response.headers['content-length']
               extension: extension
-          isVideo:    response.headers['content-type'].toLowerCase().indexOf("video") > -1
-          isAudio:    response.headers['content-type'].toLowerCase().indexOf("audio") > -1
-          isImage:    response.headers['content-type'].toLowerCase().indexOf("image") > -1
-          _prefix:    self._prefix
+          isVideo: response.headers['content-type'].toLowerCase().indexOf("video") > -1
+          isAudio: response.headers['content-type'].toLowerCase().indexOf("audio") > -1
+          isImage: response.headers['content-type'].toLowerCase().indexOf("image") > -1
+          _prefix: self._prefix
           _collectionName: self.collectionName
           _storagePath:    self.storagePath
           _downloadRoute:  self.downloadRoute
@@ -623,8 +622,8 @@ class Meteor.Files
             Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
               if not result.onPause.get()
                 if data.chunk + 1 <= chunksQtyInPart
-                  from         = currentChunk * self.chunkSize
-                  to           = from + self.chunkSize
+                  from = currentChunk * self.chunkSize
+                  to   = from + self.chunkSize
 
                   fileReader.readAsArrayBuffer filePart.slice from, to
                   currentChunk = ++data.chunk
@@ -633,8 +632,8 @@ class Meteor.Files
               else
                 result.continueFrom.push () ->
                   if data.chunk + 1 <= chunksQtyInPart
-                    from         = currentChunk * self.chunkSize
-                    to           = from + self.chunkSize
+                    from = currentChunk * self.chunkSize
+                    to   = from + self.chunkSize
 
                     fileReader.readAsArrayBuffer filePart.slice from, to
                     currentChunk = ++data.chunk
