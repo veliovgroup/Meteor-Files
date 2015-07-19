@@ -14,12 +14,12 @@
    * [Thumbnail Example](#to-display-thumbnail) [*Example*]
    * [Video Streaming Example](#to-stream-video) [*Example*]
  - [General Methods](#methods)
-   * [Insert (Upload) File(s)](#insertsettings-client) [*Client*]
+   * [Insert (Upload) File(s)](#insertsettings-client) [*Client*] - Upload file to server
    * [Collection](#collection--isomorphic) [*Isomorphic*]
    * [findOne()](#findonesearch--isomorphic) [*Isomorphic*]
    * [find()](#findsearch--isomorphic) [*Isomorphic*]
-   * [write()](#writebuffer-options-callback--server) [*Server*]
-   * [load()](#loadurl-options-callback--server) [*Server*]
+   * [write()](#writebuffer-options-callback--server) [*Server*] - Write binary code into FS
+   * [load()](#loadurl-options-callback--server) [*Server*] - Upload file from remote host
 
 Meteor-Files
 ========
@@ -30,9 +30,14 @@ This package allows to:
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
+ - Serving files
+    * Set `public` option to `true` to serve files via your proxy server. like __nginx__
+    * Set `protected` option to `true` to serve files only to authorized users, or to `function()` to check user's permission
+    * Files CRC check (integrity check)
  - Write file in file system
     * Automatically writes uploaded files on FS and special Collection
     * You able to specify `path`, collection name, schema, chunk size and naming function
+    * Store multiply versions of the file, like revisions, image thumbnails or video in different formats, and etc.
  - File streaming from server via HTTP
     * Correct `mime-type` and `Content-Range` headers
     * Correct `206` and `416` responses
@@ -78,12 +83,30 @@ API
     * Default value: `272144`
  - `namingFunction` {*Function*} - Function which returns `String`
     * Default value: `String.rand`
- - `permissions` {*Number*} - Permissions or access rights in octal, like `0755` or `0777`
+ - `permissions` {*Number*} - FS-permissions (access rights) in octal, like `0755` or `0777`
+    * Default value: `0777`
+ - `integrityCheck` {*Boolean*} - CRC file check
+    * Default value: `true`
+ - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()`
+    * Default value: `false`
+    * If function - `function` __context__ has:
+      - `@request` - On __server only__
+      - `@response` - On __server only__
+      - `@user()`
+      - `@userId`
+ - `public` {*Boolean*} - If `true` - files will be stored in folder publicity available for proxy servers inside `uploads` folder, like nginx
+    * Default value: `false`
+    * Route: `http://example.com/uploads/`
+    * __Note:__ Collection can not be `public` and `protected` at the same time!
+    * __Note:__ `integrityCheck` is __not__ guaranteed!
+    * __Note:__ `play` and force `download` features is __not__ guaranteed!
  - `onbeforeunloadMessage` {*String* or *Function*} - Message shown to user when closing browser's window or tab, while upload in the progress
  - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client
  - `debug` {*Boolean*} - Turn on/of debugging and extra logging
     * Default value: `false`
 
+Usage
+========
 ```coffeescript
 myFiles.cacheControl = 'public, max-age=31536000' # Set 'Cache-Control' header for downloads
 
@@ -406,6 +429,7 @@ uploads.collection.findOne('hdjJDSHW6784kJS')
 ```
 
 ###### `findOne(search)`  [*Isomorphic*]
+Find one fileObj matched by passed search
  - `search` {*String* or *Object*} - `_id` of the file or `Object`
 
 ```coffeescript
@@ -421,6 +445,7 @@ uploads.findOne({'meta.post': post._id}).link()   # Get download link
 ```
 
 ###### `find(search)`  [*Isomorphic*]
+Find multiply fileObj matched by passed search
  - `search` {*String* or *Object*} - `_id` of the file or `Object`
 
 ```coffeescript
@@ -433,7 +458,8 @@ uploads.find({'meta.post': post._id}).get()    # Get array of fileRef(s)
 uploads.find({'meta.post': post._id}).remove() # Remove all files on cursor
 ```
 
-###### `write(buffer, [options], [callback])`  [*Server*]
+###### `write(buffer, [options], [callback])` [*Server*]
+Write binary data to FS and store in `Meteor.Files` collection
  - `buffer` {*Buffer*} - Binary data
  - `options` {*Object*} - Object with next properties:
     * `type` - File mime-type
@@ -460,7 +486,8 @@ uploads.write buffer
     window.open uploads.link(fileObj, 'original'), '_parent'
 ```
 
-###### `load(url, options, callback)`  [*Server*]
+###### `load(url, options, callback)` [*Server*]
+Upload file via http from remote host to server's FS and store in `Meteor.Files` collection
  - `url` {*String*} - Binary data
  - `options` {*Object*} - Object with next properties:
     * `meta` - Additional data as object, use later for search
