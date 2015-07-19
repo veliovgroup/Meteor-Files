@@ -31,7 +31,7 @@ This package allows to:
     * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
  - Serving files
-    * Set `public` option to `true` to serve files via your proxy server. like __nginx__
+    * Set `public` option to `true` to serve files via your proxy server, like __nginx__
     * Set `protected` option to `true` to serve files only to authorized users, or to `function()` to check user's permission
     * Files CRC check (integrity check)
  - Write file in file system
