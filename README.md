@@ -87,7 +87,7 @@ API
     * Default value: `0777`
  - `integrityCheck` {*Boolean*} - CRC file check
     * Default value: `true`
- - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()`
+ - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way
     * Default value: `false`
     * If function - `function` __context__ has:
       - `@request` - On __server only__
