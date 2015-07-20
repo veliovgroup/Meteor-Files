@@ -2,8 +2,9 @@ if Meteor.isServer
   ###
   @description Require "fs-extra" npm package
   ###
-  fs = Npm.require "fs-extra"
+  fs      = Npm.require "fs-extra"
   request = Npm.require "request"
+  util    = Npm.require "util"
 
   ###
   @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
@@ -356,7 +357,7 @@ class Meteor.Files
   @description Write buffer to FS and add to Meteor.Files Collection
   @returns {Files} - Return this
   ###
-  write: if Meteor.isServer then (buffer, opts, callback) ->
+  write: if Meteor.isServer then (buffer, opts = {}, callback) ->
     console.info "Meteor.Files Debugger: [write(buffer, #{opts}, callback)]" if @debug
     check opts, Match.Optional Object
     check callback, Match.Optional Function
@@ -366,23 +367,27 @@ class Meteor.Files
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
       path          = "#{@storagePath}/#{randFileName}.#{extension}"
+      
+      opts.type = 'application/*' if not opts.type
+      opts.meta = {} if not opts.meta
+      opts.size = buffer.length if not opts.size
 
       result = 
         name:       fileName
         extension:  extension
         path:       path
         meta:       opts.meta
-        type:       if opts.type then opts.type else 'application/*'
-        size:       if opts.size then opts.size else buffer.length
-        versions:
-          original:
-            path: path
-            type: if opts.type then opts.type else 'application/*'
-            size: if opts.size then opts.size else buffer.length
-            extension: extension
+        type:       opts.type
+        size:       opts.size
         isVideo: if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
         isAudio: if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
         isImage: if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
+        versions:
+          original:
+            path: path
+            type: opts.type
+            size: opts.size
+            extension: extension
         _prefix: @_prefix
         _collectionName: @collectionName
         _storagePath:    @storagePath
@@ -413,7 +418,7 @@ class Meteor.Files
   @description Download file, write stream to FS and add to Meteor.Files Collection
   @returns {Files} - Return this
   ###
-  load: if Meteor.isServer then (url, opts, callback) ->
+  load: if Meteor.isServer then (url, opts = {}, callback) ->
     console.info "Meteor.Files Debugger: [load(#{url}, #{opts}, callback)]" if @debug
     check url, String
     check opts, Match.Optional Object
@@ -425,6 +430,7 @@ class Meteor.Files
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
       path          = "#{@storagePath}/#{randFileName}.#{extension}"
+      opts.meta     = {} if not opts.meta
 
       request.get(url).on('error', (error)->
         throw new Meteor.Error 500, "Error on [load(#{url}, #{opts})]; Error:" + JSON.stringify error
@@ -437,15 +443,15 @@ class Meteor.Files
             meta:       opts.meta
             type:       response.headers['content-type']
             size:       response.headers['content-length']
+            isVideo: response.headers['content-type'].toLowerCase().indexOf("video") > -1
+            isAudio: response.headers['content-type'].toLowerCase().indexOf("audio") > -1
+            isImage: response.headers['content-type'].toLowerCase().indexOf("image") > -1
             versions:
               original:
                 path: path
                 type: response.headers['content-type']
                 size: response.headers['content-length']
                 extension: extension
-            isVideo: response.headers['content-type'].toLowerCase().indexOf("video") > -1
-            isAudio: response.headers['content-type'].toLowerCase().indexOf("audio") > -1
-            isImage: response.headers['content-type'].toLowerCase().indexOf("image") > -1
             _prefix: self._prefix
             _collectionName: self.collectionName
             _storagePath:    self.storagePath
@@ -471,44 +477,63 @@ class Meteor.Files
   @description Add file from FS to Meteor.Files
   @returns {Files} - Return this
   ###
-  # addFile: if Meteor.isServer then (path, opts, callback) ->
-  #   console.info "[addFile(#{path})]" if @debug
-  #   check path, String
-  #   check opts, Match.Optional Object
-  #   check callback, Match.Optional Function
+  addFile: if Meteor.isServer then (path, opts, callback) ->
+    console.info "[addFile(#{path})]" if @debug
 
-  #   try
-  #     fs.statSync path
-  #     buffer    = fs.readFileSync path
-  #     pathParts = path.split '/'
-  #     fileName  = pathParts[pathParts.length - 1]
-  #     ext       = fileName.split('.').pop()
-  #     result    = 
-  #       name:       fileName
-  #       extension:  ext
-  #       path:       path
-  #       meta:       opts.meta
-  #       type:       if opts.type then opts.type else 'application/*'
-  #       size:       if opts.size then opts.size else buffer.length
-  #       isVideo:    if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
-  #       isAudio:    if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
-  #       isImage:    if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
-  #       _prefix:    @_prefix
-  #       _collectionName: @collectionName
-  #       _storagePath:    path.replace "/#{fileName}", ''
-  #       _downloadRoute:  @downloadRoute
+    throw new Meteor.Error 403, "Can not run [addFile()] on public collection" if @public
+    check path, String
+    check opts, Match.Optional Object
+    check callback, Match.Optional Function
 
-  #     result._id = @collection.insert _.clone result
-  #     console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
+    try
+      stats     = fs.statSync path
 
-  #     callback and callback null, result
-  #     return result
+      if stat.isFile()
+        fileSize  = util.inspect(stats).size
+        pathParts = path.split '/'
+        fileName  = pathParts[pathParts.length - 1]
+        ext       = fileName.split('.').pop()
 
-  #   catch error
-  #     callback and callback error, undefined
-  #     return error
-  # else
-  #   undefined
+        opts.type = 'application/*' if not opts.type
+        opts.meta = {} if not opts.meta
+        opts.size = fileSize if not opts.size
+
+        result    = 
+          name:       fileName
+          extension:  ext
+          path:       path
+          meta:       opts.meta
+          type:       opts.type
+          size:       opts.size
+          isVideo:    opts.type.toLowerCase().indexOf("video") > -1
+          isAudio:    opts.type.toLowerCase().indexOf("audio") > -1
+          isImage:    opts.type.toLowerCase().indexOf("image") > -1
+          versions:
+            original:
+              path: path
+              type: opts.type
+              size: opts.size
+              extension: ext
+          _prefix:         @_prefix
+          _collectionName: @collectionName
+          _storagePath:    path.replace "/#{fileName}", ''
+          _downloadRoute:  @downloadRoute
+
+        result._id = @collection.insert _.clone result
+        console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
+
+        callback and callback null, result
+        return result
+      else
+        error = new Meteor.Error 400, "[Files.addFile(#{path})]: File does not exist"
+        callback and callback error
+        return error
+
+    catch error
+      callback and callback error
+      return error
+  else
+    undefined
 
   ###
   @isomorphic
@@ -914,7 +939,7 @@ class Meteor.Files
     if _.isString fileRef
       version = fileRef 
       fileRef = undefined
-    return undefined if not fileRef or @currentFile
+    return undefined if not fileRef or not @currentFile
 
     if fileRef and _.isObject fileRef 
       if @public
