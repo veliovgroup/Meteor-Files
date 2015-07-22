@@ -87,6 +87,8 @@ API
     * Default value: `0777`
  - `integrityCheck` {*Boolean*} - CRC file check
     * Default value: `true`
+ - `strict` {*Boolean*} - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
+    * Default value: `false`
  - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way
     * Default value: `false`
     * If function - `function` __context__ has:

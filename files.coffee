@@ -4,7 +4,6 @@ if Meteor.isServer
   ###
   fs      = Npm.require "fs-extra"
   request = Npm.require "request"
-  util    = Npm.require "util"
 
   ###
   @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
@@ -77,7 +76,7 @@ cp = (to, from) ->
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @integrityCheck, @protected, @public} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @integrityCheck, @protected, @public, @strict} = config if config
 
     @collectionName   = 'MeteorUploadFiles' if not @collectionName
     @chunkSize        = 272144 if not @chunkSize
@@ -88,6 +87,7 @@ class Meteor.Files
     @integrityCheck   = true if not @integrityCheck
     @protected        = false if not @protected
     @public           = false if not @public
+    @strict           = false if not @strict
     @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
     
     if @public and @storagePath
@@ -489,7 +489,7 @@ class Meteor.Files
       stats     = fs.statSync path
 
       if stat.isFile()
-        fileSize  = util.inspect(stats).size
+        fileSize  = stats.size
         pathParts = path.split '/'
         fileName  = pathParts[pathParts.length - 1]
         ext       = fileName.split('.').pop()
@@ -700,9 +700,9 @@ class Meteor.Files
           onUploaded and onUploaded.call self, error, data
 
         if onBeforeUpload
-          chres = onBeforeUpload.call file
-          if chres isnt true
-            end new Meteor.Error(500, if _.isString(chres) then chres else "onBeforeUpload() returned false"), null
+          isUploadAllowed = onBeforeUpload.call file
+          if isUploadAllowed isnt true
+            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "onBeforeUpload() returned false"), null
             return false
 
         upload = (filePart, part, chunksQtyInPart, fileReader) ->
@@ -803,124 +803,113 @@ class Meteor.Files
   download: if Meteor.isServer then (http, version = 'original') ->
     console.info "Meteor.Files Debugger: [download(#{http}, #{version})]" if @debug
 
-    if Meteor.isServer
-      resp = http.response
-
-      if not @public
-        if @currentFile
-          if _.has(@currentFile, 'versions') and _.has @currentFile.versions, version
-            fileRef = @currentFile.versions[version]
-          else
-            fileRef = @currentFile
-        else
-          fileRef = false
-      else
-        search = {}
-        search["versions.#{version}.path"] = "#{@storagePath}/#{http.params.file}"
-        @currentFile = @collection.findOne(search)
-        if @currentFile
+    if not @public
+      if @currentFile
+        if _.has(@currentFile, 'versions') and _.has @currentFile.versions, version
           fileRef = @currentFile.versions[version]
+        else
+          fileRef = @currentFile
+      else
+        fileRef = false
+    else
+      search = {}
+      search["versions.#{version}.path"] = "#{@storagePath}/#{http.params.file}"
+      @currentFile = @collection.findOne(search)
+      if @currentFile
+        fileRef = @currentFile.versions[version]
 
-      unless _.isObject(fileRef) and fs.existsSync fileRef.path
-        if @debug
-          console.info "======================|404|======================"
-          console.info http.request.headers
+    unless _.isObject(fileRef) and fs.existsSync fileRef.path
+      console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [404] File not found: #{fileRef.path}" if @debug
+      text = "File Not Found :("
+      http.response.writeHead 404,
+        'Content-Length': text.length
+        'Content-Type':   "text/plain"
+      http.response.end text
+      return undefined
 
-        text = "File Not Found :("
-        resp.writeHead 404,
+    else if @currentFile
+      self       = @
+      attachment = ''
+      partiral   = false
+      reqRange   = false
+      fileStats  = fs.statSync fileRef.path
+
+      if fileStats.size isnt fileRef.size and not @integrityCheck
+        fileRef.size = fileStats.size
+      else if fileStats.size isnt fileRef.size and @integrityCheck
+        console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [400] Content-Length mismatch!: #{fileRef.path}" if @debug
+        text = "Content-Length mismatch!"
+        http.response.writeHead 400,
+          'Cache-Control': 'no-cache'
           'Content-Length': text.length
           'Content-Type':   "text/plain"
-        resp.end text
+        http.response.end text
         return undefined
 
-      else if @currentFile
+      if http.params.query.download and http.params.query.download == 'true'
+        attachment = 'attachment; '
 
-        if @debug
-          console.info "======================|Headers for: #{fileRef.path}|======================"
-          console.info http.request.headers
+      if http.request.headers.range
+        partiral = true
+        array    = http.request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
+        start    = parseInt array[1]
+        end      = parseInt array[2]
+      else
+        start    = 0
+        end      = fileRef.size
 
-        file = fs.readFileSync fileRef.path
-        if file.length isnt fileRef.size and not @integrityCheck
-          fileRef.size = file.length
-        else if file.length isnt fileRef.size and @integrityCheck
-          console.warn "Content-Length mismatch!: #{fileRef.path}" if @debug
-          text = "Content-Length mismatch!"
-          resp.writeHead 400,
-            'Content-Length': text.length
-            'Content-Type':   "text/plain"
-          resp.end text
+      if partiral or (http.params.query.play and http.params.query.play == 'true')
+        reqRange =
+          Start: if isNaN(start) then 0 else start
+          End: if isNaN(end) then (fileRef.size) else end
+        if not isNaN(start) and isNaN(end)
+          reqRange.Start = start
+          reqRange.End   = fileRef.size
+        if isNaN(start) and not isNaN(end) 
+          reqRange.Start = fileRef.size - end
+          reqRange.End   = fileRef.size
+
+        if (@strict and not http.request.headers.range) or reqRange.Start > fileRef.size or reqRange.End > fileRef.size
+          console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [416] Content-Range is not specified!: #{fileRef.path}" if @debug
+          http.response.writeHead 416,
+            'Content-Range':        "bytes */#{fileRef.size}"
+            'Pragma':               'public'
+            'Expires':              -1
+            'Cache-Control':        'public, must-revalidate, post-check=0, pre-check=0'
+            'Content-Type':         fileRef.type
+            'Accept-Ranges':        'bytes'
+          http.response.end()
+          return undefined
+        else
+          console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
+          _cacheControl = if (http.params.query.play and http.params.query.play == 'true') then 'public, must-revalidate, post-check=0, pre-check=0' else @cacheControl
+          stream = fs.createReadStream fileRef.path, {start: reqRange.Start, end: reqRange.End}
+          stream.on 'open', ->
+            http.response.writeHead 206, 
+              'Content-Range':        "bytes #{reqRange.Start}-#{reqRange.End}/#{fileRef.size}"
+              'Pragma':               'public'
+              'Expires':              -1
+              'Cache-Control':        _cacheControl
+              'Content-Type':         fileRef.type
+              'Content-Disposition':  "#{attachment or 'inline; '}filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
+              'Content-Length':       if reqRange.Start == reqRange.End then 0 else (reqRange.End - reqRange.Start);
+              'Accept-Ranges':        'bytes'
+            stream.pipe http.response
           return undefined
 
-
-        if http.params.query.download and http.params.query.download == 'true'
-          file = fs.readFileSync fileRef.path if not file
-
-          resp.writeHead 200, 
-            'Cache-Control':        @cacheControl
+      else
+        console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [200]: #{fileRef.path}" if @debug
+        stream = fs.createReadStream fileRef.path
+        stream.on 'open', ->
+          http.response.writeHead 200, 
+            'Content-Range':        "bytes 0-#{fileRef.size}/#{fileRef.size}"
+            'Cache-Control':        self.cacheControl
             'Content-Type':         fileRef.type
-            'Content-Encoding':     'binary'
-            'Content-Disposition':  "attachment; filename=\"#{encodeURI @currentFile.name}\"; charset=utf-8"
+            'Content-Disposition':  "#{attachment or 'inline; '}filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
             'Content-Length':       fileRef.size
-          resp.end file
-
-        else if http.params.query.play and http.params.query.play == 'true'
-          if http.request.headers.range
-            array = http.request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
-            start = parseInt array[1]
-            end = parseInt array[2]
-            result =
-              Start: if isNaN(start) then 0 else start
-              End: if isNaN(end) then (fileRef.size - 1) else end
-            
-            if not isNaN(start) and isNaN(end)
-              result.Start = start
-              result.End = fileRef.size - 1
-
-            if isNaN(start) and not isNaN(end) 
-              result.Start = fileRef.size - end
-              result.End = fileRef.size - 1
-
-            if result.Start >= fileRef.size or result.End >= fileRef.size
-              resp.writeHead 416,
-                'Content-Range': "bytes */#{fileRef.size}"
-              resp.end()
-
-            else
-              stream = fs.createReadStream fileRef.path, {start: result.Start, end: result.End}
-              resp.writeHead 206, 
-                'Content-Range':        "bytes #{result.Start}-#{result.End}/#{fileRef.size}"
-                'Cache-Control':        'no-cache'
-                'Content-Type':         fileRef.type
-                'Content-Encoding':     'binary'
-                'Content-Disposition':  "attachment; filename=\"#{encodeURI(@currentFile.name)}\"; charset=utf-8"
-                'Content-Length':       if result.Start == result.End then 0 else (result.End - result.Start + 1);
-                'Accept-Ranges':        'bytes'
-              stream.pipe resp
-
-          else
-            stream = fs.createReadStream fileRef.path
-            resp.writeHead 200, 
-              'Content-Range':        "bytes 0-#{fileRef.size}/#{fileRef.size}"
-              'Cache-Control':        @cacheControl
-              'Content-Type':         fileRef.type
-              'Content-Encoding':     'binary'
-              'Content-Disposition':  "attachment; filename=\"#{encodeURI(@currentFile.name)}\"; charset=utf-8"
-              'Content-Length':       fileRef.size
-              'Accept-Ranges':        'bytes'
-            stream.pipe resp
-
-        else
-          stream = fs.createReadStream fileRef.path
-          resp.writeHead 200, 
-            'Cache-Control':        @cacheControl
-            'Content-Type':         fileRef.type
-            'Content-Encoding':     'binary'
-            'Content-Disposition':  "filename=\"#{encodeURI(@currentFile.name)}\"; charset=utf-8"
-            'Content-Length':       fileRef.size
-          stream.pipe resp
-
-    else
-      new Meteor.Error 500, "Can't [download()] on client!"
+            'Accept-Ranges':        'bytes'
+          stream.pipe http.response
+        return undefined
   else
     undefined
 
@@ -934,23 +923,23 @@ class Meteor.Files
   @description Returns link
   @returns {String}
   ###
-  link: (fileRef, version = 'original') ->
+  link: (fileRef, version = 'original', pub = false) ->
     console.info "Meteor.Files Debugger: [link()]" if @debug
     if _.isString fileRef
       version = fileRef 
       fileRef = undefined
-    return undefined if not fileRef or not @currentFile
+    return undefined if not fileRef and not @currentFile
 
-    if fileRef and _.isObject fileRef 
-      if @public
-        return "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}.#{fileRef.extension}" 
-      else
-        return "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}"
-    else 
-      if @public
-        return "#{@currentFile._downloadRoute}/#{version}-#{@currentFile._id}.#{@currentFile.extension}" 
-      else
-        return "#{@currentFile._downloadRoute}/#{@currentFile._collectionName}/#{@currentFile._id}/#{version}/#{@currentFile._id}.#{@currentFile.extension}"
+    if @public
+      return formatFleURL fileRef or @currentFile, version, true
+    else
+      return formatFleURL fileRef or @currentFile, version, false
+
+formatFleURL = (fileRef, version = 'original', pub = false) ->
+  if pub
+    return "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}.#{fileRef.extension}" 
+  else
+    return "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}"
 
 if Meteor.isClient
   ###
@@ -964,11 +953,12 @@ if Meteor.isClient
   @returns {String}
   ###
   Template.registerHelper 'fileURL', (fileRef, version) ->
+    return undefined if not fileRef or not _.isObject fileRef
     version = if not _.isString version then 'original' else version
     if fileRef._id
       if fileRef._storagePath.indexOf('../web.browser') isnt -1
-        return "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}.#{fileRef.extension}" 
+        return formatFleURL fileRef, version, true
       else
-        return "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}"
+        return formatFleURL fileRef, version, false
     else
       null
