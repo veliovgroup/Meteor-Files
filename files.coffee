@@ -87,8 +87,12 @@ class Meteor.Files
     @integrityCheck   = true if not @integrityCheck
     @protected        = false if not @protected
     @public           = false if not @public
-    @strict           = false if not @strict
+    @strict           = true if not @strict
     @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
+
+    # if @protected and Meteor.isClient
+    #   if not Meteor.cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
+    #     Meteor.cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
     
     if @public and @storagePath
       @downloadRoute  = if @storagePath.indexOf('/') isnt 1 then "/uploads/#{@storagePath}" else "/uploads#{@storagePath}"
@@ -180,6 +184,7 @@ class Meteor.Files
 
     @checkAccess = (http) ->
       if @protected
+        Meteor.cookie.init http
         user = false
 
         if Meteor.isServer
@@ -828,11 +833,10 @@ class Meteor.Files
       return undefined
 
     else if @currentFile
-      self       = @
-      attachment = ''
       partiral   = false
       reqRange   = false
       fileStats  = fs.statSync fileRef.path
+
 
       if fileStats.size isnt fileRef.size and not @integrityCheck
         fileRef.size = fileStats.size
@@ -847,67 +851,76 @@ class Meteor.Files
         return undefined
 
       if http.params.query.download and http.params.query.download == 'true'
-        attachment = 'attachment; '
+        dispositionType = 'attachment; '
+      else
+        dispositionType = 'inline; '
+
+      dispositionName     = "filename=\"#{encodeURI(@currentFile.name)}\"; "
+      dispositionEncoding = 'charset=utf-8'
+      disposition         = dispositionType + dispositionName + dispositionEncoding
+      cacheControl        = if (http.params.query.play and http.params.query.play == 'true') then 'public, must-revalidate, post-check=0, pre-check=0' else @cacheControl
+
 
       if http.request.headers.range
         partiral = true
         array    = http.request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
         start    = parseInt array[1]
         end      = parseInt array[2]
+        if isNaN(end)
+          end    = if (start + 512000) < fileRef.size then start + 512000 else fileRef.size 
+        take     = end - start
       else
-        start    = 0
-        end      = fileRef.size
+        start    = undefined
+        end      = undefined
+        take     = 512000
+
+      console.log "from headers", {start, end}
 
       if partiral or (http.params.query.play and http.params.query.play == 'true')
-        reqRange =
-          Start: if isNaN(start) then 0 else start
-          End: if isNaN(end) then (fileRef.size) else end
-        if not isNaN(start) and isNaN(end)
-          reqRange.Start = start
-          reqRange.End   = fileRef.size
-        if isNaN(start) and not isNaN(end) 
-          reqRange.Start = fileRef.size - end
-          reqRange.End   = fileRef.size
+        reqRange = {start, end}
+        if isNaN(start) and not isNaN(end)
+          reqRange.start = end - take
+          reqRange.end   = end
+        if not isNaN(start) and isNaN(end) 
+          reqRange.start = start
+          reqRange.end   = start + take
 
-        if (@strict and not http.request.headers.range) or reqRange.Start > fileRef.size or reqRange.End > fileRef.size
+        if (@strict and not http.request.headers.range) or reqRange.start >= fileRef.size or reqRange.end > fileRef.size
           console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [416] Content-Range is not specified!: #{fileRef.path}" if @debug
           http.response.writeHead 416,
             'Content-Range':        "bytes */#{fileRef.size}"
             'Pragma':               'public'
             'Expires':              -1
             'Cache-Control':        'public, must-revalidate, post-check=0, pre-check=0'
-            'Content-Type':         fileRef.type
             'Accept-Ranges':        'bytes'
           http.response.end()
           return undefined
         else
           console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
-          _cacheControl = if (http.params.query.play and http.params.query.play == 'true') then 'public, must-revalidate, post-check=0, pre-check=0' else @cacheControl
-          stream = fs.createReadStream fileRef.path, {start: reqRange.Start, end: reqRange.End}
-          stream.on 'open', ->
-            http.response.writeHead 206, 
-              'Content-Range':        "bytes #{reqRange.Start}-#{reqRange.End}/#{fileRef.size}"
-              'Pragma':               'public'
-              'Expires':              -1
-              'Cache-Control':        _cacheControl
-              'Content-Type':         fileRef.type
-              'Content-Disposition':  "#{attachment or 'inline; '}filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
-              'Content-Length':       if reqRange.Start == reqRange.End then 0 else (reqRange.End - reqRange.Start);
-              'Accept-Ranges':        'bytes'
-            stream.pipe http.response
-          return undefined
+          
+          console.log "[206]", {start: reqRange.start, end: reqRange.end}
+          stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+          http.response.writeHead 206, 
+            'Content-Range':        "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
+            'Cache-Control':        'no-cache'
+            'Content-Type':         fileRef.type
+            'Content-Encoding':     'binary'
+            'Content-Disposition':  "attachment; filename=\"#{encodeURI(@currentFile.name)}\"; charset=utf-8"
+            'Content-Length':       if reqRange.start == reqRange.end then 0 else (reqRange.end - reqRange.start + 1);
+            'Accept-Ranges':        'bytes'
+          stream.pipe http.response
 
       else
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [200]: #{fileRef.path}" if @debug
         stream = fs.createReadStream fileRef.path
+        http.response.writeHead 200, 
+          'Content-Range':        "bytes 0-#{fileRef.size}/#{fileRef.size}"
+          'Cache-Control':        cacheControl
+          'Content-Type':         fileRef.type
+          'Content-Disposition':  disposition
+          'Content-Length':       fileRef.size
+          'Accept-Ranges':        'bytes'
         stream.on 'open', ->
-          http.response.writeHead 200, 
-            'Content-Range':        "bytes 0-#{fileRef.size}/#{fileRef.size}"
-            'Cache-Control':        self.cacheControl
-            'Content-Type':         fileRef.type
-            'Content-Disposition':  "#{attachment or 'inline; '}filename=\"#{encodeURI(self.currentFile.name)}\"; charset=utf-8"
-            'Content-Length':       fileRef.size
-            'Accept-Ranges':        'bytes'
           stream.pipe http.response
         return undefined
   else
