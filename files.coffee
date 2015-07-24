@@ -261,7 +261,6 @@ class Meteor.Files
           throw new Meteor.Error 401, '[Meteor.Files] [remove()] Run code from client is not allowed!'
 
       _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize) ->
-        console.info "Meteor.Files Debugger: [MeteorFileWrite] {name: #{randFileName}, meta:#{meta}}" if self.debug
         check unitArray, Match.OneOf Uint8Array, Object
         check fileData, Object
         check meta, Match.Optional Object
@@ -274,6 +273,8 @@ class Meteor.Files
         check partsQty, Number
         check fileSize, Number
 
+        @unblock()
+        console.info "Meteor.Files Debugger: [MeteorFileWrite] {name: #{randFileName}, meta:#{meta}}" if self.debug
         console.info "Meteor.Files Debugger: Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
         i = 0
@@ -317,7 +318,6 @@ class Meteor.Files
           _downloadRoute:  self.downloadRoute
 
         result._id = _newId if self.public
-
         
         if first
           fs.outputFileSync pathPart, binary, 'binary'
@@ -402,13 +402,9 @@ class Meteor.Files
 
       console.info "Meteor.Files Debugger: The file #{fileName} (binary) was added to #{@collectionName}" if @debug
 
-      if callback
-        fs.outputFile path, buffer, 'binary', callback
-      else
-        fs.outputFileSync path, buffer, 'binary'
+      fs.outputFileSync path, buffer, 'binary'
 
       result._id = @collection.insert _.clone result
-
       callback and callback null, result
       return result
   else
@@ -758,10 +754,8 @@ class Meteor.Files
           fileReader.readAsArrayBuffer filePart.slice 0, self.chunkSize
 
         for part, i in parts
-          part = parts[i]
           fileReader = new FileReader
           upload.call null, file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader
-          --i
 
         return result
   else
