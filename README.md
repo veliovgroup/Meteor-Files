@@ -102,6 +102,13 @@ API
     * __Note:__ Collection can not be `public` and `protected` at the same time!
     * __Note:__ `integrityCheck` is __not__ guaranteed!
     * __Note:__ `play` and force `download` features is __not__ guaranteed!
+ - `onBeforeUpload` {*Function*} - Callback triggered right before upload on __client__ and right after recieving a chunk on __server__, with __no arguments__:
+    * Context of the function is {*Object*}, with:
+      - `extension`, alias `ext`
+      - `mime-type`, alias `type`
+      - `size`
+    * __return__ `true` to continue
+    * __return__ `false` to abort or {*String*} to abort upload with message
  - `onbeforeunloadMessage` {*String* or *Function*} - Message shown to user when closing browser's window or tab, while upload in the progress
  - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client
  - `debug` {*Boolean*} - Turn on/of debugging and extra logging
@@ -345,7 +352,7 @@ Methods
  - `onBeforeUpload` {*Function*} - Callback triggered right before upload is started, with __no arguments__:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
     * __return__ `true` to continue
-    * __return__ `false` to abort upload
+    * __return__ `false` to abort or {*String*} to abort upload with message
  - `streams` {*Number*} - Quantity of parallel upload streams
 
 Returns {*Object*}, with properties:
@@ -485,7 +492,7 @@ uploads.write buffer
 ,
   (err, fileObj) ->
     # Download File
-    window.open uploads.link(fileObj, 'original'), '_parent'
+    window.open uploads.link(fileObj, 'original')+'?download=true', '_parent'
 ```
 
 ###### `load(url, options, callback)` [*Server*]
@@ -509,5 +516,5 @@ uploads.load 'http://domain.com/small.png'
 ,
   (err, fileObj) ->
     # Download File
-    window.open uploads.link(fileObj, 'original'), '_parent'
+    window.open uploads.link(fileObj, 'original')+'?download=true', '_parent'
 ```
