@@ -76,7 +76,7 @@ cp = (to, from) ->
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @integrityCheck, @protected, @public, @strict} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict} = config if config
 
     @collectionName   = 'MeteorUploadFiles' if not @collectionName
     @chunkSize        = 272144 if not @chunkSize
@@ -276,11 +276,10 @@ class Meteor.Files
         console.info "Meteor.Files Debugger: [MeteorFileWrite] {name: #{randFileName}, meta:#{meta}}" if self.debug
         console.info "Meteor.Files Debugger: Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
 
-        if @onBeforeUpload and _.isFunction @onBeforeUpload
-          isUploadAllowed = @onBeforeUpload.call fileData
+        if self.onBeforeUpload and _.isFunction self.onBeforeUpload
+          isUploadAllowed = self.onBeforeUpload.call fileData
           if isUploadAllowed isnt true
-            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false"), null
-            return false
+            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false")
 
         @unblock()
 
@@ -295,14 +294,14 @@ class Meteor.Files
           str.replace(/\.\./g, '').replace /\//g, ''
 
         fileName  = cleanName(fileData.name or fileData.fileName)
-        ext       = fileName.split('.').pop()
+        extension = fileName.split('.').pop()
         pathName  = if self.public then "#{self.storagePath}/original-#{randFileName}" else "#{self.storagePath}/#{randFileName}"
-        path      = if self.public then "#{self.storagePath}/original-#{randFileName}.#{ext}" else "#{self.storagePath}/#{randFileName}.#{ext}"
-        pathPart  = if partsQty > 1 then "#{pathName}_#{part}.#{ext}" else path
+        path      = if self.public then "#{self.storagePath}/original-#{randFileName}.#{extension}" else "#{self.storagePath}/#{randFileName}.#{extension}"
+        pathPart  = if partsQty > 1 then "#{pathName}_#{part}.#{extension}" else path
 
         result    = self.dataToSchema
           name:       fileName
-          extension:  ext
+          extension:  extension
           path:       path
           meta:       meta
           type:       fileData.type
@@ -323,10 +322,10 @@ class Meteor.Files
             buffers = []
             i = 2
             while i <= partsQty
-              fs.appendFileSync pathName + '_1.' + ext, fs.readFileSync(pathName + '_' + i + '.' + ext), 'binary'
-              fs.unlink pathName + '_' + i + '.' + ext
+              fs.appendFileSync pathName + '_1.' + extension, fs.readFileSync(pathName + '_' + i + '.' + extension), 'binary'
+              fs.unlink pathName + '_' + i + '.' + extension
               i++
-            fs.renameSync pathName + '_1.' + ext, path
+            fs.renameSync pathName + '_1.' + extension, path
 
           fs.chmod path, self.permissions
           result._id = randFileName if self.public
@@ -389,7 +388,7 @@ class Meteor.Files
       randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
-      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{ext}" else "#{@storagePath}/#{randFileName}.#{ext}"
+      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{extension}" else "#{@storagePath}/#{randFileName}.#{extension}"
       
       opts.type = 'application/*' if not opts.type
       opts.meta = {} if not opts.meta
@@ -435,7 +434,7 @@ class Meteor.Files
       randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
-      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{ext}" else "#{@storagePath}/#{randFileName}.#{ext}"
+      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{extension}" else "#{@storagePath}/#{randFileName}.#{extension}"
       opts.meta     = {} if not opts.meta
 
       request.get(url).on('error', (error)->
@@ -711,10 +710,12 @@ class Meteor.Files
 
             if chunksQtyInPart is 1
               Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data) ->
+                return end error if error
                 if data.last
                   end error, data
             else
               Meteor.call self.methodNames.MeteorFileWrite, unitArray, fileData, meta, first, chunksQtyInPart, currentChunk, totalSentChunks, randFileName, part, streams, file.size, (error, data)->
+                return end error if error
                 if not result.onPause.get()
                   if data.chunk + 1 <= chunksQtyInPart
                     from = currentChunk * self.chunkSize
