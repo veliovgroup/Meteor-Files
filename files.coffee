@@ -88,6 +88,7 @@ class Meteor.Files
     @protected        = false if not @protected
     @public           = false if not @public
     @strict           = true if not @strict
+    @onBeforeUpload   = false if not @onBeforeUpload
     @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
 
     if @protected and Meteor.isClient
@@ -167,7 +168,6 @@ class Meteor.Files
     @cursor       = null
     @search       = {}
     @cacheControl = 'public, max-age=31536000'
-
 
     @collection.attachSchema @schema
 
@@ -273,9 +273,16 @@ class Meteor.Files
         check partsQty, Number
         check fileSize, Number
 
-        @unblock()
         console.info "Meteor.Files Debugger: [MeteorFileWrite] {name: #{randFileName}, meta:#{meta}}" if self.debug
         console.info "Meteor.Files Debugger: Received chunk ##{currentChunk} of #{chunksQty} chunks, in part: #{part}, file: #{fileData.name or fileData.fileName}" if self.debug
+
+        if @onBeforeUpload and _.isFunction @onBeforeUpload
+          isUploadAllowed = @onBeforeUpload.call fileData
+          if isUploadAllowed isnt true
+            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false"), null
+            return false
+
+        @unblock()
 
         i = 0
         binary = ''
@@ -289,35 +296,20 @@ class Meteor.Files
 
         fileName  = cleanName(fileData.name or fileData.fileName)
         ext       = fileName.split('.').pop()
-        _newId    = String.rand 32, 'ABCDEFabcdef' if self.public
-        pathName  = if self.public then "#{self.storagePath}/original-#{_newId}" else "#{self.storagePath}/#{randFileName}"
-        path      = if self.public then "#{self.storagePath}/original-#{_newId}.#{ext}" else "#{self.storagePath}/#{randFileName}.#{ext}"
+        pathName  = if self.public then "#{self.storagePath}/original-#{randFileName}" else "#{self.storagePath}/#{randFileName}"
+        path      = if self.public then "#{self.storagePath}/original-#{randFileName}.#{ext}" else "#{self.storagePath}/#{randFileName}.#{ext}"
         pathPart  = if partsQty > 1 then "#{pathName}_#{part}.#{ext}" else path
 
-        result    = 
+        result    = self.dataToSchema
           name:       fileName
           extension:  ext
           path:       path
           meta:       meta
           type:       fileData.type
           size:       fileData.size
-          chunk:      currentChunk
-          versions:
-            original:
-              path: path
-              size: fileData.size
-              type: fileData.type
-              extension: ext
-          last:       last
-          isVideo:    fileData.type.toLowerCase().indexOf("video") > -1
-          isAudio:    fileData.type.toLowerCase().indexOf("audio") > -1
-          isImage:    fileData.type.toLowerCase().indexOf("image") > -1
-          _prefix:    self._prefix
-          _collectionName: self.collectionName
-          _storagePath:    self.storagePath
-          _downloadRoute:  self.downloadRoute
 
-        result._id = _newId if self.public
+        result.chunk = currentChunk
+        result.last  = last
         
         if first
           fs.outputFileSync pathPart, binary, 'binary'
@@ -337,12 +329,36 @@ class Meteor.Files
             fs.renameSync pathName + '_1.' + ext, path
 
           fs.chmod path, self.permissions
+          result._id = randFileName if self.public
           result._id = self.collection.insert _.clone result
 
           console.info "Meteor.Files Debugger: The file #{fileName} (binary) was saved to #{path}" if self.debug
         return result
 
       Meteor.methods _methods
+
+  dataToSchema: (data) ->
+    return {
+      name:       data.name
+      extension:  data.extension
+      path:       data.path
+      meta:       data.meta
+      type:       data.type
+      size:       data.size
+      versions:
+        original:
+          path: data.path
+          size: data.size
+          type: data.type
+          extension: data.extension
+      isVideo:    data.type.toLowerCase().indexOf("video") > -1
+      isAudio:    data.type.toLowerCase().indexOf("audio") > -1
+      isImage:    data.type.toLowerCase().indexOf("image") > -1
+      _prefix:    data._prefix or @_prefix
+      _collectionName: data._collectionName or @collectionName
+      _storagePath:    data._storagePath or @storagePath
+      _downloadRoute:  data._downloadRoute or @downloadRoute
+    }
 
   srch: (search) ->
     if search and _.isString search
@@ -370,35 +386,22 @@ class Meteor.Files
     check callback, Match.Optional Function
 
     if @checkAccess()
-      randFileName  = @namingFunction.call null, true
+      randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
-      path          = "#{@storagePath}/#{randFileName}.#{extension}"
+      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{ext}" else "#{@storagePath}/#{randFileName}.#{ext}"
       
       opts.type = 'application/*' if not opts.type
       opts.meta = {} if not opts.meta
       opts.size = buffer.length if not opts.size
 
-      result = 
+      result    = @dataToSchema
         name:       fileName
         extension:  extension
         path:       path
         meta:       opts.meta
         type:       opts.type
         size:       opts.size
-        isVideo: if opts.type then opts.type.toLowerCase().indexOf("video") > -1 else false
-        isAudio: if opts.type then opts.type.toLowerCase().indexOf("audio") > -1 else false
-        isImage: if opts.type then opts.type.toLowerCase().indexOf("image") > -1 else false
-        versions:
-          original:
-            path: path
-            type: opts.type
-            size: opts.size
-            extension: extension
-        _prefix: @_prefix
-        _collectionName: @collectionName
-        _storagePath:    @storagePath
-        _downloadRoute:  @downloadRoute
 
       console.info "Meteor.Files Debugger: The file #{fileName} (binary) was added to #{@collectionName}" if @debug
 
@@ -429,36 +432,23 @@ class Meteor.Files
 
     self = @
     if @checkAccess()
-      randFileName  = @namingFunction.call null, true
+      randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       extension     = fileName.split('.').pop()
-      path          = "#{@storagePath}/#{randFileName}.#{extension}"
+      path          = if @public then "#{@storagePath}/original-#{randFileName}.#{ext}" else "#{@storagePath}/#{randFileName}.#{ext}"
       opts.meta     = {} if not opts.meta
 
       request.get(url).on('error', (error)->
         throw new Meteor.Error 500, "Error on [load(#{url}, #{opts})]; Error:" + JSON.stringify error
       ).on('response', (response) ->
         bound ->
-          result = 
+          result    = self.dataToSchema
             name:       fileName
             extension:  extension
             path:       path
             meta:       opts.meta
             type:       response.headers['content-type']
             size:       response.headers['content-length']
-            isVideo: response.headers['content-type'].toLowerCase().indexOf("video") > -1
-            isAudio: response.headers['content-type'].toLowerCase().indexOf("audio") > -1
-            isImage: response.headers['content-type'].toLowerCase().indexOf("image") > -1
-            versions:
-              original:
-                path: path
-                type: response.headers['content-type']
-                size: response.headers['content-length']
-                extension: extension
-            _prefix: self._prefix
-            _collectionName: self.collectionName
-            _storagePath:    self.storagePath
-            _downloadRoute:  self.downloadRoute
 
           console.info "Meteor.Files Debugger: The file #{fileName} (binary) was loaded to #{@collectionName}" if @debug
 
@@ -480,7 +470,7 @@ class Meteor.Files
   @description Add file from FS to Meteor.Files
   @returns {Files} - Return this
   ###
-  addFile: if Meteor.isServer then (path, opts, callback) ->
+  addFile: if Meteor.isServer then (path, opts = {}, callback) ->
     console.info "[addFile(#{path})]" if @debug
 
     throw new Meteor.Error 403, "Can not run [addFile()] on public collection" if @public
@@ -501,26 +491,14 @@ class Meteor.Files
         opts.meta = {} if not opts.meta
         opts.size = fileSize if not opts.size
 
-        result    = 
-          name:       fileName
-          extension:  ext
-          path:       path
-          meta:       opts.meta
-          type:       opts.type
-          size:       opts.size
-          isVideo:    opts.type.toLowerCase().indexOf("video") > -1
-          isAudio:    opts.type.toLowerCase().indexOf("audio") > -1
-          isImage:    opts.type.toLowerCase().indexOf("image") > -1
-          versions:
-            original:
-              path: path
-              type: opts.type
-              size: opts.size
-              extension: ext
-          _prefix:         @_prefix
-          _collectionName: @collectionName
-          _storagePath:    path.replace "/#{fileName}", ''
-          _downloadRoute:  @downloadRoute
+        result    = @dataToSchema
+          name:         fileName
+          extension:    ext
+          path:         path
+          meta:         opts.meta
+          type:         opts.type
+          size:         opts.size
+          _storagePath: path.replace "/#{fileName}", ''
 
         result._id = @collection.insert _.clone result
         console.info "The file #{fileName} (binary) was added to #{@collectionName}" if @debug
@@ -671,10 +649,11 @@ class Meteor.Files
           type: file.type
           name: file.name
           ext:  file.name.split('.').pop()
-          extension: file.name.split('.').pop()
+          extension:   file.name.split('.').pop()
+          'mime-type': file.type
 
         file          = _.extend file, fileData
-        randFileName  = @namingFunction.call null, true
+        randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
         partSize      = Math.ceil file.size / streams
         parts         = []
         uploaded      = 0
@@ -702,10 +681,16 @@ class Meteor.Files
           result.progress.set 0
           onUploaded and onUploaded.call self, error, data
 
-        if onBeforeUpload
+        if onBeforeUpload and _.isFunction onBeforeUpload
           isUploadAllowed = onBeforeUpload.call file
           if isUploadAllowed isnt true
             end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "onBeforeUpload() returned false"), null
+            return false
+
+        if @onBeforeUpload and _.isFunction @onBeforeUpload
+          isUploadAllowed = @onBeforeUpload.call file
+          if isUploadAllowed isnt true
+            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false"), null
             return false
 
         upload = (filePart, part, chunksQtyInPart, fileReader) ->
@@ -758,6 +743,8 @@ class Meteor.Files
           upload.call null, file.slice(part.from, part.to), i + 1, part.chunksQty, fileReader
 
         return result
+      else
+        console.warn "Meteor.Files: [insert({file: 'file', ..})]: file property is required"
   else
     undefined
 
