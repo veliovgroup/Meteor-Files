@@ -1,5 +1,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
 
+To see basics of this package see [example app](https://github.com/VeliovGroup/ostrio-files-example).
+
  - [Overview](#meteor-files)
  - [Why this package?](#why-meteor-files)
  - [Install](#install)
@@ -96,9 +98,9 @@ API
       - `@response` - On __server only__
       - `@user()`
       - `@userId`
- - `public` {*Boolean*} - If `true` - files will be stored in folder publicity available for proxy servers inside `uploads` folder, like nginx
+ - `public` {*Boolean*} - If `true` - files will be stored in folder publicity available for proxy servers, like nginx
     * Default value: `false`
-    * Route: `http://example.com/uploads/`
+    * Route: `http://example.com/uploads/:collectionName/:fileName`
     * __Note:__ Collection can not be `public` and `protected` at the same time!
     * __Note:__ `integrityCheck` is __not__ guaranteed!
     * __Note:__ `play` and force `download` features is __not__ guaranteed!
@@ -110,6 +112,7 @@ API
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
  - `onbeforeunloadMessage` {*String* or *Function*} - Message shown to user when closing browser's window or tab, while upload in the progress
+    * Default value: `'Upload in a progress... Do you want to abort?'`
  - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client
  - `debug` {*Boolean*} - Turn on/of debugging and extra logging
     * Default value: `false`
