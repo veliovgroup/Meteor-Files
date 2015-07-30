@@ -78,18 +78,18 @@ class Meteor.Files
   constructor: (config) ->
     {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict} = config if config
 
-    @collectionName   = 'MeteorUploadFiles' if not @collectionName
-    @chunkSize        = 272144 if not @chunkSize
-    @namingFunction   = String.rand if not @namingFunction
-    @debug            = false if not @debug
-    @permissions      = 0o777 if not @permissions
-    @allowClientCode  = true if not @allowClientCode
-    @integrityCheck   = true if not @integrityCheck
-    @protected        = false if not @protected
-    @public           = false if not @public
-    @strict           = true if not @strict
-    @onBeforeUpload   = false if not @onBeforeUpload
-    @onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?' if not @onbeforeunloadMessage
+    @collectionName   ?= 'MeteorUploadFiles'
+    @chunkSize        ?= 272144
+    @namingFunction   ?= String.rand
+    @debug            ?= false
+    @permissions      ?= 0o777
+    @allowClientCode  ?= true
+    @integrityCheck   ?= true
+    @protected        ?= false
+    @public           ?= false
+    @strict           ?= true
+    @onBeforeUpload   ?= false
+    @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
 
     if @protected and Meteor.isClient
       if not Meteor.cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')

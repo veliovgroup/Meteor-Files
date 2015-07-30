@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.3.4',
+  version: '1.3.5',
   summary: 'Upload, Store and Stream (Video & Audio streaming) files to/from file system (FS) via DDP and HTTP',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
