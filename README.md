@@ -26,6 +26,7 @@ To see basics of this package see [example app](https://github.com/VeliovGroup/o
 Meteor-Files
 ========
 This package allows to:
+ - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
  - Upload file(s) via DDP
     * Small files
     * Huge files, tested on 100GB (Note Browser will eat 7%-10% RAM of the file size)

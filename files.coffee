@@ -936,10 +936,11 @@ class Meteor.Files
       return formatFleURL fileRef or @currentFile, version, false
 
 formatFleURL = (fileRef, version = 'original', pub = false) ->
+  root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, "")
   if pub
-    return "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}.#{fileRef.extension}" 
+    return root + "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}.#{fileRef.extension}" 
   else
-    return "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}"
+    return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}.#{fileRef.extension}"
 
 if Meteor.isClient
   ###
