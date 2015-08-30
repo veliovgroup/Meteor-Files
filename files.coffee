@@ -209,7 +209,7 @@ class Meteor.Files
     @checkAccess = (http) ->
       if @protected
         user = false
-        userFuncs = @getUser()
+        userFuncs = @getUser http
         {user, userId} = userFuncs
         user = user()
 
@@ -406,17 +406,18 @@ class Meteor.Files
   @description Returns object with `userId` and `user()` method which return user's object
   @returns {Object}
   ###
-  getUser: ->
-    Meteor.cookie.init http
+  getUser: (http) ->
     result = 
       user: -> return undefined
       userId: undefined
       
     if Meteor.isServer
+      Meteor.cookie.init http if http
       if _.has(Package, 'accounts-base') and Meteor.cookie.has 'meteor_login_token'
         user = Meteor.users.findOne "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken Meteor.cookie.get 'meteor_login_token'
-        result.user = () -> return user
-        result.userId = user._id
+        if user
+          result.user = () -> return user
+          result.userId = user._id
     else
       if _.has(Package, 'accounts-base') and Meteor.userId()
         result.user = -> return Meteor.user()
@@ -745,6 +746,13 @@ class Meteor.Files
 
       if file
         console.time('insert') if @debug
+
+        beforeunload = (e) ->
+          message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
+          e.returnValue = message if e
+          return message
+        window.addEventListener "beforeunload", beforeunload, false
+
         self    = @
         result  =
           onPause: new ReactiveVar false
@@ -759,6 +767,7 @@ class Meteor.Files
             if @onPause.get() then @continue() else @pause()
           progress: new ReactiveVar 0
           abort: () ->
+            window.removeEventListener "beforeunload", beforeunload, false
             onAbort and onAbort.call file, fileData
             @pause()
             Meteor.call self.methodNames.MeteorFileAbort, randFileName, streams, file
@@ -799,10 +808,6 @@ class Meteor.Files
         uploaded      = 0
         last          = false
 
-        window.onbeforeunload = (e) ->
-          message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
-          e.returnValue = message if e
-          return message
 
         i = 1
         while i <= streams
@@ -816,7 +821,7 @@ class Meteor.Files
 
         end = (error, data) ->
           console.timeEnd('insert') if self.debug
-          window.onbeforeunload = null
+          window.removeEventListener "beforeunload", beforeunload, false
           result.progress.set 0
           onUploaded and onUploaded.call self, error, data
 
@@ -960,7 +965,7 @@ class Meteor.Files
     else if @currentFile
 
       if @downloadCallback
-        unless @downloadCallback.call _.extend(http, @getUser()), @currentFile
+        unless @downloadCallback.call _.extend(http, @getUser(http)), @currentFile
           responseType = '404'
 
       partiral   = false
