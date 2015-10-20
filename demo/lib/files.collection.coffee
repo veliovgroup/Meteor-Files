@@ -2,6 +2,7 @@ Collections.files = new Meteor.Files
   debug:            false
   storagePath:      'assets/app/uploads/uploadedFiles'
   collectionName:   'uploadedFiles'
+  chunkSize:        256*256*8
   onBeforeUpload:   -> if @size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@size)}"
   allowClientCode:  false
   downloadCallback: (fileObj) -> 

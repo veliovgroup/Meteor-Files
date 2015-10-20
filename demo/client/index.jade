@@ -38,6 +38,7 @@ template(name="index")
               span.label.label-default(title="Downloads")
                 i.fa.fa-download
                 | #{meta.downloads}
-        if compare filesLength '>' latest.count
-          tr: td(colspan="100%")
-            button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
+                
+    if compare filesLength '>' latest.count
+      .panel-footer
+        button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
