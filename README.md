@@ -84,17 +84,9 @@ API
     * Default value: `/assets/app/uploads`
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
+ - `cacheControl` {*String*} - Default `Cache-Control` header, by default: `public, max-age=31536000, s-maxage=31536000`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `downloadCallback` {*Function*} - Called right before initiate file download, with next context and only one argument `fileObj`:
-    * `fileObj` - see __Current schema__ section below
-    * __context__:
-      - `@request`
-      - `@response`
-      - `@user()`
-      - `@userId`
-    * __Notes__:
-      * Function should return {*Boolean*} value, to abort download - return `false`, to allow download - return `true`
  - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
@@ -106,6 +98,15 @@ API
     * Default value: `true`
  - `strict` {*Boolean*} - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
     * Default value: `false`
+ - `downloadCallback` {*Function*} - Called right before initiate file download, with next context and only one argument `fileObj`:
+    * `fileObj` - see __Current schema__ section below
+    * __context__:
+      - `@request`
+      - `@response`
+      - `@user()`
+      - `@userId`
+    * __Notes__:
+      * Function should return {*Boolean*} value, to abort download - return `false`, to allow download - return `true`
  - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way
     * Default value: `false`
     * If function - `function` __context__ has:
