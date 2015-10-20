@@ -29,15 +29,17 @@ template(name="index")
       tbody
         each latest
           tr
-            td.ellipsis: a(href="{{pathFor 'file' _id=_id}}") #{name}
+            td: a.ellipsis(href="{{pathFor 'file' _id=_id}}") #{name}
             td.text-right
-              span.label.label-default(title="Will be removed {{removedIn}}")
-                i.fa.fa-fw.fa-history
-                | {{removedIn}}
-              |  
-              span.label.label-default(title="Downloads")
-                i.fa.fa-download
-                | #{meta.downloads}
-        if compare filesLength '>' latest.count
-          tr: td(colspan="100%")
-            button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
+              span.ellipsis(color="#fafafa")
+                span.label.label-default(title="Will be removed {{removedIn}}")
+                  i.fa.fa-fw.fa-history
+                  | {{removedIn}}
+                |  
+                span.label.label-default(title="Downloads")
+                  i.fa.fa-download
+                  | #{meta.downloads}
+
+    if compare filesLength '>' latest.count
+      .panel-footer
+        button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
