@@ -1,7 +1,12 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
 
-To see basics of this package see [example app](https://github.com/VeliovGroup/ostrio-files-example).
+Demo app:
+========
+ - [Live](http://_.meteor.com)
+ - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
 
+ToC:
+========
  - [Overview](#meteor-files)
  - [Why this package?](#why-meteor-files)
  - [Install](#install)
@@ -81,6 +86,15 @@ API
     * Default value: `MeteorUploadFiles`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
+ - `downloadCallback` {*Function*} - Called right before initiate file download, with next context and only one argument `fileObj`:
+    * `fileObj` - see __Current schema__ section below
+    * __context__:
+      - `@request`
+      - `@response`
+      - `@user()`
+      - `@userId`
+    * __Notes__:
+      * Function should return {*Boolean*} value, to abort download - return `false`, to allow download - return `true`
  - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
@@ -352,12 +366,14 @@ Methods
     * `error`
     * `fileRef` - see __Current schema__ section above
  - `onProgress` {*Function*} - Callback triggered when chunk is sent, with only argument:
-    {* `progress` *Number*} - Current progress from `0` to `100`
+    * {`progress` *Number*} - Current progress from `0` to `100`
  - `onBeforeUpload` {*Function*} - Callback triggered right before upload is started, with __no arguments__:
     * Context of the function is `File` - so you are able to check for extension, mime-type, size and etc.
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
  - `streams` {*Number*} - Quantity of parallel upload streams
+ - `onAbort` {*Function*} - Callback triggered when `abort()` method is called, with only one argument:
+    * `file` - File object passed as `file` property to `insert()` method
 
 Returns {*Object*}, with properties:
  - `onPause` {*ReactiveVar*} - Is upload process on the pause?
@@ -365,7 +381,7 @@ Returns {*Object*}, with properties:
  - `pause` {*Function*} - Pause upload process
  - `continue` {*Function*} - Continue paused upload process
  - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
-  
+ - `abort` {*Function*} - Abort upload progress, and trigger `onAbort` callback
 
 ```coffeescript
 # For example we upload file for blog post
