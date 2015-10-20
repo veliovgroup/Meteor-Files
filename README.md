@@ -1,7 +1,12 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
 
-To see basics of this package see [example app](https://github.com/VeliovGroup/ostrio-files-example).
+Demo app:
+========
+ - [Live](http://_.meteor.com)
+ - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
 
+ToC:
+========
  - [Overview](#meteor-files)
  - [Why this package?](#why-meteor-files)
  - [Install](#install)

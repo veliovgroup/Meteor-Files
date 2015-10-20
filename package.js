@@ -10,7 +10,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.1');
   api.addFiles('files.coffee');
   api.use(['templating', 'reactive-var', 'tracker'], 'client');
-  api.use(['underscore', 'check', 'sha', 'ostrio:jsextensions@0.0.4', 'ostrio:cookies@1.0.1', 'coffeescript', 'iron:router@1.0.9', 'aldeed:collection2@2.3.3'], ['client', 'server']);
+  api.use(['underscore', 'check', 'sha', 'ostrio:cookies@2.0.0', 'random', 'coffeescript', 'iron:router@1.0.12', 'aldeed:collection2@2.5.0'], ['client', 'server']);
 });
 
 Npm.depends({

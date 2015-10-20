@@ -62,34 +62,29 @@ cp = (to, from) ->
 @class
 @namespace Meteor
 @name Files
-@param {Object} config - Configuration object with next properties:
-  {String}    storagePath     - Storage path on file system
-  {String}    collectionName  - Collection name
-  {String}    downloadRoute   - Server Route used to retrieve files
-  {Object}    schema          - Collection Schema
-  {Number}    chunkSize       - Upload chunk size
-  {Function}  namingFunction  - Function which returns `String`
-  {Boolean}   debug           - Turn on/of debugging and extra logging
-  {Number}    permissions     - Permissions which will be set to uploaded files,
-                                like: `511` or `0o777`
-  {Function}  onBeforeUpload  - Function which executes on server after receiving each chunk and on client right before beginning upload.
-                                Function context is `File` - so you are able to check for extension, mime-type, size and etc.
-                                return `true` to continue
-                                return `false` or `String` to abort upload
-  {Boolean}   integrityCheck  - Check file's integrity before serving to users
-  {Function}  protected       - If `true` - files will be served only to authorized users,
-                                if `function()` - you're able to check visitor's permissions in your own way
-                                function's context has:
-                                  - `request` - On server only
-                                  - `response` - On server only
-                                  - `user()`
-                                  - `userId`
-  {Boolean}   public          - Store files in folder accessible for proxy servers, for limits, and more - read docs
-  {Boolean}   strict          - Strict mode for partial content, if is `true` server will return `416` response code,
-                                when `range` is not specified, otherwise server return `206`
-  {Boolean}   allowClientCode - Allow to run `remove` from client
-  {Function}  downloadCallback- Callback triggered each time file is requested
-  {String|Function} onbeforeunloadMessage - Message shown to user when closing browser's window or tab while upload process is running
+@param config {Object}                 - Configuration object with next properties:
+@param config.storagePath {String}     - Storage path on file system
+@param config.collectionName {String}  - Collection name
+@param config.downloadRoute {String}   - Server Route used to retrieve files
+@param config.schema {Object}          - Collection Schema
+@param config.chunkSize {Number}       - Upload chunk size
+@param config.namingFunction {Function}- Function which returns `String`
+@param config.debug {Boolean}          - Turn on/of debugging and extra logging
+@param config.permissions {Number}     - Permissions which will be set to uploaded files, like: `511` or `0o777`
+@param config.onBeforeUpload {Function}- Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
+return `true` to continue
+return `false` or `String` to abort upload
+@param config.integrityCheck {Boolean} - Check file's integrity before serving to users
+@param config.protected {Function}     - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
+  - `request` - On server only
+  - `response` - On server only
+  - `user()`
+  - `userId`
+@param config.public {Boolean}         - Store files in folder accessible for proxy servers, for limits, and more - read docs
+@param config.strict {Boolean}         - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
+@param config.allowClientCode {Boolean}   - Allow to run `remove` from client
+@param config.downloadCallback {Function} - Callback triggered each time file is requested
+@param config.onbeforeunloadMessage {String|Function} - Message shown to user when closing browser's window or tab while upload process is running
 @description Create new instance of Meteor.Files
 ###
 class Meteor.Files
@@ -98,7 +93,7 @@ class Meteor.Files
 
     @collectionName   ?= 'MeteorUploadFiles'
     @chunkSize        ?= 272144
-    @namingFunction   ?= String.rand
+    @namingFunction   ?= -> Random._randomString 17, 'AZQWXSECDRFVTBGYNHUJMIKOLPzaqwsxecdrfvtgbyhnujimkolp'
     @debug            ?= false
     @permissions      ?= 0o777
     @allowClientCode  ?= true
@@ -110,9 +105,12 @@ class Meteor.Files
     @downloadCallback ?= false
     @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
 
+
+
+    cookie = new Cookies()
     if @protected and Meteor.isClient
-      if not Meteor.cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
-        Meteor.cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
+      if not cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
+        cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
     
     if @public and @storagePath
       @downloadRoute  = if @storagePath.indexOf('/') isnt 1 then "/uploads/#{@storagePath}" else "/uploads#{@storagePath}"
@@ -412,12 +410,13 @@ class Meteor.Files
       userId: undefined
       
     if Meteor.isServer
-      Meteor.cookie.init http if http
-      if _.has(Package, 'accounts-base') and Meteor.cookie.has 'meteor_login_token'
-        user = Meteor.users.findOne "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken Meteor.cookie.get 'meteor_login_token'
-        if user
-          result.user = () -> return user
-          result.userId = user._id
+      if http
+        cookie = http.request.Cookies 
+        if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
+          user = Meteor.users.findOne "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken cookie.get 'meteor_login_token'
+          if user
+            result.user = () -> return user
+            result.userId = user._id
     else
       if _.has(Package, 'accounts-base') and Meteor.userId()
         result.user = -> return Meteor.user()
@@ -507,7 +506,7 @@ class Meteor.Files
     check callback, Match.Optional Function
 
     if @checkAccess()
-      randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
+      randFileName  = @namingFunction()
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
 
       {extension, extensionWithDot} = @getExt fileName
@@ -555,7 +554,7 @@ class Meteor.Files
 
     self = @
     if @checkAccess()
-      randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
+      randFileName  = @namingFunction()
       fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
       
       {extension, extensionWithDot} = @getExt fileName
@@ -730,6 +729,7 @@ class Meteor.Files
     {Function}    pause        - Pause upload process
     {Function}    continue     - Continue paused upload process
     {Function}    toggle       - Toggle continue/pause if upload process
+    {Function}    abort        - Abort upload
   ###
   insert: if Meteor.isClient then (config) ->
     if @checkAccess()
@@ -802,12 +802,11 @@ class Meteor.Files
 
         file          = _.extend file, fileData
         result.file   = file
-        randFileName  = if @public then String.rand 32, 'ABCDEFabcdef' else @namingFunction.call null, true
+        randFileName  = @namingFunction()
         partSize      = Math.ceil file.size / streams
         parts         = []
         uploaded      = 0
         last          = false
-
 
         i = 1
         while i <= streams
@@ -912,7 +911,7 @@ class Meteor.Files
       if Meteor.isServer
         files = @collection.find @search
         if files.count() > 0
-          files.forEach (file) -> @unlink file
+          files.forEach (file) => @unlink file
         @collection.remove @search
         undefined
 
