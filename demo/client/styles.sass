@@ -1,3 +1,12 @@
+*
+  animation: newElement 350ms ease-in-out 1
+
+@keyframes newElement
+  from
+    opacity: 0
+  to
+    opacity: 1
+
 .container
   padding-top: 15px
   max-width: 640px
@@ -8,6 +17,7 @@
   max-width: 100%
   text-overflow: ellipsis
   -o-text-overflow: ellipsis
+  display: block
 
 button, input, select, textarea, .label
   user-select: none !important
@@ -20,6 +30,7 @@ button, select, input, button, form, textarea, a, pre, i
 th
   text-align: center
   vertical-align: middle
+  word-break: break-word
 
 .control-btns > *
   width: 50% !important
