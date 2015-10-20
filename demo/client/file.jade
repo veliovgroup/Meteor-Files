@@ -1,0 +1,37 @@
+template(name="file")
+  .panel.panel-default
+    .panel-heading: h3.panel-title.ellipsis(style="max-width:100%") #{name}
+    .panel-body
+      a.btn.btn-default.btn-block(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true" target="_parent" download): i.fa.fa-download
+      
+      .thumbnail.center-block(style="margin-top: 15px")
+        if isImage
+          img(src="{{fileURL .}}" alt="{{name}}" style="max-width: 100%")
+
+        else if isAudio
+          audio.center-block(controls style="max-width: 100%")
+            source(src="{{fileURL .}}?play=true" type="{{type}}")
+
+        else if isVideo
+          video.center-block(controls style="max-width: 100%")
+            source(src="{{fileURL .}}?play=true" type="{{type}}")
+        else
+          .alert.alert-info Preview is not avalible, please download file.
+
+    table.table.table-bordered.table-condenced(style="table-layout:fixed")
+      thead
+        tr
+          th Name
+          th Mime-type
+          th Size
+          th Extension
+          th Downloads
+      tbody
+        tr
+          td.text-center.ellipsis: span.label.label-default #{name}
+          td.text-center: span.label.label-default #{type}
+          td.text-center: span.label.label-default {{filesize size}}
+          td.text-center: span.label.label-default .#{extension}
+          td.text-center: a.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download)
+            i.fa.fa-download
+            | #{meta.downloads}

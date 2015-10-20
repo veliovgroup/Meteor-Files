@@ -1,0 +1,43 @@
+template(name="index")
+  .panel.panel-default
+    .panel-heading: h3.panel-title Upload File
+    .panel-body
+      .center-block
+        if error
+          .alert.alert-danger {{error}}
+
+        if uploadInstance
+          +with uploadInstance
+            .progress
+              .progress-bar.progress-bar-striped.active(aria-valuemin="0" aria-valuemax="100" style="width: {{progress.get}}%")
+            .btn-group.btn-group-justified.control-btns
+              if onPause.get
+                button#continue.btn.btn-default.btn-lg(type="button" title="Resume upload")
+                  i.fa.fa-lg.fa-play
+              else
+                button#pause.btn.btn-default.btn-lg(type="button" title="Pause upload")
+                  i.fa.fa-lg.fa-pause
+              button#abort.btn.btn-default.btn-lg(type="button" title="Abort upload")
+                  i.fa.fa-lg.fa-stop
+        else
+          form#uploadFile
+            input.btn.btn-default.btn-block(title="Select File" type="file" name="userfile" required)
+            p.text-center: small.help Any file-type. With size less or equal to 128MB
+            button.btn.btn-lg.btn-primary.btn-block(type="submit" title="Upload File"): i.fa.fa-lg.fa-cloud-download
+
+    table.table.table-bordered(style="table-layout:fixed")
+      tbody
+        each latest
+          tr
+            td.ellipsis: a(href="{{pathFor 'file' _id=_id}}") #{name}
+            td.text-right
+              span.label.label-default(title="Will be removed {{removedIn}}")
+                i.fa.fa-fw.fa-history
+                | {{removedIn}}
+              |  
+              span.label.label-default(title="Downloads")
+                i.fa.fa-download
+                | #{meta.downloads}
+        if compare filesLength '>' latest.count
+          tr: td(colspan="100%")
+            button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
