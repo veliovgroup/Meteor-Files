@@ -303,6 +303,47 @@
           }
         }
       }
+    },
+    "throttle": {
+      "version": "1.0.3",
+      "dependencies": {
+        "stream-parser": {
+          "version": "0.3.1",
+          "dependencies": {
+            "debug": {
+              "version": "2.2.0",
+              "dependencies": {
+                "ms": {
+                  "version": "0.7.1"
+                }
+              }
+            }
+          }
+        },
+        "readable-stream": {
+          "version": "2.0.3",
+          "dependencies": {
+            "core-util-is": {
+              "version": "1.0.1"
+            },
+            "inherits": {
+              "version": "2.0.1"
+            },
+            "isarray": {
+              "version": "0.0.1"
+            },
+            "process-nextick-args": {
+              "version": "1.0.3"
+            },
+            "string_decoder": {
+              "version": "0.10.31"
+            },
+            "util-deprecate": {
+              "version": "1.0.2"
+            }
+          }
+        }
+      }
     }
   }
 }

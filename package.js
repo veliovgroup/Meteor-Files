@@ -16,5 +16,6 @@ Package.onUse(function(api) {
 Npm.depends({
   'fs-extra': '0.22.1',
   'file-type': '2.10.2',
-  'request': '2.58.0'
+  'request': '2.58.0',
+  'throttle': '1.0.3'
 });
