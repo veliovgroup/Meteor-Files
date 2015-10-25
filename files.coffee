@@ -76,6 +76,7 @@ cp = (to, from) ->
 @param config.permissions {Number}     - Permissions which will be set to uploaded files, like: `511` or `0o777`
 @param config.storagePath {String}     - Storage path on file system
 @param config.cacheControl {String}    - Default `Cache-Control` header
+@param config.throttle {Number}        - bps throttle threshold
 @param config.downloadRoute {String}   - Server Route used to retrieve files
 @param config.collectionName {String}  - Collection name
 @param config.namingFunction {Function}- Function which returns `String`
@@ -159,6 +160,7 @@ class Meteor.Files
     check @strict, Boolean
     check @protected, Match.OneOf Boolean, Function
     check @chunkSize, Number
+    check @throttle, Number
     check @permissions, Number
     check @storagePath, String
     check @downloadRoute, String
