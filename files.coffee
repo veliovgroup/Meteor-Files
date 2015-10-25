@@ -1058,16 +1058,23 @@ class Meteor.Files
         ).on 'error', streamErrorHandler
         break
       when '206'
+        self = @
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
         http.response.setHeader 'Content-Length', take
         http.response.setHeader 'Transfer-Encoding', 'chunked'
-
-        stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-        stream.on('open', -> http.response.writeHead 206
-        ).on('error', streamErrorHandler
-        ).on('data', (chunk) -> http.response.write chunk
-        ).on 'end', -> http.response.end()
+        if(@throttle)
+            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+            stream.on('open', -> http.response.writeHead 206
+            ).on('error', streamErrorHandler
+            ).on('end', -> http.response.end())
+            .pipe(new Throttle({bps:self.throttle,chunksize:self.chunkSize})).pipe http.response
+        else
+            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+            stream.on('open', -> http.response.writeHead 206
+            ).on('error', streamErrorHandler
+            ).on('data', (chunk) -> http.response.write chunk
+            ).on 'end', -> http.response.end()
         break
     undefined
   else
