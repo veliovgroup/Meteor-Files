@@ -4,7 +4,7 @@ if Meteor.isServer
   ###
   fs      = Npm.require "fs-extra"
   request = Npm.require "request"
-
+  Throttle = Npm.require "throttle"
   ###
   @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
   ###
@@ -76,6 +76,7 @@ cp = (to, from) ->
 @param config.permissions {Number}     - Permissions which will be set to uploaded files, like: `511` or `0o777`
 @param config.storagePath {String}     - Storage path on file system
 @param config.cacheControl {String}    - Default `Cache-Control` header
+@param config.throttle {Number}        - bps throttle threshold
 @param config.downloadRoute {String}   - Server Route used to retrieve files
 @param config.collectionName {String}  - Collection name
 @param config.namingFunction {Function}- Function which returns `String`
@@ -90,7 +91,7 @@ return `false` or `String` to abort upload
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle} = config if config
 
     @debug            ?= false
     @public           ?= false
@@ -106,6 +107,7 @@ class Meteor.Files
     @allowClientCode  ?= true
     @downloadCallback ?= false
     @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
+    @throttle         ?= false
 
     cookie = new Cookies()
     if @protected and Meteor.isClient
@@ -158,6 +160,7 @@ class Meteor.Files
     check @strict, Boolean
     check @protected, Match.OneOf Boolean, Function
     check @chunkSize, Number
+    check @throttle, Number
     check @permissions, Number
     check @storagePath, String
     check @downloadRoute, String
@@ -1047,22 +1050,33 @@ class Meteor.Files
       when '200'
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [200]: #{fileRef.path}" if @debug
         stream = fs.createReadStream fileRef.path
+        self = @
         stream.on('open', ->
           http.response.writeHead 200
-          stream.pipe http.response
+          if(self.throttle)
+            stream.pipe(new Throttle({bps:self.throttle,chunksize:self.chunkSize})).pipe http.response
+          else
+            stream.pipe http.response
         ).on 'error', streamErrorHandler
         break
       when '206'
+        self = @
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
         http.response.setHeader 'Content-Length', take
         http.response.setHeader 'Transfer-Encoding', 'chunked'
-
-        stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-        stream.on('open', -> http.response.writeHead 206
-        ).on('error', streamErrorHandler
-        ).on('data', (chunk) -> http.response.write chunk
-        ).on 'end', -> http.response.end()
+        if(@throttle)
+            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+            stream.on('open', -> http.response.writeHead 206
+            ).on('error', streamErrorHandler
+            ).on('end', -> http.response.end())
+            .pipe(new Throttle({bps:self.throttle,chunksize:self.chunkSize})).pipe http.response
+        else
+            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+            stream.on('open', -> http.response.writeHead 206
+            ).on('error', streamErrorHandler
+            ).on('data', (chunk) -> http.response.write chunk
+            ).on 'end', -> http.response.end()
         break
     undefined
   else
