@@ -85,6 +85,7 @@ API
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
  - `cacheControl` {*String*} - Default `Cache-Control` header, by default: `public, max-age=31536000, s-maxage=31536000`
+ - `throttle` {*Number*} - Throttle downloads to set bps
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
  - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
