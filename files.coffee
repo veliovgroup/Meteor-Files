@@ -114,15 +114,15 @@ class Meteor.Files
         cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
     
     if @public and @storagePath
-      @downloadRoute  = if @storagePath.indexOf('/') isnt 1 then "/uploads/#{@storagePath}" else "/uploads#{@storagePath}"
-      @storagePath    = if @storagePath.indexOf('/') isnt 1 then "../web.browser/#{@storagePath}" else "../web.browser#{@storagePath}"
+      @downloadRoute = if @storagePath.indexOf('/') isnt 1 then "/uploads/#{@storagePath}" else "/uploads#{@storagePath}"
+      @storagePath   = if @storagePath.indexOf('/') isnt 1 then "../web.browser/#{@storagePath}" else "../web.browser#{@storagePath}"
 
     if not @storagePath
-      @storagePath    = if @public then "../web.browser/uploads/#{@collectionName}" else "/assets/app/uploads/#{@collectionName}"
-      @downloadRoute  = if @public then "/uploads/#{@collectionName}" else '/cdn/storage' if not @downloadRoute
+      @storagePath   = if @public then "../web.browser/uploads/#{@collectionName}" else "/assets/app/uploads/#{@collectionName}"
+      @downloadRoute = if @public then "/uploads/#{@collectionName}" else '/cdn/storage' if not @downloadRoute
     
     if not @downloadRoute
-      @downloadRoute  = '/cdn/storage'
+      @downloadRoute = '/cdn/storage'
 
 
     if not @schema
@@ -135,7 +135,9 @@ class Meteor.Files
         isAudio: type: Boolean
         isImage: type: Boolean
         _prefix: type: String
-        extension: type: String
+        extension:
+          type: String
+          optional: true
         _storagePath: type: String
         _downloadRoute: type: String
         _collectionName: type: String
@@ -174,9 +176,9 @@ class Meteor.Files
     if @public and @protected
       throw new Meteor.Error 500, "[Meteor.File.#{@collectionName}]: Files can not be public and protected at the same time!"
     
-    @collection     = new Mongo.Collection @collectionName
-    @storagePath    = @storagePath.replace /\/$/, ''
-    @downloadRoute  = @downloadRoute.replace /\/$/, ''
+    @collection    = new Mongo.Collection @collectionName
+    @storagePath   = @storagePath.replace /\/$/, ''
+    @downloadRoute = @downloadRoute.replace /\/$/, ''
 
     self          = @
     @cursor       = null
@@ -292,7 +294,7 @@ class Meteor.Files
           name:      fileName
           path:      path
           meta:      meta
-          type:      self.getMimeType unitArray, fileData
+          type:      fileData?.type
           size:      fileData.size
           extension: extension
 
@@ -305,7 +307,7 @@ class Meteor.Files
           else
             fs.appendFileSync pathPart, binary, 'binary'
         catch e
-          error = new Meteor.Error 500, "Unfinished upload (probably caused by server reboot)", e
+          error = new Meteor.Error 500, "Unfinished upload (probably caused by server reboot or aborted operation)", e
           console.error error
           return error
         
@@ -321,9 +323,11 @@ class Meteor.Files
               i++
             fs.renameSync pathName + '_1' + extensionWithDot, path
 
+
           fs.chmod path, self.permissions
-          result._id = randFileName if self.public
-          result._id = self.collection.insert _.clone result
+          result._id  = randFileName if self.public
+          result.type = self.getMimeType fileData
+          result._id  = self.collection.insert _.clone result
 
           console.info "Meteor.Files Debugger: The file #{fileName} (binary) was saved to #{path}" if self.debug
         return result
@@ -348,30 +352,22 @@ class Meteor.Files
   ###
   Extend Meteor.Files with mime library
   @url https://github.com/broofa/node-mime
+  @description Temporary removed from package due to unstability
   ###
-  fileType: if Meteor.isServer then Npm.require "file-type" else undefined
+  # fileType: if Meteor.isServer then Npm.require "file-type" else undefined
 
   ###
   @isomorphic
   @function
   @class Meteor.Files
   @name getMimeType
-  @param {binary} binary   - Binary file-data
   @param {Object} fileData - File Object
   @description Returns file's mime-type
   @returns {String}
   ###
-  getMimeType: (binary, fileData) ->
+  getMimeType: (fileData) ->
     check fileData, Object
-
-    mime = 'application/octet-stream'
-    unless fileData.type
-      if Meteor.isServer
-        ft = @fileType binary
-        {ext, mime} = ft if ft
-    else if fileData.type
-      mime = fileData.type
-
+    mime = fileData.type if fileData?.type
     mime = 'application/octet-stream' if not mime or not _.isString mime
     mime
 
@@ -509,7 +505,7 @@ class Meteor.Files
 
       path      = if @public then "#{@storagePath}/original-#{randFileName}#{extensionWithDot}" else "#{@storagePath}/#{randFileName}#{extensionWithDot}"
       
-      opts.type = @getMimeType buffer, opts
+      opts.type = @getMimeType opts
       opts.meta = {} if not opts.meta
       opts.size = buffer.length if not opts.size
 
@@ -785,7 +781,7 @@ class Meteor.Files
         {extension, extensionWithDot} = @getExt file.name
 
         if not file.type
-          {ext, mime} = @getMimeType file, {}
+          {ext, mime} = @getMimeType {}
           file.type = mime
 
         fileData =
@@ -1121,7 +1117,7 @@ class Meteor.Files
 formatFleURL = (fileRef, version = 'original', pub = false) ->
   root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, "")
 
-  if fileRef.extension.length > 0
+  if fileRef?.extension?.length > 0
     ext = '.' + fileRef.extension
   else
     ext = ''

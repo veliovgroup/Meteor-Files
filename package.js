@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.3.11',
+  version: '1.3.12',
   summary: 'Upload, Store and Stream (Video & Audio streaming) files to/from file system (FS) via DDP and HTTP',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -15,7 +15,6 @@ Package.onUse(function(api) {
 
 Npm.depends({
   'fs-extra': '0.22.1',
-  'file-type': '2.10.2',
   'request': '2.58.0',
   'throttle': '1.0.3'
 });

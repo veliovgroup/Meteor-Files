@@ -88,7 +88,7 @@ API
  - `throttle` {*Number* | *false*} - Throttle download speed in *bps*, by default is `false`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
+ - `schema` {*Object*} - Collection Schema (*See __Schema__ section below*). Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files#current-schema)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
  - `namingFunction` {*Function*} - Function which returns `String`
@@ -224,6 +224,7 @@ type:
   type: String
 extension:
   type: String
+  optional: true
 path:
   type: String
 meta:
