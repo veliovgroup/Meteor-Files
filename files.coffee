@@ -2,14 +2,13 @@ if Meteor.isServer
   ###
   @description Require "fs-extra" npm package
   ###
-  fs      = Npm.require "fs-extra"
-  request = Npm.require "request"
+  fs       = Npm.require "fs-extra"
+  request  = Npm.require "request"
   Throttle = Npm.require "throttle"
   ###
   @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
   ###
-  bound = Meteor.bindEnvironment (callback) ->
-    return callback()
+  bound = Meteor.bindEnvironment (callback) -> return callback()
 
 ###
 @object
@@ -158,9 +157,9 @@ class Meteor.Files
     check @schema, Object
     check @public, Boolean
     check @strict, Boolean
+    check @throttle, Match.OneOf false, Number
     check @protected, Match.OneOf Boolean, Function
     check @chunkSize, Number
-    check @throttle, Number
     check @permissions, Number
     check @storagePath, String
     check @downloadRoute, String
@@ -253,6 +252,7 @@ class Meteor.Files
           throw new Meteor.Error 401, '[Meteor.Files] [remove()] Run code from client is not allowed!'
 
       _methods[self.methodNames.MeteorFileWrite] = (unitArray, fileData, meta = {}, first, chunksQty, currentChunk, totalSentChunks, randFileName, part, partsQty, fileSize) ->
+        @unblock()
         check part, Number
         check meta, Match.Optional Object
         check first, Boolean
@@ -272,8 +272,6 @@ class Meteor.Files
           isUploadAllowed = self.onBeforeUpload.call fileData
           if isUploadAllowed isnt true
             throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false")
-
-        @unblock()
 
         i = 0
         binary = ''
@@ -301,10 +299,15 @@ class Meteor.Files
         result.chunk = currentChunk
         result.last  = last
         
-        if first
-          fs.outputFileSync pathPart, binary, 'binary'
-        else
-          fs.appendFileSync pathPart, binary, 'binary'
+        try
+          if first
+            fs.outputFileSync pathPart, binary, 'binary'
+          else
+            fs.appendFileSync pathPart, binary, 'binary'
+        catch e
+          error = new Meteor.Error 500, "Unfinished upload (probably caused by server reboot)", e
+          console.error error
+          return error
         
         console.info "Meteor.Files Debugger: The part ##{part} of file #{fileName} (binary) was saved to #{pathPart}" if (chunksQty is currentChunk) and self.debug
 
@@ -556,20 +559,20 @@ class Meteor.Files
 
       request.get(url).on('error', (error)->
         throw new Meteor.Error 500, "Error on [load(#{url}, #{opts})]; Error:" + JSON.stringify error
-      ).on('response', (response) ->
-        bound ->
-          result = self.dataToSchema
-            name:      fileName
-            path:      path
-            meta:      opts.meta
-            type:      response.headers['content-type']
-            size:      response.headers['content-length']
-            extension: extension
+      ).on('response', (response) -> bound ->
 
-          console.info "Meteor.Files Debugger: The file #{fileName} (binary) was loaded to #{@collectionName}" if @debug
+        result = self.dataToSchema
+          name:      fileName
+          path:      path
+          meta:      opts.meta
+          type:      response.headers['content-type']
+          size:      response.headers['content-length']
+          extension: extension
 
-          result._id = self.collection.insert _.clone result
-          callback and callback null, result
+        console.info "Meteor.Files Debugger: The file #{fileName} (binary) was loaded to #{@collectionName}" if @debug
+
+        result._id = self.collection.insert _.clone result
+        callback and callback null, result
 
       ).pipe fs.createOutputStream path
 
@@ -999,10 +1002,10 @@ class Meteor.Files
 
       if partiral or (http.params.query.play and http.params.query.play == 'true')
         reqRange = {start, end}
-        if isNaN(start) and not isNaN(end)
+        if isNaN(start) and not isNaN end
           reqRange.start = end - take
           reqRange.end   = end
-        if not isNaN(start) and isNaN(end)
+        if not isNaN(start) and isNaN end
           reqRange.start = start
           reqRange.end   = start + take
 
@@ -1050,27 +1053,27 @@ class Meteor.Files
       when '200'
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [200]: #{fileRef.path}" if @debug
         stream = fs.createReadStream fileRef.path
-        self = @
-        stream.on('open', ->
+        stream.on('open', =>
           http.response.writeHead 200
-          if(self.throttle)
-            stream.pipe(new Throttle({bps:self.throttle,chunksize:self.chunkSize})).pipe http.response
+          if @throttle
+            stream.pipe( new Throttle {bps: @throttle, chunksize: @chunkSize}
+            ).pipe http.response
           else
             stream.pipe http.response
         ).on 'error', streamErrorHandler
         break
       when '206'
-        self = @
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
         http.response.setHeader 'Content-Length', take
         http.response.setHeader 'Transfer-Encoding', 'chunked'
-        if(@throttle)
+        if @throttle
             stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
             stream.on('open', -> http.response.writeHead 206
             ).on('error', streamErrorHandler
-            ).on('end', -> http.response.end())
-            .pipe(new Throttle({bps:self.throttle,chunksize:self.chunkSize})).pipe http.response
+            ).on('end', -> http.response.end()
+            ).pipe( new Throttle {bps: @throttle, chunksize: @chunkSize}
+            ).pipe http.response
         else
             stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
             stream.on('open', -> http.response.writeHead 206
