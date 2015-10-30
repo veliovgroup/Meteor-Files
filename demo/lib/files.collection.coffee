@@ -1,10 +1,11 @@
 Collections.files = new Meteor.Files 
   debug:            false
+  throttle:         256*256*64
+  chunkSize:        256*256*4
   storagePath:      'assets/app/uploads/uploadedFiles'
   collectionName:   'uploadedFiles'
-  chunkSize:        256*256*8
-  onBeforeUpload:   -> if @size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@size)}"
   allowClientCode:  false
+  onBeforeUpload:   -> if @size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@size)}"
   downloadCallback: (fileObj) -> 
     if @params?.query.download is 'true'
       Collections.files.collection.update fileObj._id, $inc: 'meta.downloads': 1
@@ -16,6 +17,8 @@ if Meteor.isServer
     remove: -> true
 
   Collections.files.collection._ensureIndex {'meta.expireAt': 1}, {expireAfterSeconds: 0, background: true}
+
+  Meteor.startup -> Collections.files.remove {}
 
   Meteor.publish 'latest', (take = 50)->
     check take, Number
