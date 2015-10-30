@@ -31,7 +31,11 @@ template(name="file")
           td.text-center: span.ellipsis.label.label-default #{name}
           td.text-center: span.ellipsis.label.label-default #{type}
           td.text-center: span.ellipsis.label.label-default {{filesize size}}
-          td.text-center: span.ellipsis.label.label-default .#{extension}
+          td.text-center
+            if extension
+              span.ellipsis.label.label-default .#{extension}
+            else
+              small.help-block.no-margin extensionless
           td.text-center: a.ellipsis.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download)
             i.fa.fa-download
             | #{meta.downloads}
