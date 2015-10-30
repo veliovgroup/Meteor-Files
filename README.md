@@ -7,26 +7,26 @@ Demo app:
 
 ToC:
 ========
- - [Overview](#meteor-files)
- - [Why this package?](#why-meteor-files)
- - [Install](#install)
- - [API](#api)
-   * [new Meteor.Files()](#new-meteorfilesconfig-isomorphic) [*Isomorphic*]
-   * [Chunk Streaming](#file-streaming) [*Example*]
-   * [Force Download](#file-download) [*Example*]
-   * [Schema](#current-schema) [*Isomorphic*]
- - [Template Helper](#template-helper)
-   * [Force Download](#to-get-download-url-for-file-you-only-need-fileref-object-so-there-is-no-need-for-subscription) [*Example*]
-   * [Get file subversion](#to-get-specific-version-of-the-file-use-second-argument-version) [*Example*]
-   * [Thumbnail Example](#to-display-thumbnail) [*Example*]
-   * [Video Streaming Example](#to-stream-video) [*Example*]
- - [General Methods](#methods)
-   * [Insert (Upload) File(s)](#insertsettings-client) [*Client*] - Upload file to server
-   * [Collection](#collection--isomorphic) [*Isomorphic*]
-   * [findOne()](#findonesearch--isomorphic) [*Isomorphic*]
-   * [find()](#findsearch--isomorphic) [*Isomorphic*]
-   * [write()](#writebuffer-options-callback--server) [*Server*] - Write binary code into FS
-   * [load()](#loadurl-options-callback--server) [*Server*] - Upload file from remote host
+ - [Overview](https://github.com/VeliovGroup/Meteor-Files#meteor-files)
+ - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
+ - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
+ - [API](https://github.com/VeliovGroup/Meteor-Files#api)
+   * [new Meteor.Files()](https://github.com/VeliovGroup/Meteor-Files#new-meteorfilesconfig-isomorphic) [*Isomorphic*]
+   * [Chunk Streaming](https://github.com/VeliovGroup/Meteor-Files#file-streaming) [*Example*]
+   * [Force Download](https://github.com/VeliovGroup/Meteor-Files#file-download) [*Example*]
+   * [Schema](https://github.com/VeliovGroup/Meteor-Files#current-schema) [*Isomorphic*]
+ - [Template Helper](https://github.com/VeliovGroup/Meteor-Files#template-helper)
+   * [Force Download](https://github.com/VeliovGroup/Meteor-Files#to-get-download-url-for-file-you-only-need-fileref-object-so-there-is-no-need-for-subscription) [*Example*]
+   * [Get file subversion](https://github.com/VeliovGroup/Meteor-Files#to-get-specific-version-of-the-file-use-second-argument-version) [*Example*]
+   * [Thumbnail Example](https://github.com/VeliovGroup/Meteor-Files#to-display-thumbnail) [*Example*]
+   * [Video Streaming Example](https://github.com/VeliovGroup/Meteor-Files#to-stream-video) [*Example*]
+ - [General Methods](https://github.com/VeliovGroup/Meteor-Files#methods)
+   * [Insert (Upload) File(s)](https://github.com/VeliovGroup/Meteor-Files#insertsettings-client) [*Client*] - Upload file to server
+   * [Collection](https://github.com/VeliovGroup/Meteor-Files#collection--isomorphic) [*Isomorphic*]
+   * [findOne()](https://github.com/VeliovGroup/Meteor-Files#findonesearch--isomorphic) [*Isomorphic*]
+   * [find()](https://github.com/VeliovGroup/Meteor-Files#findsearch--isomorphic) [*Isomorphic*]
+   * [write()](https://github.com/VeliovGroup/Meteor-Files#writebuffer-options-callback--server) [*Server*] - Write binary code into FS
+   * [load()](https://github.com/VeliovGroup/Meteor-Files#loadurl-options-callback--server) [*Server*] - Upload file from remote host
 
 Meteor-Files
 ========
@@ -85,7 +85,7 @@ API
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
  - `cacheControl` {*String*} - Default `Cache-Control` header, by default: `public, max-age=31536000, s-maxage=31536000`
- - `throttle` {*Number*} - Throttle downloads to set bps
+ - `throttle` {*Number* | *false*} - Throttle download speed in *bps*, by default is `false`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
  - `schema` {*Object*} - Collection Schema (*Not editable for current release*)
