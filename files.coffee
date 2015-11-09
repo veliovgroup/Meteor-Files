@@ -976,7 +976,7 @@ class Meteor.Files
       http.response.setHeader 'Content-Type', fileRef.type
       http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
       http.response.setHeader 'Accept-Ranges', 'bytes'
-      http.response.setHeader 'Last-Modified', @currentFile.updatedAt.toUTCString()
+      http.response.setHeader 'Last-Modified', @currentFile?.updatedAt?.toUTCString()
       http.response.setHeader 'Connection', 'keep-alive'
 
       if http.request.headers.range
