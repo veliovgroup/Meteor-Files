@@ -85,10 +85,11 @@ API
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
  - `cacheControl` {*String*} - Default `Cache-Control` header, by default: `public, max-age=31536000, s-maxage=31536000`
+ - `allowUpload` {*Boolean*} - Allow/deny upload method calls from client, default: `true`
  - `throttle` {*Number* | *false*} - Throttle download speed in *bps*, by default is `false`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` {*Object*} - Collection Schema (*See __Schema__ section below*). Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files#current-schema)
+ - `schema` {*Object*} - Collection Schema (*See [__Schema__](https://github.com/VeliovGroup/Meteor-Files#current-schema) section below*). Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files#current-schema)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
  - `namingFunction` {*Function*} - Function which returns `String`
@@ -100,7 +101,7 @@ API
  - `strict` {*Boolean*} - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
     * Default value: `false`
  - `downloadCallback` {*Function*} - Called right before initiate file download, with next context and only one argument `fileObj`:
-    * `fileObj` - see __Current schema__ section below
+    * `fileObj` - see __Current [schema](https://github.com/VeliovGroup/Meteor-Files#current-schema)__ section below
     * __context__:
       - `@request`
       - `@response`
@@ -110,11 +111,16 @@ API
       * Function should return {*Boolean*} value, to abort download - return `false`, to allow download - return `true`
  - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way
     * Default value: `false`
-    * If function - `function` __context__ has:
-      - `@request` - On __server only__
-      - `@response` - On __server only__
-      - `@user()`
-      - `@userId`
+    * If function - `function(fileObj)` 
+      * __context__ has:
+        - `@request` - On __server only__
+        - `@response` - On __server only__
+        - `@user()`
+        - `@userId`
+      * __arguments__:
+        - `fileObj` {*Object*|*null*} - If requested file exists `fileObj` is [file object](https://github.com/VeliovGroup/Meteor-Files#current-schema), otherwise `fileObj` is null
+      * __return__ `true` to continue
+      * __return__ `false` to abort or {*Number*} to abort upload with specific response code, default response code is `401`
  - `public` {*Boolean*} - If `true` - files will be stored in folder publicity available for proxy servers, like nginx
     * Default value: `false`
     * Route: `http://example.com/uploads/:collectionName/:fileName`

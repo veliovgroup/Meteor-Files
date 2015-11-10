@@ -61,29 +61,30 @@ cp = (to, from) ->
 @class
 @namespace Meteor
 @name Files
-@param config {Object}                 - Configuration object with next properties:
-@param config.debug {Boolean}          - Turn on/of debugging and extra logging
-@param config.schema {Object}          - Collection Schema
-@param config.public {Boolean}         - Store files in folder accessible for proxy servers, for limits, and more - read docs
-@param config.strict {Boolean}         - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
-@param config.protected {Function}     - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
+@param config           {Object}   - Configuration object with next properties:
+@param config.debug     {Boolean}  - Turn on/of debugging and extra logging
+@param config.schema    {Object}   - Collection Schema
+@param config.public    {Boolean}  - Store files in folder accessible for proxy servers, for limits, and more - read docs
+@param config.strict    {Boolean}  - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
+@param config.protected {Function} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
   - `request` - On server only
   - `response` - On server only
   - `user()`
   - `userId`
-@param config.chunkSize {Number}       - Upload chunk size
-@param config.permissions {Number}     - Permissions which will be set to uploaded files, like: `511` or `0o777`
-@param config.storagePath {String}     - Storage path on file system
-@param config.cacheControl {String}    - Default `Cache-Control` header
-@param config.throttle {Number}        - bps throttle threshold
-@param config.downloadRoute {String}   - Server Route used to retrieve files
+@param config.chunkSize      {Number}  - Upload chunk size
+@param config.allowUpload    {Boolean} - Allow/deny upload from client, default `true`
+@param config.permissions    {Number}  - Permissions which will be set to uploaded files, like: `511` or `0o777`
+@param config.storagePath    {String}  - Storage path on file system
+@param config.cacheControl   {String}  - Default `Cache-Control` header
+@param config.throttle       {Number}  - bps throttle threshold
+@param config.downloadRoute  {String}  - Server Route used to retrieve files
 @param config.collectionName {String}  - Collection name
 @param config.namingFunction {Function}- Function which returns `String`
 @param config.integrityCheck {Boolean} - Check file's integrity before serving to users
 @param config.onBeforeUpload {Function}- Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
 return `true` to continue
 return `false` or `String` to abort upload
-@param config.allowClientCode {Boolean}   - Allow to run `remove` from client
+@param config.allowClientCode  {Boolean}  - Allow to run `remove` from client
 @param config.downloadCallback {Function} - Callback triggered each time file is requested
 @param config.onbeforeunloadMessage {String|Function} - Message shown to user when closing browser's window or tab while upload process is running
 @description Create new instance of Meteor.Files
@@ -112,13 +113,9 @@ class Meteor.Files
     if @protected and Meteor.isClient
       if not cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
         cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
-    
-    if @public and @storagePath
-      @downloadRoute = if @storagePath.indexOf('/') isnt 1 then "/uploads/#{@storagePath}" else "/uploads#{@storagePath}"
-      @storagePath   = if @storagePath.indexOf('/') isnt 1 then "../web.browser/#{@storagePath}" else "../web.browser#{@storagePath}"
 
     if not @storagePath
-      @storagePath   = if @public then "../web.browser/uploads/#{@collectionName}" else "/assets/app/uploads/#{@collectionName}"
+      @storagePath   = if @public then "../web.browser/app/uploads/#{@collectionName}" else "/assets/app/uploads/#{@collectionName}"
       @downloadRoute = if @public then "/uploads/#{@collectionName}" else '/cdn/storage' if not @downloadRoute
     
     if not @downloadRoute
@@ -206,36 +203,69 @@ class Meteor.Files
         user = user()
 
         if _.isFunction @protected
-          result = if http then @protected.call(_.extend(http, userFuncs)) else @protected.call userFuncs
+          result = if http then @protected.call(_.extend(http, userFuncs), @currentFile or null) else @protected.call userFuncs, @currentFile or null
         else
           result = !!user
 
-        if http and not result
+        if (http and result is true) or not http
+          return true
+        else
+          rc = if _.isNumber(result) then result else 401
           console.warn "Access denied!" if @debug
           if http
             text = "Access denied!"
-            http.response.writeHead 401,
+            http.response.writeHead rc,
               'Content-Length': text.length
               'Content-Type':   "text/plain"
             http.response.end text
           return false
-        else
-          return true
       else
         return true
 
-    unless @public
-      Router.route "#{@downloadRoute}/#{@collectionName}/:_id/:version/:name", ->
-        self.findOne(@params._id).download.call(self, @, @params.version) if self.checkAccess @
-      , {where: 'server'}
-    else
-      Router.route "#{@downloadRoute}/:file", ->
-        if @params.file.indexOf('-') isnt -1
-          version = @params.file.split('-')[0]
-          self.download.call self, @, version
+    if Meteor.isServer
+      WebApp.connectHandlers.use (request, response, next) =>
+        unless @public
+          if !!~request._parsedUrl.path.indexOf "#{@downloadRoute}/#{@collectionName}"
+            uri = request._parsedUrl.path.replace "#{@downloadRoute}/#{@collectionName}", ''
+            if uri.indexOf('/') is 0
+              uri = uri.substring 1
+
+            uris = uri.split '/'
+            if uris.length is 3
+              params = 
+                query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+                _id: uris[0]
+                version: uris[1]
+                name: uris[2]
+              http = {request, response, params}
+              @findOne(uris[0]).download.call(@, http, uris[1]) if @checkAccess http
+            else
+              next()
+          else
+            next()
         else
-          @response.writeHead 404
-      , {where: 'server'}
+          if !!~request._parsedUrl.path.indexOf "#{@downloadRoute}"
+            uri = request._parsedUrl.path.replace "#{@downloadRoute}", ''
+            if uri.indexOf('/') is 0
+              uri = uri.substring 1
+
+            uris = uri.split '/'
+            if uris.length is 1
+              params = 
+                query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+                file: uris[0]
+              http = {request, response, params}
+
+              if !!~params.file.indexOf '-'
+                version = params.file.split('-')[0]
+                @download.call @, http, version
+              else
+                response.writeHead 404
+                response.end 'No such file :('
+            else
+              next()
+          else
+            next()
 
     @methodNames =
       MeteorFileAbort:  "MeteorFileAbort#{@_prefix}"
@@ -403,7 +433,7 @@ class Meteor.Files
       
     if Meteor.isServer
       if http
-        cookie = http.request.Cookies 
+        cookie = http.request.Cookies
         if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
           user = Meteor.users.findOne "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken cookie.get 'meteor_login_token'
           if user
@@ -953,7 +983,7 @@ class Meteor.Files
       responseType = if fs.existsSync fileRef.path then '200' else '404'
     else if not fileRef or not _.isObject(fileRef) or not fs.existsSync fileRef.path
       responseType = '404'
-    else if @currentFile
+    else if @currentFile and fs.existsSync fileRef.path
 
       if @downloadCallback
         unless @downloadCallback.call _.extend(http, @getUser(http)), @currentFile
@@ -976,7 +1006,7 @@ class Meteor.Files
       http.response.setHeader 'Content-Type', fileRef.type
       http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
       http.response.setHeader 'Accept-Ranges', 'bytes'
-      http.response.setHeader 'Last-Modified', @currentFile?.updatedAt?.toUTCString()
+      http.response.setHeader 'Last-Modified', @currentFile?.updatedAt?.toUTCString() if @currentFile?.updatedAt?.toUTCString()
       http.response.setHeader 'Connection', 'keep-alive'
 
       if http.request.headers.range
@@ -1017,6 +1047,8 @@ class Meteor.Files
       else
         http.response.setHeader 'Cache-Control', @cacheControl
         responseType = '200'
+    else
+      responseType = '404'
 
     streamErrorHandler = (error) ->
       http.response.writeHead 500
