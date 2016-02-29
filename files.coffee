@@ -848,8 +848,7 @@ class Meteor.Files
           console.timeEnd('insert') if self.debug
           window.removeEventListener "beforeunload", beforeunload, false
           result.progress.set 0
-          if !error
-            result.state.set "completed"
+          result.state.set if error then "aborted" else "completed"
           onUploaded and onUploaded.call self, error, data
 
         if onBeforeUpload and _.isFunction onBeforeUpload
