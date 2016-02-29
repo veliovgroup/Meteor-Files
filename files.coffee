@@ -781,8 +781,10 @@ class Meteor.Files
           continueFrom: []
           pause: () ->
             @onPause.set true
+            @state.set "paused"
           continue: () ->
             @onPause.set false
+            @state.set "active"
             func.call null for func in @continueFrom
             @continueFrom = []
           toggle: () ->
@@ -792,8 +794,10 @@ class Meteor.Files
             window.removeEventListener "beforeunload", beforeunload, false
             onAbort and onAbort.call file, fileData
             @pause()
+            @state.set "aborted"
             Meteor.call self.methodNames.MeteorFileAbort, randFileName, streams, file
             delete upload
+          state: new ReactiveVar "active"
 
         result.progress.set = _.throttle result.progress.set, 250
 
@@ -844,6 +848,7 @@ class Meteor.Files
           console.timeEnd('insert') if self.debug
           window.removeEventListener "beforeunload", beforeunload, false
           result.progress.set 0
+          result.state.set if error then "aborted" else "completed"
           onUploaded and onUploaded.call self, error, data
 
         if onBeforeUpload and _.isFunction onBeforeUpload
