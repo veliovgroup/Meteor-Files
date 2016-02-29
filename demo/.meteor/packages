@@ -29,8 +29,6 @@ meteorhacks:subs-manager
 aldeed:simple-schema
 aldeed:collection2
 momentjs:moment
-meteorhacks:fast-render
-jazeee:spiderable-longer-timeout
 ostrio:templatehelpers
 twbs:bootstrap
 fortawesome:fontawesome
