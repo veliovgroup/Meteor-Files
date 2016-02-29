@@ -2,9 +2,9 @@ if Meteor.isServer
   ###
   @description Require "fs-extra" npm package
   ###
-  fs       = Npm.require "fs-extra"
-  request  = Npm.require "request"
-  Throttle = Npm.require "throttle"
+  fs       = Npm.require 'fs-extra'
+  request  = Npm.require 'request'
+  Throttle = Npm.require 'throttle'
   ###
   @var {object} bound - Meteor.bindEnvironment aka Fiber wrapper
   ###
@@ -211,12 +211,12 @@ class Meteor.Files
           return true
         else
           rc = if _.isNumber(result) then result else 401
-          console.warn "Access denied!" if @debug
+          console.warn 'Access denied!' if @debug
           if http
-            text = "Access denied!"
+            text = 'Access denied!'
             http.response.writeHead rc,
               'Content-Length': text.length
-              'Content-Type':   "text/plain"
+              'Content-Type':   'text/plain'
             http.response.end text
           return false
       else
@@ -277,7 +277,7 @@ class Meteor.Files
 
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
         check inst, Object
-        console.info "Meteor.Files Debugger: [MeteorFileUnlink]" if self.debug
+        console.info 'Meteor.Files Debugger: [MeteorFileUnlink]' if self.debug
         if self.allowClientCode
           self.remove.call cp(_insts[inst._prefix], inst), inst.search
         else
@@ -303,7 +303,7 @@ class Meteor.Files
         if self.onBeforeUpload and _.isFunction self.onBeforeUpload
           isUploadAllowed = self.onBeforeUpload.call fileData
           if isUploadAllowed isnt true
-            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false")
+            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
 
         i = 0
         binary = ''
@@ -337,7 +337,7 @@ class Meteor.Files
           else
             fs.appendFileSync pathPart, binary, 'binary'
         catch e
-          error = new Meteor.Error 500, "Unfinished upload (probably caused by server reboot or aborted operation)", e
+          error = new Meteor.Error 500, 'Unfinished upload (probably caused by server reboot or aborted operation)', e
           console.error error
           return error
         
@@ -435,7 +435,7 @@ class Meteor.Files
       if http
         cookie = http.request.Cookies
         if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
-          user = Meteor.users.findOne "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken cookie.get 'meteor_login_token'
+          user = Meteor.users.findOne 'services.resume.loginTokens.hashedToken': Accounts._hashLoginToken cookie.get 'meteor_login_token'
           if user
             result.user = () -> return user
             result.userId = user._id
@@ -485,9 +485,9 @@ class Meteor.Files
           size: data.size
           type: data.type
           extension: data.extension
-      isVideo: !!~data.type.toLowerCase().indexOf("video")
-      isAudio: !!~data.type.toLowerCase().indexOf("audio")
-      isImage: !!~data.type.toLowerCase().indexOf("image")
+      isVideo: !!~data.type.toLowerCase().indexOf('video')
+      isAudio: !!~data.type.toLowerCase().indexOf('audio')
+      isImage: !!~data.type.toLowerCase().indexOf('image')
       _prefix: data._prefix or @_prefix
       _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
@@ -618,7 +618,7 @@ class Meteor.Files
   addFile: if Meteor.isServer then (path, opts = {}, callback) ->
     console.info "[addFile(#{path})]" if @debug
 
-    throw new Meteor.Error 403, "Can not run [addFile()] on public collection" if @public
+    throw new Meteor.Error 403, 'Can not run [addFile()] on public collection' if @public
     check path, String
     check opts, Match.Optional Object
     check callback, Match.Optional Function
@@ -709,7 +709,7 @@ class Meteor.Files
   @returns {Object|[Object]}
   ###
   get: () ->
-    console.info "Meteor.Files Debugger: [get()]" if @debug
+    console.info 'Meteor.Files Debugger: [get()]' if @debug
     return @cursor.fetch() if @cursor
     return @currentFile
 
@@ -722,7 +722,7 @@ class Meteor.Files
   @returns {[Object]}
   ###
   fetch: () ->
-    console.info "Meteor.Files Debugger: [fetch()]" if @debug
+    console.info 'Meteor.Files Debugger: [fetch()]' if @debug
     data = @get()
     if not _.isArray data
       return [data]
@@ -755,7 +755,7 @@ class Meteor.Files
   ###
   insert: if Meteor.isClient then (config) ->
     if @checkAccess()
-      console.info "Meteor.Files Debugger: [insert()]" if @debug
+      console.info 'Meteor.Files Debugger: [insert()]' if @debug
       {file, meta, onUploaded, onProgress, onBeforeUpload, onAbort, streams} = config
       meta ?= {}
 
@@ -774,40 +774,40 @@ class Meteor.Files
           message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
           e.returnValue = message if e
           return message
-        window.addEventListener "beforeunload", beforeunload, false
+        window.addEventListener 'beforeunload', beforeunload, false
 
         result  =
           onPause: new ReactiveVar false
           continueFrom: []
           pause: () ->
             @onPause.set true
-            @state.set "paused"
+            @state.set 'paused'
           continue: () ->
             @onPause.set false
-            @state.set "active"
+            @state.set 'active'
             func.call null for func in @continueFrom
             @continueFrom = []
           toggle: () ->
             if @onPause.get() then @continue() else @pause()
           progress: new ReactiveVar 0
           abort: () ->
-            window.removeEventListener "beforeunload", beforeunload, false
+            window.removeEventListener 'beforeunload', beforeunload, false
             onAbort and onAbort.call file, fileData
             @pause()
-            @state.set "aborted"
+            @state.set 'aborted'
             Meteor.call self.methodNames.MeteorFileAbort, randFileName, streams, file
             delete upload
-          state: new ReactiveVar "active"
+          state: new ReactiveVar 'active'
 
         result.progress.set = _.throttle result.progress.set, 250
 
         Tracker.autorun ->
           if Meteor.status().connected
             result.continue()
-            console.info "Meteor.Files Debugger: Connection established continue() upload" if self.debug
+            console.info 'Meteor.Files Debugger: Connection established continue() upload' if self.debug
           else
             result.pause()
-            console.info "Meteor.Files Debugger: Connection error set upload on pause()" if self.debug
+            console.info 'Meteor.Files Debugger: Connection error set upload on pause()' if self.debug
 
         streams         = 1 if not streams
         totalSentChunks = 0
@@ -846,21 +846,21 @@ class Meteor.Files
 
         end = (error, data) ->
           console.timeEnd('insert') if self.debug
-          window.removeEventListener "beforeunload", beforeunload, false
+          window.removeEventListener 'beforeunload', beforeunload, false
           result.progress.set 0
-          result.state.set if error then "aborted" else "completed"
+          result.state.set if error then 'aborted' else 'completed'
           onUploaded and onUploaded.call self, error, data
 
         if onBeforeUpload and _.isFunction onBeforeUpload
           isUploadAllowed = onBeforeUpload.call file
           if isUploadAllowed isnt true
-            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "onBeforeUpload() returned false"), null
+            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else 'onBeforeUpload() returned false'), null
             return false
 
         if @onBeforeUpload and _.isFunction @onBeforeUpload
           isUploadAllowed = @onBeforeUpload.call file
           if isUploadAllowed isnt true
-            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else "@onBeforeUpload() returned false"), null
+            end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false'), null
             return false
 
         upload = (filePart, part, chunksQtyInPart, fileReader) ->
@@ -912,7 +912,7 @@ class Meteor.Files
 
         return result
       else
-        console.warn "Meteor.Files: [insert({file: 'file', ..})]: file property is required"
+        console.warn 'Meteor.Files: [insert({file: "file", ..})]: file property is required'
   else
     undefined
 
@@ -1062,7 +1062,7 @@ class Meteor.Files
     switch responseType
       when '400'
         console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [400] Content-Length mismatch!: #{fileRef.path}" if @debug
-        text = "Content-Length mismatch!"
+        text = 'Content-Length mismatch!'
         http.response.writeHead 400,
           'Content-Type':   'text/plain'
           'Cache-Control':  'no-cache'
@@ -1071,10 +1071,10 @@ class Meteor.Files
         break
       when '404'
         console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [404] File not found: #{if fileRef and fileRef.path then fileRef.path else undefined}" if @debug
-        text = "File Not Found :("
+        text = 'File Not Found :('
         http.response.writeHead 404,
           'Content-Length': text.length
-          'Content-Type':   "text/plain"
+          'Content-Type':   'text/plain'
         http.response.end text
         break
       when '416'
@@ -1130,7 +1130,7 @@ class Meteor.Files
   @returns {String}
   ###
   link: (fileRef, version = 'original', pub = false) ->
-    console.info "Meteor.Files Debugger: [link()]" if @debug
+    console.info 'Meteor.Files Debugger: [link()]' if @debug
     if _.isString fileRef
       version = fileRef
       fileRef = undefined
@@ -1152,7 +1152,7 @@ class Meteor.Files
 @returns {String}
 ###
 formatFleURL = (fileRef, version = 'original', pub = false) ->
-  root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, "")
+  root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '')
 
   if fileRef?.extension?.length > 0
     ext = '.' + fileRef.extension
