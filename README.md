@@ -391,6 +391,11 @@ Returns {*Object*}, with properties:
  - `continue` {*Function*} - Continue paused upload process
  - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
  - `abort` {*Function*} - Abort upload progress, and trigger `onAbort` callback
+ - `state` {*ReactiveVar*} - String reflecting current state of the upload, with four possible values:
+    * `active` - file is currently actively uploading
+    * `paused` - file upload is paused
+    * `aborted` - file upload has been aborted and can no longer be completed
+    * `completed` - file has been successfully uploaded
 
 ```coffeescript
 # For example we upload file for blog post
