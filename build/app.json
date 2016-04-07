@@ -2,7 +2,7 @@
   "name": "Meteor Files",
   "version": "1.3.17",
   "description": "Demo application for ostrio:files package",
-  "repository": "https://github.com/VeliovGroup/Meteor-Files/tree/master/build",
+  "repository": "https://github.com/VeliovGroup/Meteor-Files",
   "website": "https://github.com/VeliovGroup/Meteor-Files/tree/master/demo",
   "logo": "https://d14xs1qewsqjcd.cloudfront.net/assets/og-image-logo.png",
   "scripts": {
@@ -48,7 +48,7 @@
   "image": "heroku/nodejs",
   "buildpacks": [
     {
-      "url": "https://github.com/heroku/heroku-buildpack-nodejs"
+      "url": "heroku/nodejs"
     }
   ],
   "engines": {
