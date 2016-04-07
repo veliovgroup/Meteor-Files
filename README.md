@@ -4,7 +4,7 @@
 
 Demo app:
 ========
- - [Live](http://meteor-files.herokuapp.com)
+ - [Live](https://meteor-files.herokuapp.com/)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
 
 ToC:

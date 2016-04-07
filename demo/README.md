@@ -3,7 +3,7 @@
 Demo app
 ======
 __Links:__
- - __[Heroku hosted Live Demo](http://meteor-files.herokuapp.com)__
+ - __[Heroku hosted Live Demo](https://meteor-files.herokuapp.com/)__
 
 __Functionality:__
  - Upload / Download Files
