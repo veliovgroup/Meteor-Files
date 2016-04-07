@@ -40,7 +40,8 @@
     "sockjs": "^0.3.16",
     "stream-buffers": "^3.0.0",
     "underscore": "^1.5.2",
-    "useragent": "^2.1.9"
+    "useragent": "^2.1.9",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e"
   },
   "engines": {
     "node": "0.10.41",
