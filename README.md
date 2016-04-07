@@ -1,8 +1,8 @@
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://heroku.com/deploy?template=https://gitter.im/VeliovGroup/Meteor-Files)
 
 Demo app:
 ========
- - [Live](http://_.meteor.com)
+ - [Live](http://meteor-files.herokuapp.com)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
 
 ToC:
