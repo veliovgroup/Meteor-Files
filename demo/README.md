@@ -1,4 +1,4 @@
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files/tree/master/build)
 
 Demo app
 ======
@@ -40,6 +40,10 @@ heroku create <your-app-name> --buildpack https://github.com/heroku/heroku-build
 # This command will output something like: https://<your-app-name>.herokuapp.com/ | https://git.heroku.com/<your-app-name>.git
 # Copy this: `http://<your-app-name>.herokuapp.com`, note use only `http://` protocol!
 heroku config:set ROOT_URL=http://<your-app-name>.herokuapp.com
+# To have a MongoDB, you can create one at https://mlab.com/
+# After creating MongoDB instance create user, then copy URL to your MongoDB
+# Should be something like: mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19470/mydb
+heroku config:set MONGO_URL=mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19470/mydb
 git commit -m "initial"
 git push heroku master
 ```
