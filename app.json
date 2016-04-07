@@ -19,9 +19,13 @@
     "mongodb": "*",
     "mime": "*",
     "connect": "*",
+    "meteor-deque": "*",
     "fibers": "1.0.8",
     "meteor-promise": "0.5.1",
     "underscore": "1.5.2",
+    "fs-extra": "0.26.7",
+    "request": "2.70.0",
+    "throttle": "1.0.3",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "semver": "4.1.0"
   },
@@ -52,6 +56,6 @@
   ],
   "engines": {
     "node": "0.10.41",
-    "npm": "1.4.29"
+    "npm": "latest-2"
   }
 }

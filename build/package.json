@@ -38,13 +38,17 @@
     "request": "^2.70.0",
     "semver": "^4.1.0",
     "sockjs": "^0.3.16",
+    "meteor-deque": "*",
     "stream-buffers": "^3.0.0",
     "underscore": "^1.5.2",
     "useragent": "^2.1.9",
+    "fs-extra": "0.26.7",
+    "request": "2.70.0",
+    "throttle": "1.0.3",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e"
   },
   "engines": {
     "node": "0.10.41",
-    "npm": "1.4.29"
+    "npm": "latest-2"
   }
 }
