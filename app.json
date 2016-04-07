@@ -27,11 +27,11 @@
   },
   "env": {
     "ROOT_URL": {
-      "description": "ROOT_URL: Full URL of your app, with protocol (scheme), like http://example.com",
+      "description": "Full URL of your app, with protocol (scheme), like http://example.com",
       "required": true
     },
     "MONGO_URL": {
-      "description": "MONGO_URL: Full URL to mongodb, with protocol (scheme), like mongodb://user:password@host:port/databasename",
+      "description": "Full URL to mongodb, with protocol (scheme), like mongodb://user:password@host:port/db. Create free one at: https://mlab.com",
       "required": true
     }
   },
@@ -46,9 +46,6 @@
     "cdn"
   ],
   "image": "heroku/nodejs",
-  "addons": [
-    "mongolab:sandbox"
-  ],
   "engines": {
     "node": "0.10.41",
     "npm": "3.8.5"

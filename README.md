@@ -1,4 +1,6 @@
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://heroku.com/deploy?template=https://gitter.im/VeliovGroup/Meteor-Files)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files)
 
 Demo app:
 ========
