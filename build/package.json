@@ -6,6 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "scripts": {
+    "start": "node main.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VeliovGroup/Meteor-Files.git"
@@ -38,5 +41,9 @@
     "stream-buffers": "^3.0.0",
     "underscore": "^1.5.2",
     "useragent": "^2.1.9"
+  },
+  "engines": {
+    "node": "0.10.41",
+    "npm": "3.8.5"
   }
 }
