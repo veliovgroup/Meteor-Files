@@ -45,7 +45,6 @@
     "upload",
     "cdn"
   ],
-  "image": "heroku/nodejs",
   "buildpacks": [
     {
       "url": "heroku/nodejs"
