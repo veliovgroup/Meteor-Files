@@ -46,6 +46,11 @@
     "cdn"
   ],
   "image": "heroku/nodejs",
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs"
+    }
+  ],
   "engines": {
     "node": "0.10.41",
     "npm": "3.8.5"
