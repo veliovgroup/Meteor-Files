@@ -1,4 +1,4 @@
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
 Demo app
 ======
@@ -34,7 +34,7 @@ web: node main.js
 # press ctrl + x
 npm init
 # go though all steps by pressing Enter (return)
-npm install --save fibers@1.0.8 meteor-promise@0.5.1 underscore@1.5.2 semver@4.1.0 progress http-proxy sockjs keypress stream-buffers request useragent mongodb mime connect --production
+npm install --save fibers@1.0.8 meteor-promise@0.5.1 underscore@1.5.2 semver@4.1.0 progress http-proxy sockjs keypress stream-buffers request useragent mongodb mime connect fs-extra request --production
 # Ignore all warnings (but not errors)
 heroku create <your-app-name> --buildpack https://github.com/heroku/heroku-buildpack-nodejs
 # This command will output something like: https://<your-app-name>.herokuapp.com/ | https://git.heroku.com/<your-app-name>.git
