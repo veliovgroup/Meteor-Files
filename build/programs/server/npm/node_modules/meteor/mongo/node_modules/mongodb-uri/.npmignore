@@ -1,0 +1,26 @@
+# Project-specific ignore rules applicable to all users
+
+# Files related to development and testing
+Jakefile.js
+mongodb-uri.mocha.js
+
+########################################################################################################################
+#
+# TEMPORARY
+#
+# Below this line are rules that ideally belong in the user's ignore file (usually ~/.npmignore), however there's a
+# known bug preventing such files from being honored so the rules are included here for now.
+#
+#   https://github.com/isaacs/npm/issues/2634
+#
+
+# IntelliJ
+.idea
+*.iml
+*.ipr
+*.iws
+
+# emacs
+*~
+.#*
+*#
