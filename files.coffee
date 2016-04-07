@@ -523,7 +523,7 @@ class Meteor.Files
   @returns {Files} - Return this
   ###
   write: if Meteor.isServer then (buffer, opts = {}, callback) ->
-    console.info "Meteor.Files Debugger: [write(buffer, #{opts}, callback)]" if @debug
+    console.info "Meteor.Files Debugger: [write(buffer, #{JSON.stringify(opts)}, callback)]" if @debug
     check opts, Match.Optional Object
     check callback, Match.Optional Function
 
@@ -569,7 +569,7 @@ class Meteor.Files
   @returns {Files} - Return this
   ###
   load: if Meteor.isServer then (url, opts = {}, callback) ->
-    console.info "Meteor.Files Debugger: [load(#{url}, #{opts}, callback)]" if @debug
+    console.info "Meteor.Files Debugger: [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
     check url, String
     check opts, Match.Optional Object
     check callback, Match.Optional Function
@@ -672,7 +672,7 @@ class Meteor.Files
   @returns {Files} - Return this
   ###
   findOne: (search) ->
-    console.info "Meteor.Files Debugger: [findOne(#{search})]" if @debug
+    console.info "Meteor.Files Debugger: [findOne(#{JSON.stringify(search)})]" if @debug
     check search, Match.OneOf Object, String
     @srch search
 
@@ -691,7 +691,7 @@ class Meteor.Files
   @returns {Files} - Return this
   ###
   find: (search) ->
-    console.info "Meteor.Files Debugger: [find(#{search})]" if @debug
+    console.info "Meteor.Files Debugger: [find(#{JSON.stringify(search)})]" if @debug
     check search, Match.OneOf Object, String
     @srch search
 
@@ -926,7 +926,7 @@ class Meteor.Files
   @returns {undefined}
   ###
   remove: (search) ->
-    console.info "Meteor.Files Debugger: [remove(#{search})]" if @debug
+    console.info "Meteor.Files Debugger: [remove(#{JSON.stringify(search)})]" if @debug
     check search, Match.Optional Match.OneOf Object, String
 
     if @checkAccess()
@@ -1098,21 +1098,21 @@ class Meteor.Files
       when '206'
         console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if @debug
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
-        http.response.setHeader 'Content-Length', take
+        http.response.setHeader 'Trailer', 'expires'
         http.response.setHeader 'Transfer-Encoding', 'chunked'
         if @throttle
-            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-            stream.on('open', -> http.response.writeHead 206
-            ).on('error', streamErrorHandler
-            ).on('end', -> http.response.end()
-            ).pipe( new Throttle {bps: @throttle, chunksize: @chunkSize}
-            ).pipe http.response
+          stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+          stream.on('open', -> http.response.writeHead 206
+          ).on('error', streamErrorHandler
+          ).on('end', -> http.response.end()
+          ).pipe( new Throttle {bps: @throttle, chunksize: @chunkSize}
+          ).pipe http.response
         else
-            stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-            stream.on('open', -> http.response.writeHead 206
-            ).on('error', streamErrorHandler
-            ).on('data', (chunk) -> http.response.write chunk
-            ).on 'end', -> http.response.end()
+          stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
+          stream.on('open', -> http.response.writeHead 206
+          ).on('error', streamErrorHandler
+          ).on('end', -> http.response.end()
+          ).pipe http.response
         break
     undefined
   else

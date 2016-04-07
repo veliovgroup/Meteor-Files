@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.3.16',
+  version: '1.3.17',
   summary: 'Upload, Store and Stream (Video & Audio streaming) files to/from file system (FS) via DDP and HTTP',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -11,11 +11,11 @@ Package.onUse(function(api) {
   api.addFiles('files.coffee');
   api.use('webapp', 'server');
   api.use(['templating', 'reactive-var', 'tracker'], 'client');
-  api.use(['underscore', 'check', 'sha', 'ostrio:cookies@2.0.2', 'random', 'coffeescript', 'aldeed:collection2@2.9.0'], ['client', 'server']);
+  api.use(['underscore', 'check', 'sha', 'ostrio:cookies@2.0.2', 'random', 'coffeescript', 'aldeed:collection2@2.9.1'], ['client', 'server']);
 });
 
 Npm.depends({
-  'fs-extra': '0.26.5',
-  'request': '2.69.0',
+  'fs-extra': '0.26.7',
+  'request': '2.70.0',
   'throttle': '1.0.3'
 });
