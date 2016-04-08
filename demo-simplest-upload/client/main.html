@@ -1,0 +1,20 @@
+<head>
+  <title>Simplest upload form</title>
+</head>
+
+<body>
+  <h1>Simplest upload form!</h1>
+  <p>See <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a></p>
+
+  {{> uploadForm}}
+</body>
+
+<template name="uploadForm">
+  {{#if currentFile}}
+    Uploading <b>{{currentFile.file.name}}</b>: 
+    <span id="progress">{{progress}}%</span>
+  {{else}}
+    <input id="fileInput" type="file" />
+    <p><small>Upload file in <code>jpeg</code> or <code>png</code> format, with size less or equal to 10MB</small></p>
+  {{/if}}
+</template>
