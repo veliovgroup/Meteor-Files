@@ -32,19 +32,17 @@ Meteor-Files
 ### ToC:
 ##### API:
  - [`Meteor.Files` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) [*Isomorphic*] - Initialize Files collection
- - [`write()`]() [*Server*] - Write `Buffer` to FS and Files collection
- - [`load()`]() [*Server*] - Write file to FS and Files collection from remote URL
- - [`addFile()`]() [*Server*] - Add local file to Files collection from FS
- - [`findOne()`]() [*Isomorphic*] - Find one file in Files collection
- - [`find()`]() [*Isomorphic*] - Create cursor for Files collection
- - [`get()`]() [*Isomorphic*] - Return results of `findOne()` or `find()` methods
- - [`fetch()`]() [*Isomorphic*] - Return results of `find()` method, as array of Objects
+ - [`write()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Write) [*Server*] - Write `Buffer` to FS and Files collection
+ - [`load()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Load) [*Server*] - Write file to FS and Files collection from remote URL
+ - [`addFile()`](https://github.com/VeliovGroup/Meteor-Files/wiki/addFile) [*Server*] - Add local file to Files collection from FS
+ - [`findOne()`](https://github.com/VeliovGroup/Meteor-Files/wiki/findOne) [*Isomorphic*] - Find one file in Files collection
+ - [`find()`](https://github.com/VeliovGroup/Meteor-Files/wiki/find) [*Isomorphic*] - Create cursor for Files collection
  - [`insert()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)) [*Client*] - Upload file to server
- - [`remove()`]() [*Isomorphic*] - Remove files from Files collection and unlink from FS
- - [`unlink()`]() [*Server*] - Unlink file from FS
- - [`link()`]() [*Isomorphic*] - Generate downloadable link
- - [`collection`]() [*Isomorphic*] - `Meteor.Collection` instance
- - [Template helper `fileURL`]() [*Client*] - Generate downloadable link in template
+ - [`remove()`](https://github.com/VeliovGroup/Meteor-Files/wiki/remove) [*Isomorphic*] - Remove files from Files collection and unlink from FS
+ - [`unlink()`](https://github.com/VeliovGroup/Meteor-Files/wiki/unlink) [*Server*] - Unlink file from FS
+ - [`link()`](https://github.com/VeliovGroup/Meteor-Files/wiki/link) [*Isomorphic*] - Generate downloadable link
+ - [`collection`](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) [*Isomorphic*] - `Meteor.Collection` instance
+ - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
- - [File subversions]() - Create video file with preview and multiple formats
+ - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats

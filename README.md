@@ -46,8 +46,8 @@ API
 #### `new Meteor.Files([config])` [*Isomorphic*]
 Read full docs for [`Meteor.Files` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
+Shared code:
 ```js
-// lib/images-collection.js
 var Images = new Meteor.Files({
   collectionName: 'Images',
   allowClientCode: false, // Disallow remove files from Client
@@ -76,7 +76,7 @@ if (Meteor.isServer) {
 #### `insert(settings)` [*Client*]
 Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
 
-Upload form:
+Upload form (template):
 ```html
 <template name="upload-form">
   {{#if currentFile}}
@@ -156,10 +156,10 @@ this.Videos = new Meteor.Files({collectionName: 'Videos'});
 if (Meteor.isServer) {
   Meteor.startup(function () {
     Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
-      fileName: 'logo'
+      fileName: 'logo.png'
     });
     Videos.load('http://www.sample-videos.com/video/mp4/360/big_buck_bunny_360p_1mb.mp4', {
-      fileName: 'Big Buck Bunny'
+      fileName: 'Big-Buck-Bunny.mp4'
     });
   });
 }
@@ -194,7 +194,7 @@ this.Images = new Meteor.Files({collectionName: 'Images'});
 if (Meteor.isServer) {
   Meteor.startup(function () {
     Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
-      fileName: 'logo',
+      fileName: 'logo.png',
       meta: {}
     });
   });

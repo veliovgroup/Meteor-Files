@@ -6,17 +6,17 @@
     * Default value: `assets/app/uploads`. Relative to running script
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
- - `cacheControl` {*String*} - Default `Cache-Control` header, by default: `public, max-age=31536000, s-maxage=31536000`
+ - `cacheControl` {*String*} - Set `Cache-Control` header, default: `public, max-age=31536000, s-maxage=31536000`
  - `throttle` {*Number* | *false*} - Throttle download speed in *bps*, by default is `false`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
- - `schema` {*Object*} - Collection Schema (See [Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema). Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
+ - `schema` {*Object*} - Collection Schema. Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
  - `chunkSize` {*Number*} - Upload chunk size
     * Default value: `272144`
  - `namingFunction` {*Function*} - Function which returns `String`
     * Default value: `String.rand`
  - `permissions` {*Number*} - FS-permissions (access rights) in octal, like `0755` or `0777`
-    * Default value: `0777`
+    * Default value: `0755`
  - `integrityCheck` {*Boolean*} - CRC file check
     * Default value: `true`
  - `strict` {*Boolean*} - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
