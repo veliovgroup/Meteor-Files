@@ -1,7 +1,7 @@
 Meteor-Files
 ========
 
-### About
+### About:
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
  - Upload file(s) via DDP
     * Ready for small and large files (Note Browser will eat 7%-10% RAM of the file size)
