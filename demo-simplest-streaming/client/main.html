@@ -1,0 +1,22 @@
+<head>
+  <title>Meteor-Files: File Streaming</title>
+</head>
+
+<body>
+  <h1>Meteor-Files: File Streaming</h1>
+  <p>See <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a></p>
+
+  {{> file}}
+</body>
+
+<template name='file'>
+  {{#if imageFile}}
+    <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" />
+  {{/if}}
+  <hr>
+  {{#if videoFile}}
+    <video height="auto" controls preload="auto" autoplay>
+      <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" />
+    </video>
+  {{/if}}
+</template>
