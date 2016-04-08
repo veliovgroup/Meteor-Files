@@ -1,6 +1,6 @@
 Files for Meteor
 ========
-Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-app), which works smoothly on free/sandbox Heroku plan, [one click Heroku eploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
+Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-app), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
 Support:
 ========
@@ -9,7 +9,7 @@ Support:
  - [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
  - For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
 
-Demo app:
+Demo application:
 ========
  - [Live](https://meteor-files.herokuapp.com/)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
@@ -43,7 +43,7 @@ meteor add ostrio:files
 
 API
 ========
-##### `new Meteor.Files([config])` [*Isomorphic*]
+#### `new Meteor.Files([config])` [*Isomorphic*]
 Read full docs for [`Meteor.Files` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
 ```js
@@ -73,7 +73,7 @@ if (Meteor.isServer) {
 ```
 
 
-##### `insert(settings)` [*Client*]
+#### `insert(settings)` [*Client*]
 Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
 
 Upload form:
@@ -133,7 +133,7 @@ Template['upload-form'].events({
 For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
 
 
-##### Stream files
+#### Stream files
 To display files you will use `fileURL` template helper.
 
 Temaplate:
@@ -176,7 +176,7 @@ Template.file.helpers({
 For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
 
 
-##### Download button
+#### Download button
 Temaplate:
 ```html
 <template name='file'>
