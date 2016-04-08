@@ -136,10 +136,10 @@ For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor
 #### Stream files
 To display files you will use `fileURL` template helper.
 
-Temaplate:
+Template:
 ```html
 <template name='file'>
-  <img src="{{fileURL imageFile}}" alt="{{fileRef.name}}" />
+  <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" />
   <hr>
   <video height="auto" controls="controls">
     <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" />
