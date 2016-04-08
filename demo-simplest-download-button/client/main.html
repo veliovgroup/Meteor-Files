@@ -1,0 +1,20 @@
+<head>
+  <title>Meteor-Files: Download Button</title>
+</head>
+
+<body>
+  <h1>Meteor-Files: Download Button</h1>
+  <p>See <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a></p>
+
+  {{> file}}
+</body>
+
+<template name='file'>
+  {{#if fileRef}}
+    <a href="{{fileURL fileRef}}?download=true" target="_parent" download>
+      {{fileRef.name}}
+    </a>
+  {{else}}
+    loading...
+  {{/if}}
+</template>
