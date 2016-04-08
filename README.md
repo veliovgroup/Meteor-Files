@@ -78,11 +78,10 @@ Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Fil
 
 Upload form (template):
 ```html
-<template name="upload-form">
+<template name="uploadForm">
   {{#if currentFile}}
-    {{#with currentFile}
-      <span id="progress">{{progress}}%</span>
-    {{/with}}
+    Uploading <b>{{currentFile.file.name}}</b>: 
+    <span id="progress">{{progress}}%</span>
   {{else}}
     <input id="fileInput" type="file" />
   {{/if}}
@@ -96,18 +95,26 @@ this.Images = new Meteor.Files({collectionName: 'Images'});
 
 Client's code:
 ```javascript
-Template['upload-form'].onCreated(function () {
+Template.uploadForm.onCreated(function () {
   this.currentFile = new ReactiveVar(false);
 });
 
-Template['upload-form'].helpers({
+Template.uploadForm.helpers({
   currentFile: function () {
-    Template.instance().currentFile.get();
-  }
+    return Template.instance().currentFile.get();
+  },
+  progress: function () {
+    var _cf = Template.instance().currentFile.get();
+    if (_cf) {
+      return _cf.progress.get();
+    } else {
+      return 0;
+    }
+  },
 });
 
-Template['upload-form'].events({
-  'change #fileInput': (e, template) ->
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case 
       // there was multiple files selected
@@ -127,7 +134,7 @@ Template['upload-form'].events({
         chunkSize: 'dynamic'
       }));
     }
-  });
+  }
 });
 ```
 For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
