@@ -12,13 +12,13 @@ Images.collection.find({}).forEach(function (fileRef) {
 
 // Example: Subscribe:
 if (Meteor.isClient) {
-  Images.collection.subscribe('files.images.all');
+  Meteor.subscribe('files.images.all');
 }
 
 // Example: Publish:
 if (Meteor.isServer) {
-  Meteor.publish 'files.images.all', function () {
-    Images.collection.find({});
-  }
+  Meteor.publish('files.images.all', function () {
+    return Images.collection.find({});
+  });
 }
 ```

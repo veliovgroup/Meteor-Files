@@ -62,13 +62,13 @@ var Images = new Meteor.Files({
 });
 
 if (Meteor.isClient) {
-  Images.collection.subscribe('files.images.all');
+  Meteor.subscribe('files.images.all');
 }
 
 if (Meteor.isServer) {
-  Meteor.publish 'files.images.all', function () {
-    Images.collection.find({});
-  }
+  Meteor.publish('files.images.all', function () {
+    return Images.collection.find({});
+  });
 }
 ```
 
@@ -165,18 +165,33 @@ if (Meteor.isServer) {
     Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png'
     });
-    Videos.load('http://www.sample-videos.com/video/mp4/360/big_buck_bunny_360p_1mb.mp4', {
+    Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
       fileName: 'Big-Buck-Bunny.mp4'
     });
   });
+
+  Meteor.publish('files.images.all', function () {
+    return Images.collection.find({});
+  });
+  Meteor.publish('files.videos.all', function () {
+    return Videos.collection.find({});
+  });
+
+} else {
+  Meteor.subscribe('files.images.all');
+  Meteor.subscribe('files.videos.all');
 }
 ```
 
 Client's code:
 ```javascript
 Template.file.helpers({
-  imageFile: Images.collection.findOne({}),
-  videoFile: Videos.collection.findOne({})
+  imageFile: function () {
+    return Images.collection.findOne({});
+  },
+  videoFile: function () {
+    return Videos.collection.findOne({});
+  }
 });
 ```
 
@@ -184,7 +199,7 @@ For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor
 
 
 #### Download button
-Temaplate:
+Template:
 ```html
 <template name='file'>
   <a href="{{fileURL fileRef}}?download=true" target="_parent" download>
@@ -205,13 +220,21 @@ if (Meteor.isServer) {
       meta: {}
     });
   });
+
+  Meteor.publish('files.images.all', function () {
+    return Images.collection.find({});
+  });
+} else {
+  Meteor.subscribe('files.images.all');
 }
 ```
 
 Client's code:
 ```javascript
 Template.file.helpers({
-  fileRef: Images.collection.findOne({})
+  fileRef: function () {
+    return Images.collection.findOne({});
+  }
 });
 ```
 For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
