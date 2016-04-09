@@ -5,8 +5,6 @@ if Meteor.isServer
   fs       = Npm.require 'fs-extra'
   request  = Npm.require 'request'
   Throttle = Npm.require 'throttle'
-  Fiber    = Npm.require 'Fibers'
-  Future   = Npm.require 'Fibers/Future'
   util     = Npm.require 'util'
   NOOP     = -> return
 
@@ -269,8 +267,7 @@ class Meteor.Files
                 version = params.file.split('-')[0]
                 self.download.call self, http, version
               else
-                response.writeHead 404
-                response.end 'No such file :('
+                self._404 http
             else
               next()
           else
@@ -314,97 +311,87 @@ class Meteor.Files
         pathPart = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId}#{extensionWithDot}" else path
 
         result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId, chunkId: opts.chunkId, _binSize: opts._binSize}
-        
-        if opts.eof
-          fut = new Future()
 
-        Fiber( ->
+        action = (cb) ->
           binary = new Buffer opts.binData, 'base64'
           tries  = 0
-          handleError = (e) ->
-            error = new Meteor.Error 500, 'Unfinished upload (probably caused by server reboot or aborted operation)', e
-            console.error error
-            return error
 
-          concatChunks = (num, files) ->
+          concatChunks = (num, files, cb) ->
             sindex = files.indexOf "#{opts.fileId}_1#{extensionWithDot}"
             files.splice sindex, 1 if !!~sindex
             findex = files.indexOf "#{opts.fileId}_#{num}#{extensionWithDot}"
             if !!~findex
               files.splice(findex, 1)
             else
-              console.warn "finish as no more files", files, {sindex, findex}, "#{opts.fileId}_#{num}#{extensionWithDot}"
-              return finish()
+              console.warn "finish as no more files", files, {sindex, findex}, "#{opts.fileId}_#{num}#{extensionWithDot}" if self.debug
+              return finish cb
 
             _path   = "#{pathName}_#{num}#{extensionWithDot}"
             _source = pathName + '_1' + extensionWithDot
 
-            fs.stat _path, (error, stats) -> bound ->
+            fs.stat _path, (error, stats) ->
               if error or not stats.isFile()
                 if tries >= 10
-                  fut.return new Meteor.Error 500, "Chunk ##{num} is missing!"
+                  cb new Meteor.Error 500, "Chunk ##{num} is missing!"
                 else
                   tries++
                   Meteor.setTimeout ->
-                    concatChunks num, files
+                    concatChunks num, files, cb
                   , 100
               else
-                fs.readFile _path, (error, _chunkData) -> bound ->
+                fs.readFile _path, (error, _chunkData) ->
                   if error
-                    fut.return new Meteor.Error 500, "Can't read #{_path}"
+                    cb new Meteor.Error 500, "Can't read #{_path}"
                   else
-                    fs.appendFile _source, _chunkData, (error) -> bound ->
+                    fs.appendFile _source, _chunkData, (error) ->
                       if error
-                        fut.return new Meteor.Error 500, "Can't append #{_path} to #{_source}"
+                        cb new Meteor.Error 500, "Can't append #{_path} to #{_source}"
                       else
                         fs.unlink _path, NOOP
                         if files.length <= 0
                           fs.rename _source, path, (error) -> bound ->
                             if error
-                              fut.return new Meteor.Error 500, "Can't rename #{_source} to #{path}"
+                              cb new Meteor.Error 500, "Can't rename #{_source} to #{path}"
                             else
-                              finish()
+                              finish cb
                         else
-                          concatChunks ++num, files
+                          concatChunks ++num, files, cb
 
-          finish = ->
+          finish = (cb) ->
             fs.chmod path, self.permissions, NOOP
             result.type = self.getMimeType opts.file
 
             self.collection.insert _.clone(result), (error, _id) ->
               if error
-                fut.return new Meteor.Error 500, error
+                cb new Meteor.Error 500, error
               else
                 result._id = _id
                 console.info "Meteor.Files Debugger: The file #{fileName} (binary) was saved to #{path}" if self.debug
-                fut.return result
-
-          cb = (error) -> bound -> handleError error if error
-
+                cb null, result
           try
             if opts.eof
               if opts.fileLength > 1
-                fs.readdir self.storagePath, (error, files) -> bound ->
+                fs.readdir self.storagePath, (error, files) ->
                   if error
-                    fut.return new Meteor.Error 500, error
+                    cb new Meteor.Error 500, error
                   else
-                    concatChunks 2, files.filter (f) -> !!~f.indexOf opts.fileId
+                    concatChunks 2, files.filter((f) -> !!~f.indexOf opts.fileId), cb
               else
-                finish()
+                finish cb
             else
-              fs.outputFile pathPart, binary, 'binary', cb
+              fs.outputFile pathPart, binary, 'binary', (error) ->
+                cb error, result
           catch e
-            handleError e
-        ).run()
+            cb e
 
         if opts.eof
-          result = fut.wait()
-          if result.error
-            throw result
-            return false
-          else
-            return result
+          try
+            return Meteor.wrapAsync(action)()
+          catch e
+            console.warn "Meteor.Files Debugger: Insert (Upload) Exception:", e if self.debug
+            throw e
         else
+          action NOOP
           return result
 
       _methods[self.methodNames.MeteorFileAbort] = (opts) ->
@@ -559,7 +546,7 @@ class Meteor.Files
       @search =
         _id: search
     else
-      @search = search
+      @search = search or {}
     @search
 
   ###
@@ -733,7 +720,7 @@ class Meteor.Files
   ###
   findOne: (search) ->
     console.info "Meteor.Files Debugger: [findOne(#{JSON.stringify(search)})]" if @debug
-    check search, Match.OneOf Object, String
+    check search, Match.Optional Match.OneOf Object, String
     @srch search
 
     if @checkAccess()
@@ -752,7 +739,7 @@ class Meteor.Files
   ###
   find: (search) ->
     console.info "Meteor.Files Debugger: [find(#{JSON.stringify(search)})]" if @debug
-    check search, Match.OneOf Object, String
+    check search, Match.Optional Match.OneOf Object, String
     @srch search
 
     if @checkAccess
@@ -1057,7 +1044,7 @@ class Meteor.Files
 
 
   _404: if Meteor.isServer then (http) ->
-    console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [404] File not found: #{if fileRef and fileRef.path then fileRef.path else undefined}" if @debug
+    console.warn "Meteor.Files Debugger: [download(#{http.request.originalUrl})] [404] File not found" if @debug
     text = 'File Not Found :('
     http.response.writeHead 404,
       'Content-Length': text.length
@@ -1075,7 +1062,7 @@ class Meteor.Files
   @returns {undefined}
   ###
   download: if Meteor.isServer then (http, version = 'original') ->
-    console.info "Meteor.Files Debugger: [download(#{http}, #{version})]" if @debug
+    console.info "Meteor.Files Debugger: [download(#{http.request.originalUrl}, #{version})]" if @debug
     responseType = '200'
     if not @public
       if @currentFile
@@ -1164,7 +1151,7 @@ class Meteor.Files
 
         switch responseType
           when '400'
-            console.warn "Meteor.Files Debugger: [download(#{http}, #{version})] [400] Content-Length mismatch!: #{fileRef.path}" if self.debug
+            console.warn "Meteor.Files Debugger: [download(#{fileRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
             text = 'Content-Length mismatch!'
             http.response.writeHead 400,
               'Content-Type':   'text/plain'
@@ -1176,13 +1163,13 @@ class Meteor.Files
             return self._404 http
             break
           when '416'
-            console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [416] Content-Range is not specified!: #{fileRef.path}" if self.debug
+            console.info "Meteor.Files Debugger: [download(#{fileRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
             http.response.writeHead 416,
               'Content-Range': "bytes */#{fileRef.size}"
             http.response.end()
             break
           when '200'
-            console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [200]: #{fileRef.path}" if self.debug
+            console.info "Meteor.Files Debugger: [download(#{fileRef.path}, #{version})] [200]" if self.debug
             stream = fs.createReadStream fileRef.path
             stream.on('open', =>
               http.response.writeHead 200
@@ -1194,7 +1181,7 @@ class Meteor.Files
             ).on 'error', streamErrorHandler
             break
           when '206'
-            console.info "Meteor.Files Debugger: [download(#{http}, #{version})] [206]: #{fileRef.path}" if self.debug
+            console.info "Meteor.Files Debugger: [download(#{fileRef.path}, #{version})] [206]" if self.debug
             http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
             http.response.setHeader 'Trailer', 'expires'
             http.response.setHeader 'Transfer-Encoding', 'chunked'

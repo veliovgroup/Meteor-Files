@@ -1,10 +1,5 @@
 {
   "dependencies": {
-    "fibers": {
-      "version": "1.0.8",
-      "resolved": "https://registry.npmjs.org/fibers/-/fibers-1.0.8.tgz",
-      "from": "fibers@1.0.8"
-    },
     "fs-extra": {
       "version": "0.26.7",
       "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.26.7.tgz",
