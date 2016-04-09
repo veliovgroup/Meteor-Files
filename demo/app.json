@@ -1,0 +1,62 @@
+{
+  "name": "Meteor Files",
+  "version": "1.4.0",
+  "description": "Demo application for ostrio:files package",
+  "repository": "https://github.com/VeliovGroup/Meteor-Files-Demo",
+  "website": "https://github.com/VeliovGroup/Meteor-Files-Demo",
+  "logo": "https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "connect": "^3.4.1",
+    "fibers": "^1.0.8",
+    "http-proxy": "^1.13.2",
+    "keypress": "^0.2.1",
+    "meteor-promise": "0.5.1",
+    "mime": "^1.3.4",
+    "mongodb": "^2.1.15",
+    "progress": "^1.1.8",
+    "request": "^2.70.0",
+    "semver": "4.1.0",
+    "sockjs": "^0.3.16",
+    "meteor-deque": "*",
+    "stream-buffers": "^3.0.0",
+    "underscore": "1.5.2",
+    "useragent": "^2.1.9",
+    "fs-extra": "0.26.7",
+    "throttle": "1.0.3",
+    "meteor-node-stubs": "~0.2.0",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e"
+  },
+  "env": {
+    "ROOT_URL": {
+      "description": "Full URL of your app, with protocol (scheme), like http://example.com",
+      "required": true
+    },
+    "MONGO_URL": {
+      "description": "Full URL to mongodb, with protocol (scheme), like mongodb://user:pass@host:port/db. Create free one at: https://mlab.com",
+      "required": true
+    }
+  },
+  "keywords": [
+    "meteor",
+    "node",
+    "node.js",
+    "files",
+    "file",
+    "streaming",
+    "upload",
+    "cdn"
+  ],
+  "image": "heroku/nodejs",
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "engines": {
+    "node": "0.10.41",
+    "npm": "2.15.3"
+  }
+}
