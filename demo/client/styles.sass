@@ -23,6 +23,12 @@
   text-overflow: ellipsis
   -o-text-overflow: ellipsis
 
+.upload-form-container
+  max-width: 80%
+  margin: 0px auto
+  @media (max-width: 767px)
+    max-width: 100%
+
 .scroll
   -webkit-overflow-scrolling: touch
 .scroll-x
@@ -78,13 +84,16 @@ th
   min-height: 100%
   min-height: 100vh
 
-.navbar 
+.navbar
   table
     width: 100%
   .progress
     min-width: 50vw
     height: 28px
     margin: 0px
+  & > .container-fluid
+    @media (max-width: 767px)
+      padding: 0px
 
 .gh-ribbon
   position: absolute

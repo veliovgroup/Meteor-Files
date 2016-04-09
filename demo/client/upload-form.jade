@@ -11,10 +11,9 @@ template(name="uploadForm")
             i.fa.fa-lg.fa-cloud-upload
             | Upload
       small.text-center.help-block Any file-type. With size less or equal to 128MB
-
-    if uploadInstance
+    else
       +with uploadInstance
-        table(style="max-width:80%;"): tbody
+        table.upload-form-container: tbody
           tr
             td
               .btn-group
