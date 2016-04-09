@@ -36,8 +36,8 @@ echo "web: node main.js" > Procfile
 heroku create <your-app-name> --buildpack https://github.com/heroku/heroku-buildpack-nodejs
 # This command will output something like: https://<your-app-name>.herokuapp.com/ | https://git.heroku.com/<your-app-name>.git
 
-# Copy this: `http://<your-app-name>.herokuapp.com`, note use only `http://` protocol!
-heroku config:set ROOT_URL=http://<your-app-name>.herokuapp.com
+# Copy this: `https://<your-app-name>.herokuapp.com`, note use only `https://` protocol!
+heroku config:set ROOT_URL=https://<your-app-name>.herokuapp.com
 # To have a MongoDB, you can create one at https://mlab.com/
 # After creating MongoDB instance create user, then copy URL to your MongoDB
 # Should be something like: mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19470/mydb
@@ -48,7 +48,7 @@ git add .
 git commit -m "initial"
 git push heroku master
 ```
- - Go to `http://<your-app-name>.herokuapp.com`
+ - Go to `https://<your-app-name>.herokuapp.com`
  - If you app has errors:
    * Check logs: `heroku logs --tail`
    * Try to run locally and debug: `heroku run node`
