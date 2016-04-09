@@ -1,41 +1,39 @@
 template(name="file")
   .panel.panel-default
-    .panel-heading: h3.panel-title.ellipsis #{name}
-    .panel-body
-      a.btn.btn-default.btn-block(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true" target="_parent" download): i.fa.fa-download
-      
-      .thumbnail.center-block(style="margin-top: 15px")
+    .panel-body.no-padding.center
         if isImage
-          img(src="{{fileURL .}}" alt="{{name}}" style="max-width: 100%")
-
+          picture.file-preview
+            source(type="{{type}}" srcset="{{fileURL .}}")
+            img.file-preview(src="{{fileURL .}}" alt="{{name}}")
         else if isAudio
-          audio.center-block(controls style="max-width: 100%" autoplay preload="auto" loop)
+          audio.file-preview.file-audio(controls autoplay preload="auto" loop)
             source(src="{{fileURL .}}?play=true" type="{{type}}")
-
         else if isVideo
-          video.center-block(controls style="max-width: 100%" autoplay preload="auto" loop)
+          video.file-preview(controls autoplay preload="auto" loop)
             source(src="{{fileURL .}}?play=true" type="{{type}}")
         else
-          .alert.alert-info Preview is not available, please download file.
-
+          .alert.alert-info.no-margin.no-radius Preview is not available, please download file.
+    .panel-heading: h3.panel-title.ellipsis {{extless name}}
     table.table.table-bordered.table-condensed(style="table-layout:fixed")
       thead
         tr
-          th: span.ellipsis Name
-          th: span.ellipsis Mime-type
-          th: span.ellipsis Size
-          th: span.ellipsis Extension
-          th: span.ellipsis Downloads
+          th.ellipsis Name
+          th.ellipsis Mime-type
+          th.ellipsis Size
+          th.ellipsis Extension
+          th.ellipsis Downloads
       tbody
         tr
-          td.text-center: span.ellipsis.label.label-default #{name}
-          td.text-center: span.ellipsis.label.label-default #{type}
-          td.text-center: span.ellipsis.label.label-default {{filesize size}}
-          td.text-center
+          td.text-center.scroll.scroll-x: span.label.label-default #{name}
+          td.text-center.scroll.scroll-x: span.label.label-default #{type}
+          td.text-center.scroll.scroll-x: span.label.label-default {{filesize size}}
+          td.text-center.scroll.scroll-x
             if extension
-              span.ellipsis.label.label-default .#{extension}
+              span.label.label-default .#{extension}
             else
               small.help-block.no-margin extension-less
-          td.text-center: a.ellipsis.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download)
+          td.text-center.scroll.scroll-x: a.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download)
             i.fa.fa-download
             | #{meta.downloads}
+    .panel-body
+      a.btn.btn-default.btn-block(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true" target="_parent" download): i.fa.fa-download

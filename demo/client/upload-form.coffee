@@ -33,9 +33,21 @@ Meteor.startup ->
           else
             template.error.set error.reason
           template.uploadInstance.set false
+        FileReadProgress: (p) -> 
+          $('.progress-bar').addClass 'preload'
+          if p >= 100
+            @progress.set 0
+          else
+            @progress.set p
+        onReady: ->
+          @progress.set 0
+          Meteor.setTimeout ->
+            $('.progress-bar').removeClass 'preload'
+          , 250
         onAbort: ->
           done = true
           template.uploadInstance.set false
-        onBeforeUpload: -> if @size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@size)}"
-        streams: 8
+        onBeforeUpload: -> if @file.size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
+        streams: 'dynamic'
+        chunkSize: 'dynamic'
       false
