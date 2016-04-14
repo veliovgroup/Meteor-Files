@@ -4,12 +4,9 @@
 `settings` is __required__ object:
  - `file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `event.currentTarget.files[0]`
  - `meta` {*Object*} - Additional file-related data, like `ownerId`, `postId`, etc.
- - `onReady` {*Function*} - Triggered when file is loaded to browser
  - `onUploaded` {*Function*} - Callback triggered when upload is finished, with two arguments:
     * `error`
     * `fileRef` - File record from DB
- - `FileReadProgress` {*Function*} - Callback triggered while browser loading file, argument:
-    * `progress` {*Number*} - Current progress from `0` to `100`
  - `onProgress` {*Function*} - Callback triggered when chunk is sent, argument:
     * `progress` {*Number*} - Current progress from `0` to `100`
  - `onBeforeUpload` {*Function*} - Callback triggered right before upload is started, with __no arguments__:
@@ -34,7 +31,6 @@ Returns {*Object*}, this is same object used for *context* of callback functions
  - `continue` {*Function*} - Continue paused upload process
  - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
  - `abort` {*Function*} - Abort upload upload and file reading, then trigger `onAbort` callback
- - `readAsDataURL` {*Function*} - Returns file as base64 data URL, can be used to create previews and etc. *Do not call on large files, may lead to browser crash*. Returns empty string if file is not yet loaded to browser, use `onReady` callback to make sure file is loaded to browser.
  - `state` {*ReactiveVar*} - String reflecting current state of the upload, with four possible values:
     * `active` - file is currently actively uploading
     * `paused` - file upload is paused

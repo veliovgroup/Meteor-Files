@@ -24,7 +24,7 @@ Deploy to Heroku
 # os.windows.x86_32
 meteor build ../build-<your-app-name> --architecture os.linux.x86_64
 cd ../build-<your-app-name>
-tar xvzf <name-of-archive> -C ./
+tar xzf <name-of-archive> -C ./
 cd bundle/
 cp -Rf * ../
 cd ../
