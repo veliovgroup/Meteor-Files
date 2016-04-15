@@ -297,14 +297,19 @@ class Meteor.Files
       _methods[self.methodNames.MeteorFileWrite] = (opts) ->
         @unblock()
         check opts, {
-          eof:        Boolean
-          meta:       Object
+          eof:        Match.Optional Boolean
+          meta:       Match.Optional Object
           file:       Object
           fileId:     String
-          binData:    Match.Any
-          chunkId:    Number
+          binData:    Match.Optional String
+          chunkId:    Match.Optional Number
           fileLength: Number
         }
+
+        opts.eof     ?= false
+        opts.meta    ?= {}
+        opts.binData ?= 'EOF'
+        opts.chunkId ?= -1
 
         console.info "[Meteor.Files] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
 
@@ -318,9 +323,9 @@ class Meteor.Files
 
         pathName = if self.public then "#{self.storagePath}/original-#{opts.fileId}" else "#{self.storagePath}/#{opts.fileId}"
         path     = if self.public then "#{self.storagePath}/original-#{opts.fileId}#{extensionWithDot}" else "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
-        pathPart = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId}#{extensionWithDot}" else path
+        pathPart = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId}#{extensionWithDot}" else null
 
-        result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId, chunkId: opts.chunkId}
+        result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId}
 
         action = (cb) -> Meteor.defer ->
           if opts.eof
@@ -334,10 +339,11 @@ class Meteor.Files
             files.splice sindex, 1 if !!~sindex
             findex = files.indexOf "#{opts.fileId}_#{num}#{extensionWithDot}"
             if !!~findex
-              files.splice(findex, 1)
-            else
-              console.warn "[Meteor.Files] [Write Method] [concatChunks] finish as no more file's chunks", files, {sindex, findex}, "#{opts.fileId}_#{num}#{extensionWithDot}" if self.debug
+              files.splice findex, 1
+            else if files.length <= 0
               return finish cb
+            else
+              return concatChunks ++num, files, cb
 
             _path   = "#{pathName}_#{num}#{extensionWithDot}"
             _source = pathName + '_1' + extensionWithDot
@@ -389,11 +395,30 @@ class Meteor.Files
                   if error
                     cb new Meteor.Error 500, error
                   else
-                    concatChunks 2, files.filter((f) -> !!~f.indexOf opts.fileId), cb
+                    files = files.filter((f) -> !!~f.indexOf opts.fileId)
+                    if files.length is 1
+                      fs.rename "#{self.storagePath}/#{files[0]}", path, (error) -> bound ->
+                        if error
+                          cb new Meteor.Error 500, "Can't rename #{_source} to #{path}"
+                        else
+                          finish cb
+                    else
+                      concatChunks 2, files, cb
               else
                 finish cb
             else
-              fs.outputFile pathPart, binary, 'binary', (error) -> bound -> cb error, result
+              if pathPart
+                _path = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId - 1}#{extensionWithDot}"
+                fs.stat _path, (error, stats) -> bound ->
+                  if error or not stats.isFile()
+                    fs.outputFile (pathPart or path), binary, 'binary', (error) -> bound -> 
+                      cb error, result
+                  else
+                    fs.appendFile _path, binary, (error) -> bound -> 
+                      fs.rename _path, "#{pathName}_#{opts.chunkId}#{extensionWithDot}", (error) -> bound -> 
+                        cb error, result
+              else
+                fs.outputFile (pathPart or path), binary, 'binary', (error) -> bound -> cb error, result
           catch e
             cb e
           return
@@ -805,10 +830,9 @@ class Meteor.Files
     {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
     {Number|dynamic} chunkSize   - Chunk size for upload
     {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-    {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileRef`
+    {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
     {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
-    {Function}    onBeforeUpload - Callback triggered right before upload is started, with only `FileReader` argument:
-        context is `File` - so you are able to check for extension, mime-type, size and etc.
+    {Function}    onBeforeUpload - Callback triggered right before upload is started:
         return true to continue
         return false to abort upload
   @description Upload file to server over DDP
@@ -899,7 +923,6 @@ class Meteor.Files
             @state.set 'aborted'
             console.timeEnd('insert') if self.debug
             Meteor.call self.methodNames.MeteorFileAbort, {fileId, fileLength, fileData}
-            worker.terminate() if worker
             delete upload
             return
 
@@ -924,7 +947,6 @@ class Meteor.Files
             config.onError and config.onError.call result, error, fileData
           else
             result.state.set 'completed'
-          worker.terminate() if worker
           return
 
         if config.onBeforeUpload and _.isFunction config.onBeforeUpload
@@ -950,15 +972,13 @@ class Meteor.Files
           result.estimateSpeed.set (config.chunkSize / (_t / 1000))
           progress = Math.round((sentChunks / fileLength) * 100)
           result.progress.set progress
-          config.onProgress and config.onProgress.call result, progress
+          config.onProgress and config.onProgress.call result, progress, fileData
           return
         , 250
 
         sendViaDDP = (evt) -> Meteor.defer ->
           console.timeEnd('loadFile') if self.debug
           opts =
-            eof:        false
-            meta:       config.meta
             file:       fileData
             fileId:     fileId
             binData:    evt.data.bin
@@ -986,12 +1006,10 @@ class Meteor.Files
           unless EOFsent
             EOFsent = true
             opts =
-              eof:       true
-              meta:      config.meta
-              file:      fileData
-              fileId:    fileId
-              binData:   'EOF'
-              chunkId:    -1
+              eof:        true
+              meta:       config.meta
+              file:       fileData
+              fileId:     fileId
               fileLength: fileLength
             Meteor.call self.methodNames.MeteorFileWrite, opts, end
           return
@@ -1062,7 +1080,6 @@ class Meteor.Files
 
           fileLength     = if _len <= 0 then 1 else _len
           config.streams = fileLength if config.streams > fileLength
-          console.log {config, fileLength}
           createStreams()
           return
         prepare()
