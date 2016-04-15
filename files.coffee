@@ -116,6 +116,8 @@ class Meteor.Files
 
     if Meteor.isClient
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
+      if Worker
+        @ReaderWorker = new Worker '/packages/ostrio_files/worker.js'
       delete @strict
       delete @throttle
       delete @storagePath
@@ -295,13 +297,13 @@ class Meteor.Files
       _methods[self.methodNames.MeteorFileWrite] = (opts) ->
         @unblock()
         check opts, {
-          meta: Object
-          file: Object
-          fileId: String
-          binData: String
-          chunkId: Number
+          eof:        Boolean
+          meta:       Object
+          file:       Object
+          fileId:     String
+          binData:    Match.Any
+          chunkId:    Number
           fileLength: Number
-          eof: Boolean
         }
 
         console.info "[Meteor.Files] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
@@ -321,7 +323,10 @@ class Meteor.Files
         result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId, chunkId: opts.chunkId}
 
         action = (cb) -> Meteor.defer ->
-          binary = new Buffer opts.binData, 'base64'
+          if opts.eof
+            binary = opts.binData
+          else
+            binary = new Buffer opts.binData, 'base64'
           tries  = 0
 
           concatChunks = (num, files, cb) ->
@@ -821,28 +826,28 @@ class Meteor.Files
   insert: if Meteor.isClient then (config) ->
     if @checkAccess()
       console.info '[Meteor.Files] [insert()]' if @debug
-      config.meta      ?= {}
-      config.streams   ?= 2
-      config.streams    = 2 if config.streams < 1
-      config.chunkSize ?= @chunkSize
+      config.meta            ?= {}
+      config.streams         ?= 2
+      config.streams          = 2 if config.streams < 1
+      config.chunkSize       ?= @chunkSize
       config.allowWebWorkers ?= true
 
       check config, {
-        file: Match.Any
-        meta: Match.Optional Object
-        onAbort: Match.Optional Function
-        streams: Match.OneOf 'dynamic', Number
-        chunkSize: Match.OneOf 'dynamic', Number
-        onUploaded: Match.Optional Function
-        onProgress: Match.Optional Function
-        onBeforeUpload: Match.Optional Function
-        onError: Match.Optional Function
+        file:            Match.Any
+        meta:            Match.Optional Object
+        onError:         Match.Optional Function
+        onAbort:         Match.Optional Function
+        streams:         Match.OneOf 'dynamic', Number
+        chunkSize:       Match.OneOf 'dynamic', Number
+        onUploaded:      Match.Optional Function
+        onProgress:      Match.Optional Function
+        onBeforeUpload:  Match.Optional Function
         allowWebWorkers: Boolean
       }
 
       if config.file
-        if URL and Blob and Worker and config.allowWebWorkers
-          worker   = new Worker URL.createObjectURL new Blob ['self.onmessage=function(t){var e=new FileReader;e.onloadend=function(a){var n,r;postMessage({bin:((null!=e?e.result:void 0)||(null!=(n=a.srcElement)?n.result:void 0)||(null!=(r=a.target)?r.result:void 0)).split(",")[1],chunkId:t.data.currentChunk,start:t.data.start})},e.onerror=function(t){throw(t.target||t.srcElement).error},e.readAsDataURL(t.data.file.slice(t.data.chunkSize*(t.data.currentChunk-1),t.data.chunkSize*t.data.currentChunk))};']
+        if Worker and config.allowWebWorkers
+          worker   = @ReaderWorker
         else
           worker   = null
         console.time('insert') if @debug
@@ -952,13 +957,13 @@ class Meteor.Files
         sendViaDDP = (evt) -> Meteor.defer ->
           console.timeEnd('loadFile') if self.debug
           opts =
-            meta: config.meta
-            file: fileData
-            fileId: fileId
-            binData: evt.data.bin
-            chunkId: evt.data.chunkId
+            eof:        false
+            meta:       config.meta
+            file:       fileData
+            fileId:     fileId
+            binData:    evt.data.bin
+            chunkId:    evt.data.chunkId
             fileLength: fileLength
-            eof: false
 
           if opts.binData and opts.binData.length
             Meteor.call self.methodNames.MeteorFileWrite, opts, (error) ->
@@ -981,13 +986,13 @@ class Meteor.Files
           unless EOFsent
             EOFsent = true
             opts =
-              meta: config.meta
-              file: fileData
-              fileId: fileId
-              binData: 'EOF'
-              chunkId: -1
+              eof:       true
+              meta:      config.meta
+              file:      fileData
+              fileId:    fileId
+              binData:   'EOF'
+              chunkId:    -1
               fileLength: fileLength
-              eof: true
             Meteor.call self.methodNames.MeteorFileWrite, opts, end
           return
 
