@@ -2,12 +2,12 @@
 *Initialize Meteor.Files collection*.
 
 `config` is __optional__ object with next properties:
- - `storagePath` {*String*} - Storage path on file system
+ - `storagePath` {*String*} - [*SERVER*] Storage path on file system
     * Default value: `assets/app/uploads`. Relative to running script
  - `collectionName` {*String*} - Collection name
     * Default value: `MeteorUploadFiles`
- - `cacheControl` {*String*} - Set `Cache-Control` header, default: `public, max-age=31536000, s-maxage=31536000`
- - `throttle` {*Number* | *false*} - Throttle download speed in *bps*, by default is `false`
+ - `cacheControl` {*String*} - [*SERVER*] Set `Cache-Control` header, default: `public, max-age=31536000, s-maxage=31536000`
+ - `throttle` {*Number*|*false*} - [*SERVER*] Throttle download speed in *bps*, by default is `false`
  - `downloadRoute` {*String*} - Server Route used to retrieve files
     * Default value: `/cdn/storage`
  - `schema` {*Object*} - Collection Schema. Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
@@ -17,11 +17,11 @@
     * Default value: `String.rand`
  - `permissions` {*Number*} - FS-permissions (access rights) in octal, like `0755` or `0777`
     * Default value: `0755`
- - `integrityCheck` {*Boolean*} - CRC file check
+ - `integrityCheck` {*Boolean*} - [*SERVER*] CRC file check
     * Default value: `true`
- - `strict` {*Boolean*} - Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
+ - `strict` {*Boolean*} - [*SERVER*] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
     * Default value: `false`
- - `downloadCallback` {*Function*} - Called right before initiate file download, with next context and only one argument `fileObj`:
+ - `downloadCallback` {*Function*} - [*SERVER*] Called right before initiate file download, with next context and only one argument `fileObj`:
     * `fileObj` - see [schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
     * __context__:
       - `this.request`
@@ -48,18 +48,24 @@
     * __Note:__ Collection can not be `public` and `protected` at the same time!
     * __Note:__ `integrityCheck` is __not__ guaranteed!
     * __Note:__ `play` and force `download` features is __not__ guaranteed!
- - `onBeforeUpload` {*Function*} - Callback triggered right before upload on __client__ and right after recieving a chunk on __server__, with __no arguments__:
-    * Context of the function is {*Object*}, with:
-      - `extension`, alias `ext`
-      - `mime-type`, alias `type`
-      - `size`
+ - `onBeforeUpload` {*Function*} - Callback, triggered right before upload is started on __client__ and right after receiving a chunk on __server__, arguments:
+    * `fileData` {*Object*}
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
- - `onbeforeunloadMessage` {*String* or *Function*} - Message shown to user when closing browser's window or tab, while upload in the progress
+ - `onAfterUpload` {*Function*} - [*SERVER*] Callback, triggered after file is written to FS, with single argument:
+    - `fileRef` {*Object*} - Record from MongoDB
+ - `onbeforeunloadMessage` {*String*|*Function*} - [*Client*] Message shown to user when closing browser's window or tab, while upload in the progress
     * Default value: `'Upload in a progress... Do you want to abort?'`
  - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client, default: `true`
  - `debug` {*Boolean*} - Turn on/of debugging and extra logging
     * Default value: `false`
+ - `interceptDownload` {*Function*} - [*SERVER*] Intercept download request, so you can serve file from third-party resource, arguments:
+    - `http` {*Object*} - Middleware request instance
+    - `http.request` {*Object*} - example: `http.request.headers`
+    - `http.response` {*Object*} - example: `http.response.end()`
+    - `fileRef` {*Object*} - Current file record from MongoDB
+    - Return `false` from this function to continue standard behavior
+    - Return `true` to intercept incoming request
 
 ```javascript
 var Images;

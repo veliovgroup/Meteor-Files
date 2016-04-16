@@ -7,7 +7,7 @@
  - `onUploaded` {*Function*} - Callback, triggered when upload is finished, arguments:
     * `error`
     * `fileRef` - File record from DB
- - `onError` {*Function*} - Callback, triggered when upload is finished, arguments:
+ - `onError` {*Function*} - Callback, triggered when upload is finished with error, arguments:
     * `error`
     * `fileData` {*Object*}
  - `onProgress` {*Function*} - Callback, triggered after chunk is sent, arguments:
