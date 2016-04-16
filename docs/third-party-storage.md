@@ -1,6 +1,6 @@
 ##### How to use third-party storage
 
-Example blow shows how to store and serve uploaded file via third-party storage (*DropBox in this case*). This example also covers file removing from both your application and DropBox.
+Example below shows how to store and serve uploaded file via third-party storage (*DropBox in this case*). This example also covers file removing from both your application and DropBox.
 
 Prepare: install [dropbox-js](https://github.com/dropbox/dropbox-js):
 ```shell
