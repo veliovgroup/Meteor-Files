@@ -93,12 +93,13 @@ return `true` to continue
 return `false` or `String` to abort upload
 @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
 @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
+@param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
 @param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
 @description Create new instance of Meteor.Files
 ###
 class Meteor.Files
   constructor: (config) ->
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload} = config if config
 
     self               = @
     cookie             = new Cookies()
@@ -113,6 +114,7 @@ class Meteor.Files
     @namingFunction   ?= -> Random.id()
     @onBeforeUpload   ?= false
     @allowClientCode  ?= true
+    @interceptDownload?= false
 
     if Meteor.isClient
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
@@ -126,6 +128,7 @@ class Meteor.Files
       delete @onAfterUpload
       delete @integrityCheck
       delete @downloadCallback
+      delete @interceptDownload
       if @protected
         if not cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
           cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
@@ -147,9 +150,10 @@ class Meteor.Files
       check @permissions, Number
       check @storagePath, String
       check @cacheControl, String
-      check @onAfterUpload, Match.OneOf Boolean, Function
+      check @onAfterUpload, Match.OneOf false, Function
       check @integrityCheck, Boolean
-      check @downloadCallback, Match.OneOf Boolean, Function
+      check @downloadCallback, Match.OneOf false, Function
+      check @interceptDownload, Match.OneOf false, Function
 
     if not @schema
       @schema =
@@ -189,7 +193,7 @@ class Meteor.Files
     check @downloadRoute, String
     check @collectionName, String
     check @namingFunction, Function
-    check @onBeforeUpload, Match.OneOf Boolean, Function
+    check @onBeforeUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
 
     if @public and @protected
@@ -386,7 +390,7 @@ class Meteor.Files
               else
                 result._id = _id
                 console.info "[Meteor.Files] [Write Method] [finish] #{fileName} -> #{path}" if self.debug
-                self.onAfterUpload and self.onAfterUpload null, result
+                self.onAfterUpload and self.onAfterUpload.call self, result
                 cb null, result
           try
             if opts.eof
@@ -887,12 +891,6 @@ class Meteor.Files
         fileData = _.extend fileData, @getExt(config.file.name), {mime: @getMimeType(fileData)}
         fileData['mime-type'] = fileData.mime
 
-        beforeunload = (e) ->
-          message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(null) else self.onbeforeunloadMessage
-          e.returnValue = message if e
-          return message
-        window.addEventListener 'beforeunload', beforeunload, false
-
         result  =
           file:          _.extend config.file, fileData
           state:         new ReactiveVar 'active'
@@ -925,6 +923,12 @@ class Meteor.Files
             Meteor.call self.methodNames.MeteorFileAbort, {fileId, fileLength, fileData}
             delete upload
             return
+
+        beforeunload = (e) ->
+          message = if _.isFunction(self.onbeforeunloadMessage) then self.onbeforeunloadMessage.call(result, fileData) else self.onbeforeunloadMessage
+          e.returnValue = message if e
+          return message
+        window.addEventListener 'beforeunload', beforeunload, false
 
         Tracker.autorun ->
           unless result.onPause.get()
@@ -1125,6 +1129,7 @@ class Meteor.Files
   @returns {undefined}
   ###
   unlink: if Meteor.isServer then (file) ->
+    console.log "[Meteor.Files] [unlink(#{file._id})]" if @debug
     if file.versions and not _.isEmpty file.versions
       _.each file.versions, (version) -> bound ->
         fs.unlink version.path, NOOP
@@ -1171,6 +1176,11 @@ class Meteor.Files
       return @_404 http
     else if @currentFile
       self = @
+
+      if @interceptDownload and _.isFunction @interceptDownload
+        _idres = @interceptDownload http, @currentFile
+        if _idres is true
+          return
 
       if @downloadCallback
         unless @downloadCallback.call _.extend(http, @getUser(http)), @currentFile
