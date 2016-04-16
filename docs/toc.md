@@ -4,10 +4,16 @@ Meteor-Files
 ### About:
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
  - Upload file(s) via DDP
-    * Ready for small and large files (Note Browser will eat 7%-10% RAM of the file size)
+    * Ready for small and large files (RAM used only for chunk reading - [read about `chunkSize`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)))
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (faster than ever)
+ - Use third-party storage:
+    * AWS
+    * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+    * Google Drive
+    * Google Storage
+    * any other with JS/REST API
  - Serving files
     * Make files `public`, so your proxy server like __nginx__ can serve them
     * Protect/Restrict access to files
@@ -45,4 +51,5 @@ Meteor-Files
  - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
+ - [Third-party storage (DropBox example)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats

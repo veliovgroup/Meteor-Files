@@ -17,7 +17,7 @@ Demo application:
 
 ToC:
 ========
- - [Overview](https://github.com/VeliovGroup/Meteor-Files#meteor-files)
+ - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api)
@@ -29,9 +29,9 @@ ToC:
 Why `Meteor-Files`?
 ========
 `cfs` is a good package, but buggy as it's huge monster which combine everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/retrieve files to/from server. 
- - You need store to GridFS? - *Add it yourself*
- - You need to check file mime-type or extensions? - *Add it yourself*
- - You need to resize images after upload? - *Add it yourself*
+ - You need store to GridFS, AWS or DropBox? (*[Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
+ - You need to check file mime-type or extensions? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
+ - You need to resize images after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
 
