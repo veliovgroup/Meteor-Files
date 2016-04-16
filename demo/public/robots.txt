@@ -1,3 +1,2 @@
 User-agent: *
 Disallow: 
-Host: meteor-files.herokuapp.com

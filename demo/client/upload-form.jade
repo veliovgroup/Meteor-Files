@@ -26,4 +26,4 @@ template(name="uploadForm")
                 button#abort.btn.btn-default.btn-sm(type="button" title="Abort upload")
                     i.fa.fa-fw.fa-stop
             td: .progress.center: .progress-bar.progress-bar-striped.active(aria-valuemin="0" aria-valuemax="100" style="width: {{progress.get}}%")
-          tr: td.center(colspan="2"): small.text-center.help-block(style="margin-bottom:0px") You are free to browse the site while upload in progress
+          tr: td.center(colspan="2"): small.text-center.help-block(style="margin-bottom:0px") You are free to browse the site while upload in progress | Remaining time: {{estimateDuration}} | Speed: {{estimateBitrate}}

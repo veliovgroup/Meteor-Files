@@ -4,8 +4,18 @@ Meteor.startup ->
     @uploadInstance = new ReactiveVar false
 
   Template.uploadForm.helpers
-    error:         -> Template.instance().error.get()
-    uploadInstance:-> Template.instance().uploadInstance.get()
+    error:            -> Template.instance().error.get()
+    uploadInstance:   -> Template.instance().uploadInstance.get()
+    estimateBitrate:  -> filesize(@estimateSpeed.get(), {bits: true}) + '/s'
+    estimateDuration: -> 
+      duration = moment.duration(@estimateTime.get())
+      hours    = "#{duration.hours()}"
+      hours    = "0" + hours if hours.length <= 1
+      minutes  = "#{duration.minutes()}"
+      minutes  = "0" + minutes if minutes.length <= 1
+      seconds  = "#{duration.seconds()}"
+      seconds  = "0" + seconds if seconds.length <= 1
+      return "#{hours}:#{minutes}:#{seconds}"
 
   Template.uploadForm.events
     'click #pause':    -> @pause()
@@ -31,12 +41,11 @@ Meteor.startup ->
           unless error
             Router.go 'file', _id: fileObj._id
           else
-            template.error.set error.reason
+            template.error.set error?.reason or error
           template.uploadInstance.set false
         onAbort: ->
           done = true
           template.uploadInstance.set false
-        onBeforeUpload: -> if @file.size <= 100000 * 10 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
         streams: 'dynamic'
         chunkSize: 'dynamic'
         # Set allowWebWorkers to false to disable WebWorkers

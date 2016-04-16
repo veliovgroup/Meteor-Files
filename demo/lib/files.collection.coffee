@@ -1,4 +1,16 @@
-Collections.files = new Meteor.Files 
+# Uncomment for DropBox usage
+# Read: https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage
+# if Meteor.isServer
+#   Dropbox = Npm.require 'dropbox'
+#   fs      = Npm.require 'fs'
+#   bound   = Meteor.bindEnvironment (callback) -> return callback()
+#   client  = new (Dropbox.Client)({
+#     key: 'XXX'
+#     secret: 'XXX'
+#     token: 'XXXXXXXXX'
+#   })
+
+Collections.files = new Meteor.Files
   debug:            false
   throttle:         false
   chunkSize:        1024*1024
@@ -10,6 +22,39 @@ Collections.files = new Meteor.Files
     if @params?.query.download is 'true'
       Collections.files.collection.update fileObj._id, $inc: 'meta.downloads': 1
     return true
+  # Uncomment for DropBox usage
+  # onAfterUpload:    (fileRef) ->
+  #   self = @
+  #   fs.readFile fileRef.path, (error, data) -> bound ->
+  #     if error
+  #       console.error error
+  #     else
+  #       # Write file to DropBox
+  #       client.writeFile "#{fileRef._id}.#{fileRef.extension}", data, (error, stat) -> bound ->
+  #         if error
+  #           console.error error
+  #         else
+  #           # Generate downloadable link
+  #           client.makeUrl stat.path, {long: true, downloadHack: true}, (error, xml) -> bound ->
+  #             # Store downloadable in file's meta object
+  #             self.collection.update {_id: fileRef._id}, {$set: {'meta.pipeFrom': xml.url, 'meta.pipePath': stat.path}}, (error) ->
+  #               if error
+  #                 console.error error
+  #               else
+  #                 # Remove file from FS
+  #                 self.unlink fileRef
+  # interceptDownload: (http, fileRef) ->
+  #   path = fileRef?.meta?.pipeFrom
+  #   if path
+  #     # If file is moved to DropBox
+  #     # We will redirect browser to DropBox
+  #     http.response.writeHead 302, 'Location': path
+  #     http.response.end()
+  #     return true
+  #   else
+  #     # While file is not uploaded to DropBox
+  #     # We will serve file from FS
+  #     return false
 
 if Meteor.isServer
   Collections.files.collection.deny
@@ -18,7 +63,21 @@ if Meteor.isServer
     remove: -> true
 
   Collections.files.collection._ensureIndex {'meta.expireAt': 1}, {expireAfterSeconds: 0, background: true}
-  
+
+  # Uncomment for DropBox usage
+  # Intercept File's collection remove method
+  # to remove file from DropBox
+  # _origRemove = Collections.files.remove
+  # Collections.files.remove = (search) ->
+  #   cursor = @collection.find search
+  #   cursor.forEach (fileRef) ->
+  #     if fileRef?.meta?.pipePath
+  #       client.remove fileRef.meta.pipePath, (error) ->
+  #         if error
+  #           console.error error
+  #   # Call original method
+  #   _origRemove.call @, search
+
   # Remove all files on server load/reload, useful while testing/development
   # Meteor.startup -> Collections.files.remove {}
 
