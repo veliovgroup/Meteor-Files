@@ -38,8 +38,8 @@
  - `continue` {*Function*} - Continue paused upload process
  - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
  - `abort` {*Function*} - Abort current upload, then trigger `onAbort` callback
- - `estimateTime` {*Function*} - Remaining upload time in milliseconds
- - `estimateSpeed` {*Function*} - Current upload speed in bytes/second, to convert into speed look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: `filesize(estimateSpeed, {bits: true}) + '/s';`
+ - `estimateTime` {*ReactiveVar*} - Remaining upload time in milliseconds
+ - `estimateSpeed` {*ReactiveVar*} - Current upload speed in bytes/second, to convert into speed look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: `filesize(estimateSpeed, {bits: true}) + '/s';`
  - `state` {*ReactiveVar*} - String reflecting current state of the upload, with four possible values:
     * `active` - file is currently actively uploading
     * `paused` - file upload is paused
