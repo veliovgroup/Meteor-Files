@@ -31,3 +31,6 @@ fortawesome:fontawesome
 mrt:filesize
 standard-minifier-css
 standard-minifier-js
+markdown
+perak:markdown
+simple:highlight.js

@@ -10,7 +10,7 @@
 #     token: 'XXXXXXXXX'
 #   })
 
-Collections.files = new Meteor.Files
+Collections.files = new FilesCollection
   debug:            false
   throttle:         false
   chunkSize:        1024*1024
@@ -57,11 +57,8 @@ Collections.files = new Meteor.Files
   #     return false
 
 if Meteor.isServer
-  Collections.files.collection.deny
-    insert: -> true
-    update: -> true
-    remove: -> true
-
+  Collections.files.denyClient()
+  Collections.files.collection.attachSchema Collections.files.schema
   Collections.files.collection._ensureIndex {'meta.expireAt': 1}, {expireAfterSeconds: 0, background: true}
 
   # Uncomment for DropBox usage
@@ -103,6 +100,8 @@ if Meteor.isServer
         isVideo: 1
         isAudio: 1
         isImage: 1
+        isText: 1
+        extension: 1
 
   Meteor.publish 'file', (_id)->
     check _id, String

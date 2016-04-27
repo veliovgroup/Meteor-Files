@@ -1,6 +1,6 @@
 template(name="file")
   .panel.panel-default
-    .panel-body.no-padding.center
+    .panel-body(class="{{#if isText}}text-left{{else}}center no-padding{{/if}}")
         if isImage
           picture.file-preview
             source(type="{{type}}" srcset="{{fileURL .}}")
@@ -11,9 +11,34 @@ template(name="file")
         else if isVideo
           video.file-preview(controls autoplay preload="auto" loop)
             source(src="{{fileURL .}}?play=true" type="{{type}}")
+        else if isText
+          if warning
+            .alert.alert-warning.no-margin {{warning}}
+          else if fetchedText
+            if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
+              +markdown
+                {{fetchedText}}
+            else
+              +markdown
+                ```{{getCode}}
+                #{fetchedText}
+                ```
+          else
+            .alert.alert-info.no-margin.no-radius Preview is not available, please download file.
         else
           .alert.alert-info.no-margin.no-radius Preview is not available, please download file.
-    .panel-heading: h3.panel-title.ellipsis {{extless name}}
+    .panel-heading: h3.panel-title.ellipsis
+      if isAudio
+        i.fa.fa-fw.fa-file-audio-o
+      else if isVideo
+        i.fa.fa-fw.fa-file-video-o
+      else if isImage
+        i.fa.fa-fw.fa-file-image-o
+      else if isText
+        i.fa.fa-fw.fa-file-text-o
+      else
+        i.fa.fa-fw.fa-file-o
+      | {{extless name}}
     table.table.table-bordered.table-condensed(style="table-layout:fixed")
       thead
         tr
@@ -32,8 +57,8 @@ template(name="file")
               span.label.label-default .#{extension}
             else
               small.help-block.no-margin extension-less
-          td.text-center.scroll.scroll-x: a.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download)
+          td.text-center.scroll.scroll-x: a.label.label-default(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true"  target="_parent" download="#{name}")
             i.fa.fa-download
             | #{meta.downloads}
     .panel-body
-      a.btn.btn-default.btn-block(title="Download \"{{name}}\"" href="{{fileURL .}}?download=true" target="_parent" download): i.fa.fa-download
+      a.btn.btn-default.btn-block(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" target="_parent"  download="#{name}"): i.fa.fa-download

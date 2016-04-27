@@ -31,23 +31,48 @@ Meteor.startup ->
         template.error.set "Please select a file to upload"
         return false
 
-      done = false
+      if files.length > 6
+        template.error.set "Please select not more than 6 files"
+        return
+
+      cleanUploaded = (current) ->
+        _uploads = _.clone template.uploadInstance.get()
+        if _.isArray _uploads
+          _.each _uploads, (upInst, index) ->
+            if upInst.file.name is current.file.name
+              _uploads.splice index, 1
+              if _uploads.length
+                template.uploadInstance.set _uploads
+              else
+                template.uploadInstance.set false
+        return
+
       created_at = +new Date
-      template.uploadInstance.set Collections.files.insert 
-        file: files[0]
-        meta: {expireAt: new Date(created_at + _app.storeTTL), created_at, downloads: 0}
-        onUploaded: (error, fileObj) ->
-          done = true
-          unless error
-            Router.go 'file', _id: fileObj._id
-          else
-            template.error.set error?.reason or error
-          template.uploadInstance.set false
-        onAbort: ->
-          done = true
-          template.uploadInstance.set false
-        streams: 'dynamic'
-        chunkSize: 'dynamic'
-        # Set allowWebWorkers to false to disable WebWorkers
-        # allowWebWorkers: false
+      uploads = []
+      _.each files, (file) ->
+        fileUpload = Collections.files.insert
+          file: file
+          meta: {expireAt: new Date(created_at + _app.storeTTL), created_at, downloads: 0}
+          onUploaded: (error, fileObj) ->
+            unless error
+              # Redirect to uploaded file
+              # Only then we upload one file
+              Router.go('file', _id: fileObj._id) if uploads.length is 1
+            else
+              template.error.set error?.reason or error
+              Meteor.setTimeout ->
+                template.error.set false
+              , 5000
+            cleanUploaded @
+            return
+          onAbort: -> cleanUploaded @
+          onError: -> cleanUploaded @
+          streams: 'dynamic'
+          chunkSize: 'dynamic'
+          # Set allowWebWorkers to false to disable WebWorkers
+          # allowWebWorkers: false
+
+        # Filter failed and aborted uploads
+        uploads.push fileUpload if fileUpload.state.get() isnt 'aborted'
+      template.uploadInstance.set uploads
       false
