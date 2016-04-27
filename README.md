@@ -1,6 +1,10 @@
 Files for Meteor
 ========
+Extremely fast and robust package for file uploading, managing and streaming (Audio & Video & Images), with support of server's file system (FS) or third party storage, like: AWS, DropBox, Google Storage, Google Drive, GridFS or any other with API.
+
 Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-application), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
+
+For upload pause/continue, speed, remaining time and progress see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)).
 
 Support:
 ========
@@ -11,7 +15,7 @@ Support:
 
 Demo application:
 ========
- - [Live](https://meteor-files.herokuapp.com/)
+ - [Live](https://meteor-files.herokuapp.com/) (*Unavailable after 6 hours of uptime, due to [free plan](https://www.heroku.com/pricing)*)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
@@ -21,7 +25,7 @@ ToC:
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api)
-   * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-meteorfilesconfig-isomorphic)
+   * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
    * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-client)
    * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
    * [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
@@ -30,7 +34,7 @@ Why `Meteor-Files`?
 ========
 `cfs` is a good package, but buggy as it's huge monster which combine everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/retrieve files to/from server. 
  - You need store to GridFS, AWS or DropBox? (*[Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
- - You need to check file mime-type or extensions? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
+ - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
  - You need to resize images after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
@@ -41,14 +45,14 @@ Install:
 meteor add ostrio:files
 ```
 
-API
+API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========
-#### `new Meteor.Files([config])` [*Isomorphic*]
-Read full docs for [`Meteor.Files` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
+#### `new FilesCollection([config])` [*Isomorphic*]
+Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
 Shared code:
 ```js
-var Images = new Meteor.Files({
+var Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload: function (file) {
@@ -90,7 +94,7 @@ Upload form (template):
 
 Shared code:
 ```javascript
-this.Images = new Meteor.Files({collectionName: 'Images'});
+this.Images = new FilesCollection({collectionName: 'Images'});
 ```
 
 Client's code:
@@ -137,7 +141,7 @@ Template.uploadForm.events({
   }
 });
 ```
-For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
+For more expressive example see [Upload demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-upload)
 
 
 #### Stream files
@@ -156,10 +160,10 @@ Template:
 
 Shared code:
 ```javascript
-this.Images = new Meteor.Files({collectionName: 'Images'});
-this.Videos = new Meteor.Files({collectionName: 'Videos'});
+this.Images = new FilesCollection({collectionName: 'Images'});
+this.Videos = new FilesCollection({collectionName: 'Videos'});
 
-// To have sample files in DB we will upload them on server startup:
+// Upload sample files on server's startup:
 if (Meteor.isServer) {
   Meteor.startup(function () {
     Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
@@ -195,7 +199,7 @@ Template.file.helpers({
 });
 ```
 
-For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
+For more expressive example see [Streaming demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-streaming)
 
 
 #### Download button
@@ -210,9 +214,9 @@ Template:
 
 Shared code:
 ```javascript
-this.Images = new Meteor.Files({collectionName: 'Images'});
+this.Images = new FilesCollection({collectionName: 'Images'});
 
-// To have sample image in DB we will upload it on server startup:
+// Load sample image into FilesCollection on server's startup:
 if (Meteor.isServer) {
   Meteor.startup(function () {
     Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
@@ -237,7 +241,7 @@ Template.file.helpers({
   }
 });
 ```
-For more expressive example see [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo/client)
+For more expressive example see [Download demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
 
 ----
 

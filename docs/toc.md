@@ -14,6 +14,8 @@ Meteor-Files
     * Google Drive
     * Google Storage
     * any other with JS/REST API
+ - Display upload speed
+ - Display remaining upload time
  - Serving files
     * Make files `public`, so your proxy server like __nginx__ can serve them
     * Protect/Restrict access to files
@@ -37,14 +39,14 @@ Meteor-Files
 
 ### ToC:
 ##### API:
- - [`Meteor.Files` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) [*Isomorphic*] - Initialize Files collection
- - [`write()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Write) [*Server*] - Write `Buffer` to FS and Files collection
- - [`load()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Load) [*Server*] - Write file to FS and Files collection from remote URL
- - [`addFile()`](https://github.com/VeliovGroup/Meteor-Files/wiki/addFile) [*Server*] - Add local file to Files collection from FS
- - [`findOne()`](https://github.com/VeliovGroup/Meteor-Files/wiki/findOne) [*Isomorphic*] - Find one file in Files collection
- - [`find()`](https://github.com/VeliovGroup/Meteor-Files/wiki/find) [*Isomorphic*] - Create cursor for Files collection
+ - [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) [*Isomorphic*] - Initialize FilesCollection
+ - [`write()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Write) [*Server*] - Write `Buffer` to FS and FilesCollection
+ - [`load()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Load) [*Server*] - Write file to FS and FilesCollection from remote URL
+ - [`addFile()`](https://github.com/VeliovGroup/Meteor-Files/wiki/addFile) [*Server*] - Add local file to FilesCollection from FS
+ - [`findOne()`](https://github.com/VeliovGroup/Meteor-Files/wiki/findOne) [*Isomorphic*] - Find one file in FilesCollection
+ - [`find()`](https://github.com/VeliovGroup/Meteor-Files/wiki/find) [*Isomorphic*] - Create cursor for FilesCollection
  - [`insert()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)) [*Client*] - Upload file to server
- - [`remove()`](https://github.com/VeliovGroup/Meteor-Files/wiki/remove) [*Isomorphic*] - Remove files from Files collection and unlink from FS
+ - [`remove()`](https://github.com/VeliovGroup/Meteor-Files/wiki/remove) [*Isomorphic*] - Remove files from FilesCollection and unlink from FS
  - [`unlink()`](https://github.com/VeliovGroup/Meteor-Files/wiki/unlink) [*Server*] - Unlink file from FS
  - [`link()`](https://github.com/VeliovGroup/Meteor-Files/wiki/link) [*Isomorphic*] - Generate downloadable link
  - [`collection`](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) [*Isomorphic*] - `Meteor.Collection` instance

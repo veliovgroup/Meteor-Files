@@ -1,14 +1,13 @@
-##### `link(fileRef [, version, isPublic])` [*Isomorphic*]
+##### `link(fileRef [, version])` [*Isomorphic*]
 
-Create downloadable link.
+*Create downloadable link.*
 
- - `fileRef` {*Object*} - Object returned from MongoDB collection, like: `Meteor.Files.collection.findOne({})`
+ - `fileRef` {*Object*} - Object returned from MongoDB collection, like: `FilesCollection.collection.findOne({})`
  - `version` {*String*} - File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
- - `isPublic` {*Boolean*} - Set to `true` for public collections
  - Returns {*String*} - Full URL to file
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 Images.collection.find({}).forEach(function (fileRef) {

@@ -1,12 +1,12 @@
 ##### `remove(selector)` [*Isomorphic*]
 
-Remove records from collection and files from FS.
+*Remove records from FilesCollection and files from FS.*
 
  - `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
- - Returns {*Files*} - Current Meteor.Files instance
+ - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Drop collection's data and remove all associated files from FS
@@ -18,6 +18,6 @@ Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
 
 
 // Direct Collection usage
-// Remove record(s) from collection
+// Remove record(s) ONLY from collection
 Images.collection.remove({})
 ```

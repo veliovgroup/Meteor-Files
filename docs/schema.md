@@ -1,8 +1,8 @@
 ##### Schema
 
-*Below is default Files collection schema. Please keep default schema structure when extending it!. To pass your own schema use* `schema` *property when passing config to* [`Meteor.Files`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) *constructor.*
+*Below is default Files collection schema. Please keep default schema structure when extending it!. To pass your own schema use* `schema` *property when passing config to* [`FilesCollection`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) *constructor.*
 
-For more info see [Collection2](https://github.com/aldeed/meteor-collection2) package.
+For more info see [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.
 
 ```javascript
 var defaultSchema = {
@@ -27,6 +27,9 @@ var defaultSchema = {
   isImage: {
     type: Boolean
   },
+  isText: {
+    type: Boolean
+  },
   _prefix: {
     type: String
   },
@@ -42,6 +45,10 @@ var defaultSchema = {
   },
   _collectionName: {
     type: String
+  },
+  public: {
+    type: Boolean,
+    optional: true
   },
   meta: {
     type: Object,
@@ -65,16 +72,32 @@ var defaultSchema = {
 };
 ```
 
-Pass your own schema:
+#### Attach schema (*Recommended*):
+*Although this package comes with schema it isn't enabled (attached) by default (since v1.5.0), you're free to use it or not. To attach schema you need to install [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages separately.*
 ```javascript
-var Images;
+this.Images = new FilesCollection({ collectionName: 'Images'});
+Images.collection.attachSchema(Images.schema);
+```
+
+#### Extend default schema:
+```javascript
 var mySchema = _.extend(defaultSchema, {
   myProp: {
     type: String
   }
 });
 
-Images = new Meteor.Files({
+this.Images = new FilesCollection({
+  collectionName: 'Images',
+  schema: mySchema
+});
+```
+
+#### Pass your own schema (*not recommended*):
+```javascript
+var mySchema = { /* Your schema here */ };
+
+this.Images = new FilesCollection({
   collectionName: 'Images',
   schema: mySchema
 });

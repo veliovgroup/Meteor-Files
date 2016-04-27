@@ -1,6 +1,8 @@
 ##### `addFile(path [, opts, callback])` [*Server*]
 
-Add local file to Files collection from FS
+*Add local file to FilesCollection from FS.*
+
+*Note: You can not use this method on* `public` *collections. As they supposed to be served without NodeJS (Meteor) participation. But you always can move file to root of your web-server and then add a record to FilesCollection.*
 
  - `path` {*String*} - Full path to file, like `/var/www/files/sample.png`
  - `opts` {*Object*} - Recommended properties:
@@ -9,10 +11,10 @@ Add local file to Files collection from FS
    - `opts.type` {*String*} - Mime-type, like `image/png`
    - `opts.size` {*Number*} - File size in bytes, if not set - size will be calculated from file
  - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
- - Returns {*Files*} - Current Meteor.Files instance
+ - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 Images.addFile('/var/www/files/sample.png', {
   fileName: 'sample.png',

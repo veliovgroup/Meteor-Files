@@ -1,5 +1,5 @@
-##### `new Meteor.Files([config])` [*Isomorphic*]
-*Initialize Meteor.Files collection*.
+##### `new FilesCollection([config])` [*Isomorphic*]
+*Initialize FilesCollection collection.*
 
 `config` is __optional__ object with next properties:
  - `storagePath` {*String*} - [*SERVER*] Storage path on file system
@@ -46,6 +46,8 @@
     * Default value: `false`
     * Route: `http://example.com/uploads/:collectionName/:fileName`
     * __Note:__ Collection can not be `public` and `protected` at the same time!
+    * __Note:__ `downloadRoute` must be explicitly provided. And pointed to root of web/proxy-server, like `/uploads/`
+    * __Note:__ `storagePath` must point to absolute root path of web/proxy-server, like '/var/www/myapp/public/uploads/'
     * __Note:__ `integrityCheck` is __not__ guaranteed!
     * __Note:__ `play` and force `download` features is __not__ guaranteed!
  - `onBeforeUpload` {*Function*} - Callback, triggered right before upload is started on __client__ and right after receiving a chunk on __server__, arguments:
@@ -69,7 +71,7 @@
 
 ```javascript
 var Images;
-Images = new Meteor.Files({
+Images = new FilesCollection({
   storagePath: 'assets/app/uploads/Images',
   downloadRoute: '/files/images'
   collectionName: 'Images',
@@ -79,7 +81,7 @@ Images = new Meteor.Files({
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
   onbeforeunloadMessage: function () {
-    i18n.get('_app.abortUpload'); // See 'ostrio:i18n' package
+    return 'Upload is still in progress! Upload will be aborted if you leave this page!';
   },
   onBeforeUpload: function (file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
@@ -92,7 +94,7 @@ Images = new Meteor.Files({
   downloadCallback: function (fileObj) {
     if (this.params?.query.download == 'true') {
       // Increment downloads counter
-      Images.collection.update(fileObj._id, {$inc: {'meta.downloads': 1}});
+      Images.update(fileObj._id, {$inc: {'meta.downloads': 1}});
     }
     // Must return true to continue download
     return true;
@@ -106,4 +108,61 @@ Images = new Meteor.Files({
     }
   }
 });
+```
+
+### Add extra security:
+
+#### Attach schema [*Isomorphic*]:
+*Default schema is stored under* `Files.schema` *object.*
+
+*To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
+
+*You're free to modify/overwrite* `Files.schema` *object.*
+```javascript
+var Images = new new FilesCollection({/* ... */});
+Images.collection.attachSchema(Images.schema);
+```
+
+#### Deny collection interaction on client [*Server*]:
+*Deny insert/update/remove from client*
+```javascript
+if (Meteor.isServer) {
+  var Images = new new FilesCollection({/* ... */});
+  Images.deny({
+    insert: function() {
+      return true;
+    },
+    update: function() {
+      return true;
+    },
+    remove: function() {
+      return true;
+    }
+  });
+
+  /* Equal shorthand: */
+  Images.denyClient();
+}
+```
+
+#### Allow collection interaction on client [*Server*]:
+*Allow insert/update/remove from client*
+```javascript
+if (Meteor.isServer) {
+  var Images = new new FilesCollection({/* ... */});
+  Images.allow({
+    insert: function() {
+      return true;
+    },
+    update: function() {
+      return true;
+    },
+    remove: function() {
+      return true;
+    }
+  });
+
+  /* Equal shorthand: */
+  Images.allowClient();
+}
 ```

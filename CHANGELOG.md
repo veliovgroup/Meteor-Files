@@ -1,1 +1,3 @@
-[Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
+Changelog
+======
+For full changelog see [releases on GitHub](https://github.com/VeliovGroup/Meteor-Files/releases)

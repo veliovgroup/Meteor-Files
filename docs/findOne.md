@@ -1,12 +1,12 @@
 ##### `findOne(selector)` [*Isomorphic*]
 
-Find one file in Files collection. *This method doesn't returns file, it only sets cursor to file (if file exists)*. To get record from collection use `files.collection.findOne({})`.
+Find one file in FilesCollection. *This method doesn't returns file, it only sets cursor to file (if file exists)*. To get record from collection use `files.collection.findOne({})`.
 
  - `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
- - Returns {*Files*} - Current Meteor.Files instance
+ - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Set cursor

@@ -9,10 +9,10 @@ Write `Buffer` to FS and add record to Files collection. This function is asynch
    - `opts.size` {*Number*} - File size in bytes, if not set file size will be calculated from `Buffer`
    - `opts.meta` {*Object*} - Object with custom meta-data
  - `callback` {*Function*} - Triggered after file is written to FS. With `error`, and `fileRef`, where `fileRef` is a new record from DB
- - Returns {*Files*} - Current Meteor.Files instance
+ - Returns {*Files*} - Current FilesCollection instance
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 fs.readFile('/data/imgs/sample.png', function (error, data) {
   if (error) {

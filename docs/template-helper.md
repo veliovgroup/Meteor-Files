@@ -1,45 +1,58 @@
 ##### Template Helper `fileURL` [*Client*]
 
 ```javascript
-this.FilesCollection = new Meteor.Files({collectionName: 'Files'});
+this.Files = new FilesCollection({collectionName: 'Files'});
 
 if (Meteor.isClient) {
   Meteor.subscribe('files.all');
 
   Template.example.helpers({
-    fileRef: FilesCollection.collection.findOne({})
+    fileRef: Files.collection.findOne({})
   })
 
 } else {
 
   Meteor.publish('files.all', function () {
-    return FilesCollection.collection.find({});
+    return Files.collection.find({});
   });
 }
 ```
 
-To get download URL for file, you only need `fileRef` object, so there is no need for subscription:
+##### Get download URL for file, pass `fileRef` object to helper:
 ```html
-<a href="{{fileURL fileRef}}?download=true" target="_parent" download>
+<a href="{{fileURL fileRef}}?download=true" target="_parent" download="{{fileRef.name}}">
   {{fileRef.name}}
 </a>
 ```
 
-To get specific version of the file use second argument `version`:
-__Note:__ If requested version of file is not available - the original file will be returned
+-----
+
+##### Get specific version of the file, pass second argument `version`:
+__Note:__ If requested version of file is not available - the original file will be returned.
+
+For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) section
 ```html
-<a href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download>
+<a href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download="{{compare fileRef.versions.small.name '||' fileRef.name}}">
   {{fileRef.name}}
 </a>
+<!-- For `compare` helper see ostrio:templatehelpers -->
 ```
+For `compare` helper see [ostrio:templatehelpers](https://atmospherejs.com/ostrio/templatehelpers)
 
-To display thumbnail:
-__Note:__ If thumbnail (basically version of the file) is not available the original file will be returned
+-----
+
+##### Display thumbnail:
+__Note:__ If thumbnail (*subversion of the file*) is not available the original file will be returned.
+
+For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) section
 ```html
 <img src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}" />
 ```
 
-Example for video:
+-----
+
+##### Example for video with multiple subversions:
+For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) section
 ```html
 <video width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'videoPoster'}}">
   <source src="{{fileURL fileRef 'ogg'}}?play=true" type="video/ogg" />

@@ -1,12 +1,12 @@
 ##### `find(selector)` [*Isomorphic*]
 
-Set cursor in Files collection. *This method doesn't returns file, it only sets cursor to files (if files exists)*. To get records from collection use `files.collection.find({}).fetch()`. To get cursor use `files.collection.find({}).cursor`
+Set cursor in FilesCollection. *This method doesn't returns file, it only sets cursor to files (if files exists)*. To get records from collection use `files.collection.find({}).fetch()`. To get cursor use `files.find({}).cursor`
 
  - `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
- - Returns {*Files*} - Current Meteor.Files instance
+ - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```javascript
-var Images = new Meteor.Files({collectionName: 'Images'});
+var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Set cursor

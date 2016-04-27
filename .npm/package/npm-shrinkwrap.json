@@ -1,9 +1,14 @@
 {
   "dependencies": {
+    "file-type": {
+      "version": "3.8.0",
+      "resolved": "https://registry.npmjs.org/file-type/-/file-type-3.8.0.tgz",
+      "from": "file-type@3.8.0"
+    },
     "fs-extra": {
-      "version": "0.26.7",
-      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.26.7.tgz",
-      "from": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.26.7.tgz",
+      "version": "0.28.0",
+      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.28.0.tgz",
+      "from": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.28.0.tgz",
       "dependencies": {
         "graceful-fs": {
           "version": "4.1.3",
@@ -11,14 +16,14 @@
           "from": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.1.3.tgz"
         },
         "jsonfile": {
-          "version": "2.2.3",
-          "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-2.2.3.tgz",
-          "from": "https://registry.npmjs.org/jsonfile/-/jsonfile-2.2.3.tgz"
+          "version": "2.3.0",
+          "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-2.3.0.tgz",
+          "from": "https://registry.npmjs.org/jsonfile/-/jsonfile-2.3.0.tgz"
         },
         "klaw": {
-          "version": "1.1.3",
-          "resolved": "https://registry.npmjs.org/klaw/-/klaw-1.1.3.tgz",
-          "from": "https://registry.npmjs.org/klaw/-/klaw-1.1.3.tgz"
+          "version": "1.2.0",
+          "resolved": "https://registry.npmjs.org/klaw/-/klaw-1.2.0.tgz",
+          "from": "https://registry.npmjs.org/klaw/-/klaw-1.2.0.tgz"
         },
         "path-is-absolute": {
           "version": "1.0.0",
@@ -95,9 +100,9 @@
       }
     },
     "request": {
-      "version": "2.70.0",
-      "resolved": "https://registry.npmjs.org/request/-/request-2.70.0.tgz",
-      "from": "https://registry.npmjs.org/request/-/request-2.70.0.tgz",
+      "version": "2.72.0",
+      "resolved": "https://registry.npmjs.org/request/-/request-2.72.0.tgz",
+      "from": "https://registry.npmjs.org/request/-/request-2.72.0.tgz",
       "dependencies": {
         "aws-sign2": {
           "version": "0.6.0",
@@ -309,9 +314,9 @@
               }
             },
             "pinkie-promise": {
-              "version": "2.0.0",
-              "resolved": "https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.0.tgz",
-              "from": "https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.0.tgz",
+              "version": "2.0.1",
+              "resolved": "https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.1.tgz",
+              "from": "https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.1.tgz",
               "dependencies": {
                 "pinkie": {
                   "version": "2.0.4",
@@ -382,31 +387,41 @@
               }
             },
             "sshpk": {
-              "version": "1.7.4",
-              "resolved": "https://registry.npmjs.org/sshpk/-/sshpk-1.7.4.tgz",
-              "from": "https://registry.npmjs.org/sshpk/-/sshpk-1.7.4.tgz",
+              "version": "1.8.1",
+              "resolved": "https://registry.npmjs.org/sshpk/-/sshpk-1.8.1.tgz",
+              "from": "https://registry.npmjs.org/sshpk/-/sshpk-1.8.1.tgz",
               "dependencies": {
                 "asn1": {
                   "version": "0.2.3",
                   "resolved": "https://registry.npmjs.org/asn1/-/asn1-0.2.3.tgz",
                   "from": "https://registry.npmjs.org/asn1/-/asn1-0.2.3.tgz"
                 },
+                "assert-plus": {
+                  "version": "1.0.0",
+                  "resolved": "https://registry.npmjs.org/assert-plus/-/assert-plus-1.0.0.tgz",
+                  "from": "https://registry.npmjs.org/assert-plus/-/assert-plus-1.0.0.tgz"
+                },
                 "dashdash": {
-                  "version": "1.13.0",
-                  "resolved": "https://registry.npmjs.org/dashdash/-/dashdash-1.13.0.tgz",
-                  "from": "https://registry.npmjs.org/dashdash/-/dashdash-1.13.0.tgz",
+                  "version": "1.13.1",
+                  "resolved": "https://registry.npmjs.org/dashdash/-/dashdash-1.13.1.tgz",
+                  "from": "https://registry.npmjs.org/dashdash/-/dashdash-1.13.1.tgz"
+                },
+                "ecc-jsbn": {
+                  "version": "0.0.1",
+                  "resolved": "https://registry.npmjs.org/ecc-jsbn/-/ecc-jsbn-0.0.1.tgz",
+                  "from": "https://registry.npmjs.org/ecc-jsbn/-/ecc-jsbn-0.0.1.tgz",
                   "dependencies": {
-                    "assert-plus": {
-                      "version": "1.0.0",
-                      "resolved": "https://registry.npmjs.org/assert-plus/-/assert-plus-1.0.0.tgz",
-                      "from": "https://registry.npmjs.org/assert-plus/-/assert-plus-1.0.0.tgz"
+                    "jsbn": {
+                      "version": "0.0.0",
+                      "resolved": "git+https://github.com/rynomad/jsbn.git#bb522b0124f75424f89d49446c40a87111942c7b",
+                      "from": "git+https://github.com/rynomad/jsbn.git#bb522b0124f75424f89d49446c40a87111942c7b"
                     }
                   }
                 },
-                "ecc-jsbn": {
-                  "version": "0.1.1",
-                  "resolved": "https://registry.npmjs.org/ecc-jsbn/-/ecc-jsbn-0.1.1.tgz",
-                  "from": "https://registry.npmjs.org/ecc-jsbn/-/ecc-jsbn-0.1.1.tgz"
+                "getpass": {
+                  "version": "0.1.5",
+                  "resolved": "https://registry.npmjs.org/getpass/-/getpass-0.1.5.tgz",
+                  "from": "https://registry.npmjs.org/getpass/-/getpass-0.1.5.tgz"
                 },
                 "jodid25519": {
                   "version": "1.0.2",
@@ -419,9 +434,9 @@
                   "from": "https://registry.npmjs.org/jsbn/-/jsbn-0.1.0.tgz"
                 },
                 "tweetnacl": {
-                  "version": "0.14.3",
-                  "resolved": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-0.14.3.tgz",
-                  "from": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-0.14.3.tgz"
+                  "version": "0.13.3",
+                  "resolved": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-0.13.3.tgz",
+                  "from": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-0.13.3.tgz"
                 }
               }
             }
