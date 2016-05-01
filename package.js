@@ -17,7 +17,7 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  'fs-extra': '0.28.0',
+  'fs-extra': '0.28.0', // NOTE: this package has dropped support for Node v0.10, since v0.29.0
   'request': '2.72.0',
   'throttle': '1.0.3',
   'file-type': '3.8.0'
