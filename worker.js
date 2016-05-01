@@ -16,7 +16,7 @@ self.onmessage = function(e) {
     postMessage({bin: fileReader.readAsDataURL(e.data.file.slice(e.data.chunkSize * (e.data.currentChunk - 1), e.data.chunkSize * e.data.currentChunk)).split(',')[1], chunkId: e.data.currentChunk, start: e.data.start});
 
   } else {
-    postMessage({bin: null, chunkId: e.data.currentChunk, start: e.data.start, error: 'FileReader and fileReaderSunc is not supported in WebWorker!'});
+    postMessage({bin: null, chunkId: e.data.currentChunk, start: e.data.start, error: 'FileReader and FileReaderSync is not supported in WebWorker!'});
   }
   return;
 };

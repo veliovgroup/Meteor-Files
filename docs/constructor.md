@@ -140,7 +140,7 @@ if (Meteor.isServer) {
     }
   });
 
-  /* Equal shorthand: */
+  /* Equal shortcut: */
   Images.denyClient();
 }
 ```
@@ -162,7 +162,7 @@ if (Meteor.isServer) {
     }
   });
 
-  /* Equal shorthand: */
+  /* Equal shortcut: */
   Images.allowClient();
 }
 ```
