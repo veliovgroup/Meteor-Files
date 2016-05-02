@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.5.0',
+  version: '1.5.1',
   summary: 'Fast and robust file uploads and streaming (Audio & Video), support FS or AWS, DropBox, Google Drive',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -8,8 +8,9 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.1');
-  api.addFiles('files.coffee', ['server', 'client']);
+  api.addFiles('event-emitter.js', 'client');
   api.addAssets('worker.js', 'client');
+  api.addFiles('files.coffee', ['server', 'client']);
   api.use('webapp', 'server');
   api.use(['templating', 'reactive-var', 'tracker'], 'client');
   api.use(['underscore', 'check', 'sha', 'ostrio:cookies@2.0.2', 'random', 'coffeescript'], ['client', 'server']);

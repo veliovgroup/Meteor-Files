@@ -4,9 +4,14 @@
  - `settings` {*Object*} [REQUIRED]
  - `settings.file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `event.currentTarget.files[0]`
  - `settings.meta` {*Object*} - Additional file-related data, like `ownerId`, `postId`, etc.
+ - `settings.onStart` {*Function*} - Callback, triggered when upload is started and validations was successful, arguments:
+    * `error` - *Always* `null`
+    * `fileData` {*Object*}
  - `settings.onUploaded` {*Function*} - Callback, triggered when upload is finished, arguments:
     * `error`
-    * `fileRef` - File record from DB
+    * `fileRef` - {*Object*} File record from DB
+ - `settings.onAbort` {*Function*} - Callback, triggered when `abort()` method is called, argument:
+    * `fileData` {*Object*}
  - `settings.onError` {*Function*} - Callback, triggered when upload is finished with error, arguments:
     * `error`
     * `fileData` {*Object*}
@@ -20,8 +25,7 @@
  - `settings.streams` {*Number*|dynamic} - Quantity of parallel upload streams, `dynamic` is recommended
  - `settings.allowWebWorkers` {*Boolean*} - Use WebWorkers (*To avoid main thread blocking*) whenever feature is available in browser, default: true
  - `settings.chunkSize` {*Number*|dynamic} - Chunk size for upload, `dynamic` is recommended
- - `settings.onAbort` {*Function*} - Callback, triggered when `abort()` method is called, argument:
-    * `fileData` {*Object*}
+ - `autoStart` {*Boolean*} - Start upload immediately. If set to `false`, you need manually call `.start()` method on returned class. Useful to set EventListeners, before starting upload.
  - __Returns__ {*Object*}:
    - __Note__: same object is used as *__context__* in all callback functions (*see above*)
    - `file` {*File*} - Source file passed into method
@@ -38,6 +42,33 @@
       * `paused` - file upload is paused
       * `aborted` - file upload has been aborted and can no longer be completed
       * `completed` - file has been successfully uploaded
+   - This object has support for next events:
+      * `start` - Triggered when upload is started (*before sending first byte*) and validations was successful, arguments:
+        - `error` - *Always* `null`
+        - `fileData` {*Object*}
+      * `data` - Triggered after each chunk is read, arguments
+        - `data` {*String*} - Base64 encoded chunk (DataURL). Can be used to display or do something else with loaded file during upload. To get EOF use `readEnd` event
+      * `readEnd` - Triggered after file is fully read by browser, called with no arguments
+      * `progress` - Triggered after each chunk is sent, arguments:
+        - `progress` {*Number*} - Current progress from `0` to `100`
+        - `fileData` {*Object*}
+      * `pause` - Triggered after upload process set to pause, arguments:
+        - `fileData` {*Object*}
+      * `continue` - Triggered after upload process is continued from pause, arguments:
+        - `fileData` {*Object*}
+      * `abort` - Triggered after upload is aborted, arguments:
+        - `fileData` {*Object*}
+      * `uploaded` - Triggered when upload is finished, arguments:
+        - `error`
+        - `fileRef` - {*Object*} File record from DB
+      * `error` - Triggered whenever upload has an error, arguments:
+        - `error`
+        - `fileData` {*Object*}
+      * `end` - Triggered at the very end of upload, arguments:
+        - `error`
+        - `fileRef` - {*Object*} File record from DB
+
+*When* `autoStart` *is* `false` *before calling* `.start()` *you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. Do not forget to change file name, extension and mime-type if required.*
 
 The `fileData` object (*see above*):
  - `size` {*Number*} - File size in bytes
@@ -48,7 +79,7 @@ The `fileData` object (*see above*):
 
 Upload form:
 ```html
-<template name="upload-form">
+<template name="uploadForm">
   {{#if currentFile}}
     {{#with currentFile}
       <span id="progress">{{progress}}%</span>
@@ -66,25 +97,28 @@ this.Images = new FilesCollection({collectionName: 'Images'});
 
 Client's code:
 ```javascript
-Template['upload-form'].onCreated(function () {
+Template.uploadForm.onCreated(function () {
   this.currentFile = new ReactiveVar(false);
 });
 
-Template['upload-form'].helpers({
+Template.uploadForm.helpers({
   currentFile: function () {
     Template.instance().currentFile.get();
   }
 });
 
-Template['upload-form'].events({
-  'change #fileInput': (e, template) ->
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      // We upload only one file, in case 
+      // We upload only one file, in case
       // there was multiple files selected
       var file = e.currentTarget.files[0];
 
-      template.currentFile.set(Images.insert({
+      Images.insert({
         file: file,
+        onStart: function () {
+          template.currentFile.set(this);
+        },
         onUploaded: function (error, fileObj) {
           if (error) {
             alert('Error during upload: ' + error);
@@ -95,8 +129,97 @@ Template['upload-form'].events({
         },
         streams: 'dynamic',
         chunkSize: 'dynamic'
-      }));
+      });
     }
-  });
+  }
+});
+```
+
+##### Alternative, using events:
+```javascript
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
+    if (e.currentTarget.files && e.currentTarget.files[0]) {
+      // We upload only one file, in case
+      // multiple files were selected
+      Images.insert({
+        file: e.currentTarget.files[0],
+        streams: 'dynamic',
+        chunkSize: 'dynamic'
+
+      }, false).on('start', function () {
+        template.currentFile.set(this);
+
+      }).on('end', function (error, fileObj) {
+        if (error) {
+          alert('Error during upload: ' + error);
+        } else {
+          alert('File "' + fileObj.name + '" successfully uploaded');
+        }
+        template.currentFile.set(false);
+
+      }).start();
+    }
+  }
+});
+```
+
+Other example:
+```javascript
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
+    if (e.currentTarget.files && e.currentTarget.files[0]) {
+      uploader = Images.insert({
+        file: e.currentTarget.files[0],
+        streams: 'dynamic',
+        chunkSize: 'dynamic'
+      }, false);
+
+      uploader.on('start', function () {
+        template.currentFile.set(this);
+      });
+
+      uploader.on('end', function (error, fileObj) {
+        template.currentFile.set(false);
+      });
+
+      uploader.on('uploaded', function (error, fileObj) {
+        if (!error) {
+          alert('File "' + fileObj.name + '" successfully uploaded');
+        }
+      });
+
+      uploader.on('error', function (error, fileObj) {
+        alert('Error during upload: ' + error);
+      });
+
+      uploader.start();
+    }
+  }
+});
+```
+
+##### Piping:
+```javascript
+var encrypt = function encrypt(data) {
+  return someHowEncryptAndReturnAsBase64(data);
+};
+
+var zip = function zip(data) {
+  return someHowZipAndReturnAsBase64(data);
+};
+
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
+    if (e.currentTarget.files && e.currentTarget.files[0]) {
+      // We upload only one file, in case
+      // multiple files were selected
+      Images.insert({
+        file: e.currentTarget.files[0],
+        streams: 'dynamic',
+        chunkSize: 'dynamic'
+      }, false).pipe(encrypt).pipe(zip).start();
+    }
+  }
 });
 ```

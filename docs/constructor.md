@@ -54,7 +54,7 @@
     * `fileData` {*Object*}
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
- - `onAfterUpload` {*Function*} - [*SERVER*] Callback, triggered after file is written to FS, with single argument:
+ - `onAfterUpload` {*Function*} - [*SERVER*] Callback, triggered after file is written to FS, with single argument (*alternatively:* `addListener('afterUpload', func)`):
     - `fileRef` {*Object*} - Record from MongoDB
  - `onbeforeunloadMessage` {*String*|*Function*} - [*Client*] Message shown to user when closing browser's window or tab, while upload in the progress
     * Default value: `'Upload in a progress... Do you want to abort?'`
@@ -68,6 +68,9 @@
     - `fileRef` {*Object*} - Current file record from MongoDB
     - Return `false` from this function to continue standard behavior
     - Return `true` to intercept incoming request
+ - This object has support for next events:
+    - `afterUpload` [*Isomorphic*] - Triggered right after file is written to FS, with single argument:
+      * `fileRef` {*Object*} - Record from MongoDB
 
 ```javascript
 var Images;
@@ -113,11 +116,11 @@ Images = new FilesCollection({
 ### Add extra security:
 
 #### Attach schema [*Isomorphic*]:
-*Default schema is stored under* `Files.schema` *object.*
+*Default schema is stored under* `FilesCollection.schema` *object.*
 
 *To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
-*You're free to modify/overwrite* `Files.schema` *object.*
+*You're free to modify/overwrite* `FilesCollection.schema` *object.*
 ```javascript
 var Images = new new FilesCollection({/* ... */});
 Images.collection.attachSchema(Images.schema);
@@ -165,4 +168,13 @@ if (Meteor.isServer) {
   /* Equal shortcut: */
   Images.allowClient();
 }
+```
+
+#### Events listeners:
+```javascript
+var Images = new new FilesCollection({/* ... */});
+// Alias addListener
+Images.on('afterUpload', function (fileRef) {
+  /* ... */
+});
 ```
