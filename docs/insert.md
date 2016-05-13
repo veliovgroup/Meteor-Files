@@ -77,7 +77,7 @@ The `fileData` object (*see above*):
  - `ext`, `extension` {*String*}
  - `name` {*String*} - File name
 
-Upload form:
+#### Upload form:
 ```html
 <template name="uploadForm">
   {{#if currentFile}}
@@ -164,7 +164,7 @@ Template.uploadForm.events({
 });
 ```
 
-Other example:
+##### Other events based example:
 ```javascript
 Template.uploadForm.events({
   'change #fileInput': function (e, template) {

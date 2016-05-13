@@ -54,6 +54,11 @@
     * `fileData` {*Object*}
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
+ - `onBeforeRemove` {*Function*} - [*SERVER*] Callback, triggered right before remove file, arguments:
+    * `cursor` {*MongoCursor*} - Current files to be removed on cursor, *if has any*
+    * To get user use `this.userId` or `this.user()` in function's context
+    * __return__ `true` to continue
+    * __return__ `false` to abort
  - `onAfterUpload` {*Function*} - [*SERVER*] Callback, triggered after file is written to FS, with single argument (*alternatively:* `addListener('afterUpload', func)`):
     - `fileRef` {*Object*} - Record from MongoDB
  - `onbeforeunloadMessage` {*String*|*Function*} - [*Client*] Message shown to user when closing browser's window or tab, while upload in the progress
@@ -176,5 +181,48 @@ var Images = new new FilesCollection({/* ... */});
 // Alias addListener
 Images.on('afterUpload', function (fileRef) {
   /* ... */
+});
+```
+
+#### Use onBeforeUpload to avoid unauthorized upload:
+```javascript
+var Images = new FilesCollection({
+  collectionName: 'Images',
+  allowClientCode: true,
+  onBeforeUpload: function () {
+    if (this.userId) {
+      var user = this.user();
+      if (user.profile.role === 'admin') {
+        // Allow upload only if
+        // current user is signed-in
+        // and has role is `admin`
+        return true;
+      }
+    }
+
+    return "Not enough rights to upload a file!";
+  }
+});
+```
+
+#### Use onBeforeRemove to avoid unauthorized remove:
+*For more info see [remove method](https://github.com/VeliovGroup/Meteor-Files/wiki/remove).*
+```javascript
+var Images = new FilesCollection({
+  collectionName: 'Images',
+  allowClientCode: true,
+  onBeforeRemove: function () {
+    if (this.userId) {
+      var user = this.user();
+      if (user.profile.role === 'admin') {
+        // Allow upload only if
+        // current user is signed-in
+        // and has role is `admin`
+        return true;
+      }
+    }
+
+    return false;
+  }
 });
 ```
