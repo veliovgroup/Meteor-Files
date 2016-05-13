@@ -9,6 +9,7 @@ if Meteor.isServer
   request      = Npm.require 'request'
   Throttle     = Npm.require 'throttle'
   fileType     = Npm.require 'file-type'
+  nodePath     = Npm.require 'path'
 
   ###
   @var {object} bound - Meteor.bindEnvironment (Fiber wrapper)
@@ -32,14 +33,11 @@ rcp = (obj) ->
   o =
     currentFile:    obj.currentFile
     search:         obj.search
-    storagePath:    obj.storagePath
     collectionName: obj.collectionName
     downloadRoute:  obj.downloadRoute
     chunkSize:      obj.chunkSize
     debug:          obj.debug
     _prefix:        obj._prefix
-    cacheControl:   obj.cacheControl
-    versions:       obj.versions
   return o
 
 ###
@@ -52,14 +50,11 @@ rcp = (obj) ->
 cp = (to, from) ->
   to.currentFile    = from.currentFile
   to.search         = from.search
-  to.storagePath    = from.storagePath
   to.collectionName = from.collectionName
   to.downloadRoute  = from.downloadRoute
   to.chunkSize      = from.chunkSize
   to.debug          = from.debug
   to._prefix        = from._prefix
-  to.cacheControl   = from.cacheControl
-  to.versions       = from.versions
   return to
 
 ###
@@ -88,6 +83,7 @@ cp = (to, from) ->
 @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
 return `true` to continue
 return `false` or `String` to abort upload
+@param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
 @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
 @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
 @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
@@ -101,7 +97,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
 
     self               = @
     cookie             = new Cookies()
@@ -131,6 +127,8 @@ class FilesCollection
       delete @integrityCheck
       delete @downloadCallback
       delete @interceptDownload
+      delete @onBeforeRemove
+
       if @protected
         if not cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
           cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
@@ -141,6 +139,7 @@ class FilesCollection
       @throttle         ?= false
       @permissions      ?= 0o755
       @cacheControl     ?= 'public, max-age=31536000, s-maxage=31536000'
+      @onBeforeRemove   ?= false
       @onAfterUpload    ?= false
       @integrityCheck   ?= true
       @downloadCallback ?= false
@@ -148,6 +147,7 @@ class FilesCollection
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
       @storagePath      ?= "assets/app/uploads/#{@collectionName}"
       @storagePath       = @storagePath.replace /\/$/, ''
+      @storagePath       = nodePath.normalize @storagePath
 
       fs.mkdirsSync @storagePath
 
@@ -158,6 +158,7 @@ class FilesCollection
       check @cacheControl, String
       check @onAfterUpload, Match.OneOf false, Function
       check @integrityCheck, Boolean
+      check @onBeforeRemove, Match.OneOf false, Function
       check @downloadCallback, Match.OneOf false, Function
       check @interceptDownload, Match.OneOf false, Function
 
@@ -224,7 +225,7 @@ class FilesCollection
         user = user()
 
         if _.isFunction self.protected
-          result = if http then self.protected.call(_.extend(http, userFuncs), self.currentFile or null) else self.protected.call userFuncs, self.currentFile or null
+          result = if http then self.protected.call(_.extend(http, userFuncs), (self.currentFile or null)) else self.protected.call userFuncs, (self.currentFile or null)
         else
           result = !!user
 
@@ -316,9 +317,23 @@ class FilesCollection
         check inst, Object
         console.info '[FilesCollection] [Unlink Method]' if self.debug
         if self.allowClientCode
-          self.remove.call cp(_insts[inst._prefix], inst), inst.search
+          __instData = cp _insts[inst._prefix], inst
+          if self.onBeforeRemove and _.isFunction self.onBeforeRemove
+            user = false
+            userFuncs = {
+              userId: @userId
+              user: -> Meteor.users.findOne @userId
+            }
+
+            __inst = self.find.call __instData, inst.search
+            unless self.onBeforeRemove.call userFuncs, (__inst.cursor or null)
+              throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
+
+          self.remove.call __instData, inst.search
+          return true
         else
           throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+        return
 
       _methods[self.methodNames.MeteorFileWrite] = (opts) ->
         @unblock()
@@ -340,7 +355,13 @@ class FilesCollection
         console.info "[FilesCollection] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
 
         if self.onBeforeUpload and _.isFunction self.onBeforeUpload
-          isUploadAllowed = self.onBeforeUpload.call {file: opts.file}, opts.file
+          isUploadAllowed = self.onBeforeUpload.call(_.extend({
+            file: opts.file
+          }, {
+            userId: @userId, 
+            user: -> Meteor.users.findOne @userId
+          }), opts.file)
+
           if isUploadAllowed isnt true
             throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
 
@@ -816,7 +837,7 @@ class FilesCollection
     check search, Match.Optional Match.OneOf Object, String
     @srch search
 
-    if @checkAccess
+    if @checkAccess()
       @currentFile = null
       @cursor = @collection.find @search
     return @
@@ -990,6 +1011,7 @@ class FilesCollection
       @config.onUploaded and @config.onUploaded.call @result, error, data
       if error
         console.warn "[FilesCollection] [insert] [end] Error: ", error if @collection.debug
+        @result.abort()
         @result.state.set 'aborted'
         @result.emitEvent 'error', [error, @fileData]
         @config.onError and @config.onError.call @result, error, @fileData
@@ -1130,12 +1152,12 @@ class FilesCollection
     start: ->
       self = @
       if @config.onBeforeUpload and _.isFunction @config.onBeforeUpload
-        isUploadAllowed = @config.onBeforeUpload.call @result, @fileData
+        isUploadAllowed = @config.onBeforeUpload.call _.extend(@result, @collection.getUser()), @fileData
         if isUploadAllowed isnt true
           return @end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else 'config.onBeforeUpload() returned false')
 
       if @collection.onBeforeUpload and _.isFunction @collection.onBeforeUpload
-        isUploadAllowed = @collection.onBeforeUpload.call @result, @fileData
+        isUploadAllowed = @collection.onBeforeUpload.call _.extend(@result, @collection.getUser()), @fileData
         if isUploadAllowed isnt true
           return @end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else 'collection.onBeforeUpload() returned false')
 
@@ -1225,7 +1247,8 @@ class FilesCollection
       @config._onEnd()
       @state.set 'aborted'
       console.timeEnd('insert ' + @config.file.name) if @config.debug
-      Meteor.call @config.MeteorFileAbort, {fileId: @config.fileId, fileLength: @config.fileLength, fileData: @config.fileData}
+      if @config.fileLength
+        Meteor.call @config.MeteorFileAbort, {fileId: @config.fileId, fileLength: @config.fileLength, fileData: @config.fileData}
       return
   else undefined
 
@@ -1234,24 +1257,28 @@ class FilesCollection
   @memberOf FilesCollection
   @name remove
   @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @param {Function} cb - Callback with one `error` argument
   @summary Remove file(s) on cursor or find and remove file(s) if search is set
   @returns {undefined}
   ###
-  remove: (search) ->
+  remove: (search, cb) ->
     console.info "[FilesCollection] [remove(#{JSON.stringify(search)})]" if @debug
     check search, Match.Optional Match.OneOf Object, String
+    check cb, Match.Optional Function
 
     if @checkAccess()
       @srch search
       if Meteor.isClient
-        Meteor.call @methodNames.MeteorFileUnlink, rcp(@)
+        Meteor.call @methodNames.MeteorFileUnlink, rcp(@), cb
 
       if Meteor.isServer
         files = @collection.find @search
         if files.count() > 0
           self = @
           files.forEach (file) -> self.unlink file
-        @collection.remove @search
+        @collection.remove @search, cb
+    else
+      cb and cb new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
     return @
 
   ###
@@ -1499,17 +1526,16 @@ class FilesCollection
   @name link
   @param {Object}   fileRef - File reference object
   @param {String}   version - [Optional] Version of file you would like to request
-  @param {Boolean}  pub     - [Optional] is file located in publicity available folder?
   @summary Returns downloadable URL
   @returns {String} Empty string returned in case if file not found in DB
   ###
-  link: (fileRef, version = 'original', pub = false) ->
+  link: (fileRef, version = 'original') ->
     console.info '[FilesCollection] [link()]' if @debug
     if _.isString fileRef
       version = fileRef
       fileRef = null
     return '' if not fileRef and not @currentFile
-    return formatFleURL (fileRef or @currentFile), version, @public
+    return formatFleURL (fileRef or @currentFile), version
 
 ###
 @locus Anywhere
