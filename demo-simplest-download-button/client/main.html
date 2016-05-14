@@ -11,7 +11,7 @@
 
 <template name='file'>
   {{#if fileRef}}
-    <a href="{{fileURL fileRef}}?download=true" target="_parent" download="{{fileRef.name}}">
+    <a href="{{fileURL fileRef}}?download=true" target="_parent" download="#{fileRef.name}">
       {{fileRef.name}}
     </a>
   {{else}}
