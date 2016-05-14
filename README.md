@@ -77,7 +77,7 @@ if (Meteor.isServer) {
 ```
 
 
-#### `insert(settings)` [*Client*]
+#### `insert(settings[, autoStart])` [*Client*]
 Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
 
 Upload form (template):
