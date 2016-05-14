@@ -115,7 +115,7 @@ Template.uploadForm.events({
   'change #fileInput': function (e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case 
-      // there was multiple files selected
+      // multiple files were selected
       var upload = Images.insert({
         file: e.currentTarget.files[0],
         streams: 'dynamic',
