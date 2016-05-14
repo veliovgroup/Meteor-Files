@@ -2,6 +2,7 @@ Meteor-Files
 ========
 
 ### About:
+ - Event-driven API
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
  - Upload file(s) via DDP
     * Ready for small and large files (RAM used only for chunk reading - [read about `chunkSize`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)))
@@ -54,4 +55,5 @@ Meteor-Files
 
 ##### Examples:
  - [Third-party storage (DropBox example)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats

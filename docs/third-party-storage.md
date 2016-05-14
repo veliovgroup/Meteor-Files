@@ -6,6 +6,11 @@ Prepare: install [dropbox-js](https://github.com/dropbox/dropbox-js):
 ```shell
 npm install --save dropbox
 ```
+Or:
+```shell
+meteor npm install dropbox
+```
+
 Prepare: Get access to DropBox API:
  - Go to https://www.dropbox.com/developers (*Sign(in|up) if required*)
  - Click on [Create your app](https://www.dropbox.com/developers/apps/create)

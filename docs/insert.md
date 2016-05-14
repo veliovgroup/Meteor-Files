@@ -1,4 +1,4 @@
-##### `insert(settings)` [*Client*]
+##### `insert(settings[, autoStart])` [*Client*]
 *Upload file to Server via DDP.*
 
  - `settings` {*Object*} [REQUIRED]
@@ -23,9 +23,9 @@
     * __return__ `true` to continue
     * __return__ `false` to abort or {*String*} to abort upload with message
  - `settings.streams` {*Number*|dynamic} - Quantity of parallel upload streams, `dynamic` is recommended
- - `settings.allowWebWorkers` {*Boolean*} - Use WebWorkers (*To avoid main thread blocking*) whenever feature is available in browser, default: true
+ - `settings.allowWebWorkers` {*Boolean*} - Use WebWorkers (*To avoid main thread blocking*) whenever feature is available in browser, default: `true`
  - `settings.chunkSize` {*Number*|dynamic} - Chunk size for upload, `dynamic` is recommended
- - `autoStart` {*Boolean*} - Start upload immediately. If set to `false`, you need manually call `.start()` method on returned class. Useful to set EventListeners, before starting upload.
+ - `autoStart` {*Boolean*} - Start upload immediately. If set to `false`, you need manually call `.start()` method on returned class. Useful to set EventListeners, before starting upload. Default: `true`
  - __Returns__ {*Object*}:
    - __Note__: same object is used as *__context__* in all callback functions (*see above*)
    - `file` {*File*} - Source file passed into method
@@ -36,13 +36,13 @@
    - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
    - `abort` {*Function*} - Abort current upload, then trigger `onAbort` callback
    - `estimateTime` {*ReactiveVar*} - Remaining upload time in milliseconds
-   - `estimateSpeed` {*ReactiveVar*} - Current upload speed in bytes/second, to convert into speed look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: `filesize(estimateSpeed, {bits: true}) + '/s';`
-   - `state` {*ReactiveVar*} - String reflecting current state of the upload, with four possible values:
+   - `estimateSpeed` {*ReactiveVar*} - Current upload speed in bytes/second, to convert into speed, take a look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: `filesize(estimateSpeed, {bits: true}) + '/s';`
+   - `state` {*ReactiveVar*} - String, indicates current state of the upload, with four possible values:
       * `active` - file is currently actively uploading
       * `paused` - file upload is paused
       * `aborted` - file upload has been aborted and can no longer be completed
       * `completed` - file has been successfully uploaded
-   - This object has support for next events:
+   - __This object has support for next events__:
       * `start` - Triggered when upload is started (*before sending first byte*) and validations was successful, arguments:
         - `error` - *Always* `null`
         - `fileData` {*Object*}
@@ -68,7 +68,7 @@
         - `error`
         - `fileRef` - {*Object*} File record from DB
 
-*When* `autoStart` *is* `false` *before calling* `.start()` *you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. Do not forget to change file name, extension and mime-type if required.*
+*When* `autoStart` *is* `false` *before calling* `.start()` *you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. __Do not forget to change file name, extension and mime-type if required__.*
 
 The `fileData` object (*see above*):
  - `size` {*Number*} - File size in bytes

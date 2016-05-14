@@ -1,4 +1,4 @@
-##### `remove(selector)` [*Isomorphic*]
+##### `remove(selector[, cb])` [*Isomorphic*]
 
 *Remove records from FilesCollection and files from FS.*
 
@@ -32,8 +32,8 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, function (error) {
 });
 ```
 
+*Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeremove-to-avoid-unauthorized-remove)*
 ```javascript
-// Using onBeforeRemove to avoid unauthorized actions
 var Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
