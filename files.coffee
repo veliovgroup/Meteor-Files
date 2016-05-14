@@ -1153,6 +1153,10 @@ class FilesCollection
 
     start: ->
       self = @
+      if @config.file.size <= 0
+        @end new Meteor.Error 400, 'Can\'t upload empty file'
+        return @result
+
       if @config.onBeforeUpload and _.isFunction @config.onBeforeUpload
         isUploadAllowed = @config.onBeforeUpload.call _.extend(@result, @collection.getUser()), @fileData
         if isUploadAllowed isnt true
