@@ -172,6 +172,7 @@ class FilesCollection
         isAudio: type: Boolean
         isImage: type: Boolean
         isText: type: Boolean
+        isJSON: type: Boolean
         _prefix: type: String
         extension:
           type: String
@@ -630,6 +631,7 @@ class FilesCollection
       isAudio: !!~data.type.toLowerCase().indexOf('audio')
       isImage: !!~data.type.toLowerCase().indexOf('image')
       isText:  !!~data.type.toLowerCase().indexOf('text')
+      isJSON:  !!~data.type.toLowerCase().indexOf('json')
       _prefix: data._prefix or @_prefix
       _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
@@ -660,7 +662,7 @@ class FilesCollection
   @param {Object} opts - {fileName: '', type: '', size: 0, meta: {...}}
   @param {Function} callback - function(error, fileObj){...}
   @summary Write buffer to FS and add to FilesCollection Collection
-  @returns {Files} - Returns current FilesCollection instance
+  @returns {FilesCollection} Instance
   ###
   write: if Meteor.isServer then (buffer, opts = {}, callback) ->
     console.info "[FilesCollection] [write()]" if @debug
@@ -708,7 +710,7 @@ class FilesCollection
   @param {Object} opts - {fileName: '', meta: {...}}
   @param {Function} callback - function(error, fileObj){...}
   @summary Download file, write stream to FS and add to FilesCollection Collection
-  @returns {Files} - Return this
+  @returns {FilesCollection} Instance
   ###
   load: if Meteor.isServer then (url, opts = {}, callback) ->
     console.info "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
@@ -758,7 +760,7 @@ class FilesCollection
   @param {String} path - Path to file
   @param {String} path - Path to file
   @summary Add file from FS to FilesCollection
-  @returns {Files} - Return this
+  @returns {FilesCollection} Instance
   ###
   addFile: if Meteor.isServer then (path, opts = {}, callback) ->
     console.info "[FilesCollection] [addFile(#{path})]" if @debug
@@ -812,7 +814,7 @@ class FilesCollection
   @name findOne
   @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @summary Load file
-  @returns {Files} - Return this
+  @returns {FilesCollection} Instance
   ###
   findOne: (search) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(search)})]" if @debug
@@ -830,7 +832,7 @@ class FilesCollection
   @name find
   @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @summary Load file or bunch of files
-  @returns {Files} - Return this
+  @returns {FilesCollection} Instance
   ###
   find: (search) ->
     console.info "[FilesCollection] [find(#{JSON.stringify(search)})]" if @debug
@@ -889,7 +891,7 @@ class FilesCollection
         return false to abort upload
   @param {Boolean} autoStart     - Start upload immediately. If set to false, you need manually call .start() method on returned class. Useful to set EventListeners.
   @summary Upload file to server over DDP
-  @returns {Object} with next properties:
+  @returns {UploadInstance} Instance. UploadInstance has next properties:
     {ReactiveVar} onPause  - Is upload process on the pause?
     {ReactiveVar} state    - active|paused|aborted|completed
     {ReactiveVar} progress - Current progress in percentage
@@ -1259,7 +1261,7 @@ class FilesCollection
   @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
   @param {Function} cb - Callback with one `error` argument
   @summary Remove file(s) on cursor or find and remove file(s) if search is set
-  @returns {undefined}
+  @returns {FilesCollection} Instance
   ###
   remove: (search, cb) ->
     console.info "[FilesCollection] [remove(#{JSON.stringify(search)})]" if @debug
@@ -1343,7 +1345,7 @@ class FilesCollection
   @name unlink
   @param {Object} file - fileObj
   @summary Unlink files and it's versions from FS
-  @returns {undefined}
+  @returns {FilesCollection} Instance
   ###
   unlink: if Meteor.isServer then (file) ->
     console.info "[FilesCollection] [unlink(#{file._id})]" if @debug
@@ -1359,6 +1361,7 @@ class FilesCollection
   @memberOf FilesCollection
   @name _404
   @summary Internal method, used to return 404 error
+  @returns {undefined}
   ###
   _404: if Meteor.isServer then (http) ->
     console.warn "[FilesCollection] [download(#{http.request.originalUrl})] [_404] File not found" if @debug
@@ -1545,7 +1548,7 @@ class FilesCollection
 @param {String} version - [Optional] Version of file you would like build URL for
 @param {Boolean}  pub   - [Optional] is file located in publicity available folder?
 @summary Returns formatted URL for file
-@returns {String}
+@returns {String} Downloadable link
 ###
 formatFleURL = (fileRef, version = 'original') ->
   root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '')

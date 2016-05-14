@@ -30,6 +30,9 @@ var defaultSchema = {
   isText: {
     type: Boolean
   },
+  isJSON: {
+    type: Boolean
+  },
   _prefix: {
     type: String
   },
