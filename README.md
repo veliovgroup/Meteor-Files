@@ -1,10 +1,10 @@
 Files for Meteor
 ========
-Extremely fast and robust package for file uploading, managing and streaming (Audio & Video & Images), with support of server's file system (FS) or third party storage, like: AWS, DropBox, Google Storage, Google Drive, GridFS or any other with API.
+Extremely fast and robust package for file uploading, managing and streaming (*Audio & Video & Images*), with support of server's file system (FS) or third party storage, like: *AWS*, *DropBox*, *Google Storage*, *Google Drive*, *GridFS* or any other with API.
 
 Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-application), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
-For upload pause/continue, speed, remaining time and progress see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)).
+For current upload *pause/continue*, *speed*, *remaining time* and *progress* see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)).
 
 Support:
 ========
@@ -24,7 +24,7 @@ ToC:
  - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
- - [API](https://github.com/VeliovGroup/Meteor-Files#api)
+ - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
    * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-client)
    * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
@@ -32,8 +32,8 @@ ToC:
 
 Why `Meteor-Files`?
 ========
-`cfs` is a good package, but buggy as it's huge monster which combine everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/retrieve files to/from server. 
- - You need store to GridFS, AWS or DropBox? (*[Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
+The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
+ - You need store to *GridFS*, *AWS* or *DropBox*? (*[Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
  - You need to resize images after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
@@ -83,9 +83,11 @@ Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Fil
 Upload form (template):
 ```html
 <template name="uploadForm">
-  {{#if currentFile}}
-    Uploading <b>{{currentFile.file.name}}</b>: 
-    <span id="progress">{{progress}}%</span>
+  {{#if currentUpload}}
+    {{#with currentUpload}}
+      Uploading <b>{{file.name}}</b>: 
+      <span id="progress">{{progress}}%</span>
+    {{/with}}
   {{else}}
     <input id="fileInput" type="file" />
   {{/if}}
@@ -100,21 +102,13 @@ this.Images = new FilesCollection({collectionName: 'Images'});
 Client's code:
 ```javascript
 Template.uploadForm.onCreated(function () {
-  this.currentFile = new ReactiveVar(false);
+  this.currentUpload = new ReactiveVar(false);
 });
 
 Template.uploadForm.helpers({
-  currentFile: function () {
-    return Template.instance().currentFile.get();
-  },
-  progress: function () {
-    var _cf = Template.instance().currentFile.get();
-    if (_cf) {
-      return _cf.progress.get();
-    } else {
-      return 0;
-    }
-  },
+  currentUpload: function () {
+    return Template.instance().currentUpload.get();
+  }
 });
 
 Template.uploadForm.events({
@@ -122,21 +116,26 @@ Template.uploadForm.events({
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case 
       // there was multiple files selected
-      var file = e.currentTarget.files[0];
-
-      template.currentFile.set(Images.insert({
-        file: file,
-        onUploaded: function (error, fileObj) {
-          if (error) {
-            alert('Error during upload: ' + error);
-          } else {
-            alert('File "' + fileObj.name + '" successfully uploaded');
-          }
-          template.currentFile.set(false);
-        },
+      var upload = Images.insert({
+        file: e.currentTarget.files[0],
         streams: 'dynamic',
         chunkSize: 'dynamic'
-      }));
+      }, false);
+
+      upload.on('start', function () {
+        template.currentUpload.set(this);
+      });
+
+      upload.on('end', function (error, fileObj) {
+        if (error) {
+          alert('Error during upload: ' + error);
+        } else {
+          alert('File "' + fileObj.name + '" successfully uploaded');
+        }
+        template.currentUpload.set(false);
+      });
+
+      upload.start();
     }
   }
 });
@@ -206,7 +205,7 @@ For more expressive example see [Streaming demo app](https://github.com/VeliovGr
 Template:
 ```html
 <template name='file'>
-  <a href="{{fileURL fileRef}}?download=true" target="_parent" download>
+  <a href="{{fileURL fileRef}}?download=true" download="{{fileRef.name}}" target="_parent">
     {{fileRef.name}}
   </a>
 </template>
@@ -241,7 +240,7 @@ Template.file.helpers({
   }
 });
 ```
-For more expressive example see [Download demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
+For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
 
 ----
 
