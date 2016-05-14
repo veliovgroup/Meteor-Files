@@ -28,7 +28,7 @@
     "connect": "^3.4.1",
     "dropbox": "^0.10.3",
     "fibers": "^1.0.8",
-    "fs-extra": "0.28.0",
+    "fs-extra": "0.30.0",
     "http-proxy": "^1.13.2",
     "keypress": "^0.2.1",
     "meteor-deque": "*",
@@ -47,7 +47,7 @@
     "request": "2.72.0"
   },
   "engines": {
-    "node": "0.10.41",
+    "node": "0.10.43",
     "npm": "2.15.3"
   }
 }
