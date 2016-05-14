@@ -64,13 +64,16 @@ if Meteor.isServer
                   # Generate downloadable link
                   client.makeUrl stat.path, {long: true, downloadHack: true}, (error, xml) -> bound ->
                     # Store downloadable in file's meta object
-                    upd = $set: {}
-                    upd['$set']["versions.#{version}.meta.pipeFrom"] = xml.url
-                    upd['$set']["versions.#{version}.meta.pipePath"] = stat.path
-                    Collections.files.collection.update {_id: fileRef._id}, upd, (error) ->
-                      if error
-                        console.error error
-                      return
+                    if error
+                      console.error error
+                    else if xml
+                      upd = $set: {}
+                      upd['$set']["versions.#{version}.meta.pipeFrom"] = xml.url
+                      upd['$set']["versions.#{version}.meta.pipePath"] = stat.path
+                      Collections.files.collection.update {_id: fileRef._id}, upd, (error) ->
+                        if error
+                          console.error error
+                        return
                     return
                 return
             return
