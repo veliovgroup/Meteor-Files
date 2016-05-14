@@ -71,6 +71,7 @@
     - `http.request` {*Object*} - example: `http.request.headers`
     - `http.response` {*Object*} - example: `http.response.end()`
     - `fileRef` {*Object*} - Current file record from MongoDB
+    - `version` {*String*} - Requested file version
     - Return `false` from this function to continue standard behavior
     - Return `true` to intercept incoming request
  - This object has support for next events:

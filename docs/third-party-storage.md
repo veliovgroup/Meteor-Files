@@ -85,7 +85,7 @@ Collections.files = new FilesCollection({
       });
     });
   },
-  interceptDownload: function(http, fileRef) {
+  interceptDownload: function(http, fileRef, version) {
     var path, ref;
     path = fileRef != null ? (ref = fileRef.meta) != null ? ref.pipeFrom : void 0 : void 0;
     if (path) {
