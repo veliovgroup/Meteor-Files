@@ -28,21 +28,29 @@ Template.uploadForm.events({
       if (file) {
         var uploadInstance = Images.insert({
           file: file,
-          onUploaded: function (error, fileObj) {
-            if (error) {
-              alert('Error during upload: ' + error.reason);
-            } else {
-              alert('File "' + fileObj.name + '" successfully uploaded');
-            }
-            template.currentFile.set(false);
-          },
           streams: 'dynamic',
           chunkSize: 'dynamic'
+        }, false);
+
+        uploadInstance.on('start', function() {
+          template.currentFile.set(this);
         });
 
-        if (uploadInstance.state.get() !== 'aborted') {
-          template.currentFile.set(uploadInstance);
-        }
+        uploadInstance.on('error', function(error) {
+          console.error(error);
+          template.currentFile.set(false);
+        });
+
+        uploadInstance.on('end', function(error, fileObj) {
+          if (error) {
+            alert('Error during upload: ' + error.reason);
+          } else {
+            alert('File "' + fileObj.name + '" successfully uploaded');
+          }
+          template.currentFile.set(false);
+        });
+
+        uploadInstance.start();
       }
     }
   }
