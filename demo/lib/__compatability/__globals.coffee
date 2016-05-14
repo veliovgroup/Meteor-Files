@@ -2,10 +2,11 @@
 @_app = 
   subs: new SubsManager()
   storeTTL: 259200000
+  NOOP: -> return
 
 if Meteor.isClient
-  Template.registerHelper 'filesize', (size) -> filesize size
-  Template.registerHelper 'extless', (filename) -> filename.split('.')[0]
+  Template.registerHelper 'filesize', (size = 0) -> filesize size
+  Template.registerHelper 'extless', (filename = '') -> filename.split('.')[0]
 
   marked.setOptions
     highlight: (code) ->  hljs.highlightAuto(code).value

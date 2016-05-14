@@ -8,6 +8,26 @@ __Links:__
 __Functionality:__
  - Upload / Download Files
  - Stream Audio / Video Files
+ - Drag'n'drop support (*files only, folders is not supported yet*)
+ - Image processing (*thumbnails, preview*)
+ - DropBox as storage
+
+Activate DropBox
+======
+ 1. Read [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ 2. Set DropBox credentials into `METEOR_SETTINGS` env.var or pass as file, read [here for more info](http://docs.meteor.com/#/full/meteor_settings), alternatively (*if something not working*) set `DROPBOX` env.var
+ 3. You can pass DropBox credentials as JSON when using "*Heroku's one click install-button*"
+
+DropBox credentials format:
+```json
+{
+  "dropbox": {
+    "key": "xxx",
+    "secret": "xxx",
+    "token": "xxx"
+  }
+}
+```
 
 Deploy to Heroku
 ======
@@ -46,6 +66,9 @@ heroku config:set ROOT_URL=https://<your-app-name>.herokuapp.com
 # After creating MongoDB instance create user, then copy URL to your MongoDB
 # Should be something like: mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19470/mydb
 heroku config:set MONGO_URL=mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19470/mydb
+
+# For DropBox:
+# heroku config:set DROPBOX='{"dropbox":{"key": "xxx", "secret": "xxx", "token": "xxx"}}'
 
 git init
 git add .

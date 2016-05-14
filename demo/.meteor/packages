@@ -1,36 +1,42 @@
-# Meteor packages used by this project, one per line.
-# Check this file (and the other files in this directory) into your repository.
-#
-# 'meteor add' and 'meteor remove' will edit this file for you,
-# but you can also edit it by hand.
+# Basic packages
+meteor-base
+mobile-experience
+mongo
+blaze-html-templates
+session
+jquery
+tracker
 
-meteor-base             # Packages every Meteor app needs to have
-mobile-experience       # Packages for a great mobile UX
-mongo                   # The database Meteor supports right now
-blaze-html-templates    # Compile .html files into Meteor Blaze views
-session                 # Client-side reactive dictionary for your app
-jquery                  # Helpful client-side library
-tracker                 # Meteor's client-side reactive programming library
+standard-minifier-css
+standard-minifier-js
 
-fourseven:scss@2.1.1
-mquandalle:jade
+# Additional MDG packages
 audit-argument-checks
 reactive-var
-check
 coffeescript
-iron:router
-ostrio:files
-ostrio:iron-router-title
+markdown
+check
+http
+
+# UI/UX packages
+fortawesome:fontawesome
+simple:highlight.js
+mquandalle:jade
+fourseven:scss@2.1.1
+momentjs:moment
+twbs:bootstrap
+perak:markdown
+mrt:filesize
+
+# Collection-related packages
 meteorhacks:subs-manager
 aldeed:simple-schema
 aldeed:collection2
-momentjs:moment
+
+# Other packages
+cfs:graphicsmagick
+ostrio:files
+ostrio:flow-router-extra
+ostrio:flow-router-title
+arillo:flow-router-helpers
 ostrio:templatehelpers
-twbs:bootstrap
-fortawesome:fontawesome
-mrt:filesize
-standard-minifier-css
-standard-minifier-js
-markdown
-perak:markdown
-simple:highlight.js

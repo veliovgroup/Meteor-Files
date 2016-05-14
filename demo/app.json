@@ -1,6 +1,6 @@
 {
   "name": "Meteor Files",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Demo application for ostrio:files package",
   "repository": "https://github.com/VeliovGroup/Meteor-Files-Demo",
   "website": "https://github.com/VeliovGroup/Meteor-Files-Demo",
@@ -32,12 +32,16 @@
   },
   "env": {
     "ROOT_URL": {
-      "description": "Full URL of your app, with protocol (scheme), like http://example.com",
+      "description": "Full URL of your app, with protocol (scheme), ex.: https://example.com",
       "required": true
     },
     "MONGO_URL": {
-      "description": "Full URL to mongodb, with protocol (scheme), like mongodb://user:pass@host:port/db. Create free one at: https://mlab.com",
+      "description": "Full URL to mongodb, with protocol (scheme), ex.: mongodb://user:pass@host:port/db. Create free one at: https://mlab.com",
       "required": true
+    },
+    "DROPBOX": {
+      "description": "[Optional] DropBox credentials object, format: {\"dropbox\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"token\": \"xxx\"}}",
+      "required": false
     }
   },
   "keywords": [

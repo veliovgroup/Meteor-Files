@@ -5,17 +5,17 @@ Template.file.onCreated ->
 Template.file.onRendered ->
   @warning.set false
   @fetchedText.set false
-
-  if @data.isText
+  if @data.file.isText or @data.file.isJSON
     self = @
-    Meteor.call 'getTextFile', @data, (error, content) ->
+    HTTP.call 'GET', Collections.files.link(@data.file), (error, resp) ->
       if error
-        if error.reason is 'File too big to show, please download.'
-          self.warning.set error.reason
-        else
-          console.error error
+        console.error error
       else
-        self.fetchedText.set content
+        if !~[500, 404, 400].indexOf resp.statusCode
+          if resp.content.length < 1024 * 64
+            self.fetchedText.set resp.content
+          else
+            self.warning.set 'File too big to show, please download.'
 
 Template.file.helpers
   fetchedText: -> Template.instance().fetchedText.get()

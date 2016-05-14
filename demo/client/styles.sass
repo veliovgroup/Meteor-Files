@@ -1,4 +1,4 @@
-*
+html, body, span, div, p, table, tr, button, video, audio
   animation: newElement 350ms ease-in-out 1
 
 @keyframes newElement
@@ -32,6 +32,28 @@
   text-overflow: ellipsis
   -o-text-overflow: ellipsis
 
+td.thumbnail40
+  padding: 0px !important
+  img
+    height: 36px
+    width: 36px
+    max-height: 36px
+    max-width: 36px
+
+.navbar-form
+  min-height: 90px
+  padding: 10px 15px
+  border: none !important
+  background-image: none
+  &.file-over
+    background:
+      image: url(/dnd.png)
+      repeat: no-repeat
+      position: 50% 50%
+      size: 80px 80px
+    & > *
+      display: none
+
 .upload-form-container
   max-width: 80%
   margin: 0px auto
@@ -51,6 +73,11 @@ button, select, input, button, form, textarea, a, pre, i
   outline: none !important
   &:active, &:focus, &:visited
     outline: none !important
+
+pre, pre code
+  white-space: pre
+pre
+  overflow: auto
 
 th
   text-align: center

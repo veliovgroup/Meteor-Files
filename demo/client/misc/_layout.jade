@@ -1,23 +1,42 @@
 head
   meta(name="fragment" content="!")
   meta(name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
-  link(rel="icon" type="image/png" href="favicon-196x196.png" sizes="196x196")
-  link(rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96")
-  link(rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32")
-  link(rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16")
-  link(rel="icon" type="image/png" href="favicon-128.png" sizes="128x128")
-  meta(name="application-name" content="Meteor Files")
-  meta(name="msapplication-TileColor" content="#FFFFFF")
-  meta(name="msapplication-TileImage" content="mstile-144x144.png")
-  meta(name="msapplication-square70x70logo" content="mstile-70x70.png")
-  meta(name="msapplication-square150x150logo" content="mstile-150x150.png")
-  meta(name="msapplication-wide310x150logo" content="mstile-310x150.png")
-  meta(name="msapplication-square310x310logo" content="mstile-310x310.png")
 
   meta(charset="UTF-8")
   meta(http-equiv="X-UA-Compatible" content="IE=edge,chrome=1")
   meta(name="robots" content="index, follow")
   meta(name="format-detection" content="telephone=no, date=no, address=no, email=no")
+
+  link(rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png")
+  link(rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png")
+  link(rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.png")
+  link(rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png")
+  link(rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.png")
+  link(rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png")
+  link(rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png")
+  link(rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png")
+  link(rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png")
+  link(rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16")
+  link(rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32")
+  link(rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96")
+  link(rel="icon" type="image/png" href="/favicon-194x194.png" sizes="194x194")
+  link(rel="icon" type="image/png" href="/android-chrome-192x192.png" sizes="192x192")
+  link(rel="manifest" href="/manifest.json")
+  link(rel="mask-icon" href="/safari-pinned-tab.svg" color="#9f1304")
+
+  meta(name="apple-mobile-web-app-capable" content="yes")
+  meta(name="apple-mobile-web-app-status-bar-style" content="black")
+  meta(name="apple-mobile-web-app-title" content="File upload")
+  meta(name="application-name" content="File upload")
+
+  meta(name="msapplication-TileColor" content="#da532c")
+  meta(name="msapplication-TileImage" content="/mstile-144x144.png")
+  meta(name="msapplication-square70x70logo" content="/mstile-70x70.png")
+  meta(name="msapplication-square150x150logo" content="/mstile-150x150.png")
+  meta(name="msapplication-wide310x150logo" content="/mstile-310x150.png")
+  meta(name="msapplication-square310x310logo" content="/mstile-310x310.png")
+  meta(name="theme-color" content="#ffffff")
+
   meta(name="description" content="Meteor Files: Upload, Server and Manage files within Meteor application")
   title Meteor Files: Upload, Stream and Manage files
 
@@ -27,7 +46,7 @@ template(name="_layout")
   nav.navbar.navbar-default: .container-fluid
     .navbar-header.hidden-xs
       a.navbar-brand(href="/" title="Meteor Files")
-        img(src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo-bw.png" height="50" width="50" alt="Meteor Files")
+        img(src="/logo-bw.png" height="50" width="50" alt="Meteor Files")
     +uploadForm
 
   .container.full-height: .row: .col-md-12
