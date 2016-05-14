@@ -75,7 +75,7 @@ git add .
 git commit -m "initial"
 git push heroku master
 ```
- - Go to `http://<your-app-name>.herokuapp.com`
+ - Go to `https://<your-app-name>.herokuapp.com`
  - If your app has errors:
    * Check logs: `heroku logs --tail`
    * Try to run locally and debug: `heroku run node`
