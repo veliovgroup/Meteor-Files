@@ -1402,7 +1402,7 @@ class FilesCollection
       self = @
 
       if @interceptDownload and _.isFunction @interceptDownload
-        _idres = @interceptDownload http, @currentFile
+        _idres = @interceptDownload http, @currentFile, version
         if _idres is true
           return
 
