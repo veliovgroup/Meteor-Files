@@ -71,7 +71,7 @@ cp = (to, from) ->
   - `user()`
   - `userId`
 @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
-@param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files, like: `511` or `0o755`
+@param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
 @param config.storagePath    {String}  - [Server] Storage path on file system
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
 @param config.throttle       {Number}  - [Server] bps throttle threshold
@@ -135,9 +135,10 @@ class FilesCollection
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
     else
+      @_writableStreams ?= {}
       @strict           ?= true
       @throttle         ?= false
-      @permissions      ?= 0o755
+      @permissions      ?= parseInt('644', 8)
       @cacheControl     ?= 'public, max-age=31536000, s-maxage=31536000'
       @onBeforeRemove   ?= false
       @onAfterUpload    ?= false
@@ -251,17 +252,8 @@ class FilesCollection
       MeteorFileUnlink: "MeteorFileUnlink#{@_prefix}"
 
     if Meteor.isServer
-      @on 'handleUpload', (result, pathName, path, pathPart, fileName, extensionWithDot, opts, cb) ->
-        @handleUpload result, pathName, path, pathPart, fileName, extensionWithDot, opts, cb
-        return
-
-      @on 'concatChunks', (result, num, files, tries, pathName, path, fileName, extensionWithDot, opts, cb) ->
-        @concatChunks result, num, files, tries, pathName, path, fileName, extensionWithDot, opts, cb
-        return
-
-      @on 'finishUpload', (result, path, fileName, opts, cb) ->
-        @finishUpload result, path, fileName, opts, cb
-        return
+      @on 'handleUpload', @handleUpload
+      @on 'finishUpload', @finishUpload
 
       WebApp.connectHandlers.use (request, response, next) ->
         unless self.public
@@ -345,6 +337,7 @@ class FilesCollection
           fileId:     String
           binData:    Match.Optional String
           chunkId:    Match.Optional Number
+          chunkSize:  Number
           fileLength: Number
         }
 
@@ -369,20 +362,17 @@ class FilesCollection
         fileName = self.getFileName opts.file
         {extension, extensionWithDot} = self.getExt fileName
 
-        pathName = "#{self.storagePath}/#{opts.fileId}"
-        path     = "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
-        pathPart = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId}#{extensionWithDot}" else null
-
+        path   = "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
         result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId}
 
         if opts.eof
           try
-            return Meteor.wrapAsync(self.handleUpload.bind(self, result, pathName, path, pathPart, fileName, extensionWithDot, opts))()
+            return Meteor.wrapAsync(self.handleUpload.bind(self, result, path, opts))()
           catch e
             console.warn "[FilesCollection] [Write Method] Exception:", e if self.debug
             throw e
         else
-          self.emit 'handleUpload', result, pathName, path, pathPart, fileName, extensionWithDot, opts, NOOP
+          self.emit 'handleUpload', result, path, opts, NOOP
         return result
 
       _methods[self.methodNames.MeteorFileAbort] = (opts) ->
@@ -393,29 +383,26 @@ class FilesCollection
         }
 
         ext  = ".#{opts.fileData.ext}"
-        path = "#{self.storagePath}/#{opts.fileId}"
+        path = "#{self.storagePath}/#{opts.fileId}#{ext}"
 
         console.info "[FilesCollection] [Abort Method]: For #{path}" if self.debug
-        if opts.fileLength > 1
-          allowed = false
-          i = 0
-          while i <= opts.fileLength
-            _path = "#{path}_#{i}#{ext}"
-            fs.stat _path, ((error, stats) -> bound =>
-              if not error and stats.isFile()
-                allowed = true
-                fs.unlink @_path, NOOP
-            ).bind({_path})
-            i++
-          
-          Meteor.setTimeout ->
-            self.remove(opts.fileId) if allowed
-          , 250
+        if self._writableStreams?[opts.fileId]
+          self._writableStreams[opts.fileId].stream.end()
+          delete self._writableStreams[opts.fileId]
+          self.remove({_id: opts.fileId})
+          self.unlink({_id: opts.fileId, path})
 
+        return true
       Meteor.methods _methods
 
-
-  finishUpload: if Meteor.isServer then (result, path, fileName, opts, cb) ->
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name finishUpload
+  @summary Internal method. Finish upload, close Writable stream, add recored to MongoDB and flush used memory
+  @returns {undefined}
+  ###
+  finishUpload: if Meteor.isServer then (result, path, opts, cb) ->
     fs.chmod path, @permissions, NOOP
     self          = @
     result.type   = @getMimeType opts.file
@@ -426,61 +413,21 @@ class FilesCollection
         cb new Meteor.Error 500, error
       else
         result._id = _id
-        console.info "[FilesCollection] [Write Method] [finishUpload] #{fileName} -> #{path}" if self.debug
+        console.info "[FilesCollection] [Write Method] [finishUpload] -> #{path}" if self.debug
         self.onAfterUpload and self.onAfterUpload.call self, result
         self.emit 'afterUpload', result
         cb null, result
     return
   else undefined
 
-  concatChunks: if Meteor.isServer then (result, num, files, tries = 0, pathName, path, fileName, extensionWithDot, opts, cb) ->
-    self = @
-    sindex = files.indexOf "#{opts.fileId}_1#{extensionWithDot}"
-    files.splice sindex, 1 if !!~sindex
-    findex = files.indexOf "#{opts.fileId}_#{num}#{extensionWithDot}"
-    if !!~findex
-      files.splice findex, 1
-    else if files.length <= 0
-      @emit 'finishUpload', result, path, fileName, opts, cb
-      return
-    else
-      @emit 'concatChunks', result, ++num, files, tries, pathName, path, fileName, extensionWithDot, opts, cb
-      return 
-
-    _path   = "#{pathName}_#{num}#{extensionWithDot}"
-    _source = pathName + '_1' + extensionWithDot
-
-    fs.stat _path, (error, stats) -> bound ->
-      if error or not stats.isFile()
-        if tries >= 10
-          cb new Meteor.Error 500, "Chunk ##{num} is missing!"
-        else
-          tries++
-          Meteor.setTimeout ->
-            self.emit 'concatChunks', result, num, files, tries, pathName, path, fileName, extensionWithDot, opts, cb
-          , 100
-      else
-        fs.readFile _path, (error, _chunkData) -> bound ->
-          if error
-            cb new Meteor.Error 500, "Can't read #{_path}"
-          else
-            fs.appendFile _source, _chunkData, (error) -> bound ->
-              if error
-                cb new Meteor.Error 500, "Can't append #{_path} to #{_source}"
-              else
-                fs.unlink _path, NOOP
-                if files.length <= 0
-                  fs.rename _source, path, (error) -> bound ->
-                    if error
-                      cb new Meteor.Error 500, "Can't rename #{_source} to #{path}"
-                    else
-                      self.emit 'finishUpload', result, path, fileName, opts, cb
-                else
-                  self.emit 'concatChunks', result, ++num, files, tries, pathName, path, fileName, extensionWithDot, opts, cb
-    return
-  else undefined
-
-  handleUpload: if Meteor.isServer then (result, pathName, path, pathPart, fileName, extensionWithDot, opts, cb) ->
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name handleUpload
+  @summary Internal method to handle upload process, pipe incoming data to Writable stream
+  @returns {undefined}
+  ###
+  handleUpload: if Meteor.isServer then (result, path, opts, cb) ->
     self = @
     if opts.eof
       binary = opts.binData
@@ -489,35 +436,38 @@ class FilesCollection
 
     try
       if opts.eof
-        if opts.fileLength > 1
-          fs.readdir self.storagePath, (error, files) -> bound ->
-            if error
-              cb new Meteor.Error 500, error
-            else
-              files = files.filter((f) -> !!~f.indexOf opts.fileId)
-              if files.length is 1
-                fs.rename "#{self.storagePath}/#{files[0]}", path, (error) -> bound ->
-                  if error
-                    cb new Meteor.Error 500, "Can't rename #{self.storagePath}/#{files[0]} to #{path}"
-                  else
-                    self.emit 'finishUpload', result, path, fileName, opts, cb
-              else
-                self.emit 'concatChunks', result, 2, files, 0, pathName, path, fileName, extensionWithDot, opts, cb
+        _hlEnd = ->
+          self._writableStreams[result._id].stream.end()
+          delete self._writableStreams[result._id]
+          self.emit 'finishUpload', result, path, opts, cb
+          return
+
+        if @_writableStreams[result._id].delayed?[opts.fileLength]
+          @_writableStreams[result._id].stream.write @_writableStreams[result._id].delayed[opts.fileLength], () -> bound ->
+            delete self._writableStreams[result._id].delayed[opts.fileLength]
+            _hlEnd()
+            return
         else
-          @emit 'finishUpload', result, path, fileName, opts, cb
-      else
-        if pathPart
-          _path = if opts.fileLength > 1 then "#{pathName}_#{opts.chunkId - 1}#{extensionWithDot}"
-          fs.stat _path, (error, stats) -> bound ->
-            if error or not stats.isFile()
-              fs.outputFile (pathPart or path), binary, 'binary', (error) -> bound -> 
-                cb error, result
-            else
-              fs.appendFile _path, binary, (error) -> bound -> 
-                fs.rename _path, "#{pathName}_#{opts.chunkId}#{extensionWithDot}", (error) -> bound -> 
-                  cb error, result
+          _hlEnd()
+        
+      else if opts.chunkId > 0
+        @_writableStreams[result._id] ?=
+          stream: fs.createWriteStream path, {flags: 'a', mode: @permissions}
+          delayed: {}
+
+        _dKeys = Object.keys @_writableStreams[result._id].delayed
+        if _dKeys.length
+          _.each @_writableStreams[result._id].delayed, (delayed, num) -> bound ->
+            if num < opts.chunkId
+              self._writableStreams[result._id].stream.write delayed
+              delete self._writableStreams[result._id].delayed[num]
+            return
+
+        start = opts.chunkSize * (opts.chunkId - 1)
+        if @_writableStreams[result._id].stream.bytesWritten < start
+          @_writableStreams[result._id].delayed[opts.chunkId] = binary
         else
-          fs.outputFile (pathPart or path), binary, 'binary', (error) -> bound -> cb error, result
+          @_writableStreams[result._id].stream.write binary
     catch e
       cb e
     return
@@ -545,7 +495,7 @@ class FilesCollection
       catch error
     if not mime or not _.isString mime
       mime = 'application/octet-stream' 
-    mime
+    return mime
 
   ###
   @locus Anywhere
@@ -587,7 +537,6 @@ class FilesCollection
       if _.has(Package, 'accounts-base') and Meteor.userId()
         result.user = -> return Meteor.user()
         result.userId = Meteor.userId()
-
     return result
 
   ###
@@ -978,14 +927,14 @@ class FilesCollection
           
         @result.config._onEnd = -> self.emitEvent '_onEnd'
 
-        @addListener 'end', (error, data) -> @end error, data
-        @addListener 'start', -> @start()
-        @addListener 'upload', -> @upload()
-        @addListener 'sendEOF', (opts) -> @sendEOF opts
-        @addListener 'prepare', -> @prepare()
-        @addListener 'sendViaDDP', (evt) -> @sendViaDDP evt
-        @addListener 'proceedChunk', (chunkId, start) -> @proceedChunk chunkId, start
-        @addListener 'createStreams', -> @createStreams()
+        @addListener 'end', @end
+        @addListener 'start', @start
+        @addListener 'upload', @upload
+        @addListener 'sendEOF', @sendEOF
+        @addListener 'prepare', @prepare
+        @addListener 'sendViaDDP', @sendViaDDP
+        @addListener 'proceedChunk', @proceedChunk
+        @addListener 'createStreams', @createStreams
 
         @addListener 'calculateStats', _.throttle ->
           _t = (self.transferTime / self.sentChunks) / self.config.streams
@@ -1030,6 +979,7 @@ class FilesCollection
         fileId:     @fileId
         binData:    evt.data.bin
         chunkId:    evt.data.chunkId
+        chunkSize:  @config.chunkSize
         fileLength: @fileLength
 
       @emitEvent 'data', [evt.data.bin]
@@ -1054,8 +1004,6 @@ class FilesCollection
               self.emitEvent 'upload'
             self.emitEvent 'calculateStats'
           return
-      else
-        @emitEvent 'sendEOF', [opts]
       return
 
     sendEOF: (opts) ->
@@ -1067,6 +1015,7 @@ class FilesCollection
           meta:       @config.meta
           file:       @fileData
           fileId:     @fileId
+          chunkSize:  @config.chunkSize
           fileLength: @fileLength
 
         Meteor.call @collection.methodNames.MeteorFileWrite, opts, -> 
@@ -1106,15 +1055,16 @@ class FilesCollection
       if @result.state.get() is 'aborted'
         return @
 
-      ++@currentChunk
-      if @worker
-        @worker.postMessage({@sentChunks, start, @currentChunk, chunkSize: @config.chunkSize, file: @config.file})
-      else
-        @emitEvent 'proceedChunk', [@currentChunk, start]
+      if @currentChunk <= @fileLength
+        ++@currentChunk
+        if @worker
+          @worker.postMessage({@sentChunks, start, @currentChunk, chunkSize: @config.chunkSize, file: @config.file})
+        else
+          @emitEvent 'proceedChunk', [@currentChunk, start]
       return
 
     createStreams: ->
-      i = 1
+      i    = 1
       self = @
       while i <= @config.streams
         self.emitEvent 'upload'
@@ -1128,17 +1078,17 @@ class FilesCollection
       @result.emitEvent 'start', [null, @fileData]
 
       if @config.chunkSize is 'dynamic'
-        if @config.file.size >= 104857600
+        @config.chunkSize = @config.file.size / 1000
+        if @config.chunkSize < 327680
+          @config.chunkSize = 327680
+        else if @config.chunkSize > 1048576
           @config.chunkSize = 1048576
-        else if @config.file.size >= 52428800
-          @config.chunkSize = 524288
-        else
-          @config.chunkSize = 262144
-      
+
+      @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
       _len = Math.ceil(@config.file.size / @config.chunkSize)
       if @config.streams is 'dynamic'
         @config.streams = _.clone _len
-        @config.streams = 32 if @config.streams > 32
+        @config.streams = 24 if @config.streams > 24
 
       @fileLength               = if _len <= 0 then 1 else _len
       @config.streams           = @fileLength if @config.streams > @fileLength
@@ -1347,16 +1297,21 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name unlink
-  @param {Object} file - fileObj
+  @param {Object} fileRef - fileObj
+  @param {String} version - [Optional] file's version
   @summary Unlink files and it's versions from FS
   @returns {FilesCollection} Instance
   ###
-  unlink: if Meteor.isServer then (file) ->
-    console.info "[FilesCollection] [unlink(#{file._id})]" if @debug
-    if file.versions and not _.isEmpty file.versions
-      _.each file.versions, (version) -> bound ->
-        fs.unlink version.path, NOOP
-    fs.unlink file.path, NOOP
+  unlink: if Meteor.isServer then (fileRef, version) ->
+    console.info "[FilesCollection] [unlink(#{fileRef._id}, #{version})]" if @debug
+    if version
+      if fileRef.versions?[version] and fileRef.versions[version]?.path
+        fs.unlink fileRef.versions[version].path, NOOP
+    else
+      if fileRef.versions and not _.isEmpty fileRef.versions
+        _.each fileRef.versions, (vRef) -> bound ->
+          fs.unlink vRef.path, NOOP
+      fs.unlink fileRef.path, NOOP
     return @
   else undefined
 
@@ -1401,14 +1356,13 @@ class FilesCollection
     else if @currentFile
       self = @
 
-      if @interceptDownload and _.isFunction @interceptDownload
-        _idres = @interceptDownload http, @currentFile, version
-        if _idres is true
-          return
-
       if @downloadCallback
         unless @downloadCallback.call _.extend(http, @getUser(http)), @currentFile
           return @_404 http
+
+      if @interceptDownload and _.isFunction @interceptDownload
+        if @interceptDownload(http, @currentFile, version) is true
+          return
 
       fs.stat fileRef.path, (statErr, stats) -> bound ->
         if statErr or not stats.isFile()

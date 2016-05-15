@@ -26,7 +26,7 @@ modules-runtime@0.6.3
 mongo-id@1.0.4
 observe-sequence@1.0.11
 ostrio:cookies@2.0.2
-ostrio:files@1.5.1
+ostrio:files@1.5.2
 promise@0.6.7
 random@1.0.9
 reactive-var@1.0.9
