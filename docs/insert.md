@@ -1,81 +1,476 @@
 ##### `insert(settings[, autoStart])` [*Client*]
 *Upload file to Server via DDP.*
 
- - `settings` {*Object*} [REQUIRED]
- - `settings.file` {*File*} or {*Object*} - [REQUIRED] HTML5 `files` item, like in change event: `event.currentTarget.files[0]`
- - `settings.meta` {*Object*} - Additional file-related data, like `ownerId`, `postId`, etc.
- - `settings.onStart` {*Function*} - Callback, triggered when upload is started and validations was successful, arguments:
-    * `error` - *Always* `null`
-    * `fileData` {*Object*}
- - `settings.onUploaded` {*Function*} - Callback, triggered when upload is finished, arguments:
-    * `error`
-    * `fileRef` - {*Object*} File record from DB
- - `settings.onAbort` {*Function*} - Callback, triggered when `abort()` method is called, argument:
-    * `fileData` {*Object*}
- - `settings.onError` {*Function*} - Callback, triggered when upload is finished with error, arguments:
-    * `error`
-    * `fileData` {*Object*}
- - `settings.onProgress` {*Function*} - Callback, triggered after chunk is sent, arguments:
-    * `progress` {*Number*} - Current progress from `0` to `100`
-    * `fileData` {*Object*}
- - `settings.onBeforeUpload` {*Function*} - Callback, triggered right before upload is started, arguments:
-    * `fileData` {*Object*}
-    * __return__ `true` to continue
-    * __return__ `false` to abort or {*String*} to abort upload with message
- - `settings.streams` {*Number*|dynamic} - Quantity of parallel upload streams, `dynamic` is recommended
- - `settings.allowWebWorkers` {*Boolean*} - Use WebWorkers (*To avoid main thread blocking*) whenever feature is available in browser, default: `true`
- - `settings.chunkSize` {*Number*|dynamic} - Chunk size for upload, `dynamic` is recommended
- - `autoStart` {*Boolean*} - Start upload immediately. If set to `false`, you need manually call `.start()` method on returned class. Useful to set EventListeners, before starting upload. Default: `true`
- - __Returns__ {*Object*}:
-   - __Note__: same object is used as *__context__* in all callback functions (*see above*)
-   - `file` {*File*} - Source file passed into method
-   - `onPause` {*ReactiveVar*} - Is upload process on the pause?
-   - `progress` {*ReactiveVar*} - Upload progress in percents
-   - `pause` {*Function*} - Pause upload process
-   - `continue` {*Function*} - Continue paused upload process
-   - `toggleUpload` {*Function*} - Toggle `continue`/`pause` if upload in the progress
-   - `abort` {*Function*} - Abort current upload, then trigger `onAbort` callback
-   - `estimateTime` {*ReactiveVar*} - Remaining upload time in milliseconds
-   - `estimateSpeed` {*ReactiveVar*} - Current upload speed in bytes/second, to convert into speed, take a look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: `filesize(estimateSpeed, {bits: true}) + '/s';`
-   - `state` {*ReactiveVar*} - String, indicates current state of the upload, with four possible values:
-      * `active` - file is currently actively uploading
-      * `paused` - file upload is paused
-      * `aborted` - file upload has been aborted and can no longer be completed
-      * `completed` - file has been successfully uploaded
-   - __This object has support for next events__:
-      * `start` - Triggered when upload is started (*before sending first byte*) and validations was successful, arguments:
-        - `error` - *Always* `null`
-        - `fileData` {*Object*}
-      * `data` - Triggered after each chunk is read, arguments
-        - `data` {*String*} - Base64 encoded chunk (DataURL). Can be used to display or do something else with loaded file during upload. To get EOF use `readEnd` event
-      * `readEnd` - Triggered after file is fully read by browser, called with no arguments
-      * `progress` - Triggered after each chunk is sent, arguments:
-        - `progress` {*Number*} - Current progress from `0` to `100`
-        - `fileData` {*Object*}
-      * `pause` - Triggered after upload process set to pause, arguments:
-        - `fileData` {*Object*}
-      * `continue` - Triggered after upload process is continued from pause, arguments:
-        - `fileData` {*Object*}
-      * `abort` - Triggered after upload is aborted, arguments:
-        - `fileData` {*Object*}
-      * `uploaded` - Triggered when upload is finished, arguments:
-        - `error`
-        - `fileRef` - {*Object*} File record from DB
-      * `error` - Triggered whenever upload has an error, arguments:
-        - `error`
-        - `fileData` {*Object*}
-      * `end` - Triggered at the very end of upload, arguments:
-        - `error`
-        - `fileRef` - {*Object*} File record from DB
+<table>
+  <thead>
+    <tr>
+      <th align="right">
+        Param/Type
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Comment
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="right">
+        <code>settings</code> {<em>Object</em>}
+      </td>
+      <td>
+        [REQUIRED]
+      </td>
+      <td>
+        See all options below
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.file</code> {<em>File</em>} or {<em>Object</em>}
+      </td>
+      <td>
+        [REQUIRED] HTML5 <code>files</code> item
+      </td>
+      <td>
+        Ex.: From event: <code>event.currentTarget.files[0]</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.meta</code> {<em>Object</em>}
+      </td>
+      <td>
+        Additional file-related data
+      </td>
+      <td>
+        Ex.: <code>ownerId</code>, <code>postId</code>, etc.
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onStart</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered when upload is started and validations was successful<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code> - <em>Always</em> <code>null</code></li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onUploaded</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered when upload is finished<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code></li>
+          <li><code>fileRef</code> {<em>Object</em>} - File record from DB</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onAbort</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered when <code>abort()</code> method is called<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onError</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered when upload finished with error<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code></li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onProgress</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered after chunk is sent<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>progress</code> {<em>Number</em>} - Current progress from `0` to `100`</li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.onBeforeUpload</code> {<em>Function</em>}
+      </td>
+      <td>
+        Callback, triggered right before upload is started<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td>
+        Use to check file-type, extension, size, etc.
+        <ul>
+          <li><strong>return</strong> <code>true</code> to continue</li>
+          <li><strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.streams</code> {<em>Number</em>|dynamic}
+      </td>
+      <td>
+        Quantity of parallel upload streams
+      </td>
+      <td>
+        <code>dynamic</code> is recommended
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.chunkSize</code> {<em>Number</em>|dynamic}
+      </td>
+      <td>
+        Chunk size for upload
+      </td>
+      <td>
+        <code>dynamic</code> is recommended
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.allowWebWorkers</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Use WebWorkers (<em>To avoid main thread blocking</em>) whenever feature is available in browser
+      </td>
+      <td>
+        Default: <code>true</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>autoStart</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Start upload immediately
+      </td>
+      <td>
+        If set to <code>false</code>, you need manually call <code>.start()</code> method on returned class. Useful to set EventListeners, before starting upload. Default: <code>true</code>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-*When* `autoStart` *is* `false` *before calling* `.start()` *you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. __Do not forget to change file name, extension and mime-type if required__.*
+<code>insert()</code> method returns <code>FileUpload</code> class instance. <strong>Note</strong>: same instance is used as <em><strong>context</strong></em> in all callback functions (<em>see above</em>)
 
-The `fileData` object (*see above*):
- - `size` {*Number*} - File size in bytes
- - `type` {*String*}
- - `mime`, `mime-type` {*String*}
- - `ext`, `extension` {*String*}
- - `name` {*String*} - File name
+#### <code>FileUpload</code> methods and properties:
+<table>
+  <thead>
+    <tr>
+      <th align="right">
+        Name/Type
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Comment
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="right">
+        <code>file</code> {<em>File</em>}
+      </td>
+      <td>
+        Source file passed into <code>insert()</code> method
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>onPause</code> {<em>ReactiveVar</em>}
+      </td>
+      <td>
+        Is upload process on the pause?
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>progress</code> {<em>ReactiveVar</em>}
+      </td>
+      <td>
+        Upload progress in percents
+      </td>
+      <td>
+        <code>0</code> - <code>100</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>pause()</code> {<em>Function</em>}
+      </td>
+      <td>
+        Pause upload process
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>continue()</code> {<em>Function</em>}
+      </td>
+      <td>
+        Continue paused upload process
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>toggleUpload()</code> {<em>Function</em>}
+      </td>
+      <td>
+        Toggle <code>continue</code>/<code>pause</code> if upload in the progress
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>abort()</code> {<em>Function</em>}
+      </td>
+      <td>
+        Abort current upload, then trigger <code>onAbort</code> callback
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>estimateTime</code> {<em>ReactiveVar</em>}
+      </td>
+      <td>
+        Remaining upload time in <strong>milliseconds</strong>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>estimateSpeed</code> {<em>ReactiveVar</em>}
+      </td>
+      <td>
+        Current upload speed in <strong>bytes/second</strong>
+      </td>
+      <td>
+        To convert into speed, take a look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: 
+        <code>filesize(estimateSpeed, {bits: true}) + '/s';</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>state</code> {<em>ReactiveVar</em>}
+      </td>
+      <td>
+        String, indicates current state of the upload
+      </td>
+      <td>
+        <ul>
+          <li><code>active</code> - file is currently actively uploading</li>
+          <li><code>paused</code> - file upload is paused</li>
+          <li><code>aborted</code> - file upload has been aborted and can no longer be completed</li>
+          <li><code>completed</code> - file has been successfully uploaded</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### Event map:
+<table>
+  <thead>
+    <tr>
+      <th align="right">
+        Name
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Comment
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="right">
+        <code>start</code>
+      </td>
+      <td>
+        Triggered when upload is started (<em>before sending first byte</em>) and validations was successful.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code> - <em>Always</em> <code>null</code></li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>data</code>
+      </td>
+      <td>
+        Triggered after each chunk is read.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>data</code> {<em>String</em>} - Base64 encoded chunk (DataURL)
+          </li>
+        </ul>
+      </td>
+      <td>
+        Can be used to display previews or do something else with loaded file during upload. To get EOF use <code>readEnd</code> event
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>readEnd</code>
+      </td>
+      <td>
+        Triggered after file is fully read by browser
+      </td>
+      <td>
+        Has no arguments
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>progress</code>
+      </td>
+      <td>
+        Triggered after each chunk is sent.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>progress</code> {<em>Number</em>} - Current progress from `0` to `100`</li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>pause</code>
+      </td>
+      <td>
+        Triggered after upload process set to pause.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>continue</code>
+      </td>
+      <td>
+        Triggered after upload process is continued from pause.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>abort</code>
+      </td>
+      <td>
+        Triggered after upload is aborted.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>uploaded</code>
+      </td>
+      <td>
+        Triggered when upload is finished.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code></li>
+          <li><code>fileRef</code> {<em>Object</em>} - File record from DB</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>error</code>
+      </td>
+      <td>
+        Triggered whenever upload has an error.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code></li>
+          <li><code>fileData</code> {<em>Object</em>}</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>end</code>
+      </td>
+      <td>
+        Triggered at the very end of upload.<br />
+        <strong>Arguments</strong>:
+        <ul>
+          <li><code>error</code></li>
+          <li><code>fileRef</code> {<em>Object</em>} - File record from DB</li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<em>When</em> <code>autoStart</code> <em>is</em> <code>false</code> <em>before calling</em> <code>.start()</code> <em>you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. <strong>Do not forget to change file name, extension and mime-type if required</strong></em>.
+
+The <code>fileData</code> object (<em>see above</em>):
+ - <code>size</code> {<em>Number</em>} - File size in bytes
+ - <code>type</code> {<em>String</em>}
+ - <code>mime</code>, <code>mime-type</code> {<em>String</em>}
+ - <code>ext</code>, <code>extension</code> {<em>String</em>}
+ - <code>name</code> {<em>String</em>} - File name
 
 #### Upload form:
 ```html

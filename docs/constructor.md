@@ -1,83 +1,580 @@
 ##### `new FilesCollection([config])` [*Isomorphic*]
 *Initialize FilesCollection collection.*
 
-`config` is __optional__ object with next properties:
- - `storagePath` {*String*} - [*SERVER*] Storage path on file system
-    * Default value: `assets/app/uploads`. Relative to running script
- - `collectionName` {*String*} - Collection name
-    * Default value: `MeteorUploadFiles`
- - `cacheControl` {*String*} - [*SERVER*] Set `Cache-Control` header, default: `public, max-age=31536000, s-maxage=31536000`
- - `throttle` {*Number*|*false*} - [*SERVER*] Throttle download speed in *bps*, by default is `false`
- - `downloadRoute` {*String*} - Server Route used to retrieve files
-    * Default value: `/cdn/storage`
- - `schema` {*Object*} - Collection Schema. Use to change schema rules, for example make `extension`, required. [Default value](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
- - `chunkSize` {*Number*} - Upload chunk size
-    * Default value: `272144`
- - `namingFunction` {*Function*} - Function which returns `String`
-    * Default value: `String.rand`
- - `permissions` {*Number*} - FS-permissions (access rights) in octal, like `0755` or `0777`
-    * Default value: `0755`
- - `integrityCheck` {*Boolean*} - [*SERVER*] CRC file check
-    * Default value: `true`
- - `strict` {*Boolean*} - [*SERVER*] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified
-    * Default value: `false`
- - `downloadCallback` {*Function*} - [*SERVER*] Called right before initiate file download, with next context and only one argument `fileObj`:
-    * `fileObj` - see [schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
-    * __context__:
-      - `this.request`
-      - `this.response`
-      - `this.user()`
-      - `this.userId`
-    * __Notes__:
-      * Function should return {*Boolean*} value, return `false` to abort download, and `true` to continue
- - `protected` {*Boolean*|*Function*} - If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way
-    * Default value: `false`
-    * If function - `function(fileObj)` 
-      * __context__ has:
-        - `this.request` - On __server only__
-        - `this.response` - On __server only__
-        - `this.user()`
-        - `this.userId`
-      * __arguments__:
-        - `fileObj` {*Object*|*null*} - If requested file exists `fileObj` is [file object](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema), otherwise `fileObj` is null
-      * __return__ `true` to continue
-      * __return__ `false` to abort or {*Number*} to abort upload with specific response code, default response code is `401`
- - `public` {*Boolean*} - If `true` - files will be stored in folder publicity available for proxy servers, like nginx
-    * Default value: `false`
-    * Route: `http://example.com/uploads/:collectionName/:fileName`
-    * __Note:__ Collection can not be `public` and `protected` at the same time!
-    * __Note:__ `downloadRoute` must be explicitly provided. And pointed to root of web/proxy-server, like `/uploads/`
-    * __Note:__ `storagePath` must point to absolute root path of web/proxy-server, like '/var/www/myapp/public/uploads/'
-    * __Note:__ `integrityCheck` is __not__ guaranteed!
-    * __Note:__ `play` and force `download` features is __not__ guaranteed!
- - `onBeforeUpload` {*Function*} - Callback, triggered right before upload is started on __client__ and right after receiving a chunk on __server__, arguments:
-    * `fileData` {*Object*}
-    * __return__ `true` to continue
-    * __return__ `false` to abort or {*String*} to abort upload with message
- - `onBeforeRemove` {*Function*} - [*SERVER*] Callback, triggered right before remove file, arguments:
-    * `cursor` {*MongoCursor*} - Current files to be removed on cursor, *if has any*
-    * To get user use `this.userId` or `this.user()` in function's context
-    * __return__ `true` to continue
-    * __return__ `false` to abort
- - `onAfterUpload` {*Function*} - [*SERVER*] Callback, triggered after file is written to FS, with single argument (*alternatively:* `addListener('afterUpload', func)`):
-    - `fileRef` {*Object*} - Record from MongoDB
- - `onbeforeunloadMessage` {*String*|*Function*} - [*Client*] Message shown to user when closing browser's window or tab, while upload in the progress
-    * Default value: `'Upload in a progress... Do you want to abort?'`
- - `allowClientCode` {*Boolean*} - Allow to run `remove()` from client, default: `true`
- - `debug` {*Boolean*} - Turn on/of debugging and extra logging
-    * Default value: `false`
- - `interceptDownload` {*Function*} - [*SERVER*] Intercept download request, so you can serve file from third-party resource, arguments:
-    - `http` {*Object*} - Middleware request instance
-    - `http.request` {*Object*} - example: `http.request.headers`
-    - `http.response` {*Object*} - example: `http.response.end()`
-    - `fileRef` {*Object*} - Current file record from MongoDB
-    - `version` {*String*} - Requested file version
-    - Return `false` from this function to continue standard behavior
-    - Return `true` to intercept incoming request
- - This object has support for next events:
-    - `afterUpload` [*Isomorphic*] - Triggered right after file is written to FS, with single argument:
-      * `fileRef` {*Object*} - Record from MongoDB
+<table>
+  <thead>
+    <tr>
+      <th align="right">
+        Param/Type
+      </th>
+      <th>
+        Locus
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Default
+      </th>
+      <th>
+        Comment
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="right">
+        <code>config</code> {<em>Object</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        [Optional]
+      </td>
+      <td>
+        <code>{}</code>
+      </td>
+      <td>
+        See all options below
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.storagePath</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Storage path on file system
+      </td>
+      <td>
+        <code>assets/app/uploads</code>
+      </td>
+      <td>
+        Relative to running script
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.collectionName</code> {<em>String</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Collection name
+      </td>
+      <td>
+        <code>MeteorUploadFiles</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.cacheControl</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Set <code>Cache-Control</code> header
+      </td>
+      <td>
+        <code>public, max-age=31536000, s-maxage=31536000</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.throttle</code> {<em>Number</em>|<em>false</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Throttle download speed in <em>bps</em>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.downloadRoute</code> {<em>String</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Server Route used to retrieve files
+      </td>
+      <td>
+        <code>/cdn/storage</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.schema</code> {<em>Object</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Collection Schema
+      </td>
+      <td>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Schema">Default Schema</a>
+      </td>
+      <td>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Schema">For more info read Schema docs</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.chunkSize</code> {<em>Number</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Upload &amp; Serve (<em>for 206 responce</em>) chunk size
+      </td>
+      <td>
+        <code>272144</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.namingFunction</code> {<em>Function</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Function which returns <code>String</code>
+      </td>
+      <td>
+        <code>Random.id()</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.permissions</code> {<em>Number</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        FS-permissions (access rights) in octal
+      </td>
+      <td>
+        <code>0644</code>
+      </td>
+      <td>
+        ex.: <code>0755</code>, <code>0777</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.integrityCheck</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        CRC file check
+      </td>
+      <td>
+        <code>true</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.strict</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Strict mode for partial content
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        If is <code>true</code> server will return <code>416</code> response code, when <code>range</code> is not specified
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.downloadCallback</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Called right before initiate file download.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileObj</code> - see <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Schema">schema</a>
+          </li>
+        </ul><br>
+        <strong>Context</strong>:
+        <ul>
+          <li>
+            <code>this.request</code>
+          </li>
+          <li>
+            <code>this.response</code>
+          </li>
+          <li>
+            <code>this.user()</code>
+          </li>
+          <li>
+            <code>this.userId</code>
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Function should return {<em>Boolean</em>} value, return <code>false</code> to abort download, and <code>true</code> to continue
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.protected</code> {<em>Boolean</em>|<em>Function</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        <em>Control download flow.</em><br>
+        If function:<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileObj</code> {<em>Object</em>|<em>null</em>} - If requested file exists - <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Schema">file object</a>, otherwise -
+            <code>null</code>
+          </li>
+        </ul><br>
+        <strong>Context</strong>:
+        <ul>
+          <li>
+            <code>this.request</code> - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.response</code> - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.user()</code>
+          </li>
+          <li>
+            <code>this.userId</code>
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        If <code>true</code> - files will be served only to authorized users, if <code>function()</code> - you're able to check visitor's permissions in your own way.<br>
+        <ul>
+          <li>
+            <strong>return</strong> <code>true</code> to continue
+          </li>
+          <li>
+            <strong>return</strong> <code>false</code> to abort or {<em>Number</em>} to abort upload with specific response code, default response code is <code>401</code>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.public</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Allows to place files in public directory of your web-server. And let your web-server to serve uploaded files
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Important notes:
+        <ul>
+          <li>Collection can not be <code>public</code> and <code>protected</code> at the same time!
+          </li>
+          <li>
+            <code>downloadRoute</code> must be explicitly provided. And pointed to root of web/proxy-server, like <code>/uploads/</code>
+          </li>
+          <li>
+            <code>storagePath</code> must point to absolute root path of web/proxy-server, like '/var/www/myapp/public/uploads/'
+          </li>
+          <li>
+            <code>integrityCheck</code> is <strong>not</strong> guaranteed!
+          </li>
+          <li>
+            <code>play</code> and force <code>download</code> features is <strong>not</strong> guaranteed!
+          </li>
+          <li>Remember: <a href="https://www.google.ru/search?q=nodejs+is+bad+in+serving+files">NodeJS is not best solution for serving files</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.onBeforeUpload</code> {<em>Function</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Callback, triggered right before upload is started on <strong>client</strong> and right after receiving a chunk on <strong>server</strong><br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileData</code> {<em>Object</em>} - Current file metadata
+          </li>
+        </ul><br>
+        <strong>Context</strong>:
+        <ul>
+          <li>
+            <code>this.file</code>
+          </li>
+          <li>
+            <code>this.user()</code>
+          </li>
+          <li>
+            <code>this.userId</code>
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        <ul>
+          <li>
+            <strong>return</strong> <code>true</code> to continue
+          </li>
+          <li>
+            <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.onBeforeRemove</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Callback, triggered right before remove file<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>cursor</code> {<em>MongoCursor</em>} - Current files to be removed on cursor, <em>if has any</em>
+          </li>
+        </ul><br>
+        <strong>Context</strong>:
+        <ul>
+          <li>
+            <code>this.file</code>
+          </li>
+          <li>
+            <code>this.user()</code>
+          </li>
+          <li>
+            <code>this.userId</code>
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Use with <code>allowClientCode</code> to control access to <code>remove()</code> method.
+        <ul>
+          <li>
+            <strong>return</strong> <code>true</code> to continue
+          </li>
+          <li>
+            <strong>return</strong> <code>false</code> to abort
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.onAfterUpload</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Callback, triggered after file is written to FS<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileRef</code> {<em>Object</em>} - Record from MongoDB
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Alternatively use: <code>addListener('afterUpload', func)</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.onbeforeunloadMessage</code> {<em>String</em>|<em>Function</em>}
+      </td>
+      <td>
+        Client
+      </td>
+      <td>
+        Message shown to user when closing browser's window or tab, while upload in the progress
+      </td>
+      <td>
+        <code>Upload in a progress... Do you want to abort?</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.allowClientCode</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Allow use <code>remove()</code> method on client
+      </td>
+      <td>
+        <code>true</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.debug</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Turn on/of debugging and extra logging
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.interceptDownload</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Intercept download request.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>http</code> {<em>Object</em>} - Middleware request instance
+          </li>
+          <li>
+            <code>http.request</code> {<em>Object</em>} - example: <code>http.request.headers</code>
+          </li>
+          <li>
+            <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+          <li>
+            <code>fileRef</code> {<em>Object</em>} - Current file record from MongoDB
+          </li>
+          <li>
+            <code>version</code> {<em>String</em>} - Requested file version
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Usage example: <em>Serve file from third-party resource</em>.<br>
+        <ul>
+          <li>
+            <strong>return</strong> <code>false</code> from this function to continue standard behavior
+          </li>
+          <li>
+            <strong>return</strong> <code>true</code> to intercept incoming request
+          </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
+
+### Event map:
+<table>
+  <thead>
+    <tr>
+      <th align="right">
+        Name
+      </th>
+      <th>
+        Locus
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Comment
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="right">
+        <code>afterUpload</code>
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Triggered right after file is written to FS.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileRef</code> {<em>Object</em>} - Record from MongoDB
+          </li>
+        </ul>
+      </td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+
+### Examples:
 ```javascript
 var Images;
 Images = new FilesCollection({
@@ -86,7 +583,7 @@ Images = new FilesCollection({
   collectionName: 'Images',
   chunkSize: 1024*2048,
   throttle: 1024*512,
-  permissions: 0o777,
+  permissions: 0755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
   onbeforeunloadMessage: function () {
