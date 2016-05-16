@@ -66,7 +66,7 @@ npm-mongo@1.4.43
 observe-sequence@1.0.11
 ordered-dict@1.0.7
 ostrio:cookies@2.0.2
-ostrio:files@1.5.1
+ostrio:files@1.5.2
 ostrio:flow-router-extra@2.12.1
 ostrio:flow-router-title@2.1.0
 ostrio:templatehelpers@1.1.2
