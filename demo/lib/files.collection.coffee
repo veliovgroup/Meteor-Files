@@ -50,48 +50,79 @@ if Meteor.isServer
 
   Collections.files.on 'afterUpload', (fileRef) ->
     if useDropBox
-      sendToDB = (fileRef) ->
-        _.each fileRef.versions, (vRef, version) ->
-          fs.readFile vRef.path, (error, data) -> bound ->
-            if error
-              console.error error
+      makeUrl = (stat, fileRef, version, triesUrl = 0) ->
+        client.makeUrl stat.path, {long: true, downloadHack: true}, (error, xml) -> bound ->
+          # Store downloadable in file's meta object
+          if error
+            if triesUrl < 10
+              Meteor.setTimeout ->
+                makeUrl stat, fileRef, version, ++triesUrl
+              , 2048
             else
-              # Write file to DropBox
-              client.writeFile "#{fileRef._id}-#{version}.#{fileRef.extension}", data, (error, stat) -> bound ->
-                if error
-                  console.error error
-                else
-                  # Generate downloadable link
-                  client.makeUrl stat.path, {long: true, downloadHack: true}, (error, xml) -> bound ->
-                    # Store downloadable in file's meta object
-                    if error
-                      console.error error
-                    else if xml
-                      upd = $set: {}
-                      upd['$set']["versions.#{version}.meta.pipeFrom"] = xml.url
-                      upd['$set']["versions.#{version}.meta.pipePath"] = stat.path
-                      Collections.files.collection.update {_id: fileRef._id}, upd, (error) ->
-                        if error
-                          console.error error
-                        return
-                    return
-                return
-            return
+              console.error error, {triesUrl}
+          else if xml
+            upd = $set: {}
+            upd['$set']["versions.#{version}.meta.pipeFrom"] = xml.url
+            upd['$set']["versions.#{version}.meta.pipePath"] = stat.path
+            Collections.files.collection.update {_id: fileRef._id}, upd, (error) ->
+              if error
+                console.error error
+              else
+                Collections.files.unlink Collections.files.collection.findOne(fileRef._id), version
+              return
+          else
+            if triesUrl < 10
+              Meteor.setTimeout ->
+                makeUrl stat, fileRef, version, ++triesUrl
+              , 2048
+            else
+              console.error "client.makeUrl doesn't returns xml", {triesUrl}
           return
-        Collections.files.unlink fileRef
         return
 
-    Meteor.setTimeout ->
-      if !!~fileRef.type.indexOf 'image'
-        _app.createThumbnails Collections.files, fileRef, (fileRef) ->
-          if useDropBox
-            sendToDB Collections.files.collection.findOne fileRef._id
+      writeToDB = (fileRef, version, data, triesSend = 0) ->
+        client.writeFile "#{fileRef._id}-#{version}.#{fileRef.extension}", data, (error, stat) -> bound ->
+          if error
+            if triesSend < 10
+              Meteor.setTimeout ->
+                writeToDB fileRef, version, data, ++triesSend
+              , 2048
+            else
+              console.error error, {triesSend}
+          else
+            # Generate downloadable link
+            makeUrl stat, fileRef, version
           return
-      else
+        return
+
+      readFile = (fileRef, vRef, version, triesRead = 0) ->
+        fs.readFile vRef.path, (error, data) -> bound ->
+          if error
+            if triesRead < 10
+              readFile fileRef, vRef, version, ++triesRead
+            else
+              console.error error
+          else
+            # Write file to DropBox
+            writeToDB fileRef, version, data
+          return
+        return
+
+      sendToDB = (fileRef) ->
+        _.each fileRef.versions, (vRef, version) ->
+          readFile fileRef, vRef, version
+          return
+        return
+
+    if !!~fileRef.type.indexOf 'image'
+      _app.createThumbnails Collections.files, fileRef, (fileRef) ->
         if useDropBox
-          sendToDB fileRef
-      return
-    , 1024
+          sendToDB Collections.files.collection.findOne fileRef._id
+        return
+    else
+      if useDropBox
+        sendToDB fileRef
+    return
 
   # This line now commented due to Heroku usage
   # Collections.files.collection._ensureIndex {'meta.expireAt': 1}, {expireAfterSeconds: 0, background: true}
