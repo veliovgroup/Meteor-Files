@@ -1,6 +1,6 @@
 {
   "name": "meteor-files-demo-app",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Demo application for ostrio:files package",
   "main": "main.js",
   "scripts": {
@@ -13,10 +13,15 @@
   },
   "keywords": [
     "meteor",
+    "node",
+    "node.js",
     "files",
     "file",
     "streaming",
-    "upload"
+    "upload",
+    "ddp",
+    "sockets",
+    "cdn"
   ],
   "author": "Dmitriy A. (Veliov Group, LLC)",
   "license": "BSD-3-Clause",
