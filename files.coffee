@@ -309,13 +309,14 @@ class FilesCollection
       _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
         check inst, Object
         console.info '[FilesCollection] [Unlink Method]' if self.debug
+        
         if self.allowClientCode
           __instData = cp _insts[inst._prefix], inst
           if self.onBeforeRemove and _.isFunction self.onBeforeRemove
             user = false
             userFuncs = {
               userId: @userId
-              user: -> Meteor.users.findOne @userId
+              user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
             }
 
             __inst = self.find.call __instData, inst.search
@@ -353,7 +354,7 @@ class FilesCollection
             file: opts.file
           }, {
             userId: @userId, 
-            user: -> Meteor.users.findOne @userId
+            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
           }), opts.file)
 
           if isUploadAllowed isnt true
@@ -362,17 +363,23 @@ class FilesCollection
         fileName = self.getFileName opts.file
         {extension, extensionWithDot} = self.getExt fileName
 
-        path   = "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
-        result = _.extend self.dataToSchema(_.extend(opts.file, {path, extension, name: fileName, meta: opts.meta})), {_id: opts.fileId}
+        result           = opts.file
+        result.path      = "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
+        result.name      = fileName
+        result.meta      = opts.meta
+        result.extension = extension
+        result           = self.dataToSchema result
+        result._id       = opts.fileId
+        result.userId    = @userId if @userId
 
         if opts.eof
           try
-            return Meteor.wrapAsync(self.handleUpload.bind(self, result, path, opts))()
+            return Meteor.wrapAsync(self.handleUpload.bind(self, result, opts))()
           catch e
             console.warn "[FilesCollection] [Write Method] Exception:", e if self.debug
             throw e
         else
-          self.emit 'handleUpload', result, path, opts, NOOP
+          self.emit 'handleUpload', result, opts, NOOP
         return result
 
       _methods[self.methodNames.MeteorFileAbort] = (opts) ->
@@ -402,8 +409,8 @@ class FilesCollection
   @summary Internal method. Finish upload, close Writable stream, add recored to MongoDB and flush used memory
   @returns {undefined}
   ###
-  finishUpload: if Meteor.isServer then (result, path, opts, cb) ->
-    fs.chmod path, @permissions, NOOP
+  finishUpload: if Meteor.isServer then (result, opts, cb) ->
+    fs.chmod result.path, @permissions, NOOP
     self          = @
     result.type   = @getMimeType opts.file
     result.public = @public
@@ -413,7 +420,7 @@ class FilesCollection
         cb new Meteor.Error 500, error
       else
         result._id = _id
-        console.info "[FilesCollection] [Write Method] [finishUpload] -> #{path}" if self.debug
+        console.info "[FilesCollection] [Write Method] [finishUpload] -> #{result.path}" if self.debug
         self.onAfterUpload and self.onAfterUpload.call self, result
         self.emit 'afterUpload', result
         cb null, result
@@ -427,7 +434,7 @@ class FilesCollection
   @summary Internal method to handle upload process, pipe incoming data to Writable stream
   @returns {undefined}
   ###
-  handleUpload: if Meteor.isServer then (result, path, opts, cb) ->
+  handleUpload: if Meteor.isServer then (result, opts, cb) ->
     self = @
     if opts.eof
       binary = opts.binData
@@ -439,7 +446,7 @@ class FilesCollection
         _hlEnd = ->
           self._writableStreams[result._id].stream.end()
           delete self._writableStreams[result._id]
-          self.emit 'finishUpload', result, path, opts, cb
+          self.emit 'finishUpload', result, opts, cb
           return
 
         if @_writableStreams[result._id].delayed?[opts.fileLength]
@@ -452,7 +459,7 @@ class FilesCollection
         
       else if opts.chunkId > 0
         @_writableStreams[result._id] ?=
-          stream: fs.createWriteStream path, {flags: 'a', mode: @permissions}
+          stream: fs.createWriteStream result.path, {flags: 'a', mode: @permissions}
           delayed: {}
 
         _dKeys = Object.keys @_writableStreams[result._id].delayed
@@ -1225,7 +1232,7 @@ class FilesCollection
     if @checkAccess()
       @srch search
       if Meteor.isClient
-        Meteor.call @methodNames.MeteorFileUnlink, rcp(@), cb
+        Meteor.call @methodNames.MeteorFileUnlink, rcp(@), (if cb then cb else NOOP)
 
       if Meteor.isServer
         files = @collection.find @search
