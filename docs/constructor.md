@@ -598,7 +598,7 @@ Images = new FilesCollection({
     }
   },
   downloadCallback: function (fileObj) {
-    if (this.params?.query.download == 'true') {
+    if (this.params.query.download == 'true') {
       // Increment downloads counter
       Images.update(fileObj._id, {$inc: {'meta.downloads': 1}});
     }
