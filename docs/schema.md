@@ -79,7 +79,7 @@ var defaultSchema = {
 *Although this package comes with schema it isn't enabled (attached) by default (since v1.5.0), you're free to use it or not. To attach schema you need to install [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages separately.*
 ```javascript
 this.Images = new FilesCollection({ collectionName: 'Images'});
-Images.collection.attachSchema(Images.schema);
+Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 #### Extend default schema:
@@ -92,7 +92,7 @@ var mySchema = _.extend(defaultSchema, {
 
 this.Images = new FilesCollection({
   collectionName: 'Images',
-  schema: mySchema
+  schema: new SimpleSchema(mySchema)
 });
 ```
 
@@ -102,6 +102,6 @@ var mySchema = { /* Your schema here */ };
 
 this.Images = new FilesCollection({
   collectionName: 'Images',
-  schema: mySchema
+  schema: new SimpleSchema(mySchema)
 });
 ```
