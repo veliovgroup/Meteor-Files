@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.5.3',
+  version: '1.5.4',
   summary: 'Fast and robust file uploads and streaming (Audio & Video), support FS or AWS, DropBox, Google Drive',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'

@@ -347,19 +347,6 @@ class FilesCollection
         opts.binData ?= 'EOF'
         opts.chunkId ?= -1
 
-        console.info "[FilesCollection] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
-
-        if self.onBeforeUpload and _.isFunction self.onBeforeUpload
-          isUploadAllowed = self.onBeforeUpload.call(_.extend({
-            file: opts.file
-          }, {
-            userId: @userId, 
-            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
-          }), opts.file)
-
-          if isUploadAllowed isnt true
-            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
-
         fileName = self.getFileName opts.file
         {extension, extensionWithDot} = self.getExt fileName
 
@@ -371,6 +358,19 @@ class FilesCollection
         result           = self.dataToSchema result
         result._id       = opts.fileId
         result.userId    = @userId if @userId
+
+        console.info "[FilesCollection] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
+
+        if self.onBeforeUpload and _.isFunction self.onBeforeUpload
+          isUploadAllowed = self.onBeforeUpload.call(_.extend({
+            file: opts.file
+          }, {
+            userId: @userId, 
+            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
+          }), result)
+
+          if isUploadAllowed isnt true
+            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
 
         if opts.eof
           try
@@ -919,6 +919,7 @@ class FilesCollection
           size: @config.file.size
           type: @config.file.type
           name: @config.file.name
+          meta: @config.meta
 
         @fileData = _.extend @fileData, @collection.getExt(self.config.file.name), {mime: @collection.getMimeType(@fileData)}
         @fileData['mime-type'] = @fileData.mime
