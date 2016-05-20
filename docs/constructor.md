@@ -625,8 +625,8 @@ Images = new FilesCollection({
 
 *You're free to modify/overwrite* `FilesCollection.schema` *object.*
 ```javascript
-var Images = new new FilesCollection({/* ... */});
-Images.collection.attachSchema(Images.schema);
+var Images = new FilesCollection({/* ... */});
+Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 #### Deny collection interaction on client [*Server*]:
