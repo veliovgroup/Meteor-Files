@@ -990,6 +990,8 @@ class FilesCollection
         chunkSize:  @config.chunkSize
         fileLength: @fileLength
 
+      opts.meta = @config.meta if @sentChunks is 0 and evt.data.chunkId is 1
+
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
         for pipeFunc in @pipes
