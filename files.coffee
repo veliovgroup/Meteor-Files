@@ -354,7 +354,9 @@ class FilesCollection
             file: opts.file
           }, {
             userId: @userId, 
-            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
+            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined,
+            meta: if opts.chunkId <= 1 then opts.meta else null,
+            chunkId: opts.chunkId
           }), opts.file)
 
           if isUploadAllowed isnt true
@@ -988,8 +990,7 @@ class FilesCollection
         chunkId:    evt.data.chunkId
         chunkSize:  @config.chunkSize
         fileLength: @fileLength
-
-      opts.meta = @config.meta if @sentChunks is 0 and evt.data.chunkId is 1
+        meta:       @config.meta
 
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
