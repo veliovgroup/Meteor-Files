@@ -359,6 +359,12 @@
           <li>
             <code>this.userId</code>
           </li>
+          <li>
+            <code>this.chunkId</code> {<em>Number</em>}
+          </li>
+          <li>
+            <code>this.eof</code> {<em>Boolean</em>}
+          </li>
         </ul>
       </td>
       <td>
@@ -373,6 +379,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><i>note: filedata.meta is always empty ({}) except on the first chunk (chunkId=1) and on eof (eof=true)</i></p>
       </td>
     </tr>
     <tr>
