@@ -366,7 +366,9 @@ class FilesCollection
             file: opts.file
           }, {
             userId: @userId, 
-            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
+            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined,
+            chunkId: opts.chunkId,
+            eof: opts.eof
           }), result)
 
           if isUploadAllowed isnt true

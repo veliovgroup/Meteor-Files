@@ -359,6 +359,12 @@
           <li>
             <code>this.userId</code>
           </li>
+          <li>
+            <code>this.chunkId</code> {<em>Number</em>} - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.eof</code> {<em>Boolean</em>} - On <strong>server only</strong>
+          </li>
         </ul>
       </td>
       <td>
@@ -373,6 +379,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1) and on eof (eof=true)</i></p>
       </td>
     </tr>
     <tr>
