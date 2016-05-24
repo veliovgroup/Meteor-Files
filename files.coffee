@@ -150,7 +150,10 @@ class FilesCollection
       @storagePath       = @storagePath.replace /\/$/, ''
       @storagePath       = nodePath.normalize @storagePath
 
-      fs.mkdirsSync @storagePath
+      fs.mkdirs @storagePath, {mode: @permissions}, (error) ->
+        if error
+          throw new Meteor.Error 401, "[FilesCollection.#{@collectionName}] Path #{@storagePath} is not writable!", error
+        return
 
       check @strict, Boolean
       check @throttle, Match.OneOf false, Number
@@ -633,6 +636,7 @@ class FilesCollection
 
       {extension, extensionWithDot} = @getExt fileName
 
+      self      = @
       path      = "#{@storagePath}/#{randFileName}#{extensionWithDot}"
       
       opts.type = @getMimeType opts
@@ -653,7 +657,7 @@ class FilesCollection
         if error
           callback and callback error
         else
-          result._id = @collection.insert _.clone result
+          result._id = self.collection.insert _.clone result
           callback and callback null, result
       
       return @
