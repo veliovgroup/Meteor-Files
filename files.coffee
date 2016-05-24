@@ -152,7 +152,7 @@ class FilesCollection
 
       fs.mkdirs @storagePath, {mode: @permissions}, (error) ->
         if error
-          throw new Meteor.Error 401, "[FilesCollection.#{@collectionName}] Path #{@storagePath} is not writable!", error
+          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path #{self.storagePath} is not writable!", error
         return
 
       check @strict, Boolean
