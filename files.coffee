@@ -72,6 +72,7 @@ cp = (to, from) ->
   - `userId`
 @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
 @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
+@param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
 @param config.storagePath    {String}  - [Server] Storage path on file system
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
 @param config.throttle       {Number}  - [Server] bps throttle threshold
@@ -97,7 +98,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
 
     self               = @
     cookie             = new Cookies()
@@ -122,6 +123,7 @@ class FilesCollection
       delete @throttle
       delete @storagePath
       delete @permissions
+      delete @parentDirPermissions
       delete @cacheControl
       delete @onAfterUpload
       delete @integrityCheck
@@ -139,6 +141,7 @@ class FilesCollection
       @strict           ?= true
       @throttle         ?= false
       @permissions      ?= parseInt('644', 8)
+      @parentDirPermissions ?= parseInt('755', 8)
       @cacheControl     ?= 'public, max-age=31536000, s-maxage=31536000'
       @onBeforeRemove   ?= false
       @onAfterUpload    ?= false
@@ -150,7 +153,7 @@ class FilesCollection
       @storagePath       = @storagePath.replace /\/$/, ''
       @storagePath       = nodePath.normalize @storagePath
 
-      fs.mkdirs @storagePath, {mode: @permissions}, (error) ->
+      fs.mkdirs @storagePath, {mode: @parentDirPermissions}, (error) ->
         if error
           throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path #{self.storagePath} is not writable!", error
         return
