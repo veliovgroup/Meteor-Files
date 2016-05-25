@@ -24,7 +24,11 @@ Template.uploadForm.onCreated ->
           return
       return
 
-    transport = event.currentTarget?.transport?.value or 'ddp'
+    for radio in event.currentTarget.transport
+      if radio.checked
+        transport = radio.value
+
+    transport ?= 'ddp'
     ClientStorage.set 'uploadTransport', transport
 
     created_at = +new Date
