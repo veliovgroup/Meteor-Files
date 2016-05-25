@@ -58,7 +58,7 @@
         <code>http</code> or <code>ddp</code>
       </td>
       <td>
-        Note: upload via <code>http</code> is at least twice faster
+        Note: upload via <code>http</code> is at least twice faster. <code>HTTP</code> will properly work only with "sticky sessions"
         <br />
         Default: <code>ddp</code>
       </td>
