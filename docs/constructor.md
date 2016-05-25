@@ -168,7 +168,7 @@
         <code>config.permissions</code> {<em>Number</em>}
       </td>
       <td>
-        Isomorphic
+        Server
       </td>
       <td>
         FS-permissions (access rights) in octal
@@ -178,6 +178,23 @@
       </td>
       <td>
         ex.: <code>0755</code>, <code>0777</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.parentDirPermissions</code> {<em>Number</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        FS-permissions for parent directory (access rights) in octal
+      </td>
+      <td>
+        <code>0755</code>
+      </td>
+      <td>
+        ex.: <code>0777</code>
       </td>
     </tr>
     <tr>
@@ -359,6 +376,12 @@
           <li>
             <code>this.userId</code>
           </li>
+          <li>
+            <code>this.chunkId</code> {<em>Number</em>} - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.eof</code> {<em>Boolean</em>} - On <strong>server only</strong>
+          </li>
         </ul>
       </td>
       <td>
@@ -373,6 +396,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1) and on eof (eof=true)</i></p>
       </td>
     </tr>
     <tr>
@@ -625,8 +649,8 @@ Images = new FilesCollection({
 
 *You're free to modify/overwrite* `FilesCollection.schema` *object.*
 ```javascript
-var Images = new new FilesCollection({/* ... */});
-Images.collection.attachSchema(Images.schema);
+var Images = new FilesCollection({/* ... */});
+Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 #### Deny collection interaction on client [*Server*]:

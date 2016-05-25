@@ -11,6 +11,14 @@ template(name="uploadForm")
             i.fa.fa-lg.fa-cloud-upload
             | Upload
       small.text-center.help-block
+        | Upload via: 
+        label.radio-inline
+          input(type="radio" name="transport" value="ddp" checked="{{#if compare uploadTransport 'is' 'ddp'}}checked{{/if}}")
+          | DDP
+        label.radio-inline
+          input(type="radio" name="transport" value="http" checked="{{#if compare uploadTransport 'is' 'http'}}checked{{/if}}")
+          | HTTP (<em>3x performance</em>)
+      small.text-center.help-block.no-margin
         span Any file-type. With size less or equal to 128MB, up to 6 files.
         span.text-info This form supports drag'n'drop.
     else

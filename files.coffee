@@ -72,6 +72,7 @@ cp = (to, from) ->
   - `userId`
 @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
 @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
+@param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
 @param config.storagePath    {String}  - [Server] Storage path on file system
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
 @param config.throttle       {Number}  - [Server] bps throttle threshold
@@ -97,7 +98,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
+    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
 
     self               = @
     cookie             = new Cookies()
@@ -122,6 +123,7 @@ class FilesCollection
       delete @throttle
       delete @storagePath
       delete @permissions
+      delete @parentDirPermissions
       delete @cacheControl
       delete @onAfterUpload
       delete @integrityCheck
@@ -139,6 +141,7 @@ class FilesCollection
       @strict           ?= true
       @throttle         ?= false
       @permissions      ?= parseInt('644', 8)
+      @parentDirPermissions ?= parseInt('755', 8)
       @cacheControl     ?= 'public, max-age=31536000, s-maxage=31536000'
       @onBeforeRemove   ?= false
       @onAfterUpload    ?= false
@@ -150,7 +153,10 @@ class FilesCollection
       @storagePath       = @storagePath.replace /\/$/, ''
       @storagePath       = nodePath.normalize @storagePath
 
-      fs.mkdirsSync @storagePath
+      fs.mkdirs @storagePath, {mode: @parentDirPermissions}, (error) ->
+        if error
+          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path #{self.storagePath} is not writable!", error
+        return
 
       check @strict, Boolean
       check @throttle, Match.OneOf false, Number
@@ -255,7 +261,43 @@ class FilesCollection
       @on 'handleUpload', @handleUpload
       @on 'finishUpload', @finishUpload
 
-      WebApp.connectHandlers.use (request, response, next) ->
+      WebApp.connectHandlers.use (request, response, next) -> bound ->
+        if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}/__upload"
+          if request.method is 'POST'
+            body = ''
+            request.on 'data', (data) -> bound ->
+              body += data
+              return
+            request.on 'end', -> bound ->
+              try
+                opts           = JSON.parse body
+                user           = self.getUser http
+                {result, opts} = self.prepareUpload opts, user.userId, 'HTTP'
+
+                if opts.eof
+                  try
+                    Meteor.wrapAsync(self.handleUpload.bind(self, result, opts))()
+                    response.writeHead 200
+                    response.end JSON.stringify result
+                    return
+                  catch e
+                    console.warn "[FilesCollection] [Write Method] [HTTP] Exception:", e
+                    response.writeHead 500
+                    response.end JSON.stringify {error: 2}
+                else
+                  self.emit 'handleUpload', result, opts, NOOP
+
+                response.writeHead 200
+                response.end JSON.stringify {success: true}
+              catch e
+                console.warn "[FilesCollection] [Write Method] [HTTP] Exception:", e
+                response.writeHead 500
+                response.end JSON.stringify {error: e}
+              return
+          else
+            next()
+          return
+
         unless self.public
           if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}"
             uri = request._parsedUrl.path.replace "#{self.downloadRoute}/#{self.collectionName}", ''
@@ -333,7 +375,6 @@ class FilesCollection
         @unblock()
         check opts, {
           eof:        Match.Optional Boolean
-          meta:       Match.Optional Object
           file:       Object
           fileId:     String
           binData:    Match.Optional String
@@ -342,45 +383,17 @@ class FilesCollection
           fileLength: Number
         }
 
-        opts.eof     ?= false
-        opts.meta    ?= {}
-        opts.binData ?= 'EOF'
-        opts.chunkId ?= -1
-
-        console.info "[FilesCollection] [Write Method] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if self.debug
-
-        if self.onBeforeUpload and _.isFunction self.onBeforeUpload
-          isUploadAllowed = self.onBeforeUpload.call(_.extend({
-            file: opts.file
-          }, {
-            userId: @userId, 
-            user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
-          }), opts.file)
-
-          if isUploadAllowed isnt true
-            throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
-
-        fileName = self.getFileName opts.file
-        {extension, extensionWithDot} = self.getExt fileName
-
-        result           = opts.file
-        result.path      = "#{self.storagePath}/#{opts.fileId}#{extensionWithDot}"
-        result.name      = fileName
-        result.meta      = opts.meta
-        result.extension = extension
-        result           = self.dataToSchema result
-        result._id       = opts.fileId
-        result.userId    = @userId if @userId
+        {result, opts} = self.prepareUpload opts, @userId, 'DDP'
 
         if opts.eof
           try
             return Meteor.wrapAsync(self.handleUpload.bind(self, result, opts))()
           catch e
-            console.warn "[FilesCollection] [Write Method] Exception:", e if self.debug
+            console.warn "[FilesCollection] [Write Method] [DDP] Exception:", e if self.debug
             throw e
         else
           self.emit 'handleUpload', result, opts, NOOP
-        return result
+        return true
 
       _methods[self.methodNames.MeteorFileAbort] = (opts) ->
         check opts, {
@@ -401,6 +414,49 @@ class FilesCollection
 
         return true
       Meteor.methods _methods
+
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name prepareUpload
+  @summary Internal method. Used to optimize received data and check upload permission
+  @returns {Object}
+  ###
+  prepareUpload: if Meteor.isServer then (opts, userId, transport) ->
+    opts.eof     ?= false
+    opts.meta    ?= {}
+    opts.binData ?= 'EOF'
+    opts.chunkId ?= -1
+
+    fileName = @getFileName opts.file
+    {extension, extensionWithDot} = @getExt fileName
+
+    result           = opts.file
+    result.path      = "#{@storagePath}/#{opts.fileId}#{extensionWithDot}"
+    result.name      = fileName
+    result.meta      = opts.file.meta
+    result.extension = extension
+    result           = @dataToSchema result
+    result._id       = opts.fileId
+    result.userId    = userId if userId
+
+    console.info "[FilesCollection] [Write Method] [#{transport}] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if @debug
+
+    if @onBeforeUpload and _.isFunction @onBeforeUpload
+      isUploadAllowed = @onBeforeUpload.call(_.extend({
+        file: opts.file
+      }, {
+        userId: result.userId
+        user: -> if Meteor.users then Meteor.users.findOne(result.userId) else undefined
+        chunkId: opts.chunkId
+        eof: opts.eof
+      }), result)
+
+      if isUploadAllowed isnt true
+        throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
+
+    return {result, opts}
+  else undefined
 
   ###
   @locus Server
@@ -631,6 +687,7 @@ class FilesCollection
 
       {extension, extensionWithDot} = @getExt fileName
 
+      self      = @
       path      = "#{@storagePath}/#{randFileName}#{extensionWithDot}"
       
       opts.type = @getMimeType opts
@@ -651,7 +708,7 @@ class FilesCollection
         if error
           callback and callback error
         else
-          result._id = @collection.insert _.clone result
+          result._id = self.collection.insert _.clone result
           callback and callback null, result
       
       return @
@@ -881,8 +938,10 @@ class FilesCollection
       @config.meta            ?= {}
       @config.streams         ?= 2
       @config.streams          = 2 if @config.streams < 1
+      @config.transport       ?= 'ddp'
       @config.chunkSize       ?= @collection.chunkSize
       @config.allowWebWorkers ?= true
+      @config.transport        = @config.transport.toLowerCase()
 
       check @config, {
         file:            Match.Any
@@ -891,6 +950,7 @@ class FilesCollection
         onAbort:         Match.Optional Function
         streams:         Match.OneOf 'dynamic', Number
         onStart:         Match.Optional Function
+        transport:       Match.OneOf 'http', 'ddp'
         chunkSize:       Match.OneOf 'dynamic', Number
         onUploaded:      Match.Optional Function
         onProgress:      Match.Optional Function
@@ -919,6 +979,7 @@ class FilesCollection
           size: @config.file.size
           type: @config.file.type
           name: @config.file.name
+          meta: @config.meta
 
         @fileData = _.extend @fileData, @collection.getExt(self.config.file.name), {mime: @collection.getMimeType(@fileData)}
         @fileData['mime-type'] = @fileData.mime
@@ -939,7 +1000,7 @@ class FilesCollection
         @addListener 'upload', @upload
         @addListener 'sendEOF', @sendEOF
         @addListener 'prepare', @prepare
-        @addListener 'sendViaDDP', @sendViaDDP
+        @addListener 'sendChunk', @sendChunk
         @addListener 'proceedChunk', @proceedChunk
         @addListener 'createStreams', @createStreams
 
@@ -979,7 +1040,7 @@ class FilesCollection
       @result.emitEvent 'end', [error, (data or @fileData)]
       return @result
 
-    sendViaDDP: (evt) ->
+    sendChunk: (evt) ->
       self = @
       opts =
         file:       @fileData
@@ -988,6 +1049,9 @@ class FilesCollection
         chunkId:    evt.data.chunkId
         chunkSize:  @config.chunkSize
         fileLength: @fileLength
+
+      if evt.data.chunkId isnt 1
+        opts.file = _.omit opts.file, 'meta', 'ext', 'extensionWithDot', 'mime', 'mime-type'
 
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
@@ -999,18 +1063,32 @@ class FilesCollection
         @emitEvent 'readEnd'
 
       if opts.binData and opts.binData.length
-        Meteor.call @collection.methodNames.MeteorFileWrite, opts, (error) ->
-          ++self.sentChunks
-          self.transferTime += (+new Date) - evt.data.start
-          if error
-            self.emitEvent 'end', [error]
-          else
-            if self.sentChunks >= self.fileLength
-              self.emitEvent 'sendEOF', [opts]
-            else if self.currentChunk < self.fileLength
-              self.emitEvent 'upload'
-            self.emitEvent 'calculateStats'
-          return
+        if @config.transport is 'ddp'
+          Meteor.call @collection.methodNames.MeteorFileWrite, opts, (error) ->
+            ++self.sentChunks
+            self.transferTime += (+new Date) - evt.data.start
+            if error
+              self.emitEvent 'end', [error]
+            else
+              if self.sentChunks >= self.fileLength
+                self.emitEvent 'sendEOF', [opts]
+              else if self.currentChunk < self.fileLength
+                self.emitEvent 'upload'
+              self.emitEvent 'calculateStats'
+            return
+        else
+          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
+            ++self.sentChunks
+            self.transferTime += (+new Date) - evt.data.start
+            if error
+              self.emitEvent 'end', [error]
+            else
+              if self.sentChunks >= self.fileLength
+                self.emitEvent 'sendEOF', [opts]
+              else if self.currentChunk < self.fileLength
+                self.emitEvent 'upload'
+              self.emitEvent 'calculateStats'
+            return
       return
 
     sendEOF: (opts) ->
@@ -1019,14 +1097,19 @@ class FilesCollection
         self = @
         opts =
           eof:        true
-          meta:       @config.meta
           file:       @fileData
           fileId:     @fileId
           chunkSize:  @config.chunkSize
           fileLength: @fileLength
 
-        Meteor.call @collection.methodNames.MeteorFileWrite, opts, -> 
-          self.emitEvent 'end', arguments
+        if @config.transport is 'ddp'
+          Meteor.call @collection.methodNames.MeteorFileWrite, opts, ->
+            self.emitEvent 'end', arguments
+            return
+        else
+          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
+            self.emitEvent 'end', [error, JSON.parse(result?.content or {})]
+            return
       return
 
     proceedChunk: (chunkId, start) ->
@@ -1035,7 +1118,7 @@ class FilesCollection
       fileReader = new FileReader
 
       fileReader.onloadend = (evt) ->
-        self.emitEvent 'sendViaDDP', [{
+        self.emitEvent 'sendChunk', [{
           data: {
             bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
             chunkId: chunkId
@@ -1141,7 +1224,7 @@ class FilesCollection
             console.warn evt.data.error if self.collection.debug
             self.emitEvent 'proceedChunk', [evt.data.chunkId, evt.data.start]
           else
-            self.emitEvent 'sendViaDDP', [evt]
+            self.emitEvent 'sendChunk', [evt]
           return
         @worker.onerror   = (e) -> 
           self.emitEvent 'end', [e.message]

@@ -5,19 +5,23 @@ template(name="index")
       .table-responsive: table.table.table-bordered.table-striped: tbody
         each latest
           tr
-            td.center.width-1(class="{{#if isImage}}thumbnail40{{/if}}")
-              if isAudio
-                i.fa.fa-fw.fa-file-audio-o
-              else if isVideo
-                i.fa.fa-fw.fa-file-video-o
-              else if isImage
-                img(src="{{fileURL this 'thumbnail40'}}" alt="#{name}")
-              else if isText
-                i.fa.fa-fw.fa-file-text-o
-              else if isJSON
-                i.fa.fa-fw.fa-file-code-o
-              else
-                i.fa.fa-fw.fa-file-o
+            td.center.width-1.table-preview(class="{{#if compare isImage 'and' versions.thumbnail40}}thumbnail40{{/if}}")
+              a(href="{{pathFor 'file' _id=_id}}")
+                if isAudio
+                  i.fa.fa-fw.fa-file-audio-o
+                else if isVideo
+                  i.fa.fa-fw.fa-file-video-o
+                else if isImage
+                  if versions.thumbnail40
+                    img(src="{{fileURL this 'thumbnail40'}}" alt="#{name}")
+                  else
+                    i.fa.fa-fw.fa-file-image-o
+                else if isText
+                  i.fa.fa-fw.fa-file-text-o
+                else if isJSON
+                  i.fa.fa-fw.fa-file-code-o
+                else
+                  i.fa.fa-fw.fa-file-o
             td.ellipsis.width-270
               a(href="{{pathFor 'file' _id=_id}}") {{extless name}}
             td.text-right.ellipsis

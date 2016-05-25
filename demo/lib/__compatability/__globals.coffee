@@ -5,8 +5,12 @@
   NOOP: -> return
 
 if Meteor.isClient
+  ClientStorage.set('uploadTransport', 'ddp') unless ClientStorage.has 'uploadTransport'
   Template.registerHelper 'filesize', (size = 0) -> filesize size
-  Template.registerHelper 'extless', (filename = '') -> filename.split('.')[0]
+  Template.registerHelper 'extless', (filename = '') ->
+    parts = filename.split '.'
+    parts.pop() if parts.length > 1
+    return parts.join '.'
 
   marked.setOptions
     highlight: (code) ->  hljs.highlightAuto(code).value
