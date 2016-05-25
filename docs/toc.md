@@ -4,7 +4,8 @@ Meteor-Files
 ### About:
  - Event-driven API
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
- - Upload file(s) via DDP
+ - Upload via *HTTP* or *DDP*
+ - File upload:
     * Ready for small and large files (RAM used only for chunk reading - [read about `chunkSize`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)))
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted

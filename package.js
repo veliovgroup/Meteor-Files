@@ -12,7 +12,7 @@ Package.onUse(function(api) {
   api.addAssets('worker.js', 'client');
   api.addFiles('files.coffee', ['server', 'client']);
   api.use('webapp', 'server');
-  api.use(['templating', 'reactive-var', 'tracker'], 'client');
+  api.use(['templating', 'reactive-var', 'tracker', 'http'], 'client');
   api.use(['underscore', 'check', 'sha', 'ostrio:cookies@2.0.2', 'random', 'coffeescript'], ['client', 'server']);
   api.export('FilesCollection');
 });

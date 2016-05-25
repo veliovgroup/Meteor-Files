@@ -51,6 +51,20 @@
     </tr>
     <tr>
       <td align="right">
+        <code>settings.transport</code> {<em>String</em>}
+      </td>
+      <td>
+        Must be set to 
+        <code>http</code> or <code>ddp</code>
+      </td>
+      <td>
+        Note: upload via <code>http</code> is at least twice faster
+        <br />
+        Default: <code>ddp</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>settings.onStart</code> {<em>Function</em>}
       </td>
       <td>
