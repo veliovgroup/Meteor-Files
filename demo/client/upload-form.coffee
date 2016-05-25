@@ -2,7 +2,7 @@ Template.uploadForm.onCreated ->
   @error          = new ReactiveVar false
   @uploadInstance = new ReactiveVar false
 
-  @initiateUpload = (files, template) ->
+  @initiateUpload = (event, files, template) ->
     unless files.length
       template.error.set "Please select a file to upload"
       return false
@@ -24,6 +24,9 @@ Template.uploadForm.onCreated ->
           return
       return
 
+    transport = event.currentTarget?.transport?.value or 'ddp'
+    ClientStorage.set 'uploadTransport', transport
+
     created_at = +new Date
     uploads = []
     _.each files, (file) ->
@@ -35,6 +38,7 @@ Template.uploadForm.onCreated ->
           downloads: 0
         streams: 'dynamic'
         chunkSize: 'dynamic'
+        transport: transport
       ,
         false # Use manual start, so we can attach event listeners
       ).on('end', (error, fileObj) ->
@@ -64,6 +68,7 @@ Template.uploadForm.helpers
   error:            -> Template.instance().error.get()
   uploadInstance:   -> Template.instance().uploadInstance.get()
   estimateBitrate:  -> filesize(@estimateSpeed.get(), {bits: true}) + '/s'
+  uploadTransport:  -> ClientStorage.get 'uploadTransport'
   estimateDuration: ->
     duration = moment.duration(@estimateTime.get())
     hours    = "#{duration.hours()}"
@@ -93,11 +98,11 @@ Template.uploadForm.events
     e.preventDefault()
     template.error.set false
     $(e.currentTarget).removeClass 'file-over'
-    template.initiateUpload e.originalEvent.dataTransfer.files, template
+    template.initiateUpload e, e.originalEvent.dataTransfer.files, template
     false
   'change input[name="userfile"]': (e, template) -> template.$('form#uploadFile').submit()
   'submit form#uploadFile': (e, template) ->
     e.preventDefault()
     template.error.set false
-    template.initiateUpload e.currentTarget.userfile.files, template
+    template.initiateUpload e, e.currentTarget.userfile.files, template
     false

@@ -23,7 +23,8 @@ Collections.files = new FilesCollection
   storagePath:      'assets/app/uploads/uploadedFiles'
   collectionName:   'uploadedFiles'
   allowClientCode:  false
-  onBeforeUpload:   -> if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
+  onBeforeUpload:   ->
+    return if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
   downloadCallback: (fileObj) -> 
     if @params?.query.download is 'true'
       Collections.files.collection.update fileObj._id, $inc: 'meta.downloads': 1
@@ -151,13 +152,18 @@ if Meteor.isServer
   # it won't remove files themselves.
   Meteor.setInterval ->
     Collections.files.remove {'meta.expireAt': $lte: new Date((+new Date) + 120000)}, _app.NOOP
+    return
   ,
     120000
 
   Meteor.publish 'latest', (take = 50)->
     check take, Number
-    Collections.files.collection.find {}
-    ,
+    return Collections.files.collection.find {
+      $or: [
+        {'meta.blamed': $lt: 3},
+        {'meta.blamed': $exists: false}
+      ]
+    }, {
       limit: take
       sort: 'meta.created_at': -1
       fields:
@@ -170,13 +176,26 @@ if Meteor.isServer
         isVideo: 1
         isAudio: 1
         isImage: 1
+        'versions.thumbnail40.path': 1
         extension: 1
         _collectionName: 1
         _downloadRoute: 1
+    }
 
   Meteor.publish 'file', (_id)->
     check _id, String
-    Collections.files.collection.find _id
+    return Collections.files.collection.find _id
 
   Meteor.methods
-    'filesLenght': -> Collections.files.collection.find({}).count()
+    'filesLenght': ->
+      return Collections.files.collection.find({
+        $or: [
+          {'meta.blamed': $lt: 3},
+          {'meta.blamed': $exists: false}
+        ]
+      }).count()
+
+    'blame': (_id) ->
+      check _id, String
+      Collections.files.collection.update {_id}, {$inc: 'meta.blamed': 1}, _app.NOOP
+      return true
