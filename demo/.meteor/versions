@@ -42,6 +42,7 @@ id-map@1.0.7
 jquery@1.11.8
 launch-screen@1.0.11
 livedata@1.0.18
+localstorage@1.0.9
 logging@1.0.12
 markdown@1.0.9
 mdg:validation-error@0.2.0
@@ -66,7 +67,8 @@ npm-mongo@1.4.43
 observe-sequence@1.0.11
 ordered-dict@1.0.7
 ostrio:cookies@2.0.2
-ostrio:files@1.5.3
+ostrio:cstorage@2.0.4
+ostrio:files@1.5.4
 ostrio:flow-router-extra@2.12.1
 ostrio:flow-router-title@2.1.0
 ostrio:templatehelpers@1.1.2

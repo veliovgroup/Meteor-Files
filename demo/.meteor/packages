@@ -40,3 +40,4 @@ ostrio:flow-router-extra
 ostrio:flow-router-title
 arillo:flow-router-helpers
 ostrio:templatehelpers
+ostrio:cstorage

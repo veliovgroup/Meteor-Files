@@ -70,6 +70,9 @@ heroku config:set MONGO_URL=mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19
 # For DropBox:
 # heroku config:set DROPBOX='{"dropbox":{"key": "xxx", "secret": "xxx", "token": "xxx"}}'
 
+# Enable sticky sessions, to support HTTP upload:
+heroku features:enable http-session-affinity
+
 git init
 git add .
 git commit -m "initial"
