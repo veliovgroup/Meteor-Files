@@ -1,15 +1,16 @@
 Template.index.onCreated ->
+  self            = @
   @take           = new ReactiveVar 50
   @filesLength    = new ReactiveVar 0
-  @getFilesLenght = =>
-    Meteor.call 'filesLenght', (error, length) =>
+  @getFilesLenght = ->
+    Meteor.call 'filesLenght', (error, length) ->
       if error
         console.error error
       else
-        @filesLength.set length
+        self.filesLength.set length
   @getFilesLenght()
 
-  @autorun => _app.subs.subscribe 'latest', @take.get()
+  @autorun -> _app.subs.subscribe 'latest', self.take.get()
 
 Template.index.helpers
   take:        -> Template.instance().take.get()
