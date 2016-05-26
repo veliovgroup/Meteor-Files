@@ -436,6 +436,7 @@ class FilesCollection
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
+    result.ext       = extension
     result           = @dataToSchema result
     result._id       = opts.fileId
     result.userId    = userId if userId
