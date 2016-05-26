@@ -261,7 +261,7 @@ class FilesCollection
       @on 'handleUpload', @handleUpload
       @on 'finishUpload', @finishUpload
 
-      WebApp.connectHandlers.use (request, response, next) -> bound ->
+      WebApp.connectHandlers.use (request, response, next) ->
         if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}/__upload"
           if request.method is 'POST'
             body = ''
@@ -521,19 +521,20 @@ class FilesCollection
 
         _dKeys = Object.keys @_writableStreams[result._id].delayed
         if _dKeys.length
-          _.each @_writableStreams[result._id].delayed, (delayed, num) -> bound ->
-            if num < opts.chunkId
-              self._writableStreams[result._id].stream.write delayed
-              delete self._writableStreams[result._id].delayed[num]
-            return
+          i = 1
+          while i < opts.chunkId
+            if @_writableStreams[result._id].delayed?[i]
+              @_writableStreams[result._id].stream.write @_writableStreams[result._id].delayed?[i]
+              delete @_writableStreams[result._id].delayed[i]
+            i++
 
         start = opts.chunkSize * (opts.chunkId - 1)
-        if @_writableStreams[result._id].stream.bytesWritten < start
+        if @_writableStreams[result._id].stream.bytesWritten isnt start
           @_writableStreams[result._id].delayed[opts.chunkId] = binary
         else
           @_writableStreams[result._id].stream.write binary
     catch e
-      cb e
+      cb and cb e
     return
   else undefined
 
