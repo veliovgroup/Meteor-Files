@@ -728,7 +728,6 @@ class FilesCollection
       extension: extension
 
     result._id = fileId
-    console.info "[FilesCollection] [write]: #{fileName} -> #{@collectionName}" if @debug
 
     stream = fs.createWriteStream opts.path, {flags: 'w', mode: @permissions}
     stream.end buffer, (error) -> bound ->
@@ -738,8 +737,10 @@ class FilesCollection
         self.collection.insert _.clone(result), (error) ->
           if error
             callback and callback error
+            console.warn "[FilesCollection] [write] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
             callback and callback null, result
+            console.info "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}" if self.debug
     return @
   else
     undefined
@@ -797,11 +798,11 @@ class FilesCollection
 
       self.collection.insert _.clone(result), (error) ->
         if error
-          console.warn "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           callback and callback error
+          console.warn "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
         else
-          console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
           callback and callback null, result
+          console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
     ).pipe fs.createWriteStream(opts.path, {flags: 'w', mode: @permissions})
 
     return @
@@ -861,11 +862,11 @@ class FilesCollection
 
         self.collection.insert _.clone(result), (error) ->
           if error
-            console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
             callback and callback error
+            console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
-            console.info "[FilesCollection] [addFile] [insert]: #{fileName} -> #{self.collectionName}" if self.debug
             callback and callback null, result
+            console.info "[FilesCollection] [addFile]: #{fileName} -> #{self.collectionName}" if self.debug
       else
         callback and callback new Meteor.Error 400, "[FilesCollection] [addFile(#{path})]: File does not exist"
 
