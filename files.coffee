@@ -1027,7 +1027,7 @@ class FilesCollection
         @transferTime = 0
         @fileLength   = 1
         @fileId       = Random.id()
-        @FSName       = if @namingFunction then @namingFunction() else fileId
+        @FSName       = if @namingFunction then @namingFunction() else @fileId
         @pipes        = []
         @fileData     =
           size: @config.file.size
