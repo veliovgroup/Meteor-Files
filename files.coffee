@@ -112,7 +112,7 @@ class FilesCollection
     @downloadRoute    ?= '/cdn/storage'
     @downloadRoute     = @downloadRoute.replace /\/$/, ''
     @collectionName   ?= 'MeteorUploadFiles'
-    @namingFunction   ?= -> Random.id()
+    @namingFunction   ?= false
     @onBeforeUpload   ?= false
     @allowClientCode  ?= true
     @interceptDownload?= false
@@ -132,8 +132,21 @@ class FilesCollection
       delete @onBeforeRemove
 
       if @protected
-        if not cookie.has('meteor_login_token') and Meteor._localStorage.getItem('Meteor.loginToken')
-          cookie.set 'meteor_login_token', Meteor._localStorage.getItem('Meteor.loginToken'), null, '/'
+        localStorageSupport = do ->
+          try
+            support = "localStorage" of window and window.localStorage isnt null
+            if support
+              window.localStorage.setItem '___test___', 'test'
+              window.localStorage.removeItem '___test___'
+              return true
+            else
+              return false
+          catch
+            return false
+
+        if localStorageSupport
+          if not cookie.has('meteor_login_token') and window.localStorage.getItem('Meteor.loginToken')
+            cookie.set 'meteor_login_token', window.localStorage.getItem('Meteor.loginToken'), null, '/'
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
     else
@@ -211,7 +224,7 @@ class FilesCollection
     check @chunkSize, Number
     check @downloadRoute, String
     check @collectionName, String
-    check @namingFunction, Function
+    check @namingFunction, Match.OneOf false, Function
     check @onBeforeUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
 
@@ -377,6 +390,7 @@ class FilesCollection
           eof:        Match.Optional Boolean
           file:       Object
           fileId:     String
+          FSName:     Match.Optional String
           binData:    Match.Optional String
           chunkId:    Match.Optional Number
           chunkSize:  Number
@@ -427,12 +441,13 @@ class FilesCollection
     opts.meta    ?= {}
     opts.binData ?= 'EOF'
     opts.chunkId ?= -1
+    opts.FSName  ?= opts.fileId
 
     fileName = @getFileName opts.file
     {extension, extensionWithDot} = @getExt fileName
 
     result           = opts.file
-    result.path      = "#{@storagePath}/#{opts.fileId}#{extensionWithDot}"
+    result.path      = "#{@storagePath}/#{opts.FSName}#{extensionWithDot}"
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
@@ -673,47 +688,59 @@ class FilesCollection
   @memberOf FilesCollection
   @name write
   @param {Buffer} buffer - Binary File's Buffer
-  @param {Object} opts - {fileName: '', type: '', size: 0, meta: {...}}
+  @param {Object} opts - Object with file-data
+  @param {String} opts.name - File name, alias: `fileName`
+  @param {String} opts.type - File mime-type
+  @param {Object} opts.meta - File additional meta-data
   @param {Function} callback - function(error, fileObj){...}
   @summary Write buffer to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
   write: if Meteor.isServer then (buffer, opts = {}, callback) ->
     console.info "[FilesCollection] [write()]" if @debug
+
+    if _.isFunction opts
+      callback = opts
+      opts     = {}
+
     check opts, Match.Optional Object
     check callback, Match.Optional Function
 
-    if @checkAccess()
-      randFileName  = @namingFunction()
-      fileName      = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
+    fileId   = Random.id()
+    FSName   = if @namingFunction then @namingFunction() else fileId
+    fileName = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else FSName
 
-      {extension, extensionWithDot} = @getExt fileName
+    {extension, extensionWithDot} = @getExt fileName
 
-      self      = @
-      path      = "#{@storagePath}/#{randFileName}#{extensionWithDot}"
-      
-      opts.type = @getMimeType opts
-      opts.meta = {} if not opts.meta
-      opts.size = buffer.length if not opts.size
+    self       = @
+    opts      ?= {}
+    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
+    opts.type  = @getMimeType opts
+    opts.meta ?= {}
+    opts.size ?= buffer.length
 
-      result    = @dataToSchema
-        name:      fileName
-        path:      path
-        meta:      opts.meta
-        type:      opts.type
-        size:      opts.size
-        extension: extension
+    result = @dataToSchema
+      name:      fileName
+      path:      opts.path
+      meta:      opts.meta
+      type:      opts.type
+      size:      opts.size
+      extension: extension
 
-      console.info "[FilesCollection] [write]: #{fileName} -> #{@collectionName}" if @debug
+    result._id = fileId
+    console.info "[FilesCollection] [write]: #{fileName} -> #{@collectionName}" if @debug
 
-      fs.outputFile path, buffer, 'binary', (error) -> bound ->
-        if error
-          callback and callback error
-        else
-          result._id = self.collection.insert _.clone result
-          callback and callback null, result
-      
-      return @
+    stream = fs.createWriteStream opts.path, {flags: 'w', mode: @permissions}
+    stream.end buffer, (error) -> bound ->
+      if error
+        callback and callback error
+      else
+        self.collection.insert _.clone(result), (error) ->
+          if error
+            callback and callback error
+          else
+            callback and callback null, result
+    return @
   else
     undefined
 
@@ -722,24 +749,35 @@ class FilesCollection
   @memberOf FilesCollection
   @name load
   @param {String} url - URL to file
-  @param {Object} opts - {fileName: '', meta: {...}}
+  @param {Object} opts - Object with file-data
+  @param {String} opts.name - File name, alias: `fileName`
+  @param {String} opts.type - File mime-type
+  @param {Object} opts.meta - File additional meta-data
   @param {Function} callback - function(error, fileObj){...}
   @summary Download file, write stream to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
-  load: if Meteor.isServer then (url, opts = {}, callback) ->
+  load: if Meteor.isServer then (url, opts, callback) ->
     console.info "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
+
+    if _.isFunction opts
+      callback = opts
+      opts     = {}
+
     check url, String
     check opts, Match.Optional Object
     check callback, Match.Optional Function
 
-    self          = @
-    randFileName = @namingFunction()
-    fileName     = if opts.name or opts.fileName then opts.name or opts.fileName else randFileName
+    self      = @
+    opts     ?= {}
+    fileId    = Random.id()
+    FSName    = if @namingFunction then @namingFunction() else fileId
+    pathParts = url.split('/')
+    fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
     
     {extension, extensionWithDot} = @getExt fileName
-    path      = "#{@storagePath}/#{randFileName}#{extensionWithDot}"
-    opts.meta = {} if not opts.meta
+    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
+    opts.meta ?= {}
 
     request.get(url).on('error', (error)-> bound ->
       throw new Meteor.Error 500, "Error on [load(#{url})]:" + JSON.stringify error
@@ -749,20 +787,22 @@ class FilesCollection
 
       result = self.dataToSchema
         name:      fileName
-        path:      path
+        path:      opts.path
         meta:      opts.meta
         type:      opts.type or response.headers['content-type']
-        size:      opts.size or response.headers['content-length']
+        size:      opts.size or parseInt(response.headers['content-length'] or 0)
         extension: extension
 
-      self.collection.insert _.clone(result), (error, fileRef) ->
+      result._id = fileId
+
+      self.collection.insert _.clone(result), (error) ->
         if error
           console.warn "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           callback and callback error
         else
           console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
-          callback and callback null, fileRef
-    ).pipe fs.createWriteStream(path, {flags: 'w'})
+          callback and callback null, result
+    ).pipe fs.createWriteStream(opts.path, {flags: 'w', mode: @permissions})
 
     return @
   else
@@ -773,12 +813,19 @@ class FilesCollection
   @memberOf FilesCollection
   @name addFile
   @param {String} path - Path to file
-  @param {String} path - Path to file
+  @param {String} opts - Object with file-data
+  @param {String} opts.type - File mime-type
+  @param {Object} opts.meta - File additional meta-data
+  @param {Function} callback - function(error, fileObj){...}
   @summary Add file from FS to FilesCollection
   @returns {FilesCollection} Instance
   ###
-  addFile: if Meteor.isServer then (path, opts = {}, callback) ->
+  addFile: if Meteor.isServer then (path, opts, callback) ->
     console.info "[FilesCollection] [addFile(#{path})]" if @debug
+
+    if _.isFunction opts
+      callback = opts
+      opts     = {}
 
     throw new Meteor.Error 403, 'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection' if @public
     check path, String
@@ -795,9 +842,11 @@ class FilesCollection
 
         {extension, extensionWithDot} = self.getExt fileName
 
-        opts.type = 'application/*' if not opts.type
-        opts.meta = {} if not opts.meta
-        opts.size = stats.size if not opts.size
+        opts      ?= {}
+        opts.path  = path
+        opts.type ?= self.getMimeType opts
+        opts.meta ?= {}
+        opts.size ?= stats.size
 
         result = self.dataToSchema
           name:         fileName
@@ -808,13 +857,14 @@ class FilesCollection
           extension:    extension
           _storagePath: path.replace "/#{fileName}", ''
 
-        _cn = self.collectionName
-        self.collection.insert _.clone(result), (error, record) ->
+        result._id = Random.id()
+
+        self.collection.insert _.clone(result), (error) ->
           if error
-            console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{_cn}", error if self.debug
+            console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
             callback and callback error
           else
-            console.info "[FilesCollection] [addFile] [insert]: #{fileName} -> #{_cn}" if self.debug
+            console.info "[FilesCollection] [addFile] [insert]: #{fileName} -> #{self.collectionName}" if self.debug
             callback and callback null, result
       else
         callback and callback new Meteor.Error 400, "[FilesCollection] [addFile(#{path})]: File does not exist"
@@ -974,10 +1024,11 @@ class FilesCollection
         @sentChunks   = 0
         @EOFsent      = false
         @transferTime = 0
-        @fileLength = 1
-        @fileId     = @collection.namingFunction()
-        @pipes      = []
-        @fileData   =
+        @fileLength   = 1
+        @fileId       = Random.id()
+        @FSName       = if @namingFunction then @namingFunction() else fileId
+        @pipes        = []
+        @fileData     =
           size: @config.file.size
           type: @config.file.type
           name: @config.file.name
@@ -1052,6 +1103,8 @@ class FilesCollection
         chunkSize:  @config.chunkSize
         fileLength: @fileLength
 
+      opts.FSName = @FSName if @FSName isnt @fileId
+
       if evt.data.chunkId isnt 1
         opts.file = _.omit opts.file, 'meta', 'ext', 'extensionWithDot', 'mime', 'mime-type'
 
@@ -1103,6 +1156,8 @@ class FilesCollection
           fileId:     @fileId
           chunkSize:  @config.chunkSize
           fileLength: @fileLength
+
+        opts.FSName = @FSName if @FSName isnt @fileId
 
         if @config.transport is 'ddp'
           Meteor.call @collection.methodNames.MeteorFileWrite, opts, ->
@@ -1601,9 +1656,12 @@ class FilesCollection
 @returns {String} Downloadable link
 ###
 formatFleURL = (fileRef, version = 'original') ->
+  check fileRef, Object
+  check version, String
+
   root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '')
 
-  if fileRef?.extension?.length > 0
+  if fileRef.extension?.length
     ext = '.' + fileRef.extension
   else
     ext = ''
