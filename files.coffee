@@ -12,50 +12,14 @@ if Meteor.isServer
   nodePath     = Npm.require 'path'
 
   ###
-  @var {object} bound - Meteor.bindEnvironment (Fiber wrapper)
+  @var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
   ###
   bound = Meteor.bindEnvironment (callback) -> return callback()
 
-###
-@private
-@name _insts
-@summary Object of FilesCollection instances
-###
-_insts = {}
-
-###
-@private
-@name rcp
-@param {Object} obj - Initial object
-@summary Create object with only needed props
-###
-rcp = (obj) ->
-  o =
-    currentFile:    obj.currentFile
-    search:         obj.search
-    collectionName: obj.collectionName
-    downloadRoute:  obj.downloadRoute
-    chunkSize:      obj.chunkSize
-    debug:          obj.debug
-    _prefix:        obj._prefix
-  return o
-
-###
-@private
-@name cp
-@param {Object} to   - Destination
-@param {Object} from - Source
-@summary Copy-Paste only needed props from one to another object
-###
-cp = (to, from) ->
-  to.currentFile    = from.currentFile
-  to.search         = from.search
-  to.collectionName = from.collectionName
-  to.downloadRoute  = from.downloadRoute
-  to.chunkSize      = from.chunkSize
-  to.debug          = from.debug
-  to._prefix        = from._prefix
-  return to
+  ###
+  @var {Function} sortNumber - Natural Number sort
+  ###
+  sortNumber = (a, b) -> return a - b
 
 ###
 @locus Anywhere
@@ -236,7 +200,6 @@ class FilesCollection
     @collection  = new Mongo.Collection @collectionName
     @currentFile = null
     @_prefix     = SHA256 @collectionName + @downloadRoute
-    _insts[@_prefix] = @
 
     @checkAccess = (http) ->
       if self.protected
@@ -361,12 +324,11 @@ class FilesCollection
         return
 
       _methods = {}
-      _methods[self.methodNames.MeteorFileUnlink] = (inst) ->
-        check inst, Object
-        console.info '[FilesCollection] [Unlink Method]' if self.debug
+      _methods[self.methodNames.MeteorFileUnlink] = (search) ->
+        check search, Match.OneOf String, Object
+        console.info "[FilesCollection] [Unlink Method] [.remove(#{search})]" if self.debug
         
         if self.allowClientCode
-          __instData = cp _insts[inst._prefix], inst
           if self.onBeforeRemove and _.isFunction self.onBeforeRemove
             user = false
             userFuncs = {
@@ -374,11 +336,10 @@ class FilesCollection
               user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
             }
 
-            __inst = self.find.call __instData, inst.search
-            unless self.onBeforeRemove.call userFuncs, (__inst.cursor or null)
+            unless self.onBeforeRemove.call userFuncs, (self.find(search) or null)
               throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
 
-          self.remove.call __instData, inst.search
+          self.remove search
           return true
         else
           throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
@@ -514,40 +475,37 @@ class FilesCollection
       binary = new Buffer opts.binData, 'base64'
 
     try
+      writeDelayed = ->
+        chunks = Object.keys self._writableStreams[result._id].delayed
+        if chunks.length
+          chunks.sort sortNumber
+          for chunk in chunks
+            if self._writableStreams[result._id].stream.bytesWritten is opts.chunkSize * (chunk - 1)
+              self._writableStreams[result._id].stream.write self._writableStreams[result._id].delayed?[chunk]
+              delete self._writableStreams[result._id].delayed[chunk]
+        return true
+
+      @_writableStreams[result._id] ?=
+        stream: fs.createWriteStream result.path, {flags: 'a', mode: @permissions}
+        delayed: {}
+
       if opts.eof
-        _hlEnd = ->
-          self._writableStreams[result._id].stream.end()
-          delete self._writableStreams[result._id]
-          self.emit 'finishUpload', result, opts, cb
+        writeDelayed()
+        @_writableStreams[result._id].stream.end()
+        delete @_writableStreams[result._id]
+        @emit 'finishUpload', result, opts, cb
+
+      else if opts.chunkId is 1
+        @_writableStreams[result._id].stream.write binary
+        @_writableStreams[result._id].stream.on 'drain', () ->
+          writeDelayed()
           return
 
-        if @_writableStreams[result._id].delayed?[opts.fileLength]
-          @_writableStreams[result._id].stream.write @_writableStreams[result._id].delayed[opts.fileLength], () -> bound ->
-            delete self._writableStreams[result._id].delayed[opts.fileLength]
-            _hlEnd()
-            return
-        else
-          _hlEnd()
-        
       else if opts.chunkId > 0
-        @_writableStreams[result._id] ?=
-          stream: fs.createWriteStream result.path, {flags: 'a', mode: @permissions}
-          delayed: {}
-
-        _dKeys = Object.keys @_writableStreams[result._id].delayed
-        if _dKeys.length
-          i = 1
-          while i < opts.chunkId
-            if @_writableStreams[result._id].delayed?[i]
-              @_writableStreams[result._id].stream.write @_writableStreams[result._id].delayed?[i]
-              delete @_writableStreams[result._id].delayed[i]
-            i++
-
         start = opts.chunkSize * (opts.chunkId - 1)
-        if @_writableStreams[result._id].stream.bytesWritten isnt start
-          @_writableStreams[result._id].delayed[opts.chunkId] = binary
-        else
-          @_writableStreams[result._id].stream.write binary
+        @_writableStreams[result._id].delayed[opts.chunkId] = binary
+        writeDelayed()
+
     catch e
       cb and cb e
     return
@@ -1373,7 +1331,13 @@ class FilesCollection
     if @checkAccess()
       @srch search
       if Meteor.isClient
-        Meteor.call @methodNames.MeteorFileUnlink, rcp(@), (if cb then cb else NOOP)
+        if @allowClientCode
+          Meteor.call @methodNames.MeteorFileUnlink, search, (if cb then cb else NOOP)
+        else
+          if cb
+            cb new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+          else
+            throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
 
       if Meteor.isServer
         files = @collection.find @search
@@ -1382,7 +1346,10 @@ class FilesCollection
           files.forEach (file) -> self.unlink file
         @collection.remove @search, cb
     else
-      cb and cb new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
+      if cb
+        cb new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
+      else
+        throw new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
     return @
 
   ###
