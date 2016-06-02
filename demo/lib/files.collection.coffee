@@ -187,7 +187,7 @@ if Meteor.isServer
     return Collections.files.collection.find _id
 
   Meteor.methods
-    'filesLenght': ->
+    filesLenght: ->
       return Collections.files.collection.find({
         $or: [
           {'meta.blamed': $lt: 3},
@@ -195,7 +195,12 @@ if Meteor.isServer
         ]
       }).count()
 
-    'blame': (_id) ->
+    unblame: (_id) ->
+      check _id, String
+      Collections.files.collection.update {_id}, {$inc: 'meta.blamed': -1}, _app.NOOP
+      return true
+
+    blame: (_id) ->
       check _id, String
       Collections.files.collection.update {_id}, {$inc: 'meta.blamed': 1}, _app.NOOP
       return true

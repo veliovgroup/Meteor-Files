@@ -52,6 +52,9 @@ template(name="index")
               span.label.label-default(title="Downloads")
                 i.fa.fa-fw.fa-download
                 | #{meta.downloads}
+            //- Remove button example, won't work with allowClientCode: false
+            //- td
+              button#remove.btn.btn-sm Remove
     else
       .panel-body.center: .alert.alert-info Be the first to upload a file
 

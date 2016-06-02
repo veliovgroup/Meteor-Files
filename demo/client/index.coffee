@@ -8,6 +8,8 @@ Template.index.onCreated ->
         console.error error
       else
         self.filesLength.set length
+      return
+    return
   @getFilesLenght()
 
   @autorun -> _app.subs.subscribe 'latest', self.take.get()
@@ -18,4 +20,15 @@ Template.index.helpers
   filesLength: -> Template.instance().filesLength.get()
 
 Template.index.events
-  'click #loadMore': (e, template) -> template.take.set template.take.get() + 50
+  'click #loadMore': (e, template) ->
+    template.take.set template.take.get() + 50
+    return
+  # Remove example, won't work with allowClientCode: false
+  'click #remove': (e, template) ->
+    Collections.files.remove @_id, (error) ->
+      if error
+        console.log error
+      else
+        template.getFilesLenght()
+      return
+    return

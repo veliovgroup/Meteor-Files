@@ -21,3 +21,20 @@ Template.file.helpers
   fetchedText: -> Template.instance().fetchedText.get()
   warning: -> Template.instance().warning.get()
   getCode: -> if @type and !!~@type.indexOf('/') then @type.split('/')[1] else ''
+  isBlamed: -> !!~_app.blamed.get().indexOf(@_id)
+
+Template.file.events
+  'click #blame': (e, template) ->
+    e.preventDefault()
+    blamed = _app.blamed.get()
+    if !!~blamed.indexOf(@_id)
+      blamed.splice blamed.indexOf(@_id), 1
+      _app.blamed.set blamed
+      Meteor.call 'unblame', @_id
+    else
+      blamed.push @_id
+      _app.blamed.set blamed
+      Meteor.call 'blame', @_id
+
+
+    return false

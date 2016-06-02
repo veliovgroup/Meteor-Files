@@ -40,6 +40,7 @@ Template.uploadForm.onCreated ->
           expireAt: new Date(created_at + _app.storeTTL)
           created_at: created_at
           downloads: 0
+          blamed: 0
         streams: 'dynamic'
         chunkSize: 'dynamic'
         transport: transport
