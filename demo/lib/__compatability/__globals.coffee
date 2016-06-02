@@ -5,6 +5,12 @@
   NOOP: -> return
 
 if Meteor.isClient
+  ClientStorage.set('blamed', []) if not ClientStorage.has('blamed') or not _.isArray ClientStorage.get('blamed')
+  _app.blamed = new ReactiveVar ClientStorage.get 'blamed'
+  Meteor.autorun ->
+    ClientStorage.set 'blamed', _app.blamed.get()
+    return
+
   ClientStorage.set('uploadTransport', 'ddp') unless ClientStorage.has 'uploadTransport'
   Template.registerHelper 'filesize', (size = 0) -> filesize size
   Template.registerHelper 'extless', (filename = '') ->

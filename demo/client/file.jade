@@ -50,6 +50,7 @@ template(name="file")
             th.ellipsis Size
             th.ellipsis Extension
             th.ellipsis Downloads
+            th.ellipsis Abuse
         tbody
           tr
             td.text-center.scroll.scroll-x: span.label.label-default #{name}
@@ -63,5 +64,7 @@ template(name="file")
             td.text-center.scroll.scroll-x: a.label.label-default(title="Download \"#{name}\"" href="{{fileURL .}}?download=true"  target="_parent" download="#{name}")
               i.fa.fa-download
               | #{meta.downloads}
+            td.text-center.scroll.scroll-x: a.label#blame(title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}label-danger{{else}}label-default{{/if}}")
+              i.fa.fa-flag
       .panel-body
         a.btn.btn-default.btn-block(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" target="_parent" download="#{name}"): i.fa.fa-download
