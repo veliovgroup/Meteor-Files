@@ -68,8 +68,8 @@ observe-sequence@1.0.11
 ordered-dict@1.0.7
 ostrio:cookies@2.0.2
 ostrio:cstorage@2.0.4
-ostrio:files@1.5.4
-ostrio:flow-router-extra@2.12.1
+ostrio:files@1.5.6
+ostrio:flow-router-extra@2.12.2
 ostrio:flow-router-title@2.1.0
 ostrio:templatehelpers@1.1.2
 perak:markdown@1.0.5
