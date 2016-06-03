@@ -176,7 +176,7 @@ class FilesCollection
           optional: true
         updatedAt: 
           type: Date
-          autoValue: -> new Date()
+          optional: true
         versions:
           type: Object
           blackbox: true

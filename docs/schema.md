@@ -64,9 +64,7 @@ var defaultSchema = {
   },
   updatedAt: {
     type: Date,
-    autoValue: function() {
-      return new Date();
-    }
+    optional: true
   },
   versions: {
     type: Object,
