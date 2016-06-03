@@ -1619,7 +1619,6 @@ class FilesCollection
 @name formatFleURL
 @param {Object} fileRef - File reference object
 @param {String} version - [Optional] Version of file you would like build URL for
-@param {Boolean}  pub   - [Optional] is file located in publicity available folder?
 @summary Returns formatted URL for file
 @returns {String} Downloadable link
 ###
