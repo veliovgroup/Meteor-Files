@@ -13,6 +13,11 @@ Support:
  - [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
  - For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
 
+Awards:
+========
+<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
+
+
 Demo application:
 ========
  - [Live](https://meteor-files.herokuapp.com/) (*Unavailable after 6 hours of uptime, due to [free plan](https://www.heroku.com/pricing)*)
