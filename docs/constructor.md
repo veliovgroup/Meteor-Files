@@ -657,7 +657,7 @@ Images.collection.attachSchema(new SimpleSchema(Images.schema));
 *Deny insert/update/remove from client*
 ```javascript
 if (Meteor.isServer) {
-  var Images = new new FilesCollection({/* ... */});
+  var Images = new FilesCollection({/* ... */});
   Images.deny({
     insert: function() {
       return true;
@@ -679,7 +679,7 @@ if (Meteor.isServer) {
 *Allow insert/update/remove from client*
 ```javascript
 if (Meteor.isServer) {
-  var Images = new new FilesCollection({/* ... */});
+  var Images = new FilesCollection({/* ... */});
   Images.allow({
     insert: function() {
       return true;
@@ -699,7 +699,7 @@ if (Meteor.isServer) {
 
 #### Events listeners:
 ```javascript
-var Images = new new FilesCollection({/* ... */});
+var Images = new FilesCollection({/* ... */});
 // Alias addListener
 Images.on('afterUpload', function (fileRef) {
   /* ... */
