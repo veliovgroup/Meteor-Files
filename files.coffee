@@ -956,6 +956,7 @@ class FilesCollection
 
       check @config, {
         file:            Match.Any
+        fileName:        Match.Optional String
         meta:            Match.Optional Object
         onError:         Match.Optional Function
         onAbort:         Match.Optional Function
@@ -970,8 +971,9 @@ class FilesCollection
       }
 
       if @config.file
-        console.time('insert ' + @config.file.name) if @collection.debug
-        console.time('loadFile ' + @config.file.name) if @collection.debug
+        if @collection.debug
+          console.time('insert ' + @config.file.name)
+          console.time('loadFile ' + @config.file.name)
 
         if Worker and @config.allowWebWorkers
           @worker = new Worker '/packages/ostrio_files/worker.js'
@@ -990,7 +992,7 @@ class FilesCollection
         @fileData     =
           size: @config.file.size
           type: @config.file.type
-          name: @config.file.name
+          name: @config.fileName or @config.file.name
           meta: @config.meta
 
         @fileData = _.extend @fileData, @collection.getExt(self.config.file.name), {mime: @collection.getMimeType(@fileData)}
