@@ -92,7 +92,7 @@ Upload form (template):
   {{#if currentUpload}}
     {{#with currentUpload}}
       Uploading <b>{{file.name}}</b>: 
-      <span id="progress">{{progress}}%</span>
+      <span id="progress">{{progress.get}}%</span>
     {{/with}}
   {{else}}
     <input id="fileInput" type="file" />
