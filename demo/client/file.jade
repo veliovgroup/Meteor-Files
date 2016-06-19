@@ -23,7 +23,7 @@ template(name="file")
             | File too big to show preview, please 
             a(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" download="#{name}") download it
         else if fetchedText
-          .text-wrap
+          .markdown-body
             if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
               +markdown
                 {{fetchedText}}
