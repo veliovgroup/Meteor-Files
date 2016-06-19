@@ -101,7 +101,7 @@ p
   i
     font-size: 20px
     line-height: 0px
-    margin-top: 19px
+    margin-top: 18px
 
 .main-container
   display: table
@@ -311,7 +311,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
     color: #97a2d0
     font-size: 0.98rem
     line-height: 1.6rem
-    margin: 2.5rem 0rem
+    margin: 2rem 0rem
     font-weight: 400
   .radio-inline
     user-select: none
@@ -340,6 +340,10 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
       margin-top: 0px
   .block-info
     padding: 20px
+    .annotation:first-child, .project-info:first-child
+      margin-top: 0px
+    .annotation:last-child, .project-info:last-child
+      margin-bottom: 0px
   a
     color: lighten(#4e546d, 10%)
   .show-settings
@@ -618,7 +622,7 @@ pre
     min-width: 100vw
     width: 100vw
     vertical-align: middle
-  .file, .listing, .col-50, .file-table
+  .file, .listing, .col-50, .file-table, ._loading
     max-width: 100%
     max-width: 100vw
     min-width: 100vw
