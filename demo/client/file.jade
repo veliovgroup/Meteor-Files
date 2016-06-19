@@ -1,70 +1,83 @@
 template(name="file")
-  +with file
-    .panel.panel-default
-      .panel-body(class="{{#if compare isText 'or' isJSON}}text-left{{else}}center no-padding{{/if}}")
-          if isImage
-            picture.file-preview
-              source(type="#{type}" srcset="{{fileURL this 'preview'}}")
-              img.file-preview(src="{{fileURL this 'preview'}}" alt="#{name}")
-          else if isAudio
-            audio.file-preview.file-audio(controls autoplay preload="auto" loop)
-              source(src="{{fileURL .}}?play=true" type="#{type}")
-          else if isVideo
-            video.file-preview(controls autoplay preload="auto" loop)
-              source(src="{{fileURL .}}?play=true" type="#{type}")
-          else if compare isText 'or' isJSON
-            if warning
-              .alert.alert-warning.no-margin {{warning}}
-            else if fetchedText
-              if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
-                +markdown
-                  {{fetchedText}}
-              else
-                +markdown
-                  ```{{getCode}}
-                  #{fetchedText}
-                  ```
-            else
-              .alert.alert-info.no-margin.no-radius Preview is not available, please download file.
-          else
-            .alert.alert-info.no-margin.no-radius Preview is not available, please download file.
-      .panel-heading: h3.panel-title.ellipsis
-        if isAudio
-          i.fa.fa-fw.fa-file-audio-o
-        else if isVideo
-          i.fa.fa-fw.fa-file-video-o
-        else if isImage
-          i.fa.fa-fw.fa-file-image-o
-        else if isText
-          i.fa.fa-fw.fa-file-text-o
-        else if isJSON
-          i.fa.fa-fw.fa-file-code-o
-        else
-          i.fa.fa-fw.fa-file-o
+  .col-50.sm-row: .file: .file-table: .file-row
+    each file
+      h1.file-title.ellipsis
+        a.go-back(href="/") &lt;
+        | &nbsp;
         | {{extless name}}
-      table.table.table-bordered.table-condensed(style="table-layout:fixed")
-        thead
+      if isImage
+        picture.file-preview
+          source(type="#{type}" srcset="{{fileURL this 'preview'}}")
+          img.file-preview(src="{{fileURL this 'preview'}}" alt="#{name}")
+      else if isAudio
+        .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
+          source(src="{{fileURL .}}?play=true" type="#{type}")
+      else if isVideo
+        .file-cell: video.file-preview(controls autoplay preload="auto" loop)
+          source(src="{{fileURL .}}?play=true" type="#{type}")
+      else if compare isText 'or' isJSON
+        if warning
+          .file-cell: h3.files-note
+            | File too big to show preview, please 
+            a(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" download="#{name}") download it
+        else if fetchedText
+          .text-wrap
+            if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
+              +markdown
+                {{fetchedText}}
+            else
+              +markdown
+                ```{{getCode}}
+                #{fetchedText}
+                ```
+        else
+          .file-cell: h3.files-note
+            | Preview is not available, please 
+            a(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" download="#{name}") download file
+      else
+        .file-cell: h3.files-note
+          | Preview is not available, please 
+          a(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" download="#{name}") download file
+
+      if showInfo
+        .file-overlay: table: tbody: tr: td: table.fixed-table: tbody
           tr
-            th.ellipsis Name
-            th.ellipsis Mime-type
-            th.ellipsis Size
-            th.ellipsis Extension
-            th.ellipsis Downloads
-            th.ellipsis Abuse
-        tbody
+            th Name:
+            td #{name}
           tr
-            td.text-center.scroll.scroll-x: span.label.label-default #{name}
-            td.text-center.scroll.scroll-x: span.label.label-default #{type}
-            td.text-center.scroll.scroll-x: span.label.label-default {{filesize size}}
-            td.text-center.scroll.scroll-x
+            th Mime-type:
+            td #{type}
+          tr
+            th Size:
+            td {{filesize size}}
+          tr
+            th Extension:
+            td 
               if extension
-                span.label.label-default .#{extension}
+                | .#{extension}
               else
-                small.help-block.no-margin extension-less
-            td.text-center.scroll.scroll-x: a.label.label-default(title="Download \"#{name}\"" href="{{fileURL .}}?download=true"  target="_parent" download="#{name}")
-              i.fa.fa-download
+                | extension-less
+          tr
+            th Downloads:
+            td
               | #{meta.downloads}
-            td.text-center.scroll.scroll-x: a.label#blame(title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}label-danger{{else}}label-default{{/if}}")
-              i.fa.fa-flag
-      .panel-body
-        a.btn.btn-default.btn-block(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" target="_parent" download="#{name}"): i.fa.fa-download
+              | &nbsp;
+              a(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" target="_parent" download="#{name}")
+                i.fa.fa-fw.fa-download
+          tr
+            th Abuse:
+            td
+              | #{meta.blamed}
+              | &nbsp;
+              a#blame(title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}danger{{/if}}")
+                i.fa.fa-flag
+
+      a.info-link.show-info#showInfo(href="#" class="{{#if showInfo}}active{{/if}}")
+        if showInfo
+          i.fa.fa-fw.fa-times
+        else
+          i.fa.fa-fw.fa-info-circle
+
+      unless showInfo
+        a.info-link.right.download-file(title="Download \"#{name}\"" href="{{fileURL .}}?download=true" target="_parent" download="#{name}")
+          i.fa.fa-fw.fa-download

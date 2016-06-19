@@ -20,7 +20,7 @@ _app.createThumbnails = (collection, fileRef, cb) ->
 
     sizes =
       preview:
-        width: 640
+        width: 400
       thumbnail40:
         width: 40
         square: true

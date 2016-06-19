@@ -1,43 +1,70 @@
 template(name="uploadForm")
-  form.navbar-form.center#uploadFile
-    if error
-      .alert.alert-danger {{error}}
+  form.col-50.upload-form#uploadFile: .sm-row
+    unless uploads
+      input.invisible#userfile(type="file" name="userfile" required multiple)
+      unless showProjectInfo
+        a.info-link.show-settings#showSettings(href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
+      unless showSettings
+        a.info-link.right.show-project-info#showProjectInfo(href="#" class="{{#if showProjectInfo}}active{{/if}}")
+          if showProjectInfo
+            i.fa.fa-fw.fa-times
+          else
+            i.fa.fa-fw.fa-info
 
-    unless uploadInstance
-      .input-group.select-form
-        input.form-control.btn.btn-default(title="Select File" type="file" name="userfile" required multiple)
-        span.input-group-btn
-          button.btn.btn-primary(type="submit" title="Upload File")
-            i.fa.fa-lg.fa-cloud-upload
-            | Upload
-      small.text-center.help-block
-        | Upload via: 
-        label.radio-inline
-          input(type="radio" name="transport" value="ddp" checked="{{#if compare uploadTransport 'is' 'ddp'}}checked{{/if}}")
-          | DDP
-        label.radio-inline
-          input(type="radio" name="transport" value="http" checked="{{#if compare uploadTransport 'is' 'http'}}checked{{/if}}")
-          | HTTP (<em>3x performance</em>)
-      small.text-center.help-block.no-margin
-        span Any file-type. With size less or equal to 128MB, up to 6 files.
-        span.text-info This form supports drag'n'drop.
+      if showSettings
+        .block-info
+          p.annotation.white
+            | Upload via:
+            br
+            label.radio-inline
+              input(type="radio" name="transport" value="ddp" checked="{{#if compare uploadTransport 'is' 'ddp'}}checked{{/if}}")
+              | DDP
+            label.radio-inline
+              input(type="radio" name="transport" value="http" checked="{{#if compare uploadTransport 'is' 'http'}}checked{{/if}}")
+              | HTTP (<em>3x performance</em>)
+
+          p.annotation Any file-type.<br />With size less or equal to 128MB,<br />up to 6 files.
+          p.annotation This form supports drag'n'drop.
+      else
+        unless showProjectInfo
+          .fake-upload#fakeUpload
+            i.fa.fa-cloud-upload
+            if error
+              h2.danger {{error}}
+            else
+              h2 UPLOAD A FILE
+
+        .block-info(class="{{#unless showProjectInfo}}invisible{{/unless}}")
+          p.project-info
+            a.info-img(href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank")
+              img(src="https://camo.githubusercontent.com/513a14500082d198359dc4450bc2d1a9cd960776/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f746d632d706f73742d636f6e74656e742f676361612d323031362d77696e6e65722d62616467652e737667" title="Giant Cotton Apron Awards Winner" alt="GCAA Badge" data-canonical-src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg")
+
+            a.info-img(href="https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo" target="_blank")
+              img(src="https://camo.githubusercontent.com/83b0e95b38892b49184e07ad572c94c8038323fb/68747470733a2f2f7777772e6865726f6b7563646e2e636f6d2f6465706c6f792f627574746f6e2e737667" title="Deploy to Heroku in one click!" alt="Deploy to Heroku" data-canonical-src="https://www.herokucdn.com/deploy/button.svg")
+
+            a.info-img(href="https://www.meteor.com/" target="_blank")
+              img(src="https://worldvectorlogo.com/logos/meteor-icon.svg" alt="Meteor.com" title="Powered by Meteor")
+
+          p.project-info This is a demo application for <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> package. With <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> you can easily Upload, Download, Serve and Stream files within your Meteor application.
+
+          p.project-info Star this package on <a href="https://github.com/VeliovGroup/Meteor-Files">GitHub</a> or <a href="https://atmospherejs.com/ostrio/files">Atmosphere</a>.
+          p.project-info 
+            | Brought to you by <a href="https://ostr.io">ostr.io</a> and <a href="https://veliovgroup.com">Veliov Group</a>
+            br
+            | 2016 <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a>
     else
-      table.upload-form-container: tbody
-        +each uploadInstance
-          if compare state.get 'isnt' 'aborted'
-            tr
-              td
-                .btn-group
-                  if onPause.get
-                    button#continue.btn.btn-default.btn-sm(type="button" title="Resume upload")
-                      i.fa.fa-fw.fa-play
-                  else
-                    button#pause.btn.btn-default.btn-sm(type="button" title="Pause upload")
-                      i.fa.fa-fw.fa-pause
-                  button#abort.btn.btn-default.btn-sm(type="button" title="Abort upload")
-                      i.fa.fa-fw.fa-stop
-              td: .progress.center: .progress-bar.progress-bar-striped.active(aria-valuemin="0" aria-valuemax="100" style="width: {{progress.get}}%")
-            tr: td.center(colspan="2"): small.text-center.help-block(style="margin-bottom:0px")
-              b #{file.name}:
-              | Remaining time: {{estimateDuration}} | Speed: {{estimateBitrate}}
-        tr: td.center(colspan="2"): small.text-center.help-block(style="margin-bottom:0px") You are free to browse the site while upload in progress
+      h2 #{status.progress}%
+      progress(max="100" value="#{status.progress}")
+      p
+        | #{status.estimateDuration}
+        | &nbsp;
+        | &middot;
+        | &nbsp;
+        | #{status.estimateBitrate}
+      p
+        if status.onPause
+          a#continue(href="#" title="Resume upload"): i.fa.fa-fw.fa-play
+        else
+          a#pause(href="#" title="Pause upload"): i.fa.fa-fw.fa-pause
+        | &nbsp;
+        a#abort(href="#" title="Abort upload"): i.fa.fa-fw.fa-stop

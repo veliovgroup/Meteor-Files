@@ -1,0 +1,124 @@
+.progress-radial {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #aebad2;
+  background-color: #9ca8be;
+}
+
+.progress-radial .overlay {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background-color: #212836;
+  border-radius: 50%;
+  margin-left: 2px;
+  margin-top: 2px;
+  text-align: center;
+  line-height: 2.8rem;
+  font-size: 0.9rem;
+}
+
+.progress-radial .overlay .action {
+  display: none;
+  visibility: hidden;
+}
+
+.progress-radial:hover .overlay {
+  background-color: #45526d
+}
+
+.progress-radial:hover .overlay .action {
+  display: inline;
+  visibility: visible;
+}
+
+.progress-radial:hover .overlay .progress {
+  display: none;
+  visibility: hidden;
+}
+
+.progress-0 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(90deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-5 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(108deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-10 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(126deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-15 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(144deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-20 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(162deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-25 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(180deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-30 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(198deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-35 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(216deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-40 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(234deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-45 {
+  background-image: linear-gradient(90deg, #212836 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(252deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-50 {
+  background-image: linear-gradient(-90deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-55 {
+  background-image: linear-gradient(-72deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-60 {
+  background-image: linear-gradient(-54deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-65 {
+  background-image: linear-gradient(-36deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-70 {
+  background-image: linear-gradient(-18deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-75 {
+  background-image: linear-gradient(0deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-80 {
+  background-image: linear-gradient(18deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-85 {
+  background-image: linear-gradient(36deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-90 {
+  background-image: linear-gradient(54deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-95 {
+  background-image: linear-gradient(72deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}
+
+.progress-100 {
+  background-image: linear-gradient(90deg, #9ca8be 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0)), linear-gradient(270deg, #9ca8be 50%, #212836 50%, #212836);
+}

@@ -25,7 +25,7 @@ Collections.files = new FilesCollection
   allowClientCode:  false
   onBeforeUpload:   ->
     return if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
-  downloadCallback: (fileObj) -> 
+  downloadCallback: (fileObj) ->
     if @params?.query.download is 'true'
       Collections.files.collection.update fileObj._id, $inc: 'meta.downloads': 1
     return true
@@ -115,7 +115,7 @@ if Meteor.isServer
           return
         return
 
-    if !!~fileRef.type.indexOf 'image'
+    if !!~['png', 'jpg', 'jpeg'].indexOf (fileRef.extension or '').toLowerCase()
       _app.createThumbnails Collections.files, fileRef, (fileRef) ->
         if useDropBox
           sendToDB Collections.files.collection.findOne fileRef._id

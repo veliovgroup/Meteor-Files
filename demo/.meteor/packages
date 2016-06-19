@@ -24,7 +24,6 @@ simple:highlight.js
 mquandalle:jade
 fourseven:scss@2.1.1
 momentjs:moment
-twbs:bootstrap
 perak:markdown
 mrt:filesize
 
