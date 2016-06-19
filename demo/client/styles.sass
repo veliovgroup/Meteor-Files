@@ -125,9 +125,9 @@ p
   display: table-cell
   width: 50%
   max-width: 50%
-  min-height: 414px
-  max-height: 414px
-  height: 414px
+  min-height: 455px
+  max-height: 455px
+  height: 455px
   vertical-align: middle
   position: relative
   &.info
@@ -364,8 +364,13 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   .fake-upload
     cursor: pointer
     transition: color 256ms ease-in-out
+    width: 85%
+    margin: 0px auto
     &:hover
       color: #BBB
+  .sm-row
+    width: 85%
+    margin: 0px auto
 
 .listing, .file, ._loading
   width: 100%
@@ -378,7 +383,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   overflow-y: auto
   -webkit-overflow-scrolling: touch
   max-height: 100%
-  min-height: 414px
+  min-height: 455px
   .btn
     border-color: #aebad2
     color: #aebad2
@@ -396,7 +401,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   .file-table
     display: table
     width: 100%
-    min-height: 414px
+    min-height: 455px
     height: 100%
     .file-row
       display: table-row
@@ -594,7 +599,7 @@ pre
     background-color: transparent
     border-radius: 0
 
-@media(max-height: 414px)
+@media(max-height: 455px)
   .gh-ribbon
     left: 0px
     right: initial
@@ -602,6 +607,8 @@ pre
       transform: rotate(-90deg)
       height: 90px
       width: 90px
+  .upload-form .fake-upload
+    width: 100%
   .col-50, .listing, .file, ._loading, .file .file-table
     min-height: 100vh
     max-height: 100vh
@@ -622,6 +629,11 @@ pre
     height: 40vh
     overflow-y: auto
     overflow-x: hidden
+    .sm-row
+      width: 100%
+      margin: initial
+    .fake-upload
+      width: 100%
   .row
     display: initial
     min-width: 100vw

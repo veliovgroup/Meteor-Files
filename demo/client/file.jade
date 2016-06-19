@@ -5,8 +5,8 @@ template(name="file")
         a.go-back(href="/") &lt;
         | &nbsp;
         | {{extless name}}
-      if compare type 'is' 'application/pdf'
-        .file-cell: iframe.file-preview(src="{{fileURL .}}")
+      if isPDF
+        .file-cell: iframe.file-preview(src="{{fileURL .}}" frameborder="0")
       else if isImage
         picture.file-preview
           source(type="#{type}" srcset="{{fileURL this 'preview'}}")
