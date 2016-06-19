@@ -6,6 +6,9 @@ Template.uploadForm.onCreated ->
   @showProjectInfo = new ReactiveVar false
 
   @initiateUpload = (event, files) ->
+    if _app.uploads.get()
+      return false
+
     unless files.length
       self.error.set "Please select a file to upload"
       return false
@@ -57,10 +60,10 @@ Template.uploadForm.onCreated ->
         cleanUploaded @
         return
       ).on('error', (error) ->
-        self.error.set error?.reason or error
+        self.error.set (if self.error.get() then self.error.get() + '<br />' else '') + @file.name + ': ' + (error?.reason or error)
         Meteor.setTimeout ->
           self.error.set false
-        , 5000
+        , 10000
         cleanUploaded @
         return
       ).on('start', ->
@@ -124,6 +127,7 @@ Template.uploadForm.events
     if uploads
       for upload in uploads
         upload.abort()
+    template.error.set false
     false
   'click #continue': (e, template) ->
     e.preventDefault()

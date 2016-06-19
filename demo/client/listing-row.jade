@@ -1,0 +1,35 @@
+template(name="listingRow")
+  tr#showFile(data-id="#{_id}")
+    td.width-1.preview
+      .preview-circle
+        if isPDF
+          i.fa.fa-fw.fa-file-pdf-o
+        else if isAudio
+          i.fa.fa-fw.fa-file-audio-o
+        else if isVideo
+          i.fa.fa-fw.fa-file-video-o
+        else if isImage
+          if versions.thumbnail40
+            img(src="{{fileURL this 'thumbnail40'}}" alt="#{name}")
+          else
+            i.fa.fa-fw.fa-file-image-o
+        else if isText
+          i.fa.fa-fw.fa-file-text-o
+        else if isJSON
+          i.fa.fa-fw.fa-file-code-o
+        else
+          i.fa.fa-fw.fa-file-o
+    td
+      table.fixed-table: tbody: tr: td
+        .file-name #{name}
+        br
+        .file-info
+          span.file-size(title="File size") {{filesize size}}
+          | &nbsp;
+          | &middot;
+          | &nbsp;
+          span.file-ttl(title="Will be removed #{removedIn}") #{removedIn}
+          | &nbsp;
+          | &middot;
+          | &nbsp;
+          span.file-downloads(title="File was downloaded for #{meta.downloads} times") #{meta.downloads}

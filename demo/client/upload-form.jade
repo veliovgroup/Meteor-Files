@@ -30,29 +30,15 @@ template(name="uploadForm")
           .fake-upload#fakeUpload
             i.fa.fa-cloud-upload
             if error
-              h2.danger {{error}}
+              h4.danger {{{error}}}
             else
               h2 UPLOAD A FILE
 
         .block-info(class="{{#unless showProjectInfo}}invisible{{/unless}}")
-          p.project-info
-            a.info-img(href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank")
-              img(src="https://camo.githubusercontent.com/513a14500082d198359dc4450bc2d1a9cd960776/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f746d632d706f73742d636f6e74656e742f676361612d323031362d77696e6e65722d62616467652e737667" title="Giant Cotton Apron Awards Winner" alt="GCAA Badge" data-canonical-src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg")
-
-            a.info-img(href="https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo" target="_blank")
-              img(src="https://camo.githubusercontent.com/83b0e95b38892b49184e07ad572c94c8038323fb/68747470733a2f2f7777772e6865726f6b7563646e2e636f6d2f6465706c6f792f627574746f6e2e737667" title="Deploy to Heroku in one click!" alt="Deploy to Heroku" data-canonical-src="https://www.herokucdn.com/deploy/button.svg")
-
-            a.info-img(href="https://www.meteor.com/" target="_blank")
-              img(src="https://worldvectorlogo.com/logos/meteor-icon.svg" alt="Meteor.com" title="Powered by Meteor")
-
-          p.project-info This is a demo application for <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> package. With <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> you can easily Upload, Download, Serve and Stream files within your Meteor application.
-
-          p.project-info Star this package on <a href="https://github.com/VeliovGroup/Meteor-Files">GitHub</a> or <a href="https://atmospherejs.com/ostrio/files">Atmosphere</a>.
-          p.project-info 
-            | Brought to you by <a href="https://ostr.io">ostr.io</a> and <a href="https://veliovgroup.com">Veliov Group</a>
-            br
-            | 2016 <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a>
+          +projectInfo
     else
+      if error
+        h4.danger {{{error}}}
       h2 #{status.progress}%
       progress(max="100" value="#{status.progress}")
       p

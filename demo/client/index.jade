@@ -3,56 +3,10 @@ template(name="index")
     if compare latest.count 'or' uploads
       .listing: table.table: tbody
         each uploads
-          tr
-            td.width-1.preview
-              .progress-radial(class="progress-{{getProgressClass}}")
-                .overlay 
-                  if onPause.get
-                    a#continue(href="#" title="Resume upload"): i.fa.fa-lg.fa-fw.fa-play
-                  else
-                    span.progress #{progress.get}%
-                    span.action
-                      a#pause(href="#" title="Pause upload"): i.fa.fa-lg.fa-fw.fa-pause
-            td
-              table.fixed-table: tbody: tr: td
-                .file-name #{file.name}
-                br
-                .file-info
-                  span.file-size(title="File size") {{filesize file.size}}, 
-                  | &nbsp;
-                  span.file-estimate-duration(title="Upload in") #{estimateDuration}, 
-                  | &nbsp;
-                  span.file-estimate-bitrate(title="Upload speed") #{estimateBitrate}
+          +uploadRow
         each latest
-          tr#showFile(data-id="#{_id}")
-            td.width-1.preview
-              .preview-circle
-                if isAudio
-                  i.fa.fa-fw.fa-file-audio-o
-                else if isVideo
-                  i.fa.fa-fw.fa-file-video-o
-                else if isImage
-                  if versions.thumbnail40
-                    img(src="{{fileURL this 'thumbnail40'}}" alt="#{name}")
-                  else
-                    i.fa.fa-fw.fa-file-image-o
-                else if isText
-                  i.fa.fa-fw.fa-file-text-o
-                else if isJSON
-                  i.fa.fa-fw.fa-file-code-o
-                else
-                  i.fa.fa-fw.fa-file-o
-            td
-              table.fixed-table: tbody: tr: td
-                .file-name #{name}
-                br
-                .file-info
-                  span.file-size(title="File size") {{filesize size}}, 
-                  | &nbsp;
-                  span.file-ttl(title="Will be removed #{removedIn}") #{removedIn}, 
-                  | &nbsp;
-                  span.file-downloads(title="File was downloaded for #{meta.downloads} times") #{meta.downloads}
-        if compare filesLength '>' latest.count
+          +listingRow
+        if compare latest.count 'and' filesLength '>' latest.count
           tr: td#loadMore(colspan="2"): h3.no-margin.center Load More
     else
       h3.files-note Be the first to upload a file
