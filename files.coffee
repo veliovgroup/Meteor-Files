@@ -37,7 +37,7 @@ if Meteor.isServer
 @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
 @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
 @param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
-@param config.storagePath    {String}  - [Server] Storage path on file system
+@param config.storagePath    {String|Function}  - [Server] Storage path on file system
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
 @param config.throttle       {Number}  - [Server] bps throttle threshold
 @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
@@ -62,7 +62,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {@storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
+    {storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
 
     self               = @
     cookie             = new Cookies()
@@ -85,7 +85,6 @@ class FilesCollection
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
       delete @strict
       delete @throttle
-      delete @storagePath
       delete @permissions
       delete @parentDirPermissions
       delete @cacheControl
@@ -124,11 +123,26 @@ class FilesCollection
       @onAfterUpload    ?= false
       @integrityCheck   ?= true
       @downloadCallback ?= false
-      if @public and not @storagePath
+      if @public and not storagePath
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
-      @storagePath      ?= "assets/app/uploads/#{@collectionName}"
-      @storagePath       = @storagePath.replace /\/$/, ''
-      @storagePath       = nodePath.normalize @storagePath
+
+      storagePath ?=  "assets/app/uploads/#{@collectionName}"
+      Object.defineProperty self, 'storagePath', {
+        get: ->
+          sp = ''
+          if _.isString storagePath
+            sp = storagePath
+          else if _.isFunction storagePath
+            sp = storagePath.call self, "assets/app/uploads/#{self.collectionName}"
+          
+          unless _.isString sp
+            throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
+
+          sp  = sp.replace /\/$/, ''
+          return nodePath.normalize sp
+      }
+
+      console.info('[FilesCollection.storagePath] Set to:', @storagePath) if @debug
 
       fs.mkdirs @storagePath, {mode: @parentDirPermissions}, (error) ->
         if error
@@ -399,11 +413,11 @@ class FilesCollection
   @returns {Object}
   ###
   prepareUpload: if Meteor.isServer then (opts, userId, transport) ->
-    opts.eof     ?= false
-    opts.meta    ?= {}
-    opts.binData ?= 'EOF'
-    opts.chunkId ?= -1
-    opts.FSName  ?= opts.fileId
+    opts.eof       ?= false
+    opts.binData   ?= 'EOF'
+    opts.chunkId   ?= -1
+    opts.FSName    ?= opts.fileId
+    opts.file.meta ?= {}
 
     fileName = @getFileName opts.file
     {extension, extensionWithDot} = @getExt fileName
@@ -737,8 +751,8 @@ class FilesCollection
     fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
     
     {extension, extensionWithDot} = @getExt fileName
-    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
     opts.meta ?= {}
+    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
 
     request.get(url).on('error', (error)-> bound ->
       throw new Meteor.Error 500, "Error on [load(#{url})]:" + JSON.stringify error

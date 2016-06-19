@@ -41,7 +41,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>config.storagePath</code> {<em>String</em>}
+        <code>config.storagePath</code> {<em>String</em>|<em>Function</em>}
       </td>
       <td>
         Server
@@ -53,7 +53,14 @@
         <code>assets/app/uploads</code>
       </td>
       <td>
-        Relative to running script
+        Relative to running script<br />
+        If <em>Function</em> is passed it must return <em>String</em>, arguments:
+        <ul>
+          <li>
+            <code>defaultPath</code> - Default recommended path
+          </li>
+        </ul>
+        Context is current <em>FilesCollction</em> instance
       </td>
     </tr>
     <tr>
