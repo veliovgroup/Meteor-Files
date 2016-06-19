@@ -157,6 +157,7 @@ class FilesCollection
         isImage: type: Boolean
         isText: type: Boolean
         isJSON: type: Boolean
+        isPDF: type: Boolean
         _prefix: type: String
         extension:
           type: String
@@ -619,6 +620,7 @@ class FilesCollection
       isImage: !!~data.type.toLowerCase().indexOf('image')
       isText:  !!~data.type.toLowerCase().indexOf('text')
       isJSON:  !!~data.type.toLowerCase().indexOf('json')
+      isPDF:   !!~data.type.toLowerCase().indexOf('pdf')
       _prefix: data._prefix or @_prefix
       _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
