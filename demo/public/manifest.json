@@ -1,5 +1,5 @@
 {
-	"name": "File upload",
+	"name": "Meteor Files",
 	"icons": [
 		{
 			"src": "\/android-chrome-36x36.png",
@@ -38,6 +38,7 @@
 			"density": 4
 		}
 	],
+	"start_url": "https:\/\/files.veliov.com",
 	"display": "standalone",
-	"orientation": "landscape"
+	"orientation": "portrait"
 }
