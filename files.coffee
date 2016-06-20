@@ -803,7 +803,8 @@ class FilesCollection
     opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
 
     request.get(url).on('error', (error)-> bound ->
-      throw new Meteor.Error 500, "Error on [load(#{url})]:" + JSON.stringify error
+      callback and callback error
+      console.error "[FilesCollection] [load] [request.get(#{url})]:", error if self.debug
     ).on('response', (response) -> bound ->
 
       console.info "[FilesCollection] [load] Received: #{url}" if self.debug
@@ -821,7 +822,7 @@ class FilesCollection
       self.collection.insert _.clone(result), (error) ->
         if error
           callback and callback error
-          console.warn "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
+          console.error "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
         else
           callback and callback null, result
           console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
@@ -1384,31 +1385,29 @@ class FilesCollection
   @memberOf FilesCollection
   @name remove
   @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
-  @param {Function} cb - Callback with one `error` argument
+  @param {Function} callback - Callback with one `error` argument
   @summary Remove file(s) on cursor or find and remove file(s) if search is set
   @returns {FilesCollection} Instance
   ###
-  remove: (search, cb) ->
+  remove: (search, callback) ->
     console.info "[FilesCollection] [remove(#{JSON.stringify(search)})]" if @debug
     check search, Match.Optional Match.OneOf Object, String
-    check cb, Match.Optional Function
+    check callback, Match.Optional Function
 
     @srch search
     if Meteor.isClient
       if @allowClientCode
-        Meteor.call @methodNames.MeteorFileUnlink, search, (if cb then cb else NOOP)
+        Meteor.call @methodNames.MeteorFileUnlink, search, (callback or NOOP)
       else
-        if cb
-          cb new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-        else
-          throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+        callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+        console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug
 
     if Meteor.isServer
       files = @collection.find @search
       if files.count() > 0
         self = @
         files.forEach (file) -> self.unlink file
-      @collection.remove @search, cb
+      @collection.remove @search, (callback or NOOP)
     return @
 
   ###
