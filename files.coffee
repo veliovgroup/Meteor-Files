@@ -22,6 +22,42 @@ if Meteor.isServer
   sortNumber = (a, b) -> return a - b
 
 ###
+@var {Function} fixJSONParse - Fix issue with Date parse
+###
+fixJSONParse = (obj) ->
+  for key, value of obj
+    if _.isString(value) and !!~value.indexOf '=--JSON-DATE--='
+      value = value.replace '=--JSON-DATE--=', ''
+      obj[key] = new Date parseInt value
+    else if _.isObject value
+      obj[key] = fixJSONParse value
+    else if _.isArray value
+      for v, i in value
+        if _.isObject(v)
+          obj[key][i] = fixJSONParse v
+        else if _.isString(v) and !!~v.indexOf '=--JSON-DATE--='
+          v = v.replace '=--JSON-DATE--=', ''
+          obj[key][i] = new Date parseInt v
+  return obj
+
+###
+@var {Function} fixJSONStringify - Fix issue with Date stringify
+###
+fixJSONStringify = (obj) ->
+  for key, value of obj
+    if _.isDate value
+      obj[key] = '=--JSON-DATE--=' + (+value)
+    else if _.isObject value
+      obj[key] = fixJSONStringify value
+    else if _.isArray value
+      for v, i in value
+        if _.isObject(v)
+          obj[key][i] = fixJSONStringify v
+        else if _.isDate v
+          obj[key][i] = '=--JSON-DATE--=' + (+v)
+  return obj
+
+###
 @locus Anywhere
 @class FilesCollection
 @param config           {Object}   - [Both]   Configuration object with next properties:
@@ -94,22 +130,22 @@ class FilesCollection
       delete @interceptDownload
       delete @onBeforeRemove
 
-      if @protected
-        localStorageSupport = do ->
-          try
-            support = "localStorage" of window and window.localStorage isnt null
-            if support
-              window.localStorage.setItem '___test___', 'test'
-              window.localStorage.removeItem '___test___'
-              return true
-            else
-              return false
-          catch
+      localStorageSupport = do ->
+        try
+          support = "localStorage" of window and window.localStorage isnt null
+          if support
+            window.localStorage.setItem '___test___', 'test'
+            window.localStorage.removeItem '___test___'
+            return true
+          else
             return false
+        catch
+          return false
 
-        if localStorageSupport
-          if not cookie.has('meteor_login_token') and window.localStorage.getItem('Meteor.loginToken')
-            cookie.set 'meteor_login_token', window.localStorage.getItem('Meteor.loginToken'), null, '/'
+      if localStorageSupport
+        if not cookie.has('meteor_login_token') and window.localStorage.getItem('Meteor.loginToken')
+          cookie.set 'meteor_login_token', window.localStorage.getItem('Meteor.loginToken'), null, '/'
+          cookie.send()
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
     else
@@ -262,6 +298,7 @@ class FilesCollection
             request.on 'end', -> bound ->
               try
                 opts           = JSON.parse body
+                opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
                 user           = self.getUser http
                 {result, opts} = self.prepareUpload opts, user.userId, 'HTTP'
 
@@ -269,6 +306,7 @@ class FilesCollection
                   try
                     Meteor.wrapAsync(self.handleUpload.bind(self, result, opts))()
                     response.writeHead 200
+                    result.meta = fixJSONStringify result.meta if result?.meta
                     response.end JSON.stringify result
                     return
                   catch e
@@ -590,6 +628,7 @@ class FilesCollection
       if _.has(Package, 'accounts-base') and Meteor.userId()
         result.user = -> return Meteor.user()
         result.userId = Meteor.userId()
+
     return result
 
   ###
@@ -1109,6 +1148,7 @@ class FilesCollection
               self.emitEvent 'calculateStats'
             return
         else
+          opts.file.meta = fixJSONStringify opts.file.meta if opts?.file?.meta
           HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
             ++self.sentChunks
             self.transferTime += (+new Date) - evt.data.start
@@ -1142,7 +1182,9 @@ class FilesCollection
             return
         else
           HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
-            self.emitEvent 'end', [error, JSON.parse(result?.content or {})]
+            res      = JSON.parse result?.content or {}
+            res.meta = fixJSONParse res.meta if res?.meta
+            self.emitEvent 'end', [error, res]
             return
       return
 
@@ -1160,6 +1202,7 @@ class FilesCollection
           }
         }]
         return
+
       fileReader.onerror = (e) ->
         self.emitEvent 'end', [(e.target or e.srcElement).error]
         return
