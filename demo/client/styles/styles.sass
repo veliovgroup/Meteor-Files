@@ -1,6 +1,6 @@
 @import url(https://fonts.googleapis.com/css?family=Lato:300,400,400italic,700)
 
-html, body, span, div, p, table, tr, button, video, audio, img, picture
+html, body, span, div, p, table, tr, button, video, audio, img, picture, i.fa
   animation: newElement 350ms ease-in-out 1
 
 @keyframes newElement
@@ -47,6 +47,9 @@ a, picture, img, video, button, input, pre, i, select, option, label, tr, td, p
     -ms-tap-highlight-color: transparent
     tap-highlight-color: rgba(0,0,0,0)
     tap-highlight-color: transparent
+
+a
+  transition: color 128ms ease-in-out
 
 a, a:active, a:hover, a:focus
   outline: none
@@ -302,6 +305,33 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   &.right
     left: 8px
     right: initial
+  &.user-account
+    right: 50px
+  &.loggingIn
+    pointer-events: none
+
+.login-options
+  line-height: 3rem
+  a
+    margin: 0px 7px
+    i
+      transition: color 256ms ease-in-out, text-shadow 256ms ease-in-out
+    img
+      max-height: 1.33333333em
+      position: relative
+      bottom: -5px
+      transition: all 256ms ease-in-out
+      filter: grayscale(100%)
+    &:hover
+      img
+        filter: grayscale(0%)
+      i.fa-github
+        color: #000
+        text-shadow: 0 0 3px #fff
+      i.fa-twitter
+        color: #00aced
+      i.fa-facebook-official
+        color: #3b5998
 
 .upload-form
   position: relative
@@ -384,10 +414,6 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   -webkit-overflow-scrolling: touch
   max-height: 100%
   min-height: 455px
-  .btn
-    border-color: #aebad2
-    color: #aebad2
-    font-size: 1.1em
 
 .files-note
   text-align: center
@@ -476,6 +502,8 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
 .file-info
   color: #606c80
   font-size: 0.9rem
+  .file-remove:hover
+    color: #bd362f
 
 .file-name, .file-info
   padding: 0px

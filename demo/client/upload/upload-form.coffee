@@ -39,11 +39,12 @@ Template.uploadForm.onCreated ->
     _.each files, (file) ->
       Collections.files.insert(
         file: file
-        meta: 
-          expireAt: new Date(created_at + _app.storeTTL)
-          created_at: created_at
-          downloads: 0
+        meta:
           blamed: 0
+          expireAt: new Date(created_at + (if Meteor.userId() then _app.storeTTLUser else _app.storeTTL))
+          unlisted: if Meteor.userId() then true else false
+          downloads: 0
+          created_at: created_at
         streams: 'dynamic'
         chunkSize: 'dynamic'
         transport: transport

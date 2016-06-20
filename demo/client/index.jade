@@ -1,12 +1,14 @@
 template(name="index")
   .col-50.sm-row
-    if compare latest.count 'or' uploads
+    if compare latest.count 'or' uploads 'or' userFiles.count
       .listing: table.table: tbody
         each uploads
           +uploadRow
+        each userFiles
+          +listingRow
         each latest
           +listingRow
-        if compare latest.count 'and' filesLength '>' latest.count
+        if compare filesLength '>' shownFiles
           tr: td#loadMore(colspan="2"): h3.no-margin.center Load More
     else
       h3.files-note Be the first to upload a file

@@ -1,0 +1,8 @@
+template(name="accounts")
+  if currentUser
+    a.info-link.user-account(href="{{#if isActiveRoute 'login'}}{{pathFor 'index'}}{{else}}{{pathFor 'login'}}{{/if}}" class="{{#if isActiveRoute 'login'}}active{{/if}}"): i.fa.fa-fw.fa-user
+  else
+    if loggingIn
+      a.info-link.user-account.loggingIn(href="#"): i.fa.fa-fw.fa-spin.fa-spinner
+    else
+      a.info-link.user-account(href="{{#if isActiveRoute 'login'}}{{pathFor 'index'}}{{else}}{{pathFor 'login'}}{{/if}}" class="{{#if isActiveRoute 'login'}}active{{/if}}"): i.fa.fa-fw.fa-sign-in

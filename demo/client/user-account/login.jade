@@ -1,0 +1,21 @@
+template(name="login")
+  if currentUser
+    .col-50._login: .sm-row
+      h1.files-note {{currentUser.profile.name}}
+      h1.files-note
+        +logout
+  else
+    if loggingIn
+      +_loading
+    else
+      .col-50._login: .sm-row
+        h1.files-note Login via:
+        h1.files-note.login-options
+          if serviceConfiguration.meteor
+            a#withMeteor(href="#"): img(src="https://worldvectorlogo.com/logos/meteor-icon.svg")
+          if serviceConfiguration.github
+            a#withGitHub(href="#"): i.fa.fa-lg.fa-fw.fa-github
+          if serviceConfiguration.twitter
+            a#withTwitter(href="#"): i.fa.fa-lg.fa-fw.fa-twitter
+          if serviceConfiguration.facebook
+            a#withFacebook(href="#"): i.fa.fa-lg.fa-fw.fa-facebook-official

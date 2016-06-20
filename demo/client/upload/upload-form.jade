@@ -2,6 +2,8 @@ template(name="uploadForm")
   form.col-50.upload-form#uploadFile: .sm-row
     unless uploads
       input.invisible#userfile(type="file" name="userfile" required multiple)
+      unless compare showProjectInfo 'or' showSettings
+        +accounts
       unless showProjectInfo
         a.info-link.show-settings#showSettings(href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
       unless showSettings

@@ -24,6 +24,15 @@ template(name="listingRow")
         .file-name #{name}
         br
         .file-info
+          if compare userId 'is' currentUser._id
+            span.file-isOwner(title="You owns this file"): i.fa.fa-fw.fa-user
+            | &nbsp;
+            | &middot;
+            | &nbsp;
+            a.file-remove#remove(href="#" title="Remove file"): i.fa.fa-fw.fa-trash-o
+            | &nbsp;
+            | &middot;
+            | &nbsp;
           span.file-size(title="File size") {{filesize size}}
           | &nbsp;
           | &middot;
