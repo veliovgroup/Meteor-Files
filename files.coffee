@@ -130,22 +130,28 @@ class FilesCollection
       delete @interceptDownload
       delete @onBeforeRemove
 
-      localStorageSupport = do ->
-        try
-          support = "localStorage" of window and window.localStorage isnt null
-          if support
-            window.localStorage.setItem '___test___', 'test'
-            window.localStorage.removeItem '___test___'
-            return true
-          else
-            return false
-        catch
-          return false
+      if _.has(Package, 'accounts-base')
+        setTokenCookie = ->
+          if (not cookie.has('meteor_login_token') and Accounts._lastLoginTokenWhenPolled) or (cookie.has('meteor_login_token') and (cookie.get('meteor_login_token') isnt Accounts._lastLoginTokenWhenPolled))
+            cookie.set 'meteor_login_token', Accounts._lastLoginTokenWhenPolled, null, '/'
+            cookie.send()
 
-      if localStorageSupport
-        if not cookie.has('meteor_login_token') and window.localStorage.getItem('Meteor.loginToken')
-          cookie.set 'meteor_login_token', window.localStorage.getItem('Meteor.loginToken'), null, '/'
-          cookie.send()
+        unsetTokenCookie = ->
+          if cookie.has 'meteor_login_token'
+            cookie.remove 'meteor_login_token'
+            cookie.send()
+
+        Accounts.onLogin ->
+          setTokenCookie()
+          return
+        Accounts.onLogout ->
+          unsetTokenCookie()
+          return
+
+        if Accounts._lastLoginTokenWhenPolled
+          setTokenCookie()
+        else
+          unsetTokenCookie()
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
     else
@@ -260,6 +266,9 @@ class FilesCollection
         user = user()
 
         if _.isFunction self.protected
+          if not self.currentFile and http?.params?._id
+            self.findOne http.params._id
+
           result = if http then self.protected.call(_.extend(http, userFuncs), (self.currentFile or null)) else self.protected.call userFuncs, (self.currentFile or null)
         else
           result = !!user
@@ -299,7 +308,7 @@ class FilesCollection
               try
                 opts           = JSON.parse body
                 opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                user           = self.getUser http
+                user           = self.getUser {request, response}
                 {result, opts} = self.prepareUpload opts, user.userId, 'HTTP'
 
                 if opts.eof
@@ -386,7 +395,7 @@ class FilesCollection
             user = false
             userFuncs = {
               userId: @userId
-              user: -> if Meteor.users then Meteor.users.findOne(@userId) else undefined
+              user: -> if Meteor.users then Meteor.users.findOne(@userId) else null
             }
 
             unless self.onBeforeRemove.call userFuncs, (self.find(search) or null)
@@ -477,7 +486,7 @@ class FilesCollection
         file: opts.file
       }, {
         userId: result.userId
-        user: -> if Meteor.users then Meteor.users.findOne(result.userId) else undefined
+        user: -> if Meteor.users then Meteor.users.findOne(result.userId) else null
         chunkId: opts.chunkId
         eof: opts.eof
       }), result)
@@ -900,9 +909,8 @@ class FilesCollection
     check search, Match.Optional Match.OneOf Object, String
     @srch search
 
-    if @checkAccess()
-      @currentFile = @collection.findOne @search
-      @cursor      = null
+    @currentFile = @collection.findOne @search
+    @cursor      = null
     return @
 
   ###
@@ -918,9 +926,8 @@ class FilesCollection
     check search, Match.Optional Match.OneOf Object, String
     @srch search
 
-    if @checkAccess()
-      @currentFile = null
-      @cursor = @collection.find @search
+    @currentFile = null
+    @cursor = @collection.find @search
     return @
 
   ###
@@ -981,11 +988,8 @@ class FilesCollection
     {Function}    readAsDataURL - Current file as data URL, use to create image preview and etc. Be aware of big files, may lead to browser crash
   ###
   insert: if Meteor.isClient then (config, autoStart = true) ->
-    if @checkAccess()
-      mName = if autoStart then 'start' else 'manual'
-      return (new @_UploadInstance(config, @))[mName]()
-    else
-      throw new Meteor.Error 401, "[FilesCollection] [insert] Access Denied"
+    mName = if autoStart then 'start' else 'manual'
+    return (new @_UploadInstance(config, @))[mName]()
   else undefined
 
   ###
@@ -1389,28 +1393,22 @@ class FilesCollection
     check search, Match.Optional Match.OneOf Object, String
     check cb, Match.Optional Function
 
-    if @checkAccess()
-      @srch search
-      if Meteor.isClient
-        if @allowClientCode
-          Meteor.call @methodNames.MeteorFileUnlink, search, (if cb then cb else NOOP)
-        else
-          if cb
-            cb new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-          else
-            throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-
-      if Meteor.isServer
-        files = @collection.find @search
-        if files.count() > 0
-          self = @
-          files.forEach (file) -> self.unlink file
-        @collection.remove @search, cb
-    else
-      if cb
-        cb new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
+    @srch search
+    if Meteor.isClient
+      if @allowClientCode
+        Meteor.call @methodNames.MeteorFileUnlink, search, (if cb then cb else NOOP)
       else
-        throw new Meteor.Error 401, '[FilesCollection] [remove] Access denied!'
+        if cb
+          cb new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+        else
+          throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+
+    if Meteor.isServer
+      files = @collection.find @search
+      if files.count() > 0
+        self = @
+        files.forEach (file) -> self.unlink file
+      @collection.remove @search, cb
     return @
 
   ###
