@@ -84,14 +84,12 @@ Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Fil
 Upload form (template):
 ```html
 <template name="uploadForm">
-  {{#if currentUpload}}
-    {{#with currentUpload}}
-      Uploading <b>{{file.name}}</b>: 
-      <span id="progress">{{progress}}%</span>
-    {{/with}}
+  {{#with currentUpload}}
+    Uploading <b>{{file.name}}</b>: 
+    <span id="progress">{{progress.get}}%</span>
   {{else}}
     <input id="fileInput" type="file" />
-  {{/if}}
+  {{/with}}
 </template>
 ```
 
