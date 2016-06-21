@@ -265,7 +265,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>toggleUpload()</code> {<em>Function</em>}
+        <code>toggle()</code> {<em>Function</em>}
       </td>
       <td>
         Toggle <code>continue</code>/<code>pause</code> if upload in the progress
