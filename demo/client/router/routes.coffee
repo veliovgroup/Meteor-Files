@@ -18,13 +18,13 @@ FlowRouter.route '/login',
     keywords: 
       name: 'keywords'
       itemprop: 'keywords'
-      content: 'private, unlisted, files, upload, open source, javascript'
+      content: 'private, unlisted, files, upload, meteor, open source, javascript'
     description:
       name: 'description'
       itemprop: 'description'
       property: 'og:description'
       content: 'Login into Meteor files. After you logged in you can make files private and unlisted'
-    'twitter:description': -> 'Login into Meteor files. After you logged in you can make files private and unlisted'
+    'twitter:description': 'Login into Meteor files. After you logged in you can make files private and unlisted'
   action: ->
     @render '_layout', 'login'
     return
@@ -43,13 +43,13 @@ FlowRouter.route '/:_id',
       keywords: 
         name: 'keywords'
         itemprop: 'keywords'
-        content: if file.name then "file, view, preview, uploaded, shared, #{file.name}, #{file.extension}, #{file.type}, open source, javascript" else '404, page, not found'
+        content: if file.name then "file, view, preview, uploaded, shared, #{file.name}, #{file.extension}, #{file.type}, meteor, open source, javascript" else '404, page, not found'
       description:
         name: 'description'
         itemprop: 'description'
         property: 'og:description'
         content: "View uploaded and shared file: #{file.name}"
-      'twitter:description': -> "View uploaded and shared file: #{file.name}"
+      'twitter:description': "View uploaded and shared file: #{file.name}"
       'og:image':
         property: 'og:image'
         content: if file.isImage then Collections.files.link(file) else Meteor.absoluteUrl 'icon_1200x630.png'

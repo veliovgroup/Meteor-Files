@@ -70,14 +70,17 @@ a, picture, img, video, button, input, pre, i, select, option, label, tr, td, p
 
 a, a:active
   transition: color 128ms ease-in-out, opacity 128ms ease-in-out, text-shadow 128ms ease-in-out
-  color: lighten($link-color, 10%)
+  color: lighten($link-color, 20%)
   opacity: 0.777
   text-decoration: underline
 a
   &:hover, &.active
     opacity: 1
     text-decoration: none
-    color: lighten($link-color, 25%)
+    color: lighten($link-color, 30%)
+
+strong, b
+  font-weight: 700
 
 p
   margin: 1rem 0rem

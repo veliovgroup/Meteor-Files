@@ -17,8 +17,8 @@ FlowRouter.globals.push
       name: 'description'
       itemprop: 'description'
       property: 'og:description'
-      content: 'Meteor Files: Upload, Serve and Manage files within Meteor application'
-    'twitter:description': -> 'Meteor Files: Upload, Serve and Manage files within Meteor application'
+      content: 'Upload, Store and Share files with speed of Meteor'
+    'twitter:description': 'Upload, Store and Share files with speed of Meteor'
     'twitter:title':       -> document.title
     'twitter:url':         -> _app.currentUrl()
     'og:image':

@@ -31,11 +31,18 @@ if Meteor.isClient
     return
 
   ClientStorage.set('uploadTransport', 'ddp') unless ClientStorage.has 'uploadTransport'
+  Template.registerHelper 'urlCurrent', -> _app.currentUrl()
+  Template.registerHelper 'url', (string = null) -> Meteor.absoluteUrl string
   Template.registerHelper 'filesize', (size = 0) -> filesize size
   Template.registerHelper 'extless', (filename = '') ->
     parts = filename.split '.'
     parts.pop() if parts.length > 1
     return parts.join '.'
+  Template.registerHelper 'DateToISO', (time) ->
+    return 0 unless time
+    if _.isString(time) or _.isNumber time
+      time = new Date time
+    time.toISOString()
 
   Template._layout.helpers
     showProjectInfo: -> _app.showProjectInfo.get()
