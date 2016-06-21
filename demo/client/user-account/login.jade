@@ -1,12 +1,13 @@
 template(name="login")
   if currentUser
     .col-50._login: .sm-row
-      h1.files-note
+      h1.files-note 
+        | {{currentUser.profile.name}}
+        | &nbsp;
         +logout
-      h1.files-note {{currentUser.profile.name}}
+      hr
+      h2.files-note Upload settings:
       h3.files-note
-        | Upload settings:
-        br
         unless secured
           a(data-change-unlist href="#" title="{{#if unlist}}Show uploaded files publicity{{else}}Hide uploaded files from public list{{/if}}")
             if unlist

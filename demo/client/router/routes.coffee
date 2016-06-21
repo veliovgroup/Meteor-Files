@@ -13,7 +13,7 @@ FlowRouter.route '/',
 
 FlowRouter.route '/login',
   name: 'login'
-  title: -> 'Login into Meteor Files'
+  title: -> if Meteor.userId() then 'Your account settings' else 'Login into Meteor Files'
   action: ->
     @render '_layout', 'login'
     return
