@@ -1,15 +1,21 @@
 Template.index.onCreated ->
+  timer           = false
   self            = @
   @take           = new ReactiveVar 10
+  @latest         = new ReactiveVar Collections.files.collection.find {}, sort: 'meta.created_at': -1
   @filesLength    = new ReactiveVar 0
   @getFilesLenght = ->
-    Meteor.call 'filesLenght', (error, length) ->
-      if error
-        console.error error
-      else
-        self.filesLength.set length
+    Meteor.clearTimeout timer if timer
+    timer = Meteor.setTimeout ->
+      Meteor.call 'filesLenght', _app.userOnly.get(), (error, length) ->
+        if error
+          console.error error
+        else
+          self.filesLength.set length
+        timer = false
+        return
       return
-    return
+    , 512
 
   observers =
     added: ->
@@ -19,11 +25,18 @@ Template.index.onCreated ->
       self.getFilesLenght()
       return
 
-  self.data.latest.observe observers
-  self.data.userFiles.observe observers
+  @autorun ->
+    if _app.userOnly.get() and Meteor.userId()
+      cursor = Collections.files.collection.find {userId: Meteor.userId()}, sort: 'meta.created_at': -1
+    else
+      cursor = Collections.files.collection.find {}, sort: 'meta.created_at': -1
+
+    cursor.observeChanges observers
+    self.latest.set cursor
+    return
 
   @autorun ->
-    _app.subs.subscribe 'latest', self.take.get()
+    _app.subs.subscribe 'latest', self.take.get(), _app.userOnly.get()
     return
   return
 
@@ -33,11 +46,10 @@ Template.index.onRendered ->
 
 Template.index.helpers
   take:        -> Template.instance().take.get()
+  latest:      -> Template.instance().latest.get()
   uploads:     -> _app.uploads.get()
+  userOnly:    -> _app.userOnly.get()
   filesLength: -> Template.instance().filesLength.get()
-  shownFiles:  ->
-    data = Template.instance().data
-    return data.latest.count() + data.userFiles.count()
 
 Template.index.events
   'click [data-load-more]': (e, template) ->

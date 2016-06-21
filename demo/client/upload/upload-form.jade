@@ -2,11 +2,7 @@ template(name="uploadForm")
   form.col-50.upload-form#uploadFile: .sm-row
     unless uploads
       input.invisible#userfile(type="file" name="userfile" required multiple)
-      unless showSettings
-        +accounts
       a.info-link.show-settings(data-show-settings href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
-      unless showSettings
-        a.info-link.right(data-show-project-info href="#"): i.fa.fa-fw.fa-info
 
       if showSettings
         .block-info
@@ -28,6 +24,9 @@ template(name="uploadForm")
             h4.danger {{{error}}}
           else
             h2 UPLOAD A FILE
+
+        +accounts
+        a.info-link.right(data-show-project-info href="#"): i.fa.fa-fw.fa-info
     else
       if error
         h4.danger {{{error}}}

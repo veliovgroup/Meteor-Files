@@ -1,15 +1,12 @@
 FlowRouter.route '/',
   name: 'index'
-  action: (params, queryParams, data) ->
-    @render '_layout', 'index', data
+  action: (params, queryParams) ->
+    @render '_layout', 'index'
     return
-  waitOn: (params) -> [_app.subs.subscribe('latest', 10)]
+  waitOn: (params) -> [_app.subs.subscribe('latest', 10, _app.userOnly.get())]
   whileWaiting: ->
     @render '_layout', '_loading'
     return
-  data: ->
-    latest: Collections.files.collection.find {userId: $ne: Meteor.userId()}, sort: 'meta.created_at': -1
-    userFiles: Collections.files.collection.find {userId: Meteor.userId()}, sort: 'meta.created_at': -1
 
 FlowRouter.route '/login',
   name: 'login'

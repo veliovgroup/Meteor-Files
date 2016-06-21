@@ -7,12 +7,14 @@ if Meteor.isClient
   ClientStorage.set('blamed', []) if not ClientStorage.has('blamed') or not _.isArray ClientStorage.get 'blamed'
   ClientStorage.set('unlist', true) if not ClientStorage.has('unlist') or not _.isBoolean ClientStorage.get 'unlist'
   ClientStorage.set('secured', false) if not ClientStorage.has('secured') or not _.isBoolean ClientStorage.get 'secured'
+  ClientStorage.set('userOnly', false) if not ClientStorage.has('userOnly') or not _.isBoolean ClientStorage.get 'userOnly'
 
   _app.subs            = new SubsManager()
   _app.blamed          = new ReactiveVar ClientStorage.get 'blamed'
   _app.unlist          = new ReactiveVar ClientStorage.get 'unlist'
   _app.secured         = new ReactiveVar ClientStorage.get 'secured'
   _app.uploads         = new ReactiveVar false
+  _app.userOnly        = new ReactiveVar ClientStorage.get 'userOnly'
   _app.storeTTL        = 86400000
   _app.currentUrl      = -> Meteor.absoluteUrl((FlowRouter.current().path or document.location.pathname).replace(/^\//g, '')).split('?')[0].split('#')[0].replace '!', ''
   _app.storeTTLUser    = 432000000
@@ -30,6 +32,10 @@ if Meteor.isClient
     ClientStorage.set 'secured', _app.secured.get()
     return
 
+  Meteor.autorun ->
+    ClientStorage.set 'userOnly', _app.userOnly.get()
+    return
+
   ClientStorage.set('uploadTransport', 'ddp') unless ClientStorage.has 'uploadTransport'
   Template.registerHelper 'urlCurrent', -> _app.currentUrl()
   Template.registerHelper 'url', (string = null) -> Meteor.absoluteUrl string
@@ -43,6 +49,10 @@ if Meteor.isClient
     if _.isString(time) or _.isNumber time
       time = new Date time
     time.toISOString()
+
+  Template._404.onRendered ->
+    window.IS_RENDERED = true
+    return
 
   Template._layout.helpers
     showProjectInfo: -> _app.showProjectInfo.get()

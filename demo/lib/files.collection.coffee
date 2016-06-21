@@ -166,30 +166,22 @@ if Meteor.isServer
   ,
     120000
 
-  Meteor.publish 'latest', (take = 10)->
+  Meteor.publish 'latest', (take = 10, userOnly = false)->
     check take, Number
-    return Collections.files.collection.find {
-      $or: [{
-        'meta.unlisted': false
-        'meta.secured': false
-        'meta.blamed': $lt: 3
-      },{
-        'meta.blamed': $exists: false
-        'meta.unlisted': $exists: false
-        'meta.secured': $exists: false
-      },{
-        'meta.blamed': $lt: 3
-        'meta.unlisted': $exists: false
-        'meta.secured': $exists: false
-      },{
-        'meta.unlisted': true
-        'meta.secured': true
-        userId: @userId
-      },{
-        'meta.unlisted': true
-        userId: @userId
-      }]
-    }, {
+    check userOnly, Boolean
+    if userOnly
+      selector = userId: @userId
+    else
+      selector = {
+        $or: [{
+          'meta.unlisted': false
+          'meta.secured': false
+          'meta.blamed': $lt: 3
+        },{
+          userId: @userId
+        }]
+      }
+    return Collections.files.collection.find selector, {
       limit: take
       sort: 'meta.created_at': -1
       fields:
@@ -218,9 +210,6 @@ if Meteor.isServer
           'meta.secured': false
         },{
           _id: _id
-          'meta.secured': $exists: false
-        },{
-          _id: _id
           'meta.secured': true
           userId: @userId
         }]
@@ -240,32 +229,26 @@ if Meteor.isServer
           extension: 1
           _collectionName: 1
           _downloadRoute: 1
+        sort:
+          'meta.created_at': -1
       }
 
   Meteor.methods
-    filesLenght: ->
-      return Collections.files.collection.find({
-        $or: [{
-          'meta.unlisted': false
-          'meta.secured': false
-          'meta.blamed': $lt: 3
-        },{
-          'meta.blamed': $exists: false
-          'meta.unlisted': $exists: false
-          'meta.secured': $exists: false
-        },{
-          'meta.blamed': $lt: 3
-          'meta.unlisted': $exists: false
-          'meta.secured': $exists: false
-        },{
-          'meta.unlisted': true
-          'meta.secured': true
-          userId: @userId
-        },{
-          'meta.unlisted': true
-          userId: @userId
-        }]
-      }).count()
+    filesLenght: (userOnly = false) ->
+      check userOnly, Boolean
+      if userOnly
+        selector = userId: @userId
+      else
+        selector = {
+          $or: [{
+            'meta.unlisted': false
+            'meta.secured': false
+            'meta.blamed': $lt: 3
+          },{
+            userId: @userId
+          }]
+        }
+      return Collections.files.collection.find(selector).count()
 
     unblame: (_id) ->
       check _id, String
