@@ -266,7 +266,7 @@ class FilesCollection
         user = user()
 
         if _.isFunction self.protected
-          if not self.currentFile and http?.params?._id
+          if http?.params?._id
             self.findOne http.params._id
 
           result = if http then self.protected.call(_.extend(http, userFuncs), (self.currentFile or null)) else self.protected.call userFuncs, (self.currentFile or null)
