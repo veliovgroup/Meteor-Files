@@ -2,22 +2,16 @@ template(name="uploadForm")
   form.col-50.upload-form#uploadFile: .sm-row
     unless uploads
       input.invisible#userfile(type="file" name="userfile" required multiple)
-      unless compare showProjectInfo 'or' showSettings
-        +accounts
-      unless showProjectInfo
-        a.info-link.show-settings#showSettings(href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
       unless showSettings
-        a.info-link.right.show-project-info#showProjectInfo(href="#" class="{{#if showProjectInfo}}active{{/if}}")
-          if showProjectInfo
-            i.fa.fa-fw.fa-times
-          else
-            i.fa.fa-fw.fa-info
+        +accounts
+      a.info-link.show-settings(data-show-settings href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
+      unless showSettings
+        a.info-link.right(data-show-project-info href="#"): i.fa.fa-fw.fa-info
 
       if showSettings
         .block-info
           p.annotation.white
-            | Upload via:
-            br
+            h3.no-margin Upload via:
             label.radio-inline
               input(type="radio" name="transport" value="ddp" checked="{{#if compare uploadTransport 'is' 'ddp'}}checked{{/if}}")
               | DDP
@@ -28,16 +22,12 @@ template(name="uploadForm")
           p.annotation Any file-type.<br />With size less or equal to 128MB,<br />up to 6 files.
           p.annotation This form supports drag'n'drop.
       else
-        unless showProjectInfo
-          .fake-upload#fakeUpload
-            i.fa.fa-cloud-upload
-            if error
-              h4.danger {{{error}}}
-            else
-              h2 UPLOAD A FILE
-
-        .block-info(class="{{#unless showProjectInfo}}invisible{{/unless}}")
-          +projectInfo
+        .fake-upload#fakeUpload
+          i.fa.fa-cloud-upload
+          if error
+            h4.danger {{{error}}}
+          else
+            h2 UPLOAD A FILE
     else
       if error
         h4.danger {{{error}}}
@@ -51,8 +41,8 @@ template(name="uploadForm")
         | #{status.estimateBitrate}
       p
         if status.onPause
-          a#continue(href="#" title="Resume upload"): i.fa.fa-fw.fa-play
+          a(data-continue-all href="#" title="Resume upload"): i.fa.fa-fw.fa-play
         else
-          a#pause(href="#" title="Pause upload"): i.fa.fa-fw.fa-pause
+          a(data-pause-all href="#" title="Pause upload"): i.fa.fa-fw.fa-pause
         | &nbsp;
-        a#abort(href="#" title="Abort upload"): i.fa.fa-fw.fa-stop
+        a(data-abort-all href="#" title="Abort upload"): i.fa.fa-fw.fa-stop

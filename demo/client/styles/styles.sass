@@ -1,6 +1,9 @@
+$link-color: #4e546d
+$text-color: #97a2d0
+
 @import url(https://fonts.googleapis.com/css?family=Lato:300,400,400italic,700)
 
-html, body, span, div, p, table, tr, button, video, audio, img, picture, i.fa
+html, body, span, div, p, td, button, video, audio, img, picture, h1, h2, h3, h4, h5, h6
   animation: newElement 350ms ease-in-out 1
 
 @keyframes newElement
@@ -15,9 +18,26 @@ html, body
   font-weight: 400
   padding: 0px
   margin: 0px
-  color: #bbb
+  color: $text-color
   font-size: 14px
   line-height: 1.2rem
+  position: relative
+  scroll-behavior: smooth
+  -ms-text-size-adjust: 100%
+  -webkit-text-size-adjust: 100%
+  -webkit-tap-highlight-color: rgba(0,0,0,0)
+  -webkit-tap-highlight-color: transparent
+  -moz-tap-highlight-color: rgba(0,0,0,0)
+  -moz-tap-highlight-color: transparent
+  -ms-tap-highlight-color: rgba(0,0,0,0)
+  -ms-tap-highlight-color: transparent
+  tap-highlight-color: rgba(0,0,0,0)
+  tap-highlight-color: transparent
+  font-smoothing: antialiased !important
+  font-smooth: always !important
+  -webkit-font-smoothing: antialiased !important
+  -webkit-font-smooth: always !important
+  text-rendering: optimizeLegibility !important
 
 &::selection
   background-color: rgba(37,50,107,0.333)
@@ -48,15 +68,16 @@ a, picture, img, video, button, input, pre, i, select, option, label, tr, td, p
     tap-highlight-color: rgba(0,0,0,0)
     tap-highlight-color: transparent
 
-a
-  transition: color 128ms ease-in-out
-
-a, a:active, a:hover, a:focus
-  outline: none
-  color: #bbb
+a, a:active
+  transition: color 128ms ease-in-out, opacity 128ms ease-in-out, text-shadow 128ms ease-in-out
+  color: lighten($link-color, 10%)
+  opacity: 0.777
   text-decoration: underline
-a:hover
-  text-decoration: none
+a
+  &:hover, &.active
+    opacity: 1
+    text-decoration: none
+    color: lighten($link-color, 25%)
 
 p
   margin: 1rem 0rem
@@ -66,8 +87,8 @@ p
   color: #a94442
 
 .invisible
-  display: none
-  visibility: hidden
+  display: none !important
+  visibility: hidden !important
 
 .width-1
   width: 1%
@@ -146,6 +167,7 @@ p
 
 .scroll
   -webkit-overflow-scrolling: touch
+  transform: translate3d(0,0,0)
 .scroll-x
   overflow-y: hidden
   overflow-x: auto
@@ -162,6 +184,7 @@ pre, pre code
   white-space: pre
 pre
   overflow: auto
+  transform: translate3d(0,0,0)
   -webkit-overflow-scrolling: touch
 
 th
@@ -169,14 +192,11 @@ th
   vertical-align: middle
   word-break: break-word
 
-.panel-title
-  line-height: 1.5
-
 .no-margin
-  margin: 0px
+  margin: 0px !important
 
 .no-padding
-  padding: 0px
+  padding: 0px !important
 
 .no-radius
   border-radius: 0px
@@ -200,6 +220,7 @@ iframe.file-preview
 
 .file-overlay
   position: absolute
+  transform: translate3d(0,0,0)
   background-color: rgba(0,0,0,0.777)
   -webkit-backdrop-filter: blur(3px)
   -moz-backdrop-filter: blur(3px)
@@ -225,6 +246,7 @@ iframe.file-preview
       line-height: 1.4rem
       word-break: break-all
       padding: 5px 10px
+      vertical-align: middle
     td
       text-align: left
     th
@@ -237,6 +259,7 @@ iframe.file-preview
 
 .gh-ribbon
   transition: opacity 256ms ease-in-out
+  transform: translate3d(0,0,0)
   position: absolute
   top: 0
   right: 0
@@ -288,6 +311,21 @@ h1
   font-size: 1.7rem
   line-height: 2.2rem
 
+h2
+  font-size: 1.5rem
+  line-height: 2rem
+  margin: 1rem 0rem
+
+h3
+  font-size: 1.3rem
+  line-height: 1.8rem
+  margin: 0.8rem 0rem
+
+h4
+  font-size: 1.1rem
+  line-height: 1.6rem
+  margin: 0.6rem 0rem
+
 h1, h2, h3, h4, h5, h6, div, form, table, p
   box-sizing: border-box
 
@@ -295,6 +333,8 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   color: inherit
   font-size: 1.1rem
   position: absolute
+  animation: newElement 350ms ease-in-out 1
+  transform: translate3d(0,0,0)
   bottom: 6px
   right: 8px
   padding: 7px
@@ -314,8 +354,9 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   line-height: 3rem
   a
     margin: 0px 7px
+    transition: none
     i
-      transition: color 256ms ease-in-out, text-shadow 256ms ease-in-out
+      transition: color 256ms ease-in-out
     img
       max-height: 1.33333333em
       position: relative
@@ -323,17 +364,44 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
       transition: all 256ms ease-in-out
       filter: grayscale(100%)
     &:hover
+      color: lighten($link-color, 10%)
       img
         filter: grayscale(0%)
       i.fa-github
-        color: #000
-        text-shadow: 0 0 3px #fff
+        color: #fff
       i.fa-twitter
         color: #00aced
       i.fa-facebook-official
         color: #3b5998
 
+.block-info
+  color: $text-color
+  text-align: center
+  padding: 20px
+  .annotation:first-child, .project-info:first-child
+    margin-top: 0px
+  .annotation:last-child, .project-info:last-child
+    margin-bottom: 0px
+
+.annotation
+  color: $text-color
+  font-size: 0.98rem
+  line-height: 1.6rem
+  margin: 2rem 0rem
+  font-weight: 400
+
+.bg-diagonal
+  background: linear-gradient(45deg, #080c15 0%, #1c222e 100%)
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#080c15', endColorstr='#1c222e', GradientType=1)
+.bg-horizontal
+  background: linear-gradient(to right, #222938 0%, #212834 100%)
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#222938', endColorstr='#212834', GradientType=1)
+
+.listing, .file, ._loading, ._404
+  @extend .bg-horizontal
+
 .upload-form
+  @extend .bg-diagonal
   position: relative
   user-select: none
   i.fa.fa-cloud-upload
@@ -341,18 +409,10 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
   h2
     font-size: 1.5rem
     line-height: 2rem
-  background: linear-gradient(45deg, #080c15 0%, #1c222e 100%)
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#080c15', endColorstr='#1c222e', GradientType=1)
-  color: #4e546d
+  color: $link-color
   font-weight: 700
   text-align: center
   vertical-align: middle
-  .annotation
-    color: #97a2d0
-    font-size: 0.98rem
-    line-height: 1.6rem
-    margin: 2rem 0rem
-    font-weight: 400
   .radio-inline
     user-select: none
     input[type="radio"]
@@ -370,44 +430,31 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
       visibility: hidden
       opacity: 0
       pointer-events: none
-  p
-    line-height: 1.2rem
-    &.project-info
-      font:
-        weight: 400
-        size: 0.9rem
-      line-height: 1.4rem
-      margin-top: 0px
-  .block-info
-    padding: 20px
-    .annotation:first-child, .project-info:first-child
-      margin-top: 0px
-    .annotation:last-child, .project-info:last-child
-      margin-bottom: 0px
-  a
-    color: lighten(#4e546d, 10%)
-  .show-settings
-    opacity: 0.7
-    transition: color 256ms ease-in-out, transform 256ms ease-in-out, opacity 256ms ease-in-out
-    &:hover, &.active
-      transform: rotate(144deg)
   .fake-upload
     cursor: pointer
-    transition: color 256ms ease-in-out
+    transition: color 256ms ease-in-out, opacity 256ms ease-in-out
     width: 85%
     margin: 0px auto
+    opacity: 0.777
     &:hover
-      color: #BBB
+      opacity: 1
+      color: lighten($link-color, 25%)
   .sm-row
     width: 85%
     margin: 0px auto
+
+.show-settings
+  opacity: 0.7
+  display: inline-block
+  transition: color 256ms ease-in-out, transform 256ms ease-in-out, opacity 256ms ease-in-out
+  &:hover, &.active
+    opacity: 1
+    transform: rotate(144deg)
 
 .listing, .file, ._loading
   width: 100%
   max-width: 384px
   background-color: mix(#222938, #212834)
-  background: linear-gradient(to right, #222938 0%, #212834 100%)
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#222938', endColorstr='#212834', GradientType=1)
   color: #aebad2
   overflow-x: hidden
   overflow-y: auto
@@ -458,6 +505,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
     pointer-events: none
   h1.file-title
     position: absolute
+    transform: translate3d(0,0,0)
     top: 0px
     left: 0px
     background-color: rgba(0,0,0,0.555)
@@ -473,6 +521,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
     width: 100%
     max-width: 100%
     .go-back
+      background-color: rgba(0,0,0,0.15)
       border-right: 1px solid rgba(0,0,0,0.1)
       padding: 0px 10px
       margin: 0px 0px
@@ -484,17 +533,30 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
       position: absolute
       left: 0px
       top: 0px
+      font-weight: 700
+      color: rgba(255,255,255,0.777)
       &:hover
+        color: #fff
         background-color: rgba(0,0,0,0.25)
-      &:active, &:focus
-        outline: none
   .info-link
     background-color: rgba(0,0,0,0.7)
     border-radius: 20px
     overflow: hidden
-    display: block
     opacity: 0.5
     transition: color 256ms ease-in-out, opacity 256ms ease-in-out
+
+.file-settings
+  text-align: center
+  vertical-align: middle
+  font-size: 2rem
+
+.fixed-table .file-settings
+  a
+    width: 100%
+    height: 100%
+    min-width: 100%
+    min-height: 100%
+    display: inline-block
 
 .file-name
   color: #aebad2
@@ -502,7 +564,18 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
 .file-info
   color: #606c80
   font-size: 0.9rem
-  .file-remove:hover
+
+.file-access, .file-secured
+  i
+    transition: color 256ms ease-in-out, opacity 256ms ease-in-out
+
+.file-remove:hover
+  color: #bd362f
+.file-access:hover
+  i.fa.fa-eye
+    color: #bd362f
+.file-secured:hover
+  i.fa.fa-unlock
     color: #bd362f
 
 .file-name, .file-info
@@ -566,6 +639,11 @@ button
     width: auto
     border-radius: 5px
     margin: 0px 5px
+  &.gcaa
+    img
+      height: 120px
+      max-height: 50%
+      max-width: 50% !important
 
 ._404
   text-align: center
@@ -607,43 +685,6 @@ pre, code, kbd, samp
   font-family: Menlo, Monaco, Consolas, "Courier New", monospace
   box-sizing: border-box
 
-// .text-wrap
-//   padding: 7px
-//   padding-top: 44px
-//   word-break: break-all
-//   word-wrap: break-word
-//   blockquote
-//     padding: 10px 20px
-//     margin: 0 0 20px
-//     font-size: 17.5px
-//     border-left: 5px solid #eee
-//   code
-//     padding: 2px 4px
-//     font-size: 90%
-//     color: #c7254e
-//     background-color: #f9f2f4
-//     border-radius: 4px
-//   pre
-//     overflow: auto
-//     white-space: pre
-//     display: block
-//     padding: 9.5px
-//     margin: 0px
-//     font-size: 13px
-//     line-height: 1.5
-//     color: #333
-//     word-break: break-all
-//     word-wrap: break-word
-//     background-color: #f5f5f5
-//     border: 1px solid #ccc
-//     code
-//       padding: 0
-//       font-size: inherit
-//       color: inherit
-//       white-space: pre-wrap
-//       background-color: transparent
-//       border-radius: 0
-
 @media(max-height: 455px)
   .gh-ribbon
     left: 0px
@@ -652,8 +693,19 @@ pre, code, kbd, samp
       transform: rotate(-90deg)
       height: 90px
       width: 90px
-  .upload-form .fake-upload
-    width: 100%
+  .upload-form
+    .fake-upload
+      width: 100%
+    #userfile
+      display: block !important
+      visibility: visible !important
+      position: absolute
+      top: 0px
+      left: 0px
+      z-index: 100
+      height: 100%
+      width: 100%
+      opacity: 0
   .col-50, .listing, .file, ._loading, .file .file-table
     min-height: 100vh
     max-height: 100vh
@@ -667,18 +719,30 @@ pre, code, kbd, samp
   .col-50
     display: table-row
     position: initial
+    max-height: 50%
+    max-height: 50vh
+    height: 50%
+    height: 50vh
   .col-50.upload-form
     max-height: 40%
     max-height: 40vh
     height: 40%
     height: 40vh
-    overflow-y: auto
-    overflow-x: hidden
     .sm-row
       width: 100%
       margin: initial
     .fake-upload
       width: 100%
+    #userfile
+      display: block !important
+      visibility: visible !important
+      position: absolute
+      top: 0px
+      left: 0px
+      z-index: 100
+      height: 100%
+      width: 100%
+      opacity: 0
   .row
     display: initial
     min-width: 100vw
@@ -689,7 +753,7 @@ pre, code, kbd, samp
     min-width: 100vw
     width: 100vw
     vertical-align: middle
-  .file, .listing, .col-50, .file-table, ._loading
+  .file, .listing, .file-table, ._loading, ._login
     max-width: 100%
     max-width: 100vw
     min-width: 100vw

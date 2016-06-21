@@ -35,6 +35,6 @@ Template.index.helpers
     return data.latest.count() + data.userFiles.count()
 
 Template.index.events
-  'click #loadMore': (e, template) ->
+  'click [data-load-more]': (e, template) ->
     template.take.set template.take.get() + 10
     return

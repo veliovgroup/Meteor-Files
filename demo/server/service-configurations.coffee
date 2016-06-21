@@ -9,7 +9,7 @@ if process.env['ACCOUNTS_METEOR_ID'] and process.env['ACCOUNTS_METEOR_SEC']
     $set:
       secret: process.env['ACCOUNTS_METEOR_SEC']
       clientId: process.env['ACCOUNTS_METEOR_ID']
-      loginStyle: 'popup'
+      loginStyle: 'redirect'
 
 if process.env['ACCOUNTS_GITHUB_ID'] and process.env['ACCOUNTS_GITHUB_SEC']
   _sc.github = true
@@ -19,7 +19,7 @@ if process.env['ACCOUNTS_GITHUB_ID'] and process.env['ACCOUNTS_GITHUB_SEC']
     $set:
       secret: process.env['ACCOUNTS_GITHUB_SEC']
       clientId: process.env['ACCOUNTS_GITHUB_ID']
-      loginStyle: 'popup'
+      loginStyle: 'redirect'
 
 if process.env['ACCOUNTS_TWITTER_ID'] and process.env['ACCOUNTS_TWITTER_SEC']
   _sc.twitter = true
@@ -27,7 +27,7 @@ if process.env['ACCOUNTS_TWITTER_ID'] and process.env['ACCOUNTS_TWITTER_SEC']
     service: 'twitter'
   ,
     $set:
-      loginStyle: 'popup'
+      loginStyle: 'redirect'
       secret: process.env['ACCOUNTS_TWITTER_SEC']
       consumerKey: process.env['ACCOUNTS_TWITTER_ID'] # consumerKey, really?! F*** this should be in docs
 
@@ -39,7 +39,7 @@ if process.env['ACCOUNTS_FACEBOOK_ID'] and process.env['ACCOUNTS_FACEBOOK_SEC']
     $set:
       secret: process.env['ACCOUNTS_FACEBOOK_SEC']
       appId: process.env['ACCOUNTS_FACEBOOK_ID'] # appId, really?! F*** this should be in docs
-      loginStyle: 'popup'
+      loginStyle: 'redirect'
 
 Meteor.methods
   'getServiceConfiguration': ->

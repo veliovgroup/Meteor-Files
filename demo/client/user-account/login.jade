@@ -1,9 +1,27 @@
 template(name="login")
   if currentUser
     .col-50._login: .sm-row
-      h1.files-note {{currentUser.profile.name}}
       h1.files-note
         +logout
+      h1.files-note {{currentUser.profile.name}}
+      h3.files-note
+        | Upload settings:
+        br
+        unless secured
+          a(data-change-unlist href="#" title="{{#if unlist}}Show uploaded files publicity{{else}}Hide uploaded files from public list{{/if}}")
+            if unlist
+              i.fa.fa-fw.fa-eye-slash
+            else
+              i.fa.fa-fw.fa-eye
+          | &nbsp;
+          | &nbsp;
+          | &middot;
+          | &nbsp;
+        a(data-change-secured href="#" title="{{#if secured}}Allow access to uploaded files by link{{else}}Make uploaded files accessible to me only{{/if}}")
+          if secured
+            i.fa.fa-fw.fa-lock
+          else
+            i.fa.fa-fw.fa-unlock
   else
     if loggingIn
       +_loading
@@ -12,10 +30,10 @@ template(name="login")
         h1.files-note Login via:
         h1.files-note.login-options
           if serviceConfiguration.meteor
-            a#withMeteor(href="#"): img(src="https://worldvectorlogo.com/logos/meteor-icon.svg")
+            a(data-login-meteor href="#" title="Login via: Meteor"): img(src="https://worldvectorlogo.com/logos/meteor-icon.svg")
           if serviceConfiguration.github
-            a#withGitHub(href="#"): i.fa.fa-lg.fa-fw.fa-github
+            a(data-login-github href="#" title="Login via: GitHub"): i.fa.fa-lg.fa-fw.fa-github
           if serviceConfiguration.twitter
-            a#withTwitter(href="#"): i.fa.fa-lg.fa-fw.fa-twitter
+            a(data-login-twitter href="#" title="Login via: Twitter"): i.fa.fa-lg.fa-fw.fa-twitter
           if serviceConfiguration.facebook
-            a#withFacebook(href="#"): i.fa.fa-lg.fa-fw.fa-facebook-official
+            a(data-login-facebook href="#" title="Login via: Facebook"): i.fa.fa-lg.fa-fw.fa-facebook-official

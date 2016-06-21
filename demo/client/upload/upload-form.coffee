@@ -1,9 +1,8 @@
 Template.uploadForm.onCreated ->
-  self             = @
-  @error           = new ReactiveVar false
-  @uploadQTY       = 0
-  @showSettings    = new ReactiveVar false
-  @showProjectInfo = new ReactiveVar false
+  self          = @
+  @error        = new ReactiveVar false
+  @uploadQTY    = 0
+  @showSettings = new ReactiveVar false
 
   @initiateUpload = (event, files) ->
     if _app.uploads.get()
@@ -36,14 +35,30 @@ Template.uploadForm.onCreated ->
     uploads    = []
     transport  = ClientStorage.get 'uploadTransport'
     created_at = +new Date
+
+    if Meteor.userId()
+      secured  = _app.secured.get()
+      secured  = false unless _.isBoolean secured
+      if secured
+        unlisted = true
+      else
+        unlisted = _app.unlist.get()
+        unlisted = true unless _.isBoolean unlisted
+      ttl      = new Date(created_at + _app.storeTTLUser)
+    else
+      unlisted = false
+      secured  = false
+      ttl      = new Date(created_at + _app.storeTTL)
+
     _.each files, (file) ->
       Collections.files.insert(
         file: file
         meta:
-          blamed: 0
-          expireAt: new Date(created_at + (if Meteor.userId() then _app.storeTTLUser else _app.storeTTL))
-          unlisted: if Meteor.userId() then true else false
-          downloads: 0
+          blamed:     0
+          secured:    secured
+          expireAt:   ttl
+          unlisted:   unlisted
+          downloads:  0
           created_at: created_at
         streams: 'dynamic'
         chunkSize: 'dynamic'
@@ -108,21 +123,21 @@ Template.uploadForm.helpers
         return "#{hours}:#{minutes}:#{seconds}"
     return {progress, estimateBitrate, estimateDuration, onPause}
   showSettings:    -> Template.instance().showSettings.get()
-  showProjectInfo: -> Template.instance().showProjectInfo.get()
+  showProjectInfo: -> _app.showProjectInfo.get()
   uploadTransport: -> ClientStorage.get 'uploadTransport'
 
 Template.uploadForm.events
   'click input[type="radio"]': (e, template) ->
     ClientStorage.set 'uploadTransport', e.currentTarget.value
     true
-  'click #pause': (e, template) ->
+  'click [data-pause-all]': (e, template) ->
     e.preventDefault()
     uploads = _app.uploads.get()
     if uploads
       for upload in uploads
         upload.pause()
     false
-  'click #abort': (e, template) ->
+  'click [data-abort-all]': (e, template) ->
     e.preventDefault()
     uploads = _app.uploads.get()
     if uploads
@@ -130,7 +145,7 @@ Template.uploadForm.events
         upload.abort()
     template.error.set false
     false
-  'click #continue': (e, template) ->
+  'click [data-continue-all]': (e, template) ->
     e.preventDefault()
     uploads = _app.uploads.get()
     if uploads
@@ -163,13 +178,13 @@ Template.uploadForm.events
     template.error.set false
     template.initiateUpload e, e.currentTarget.userfile.files
     false
-  'click #showSettings': (e, template) ->
+  'click [data-show-settings]': (e, template) ->
     e.preventDefault()
     $('.gh-ribbon').toggle()
     template.showSettings.set !template.showSettings.get()
     false
-  'click #showProjectInfo': (e, template) ->
+  'click [data-show-project-info]': (e, template) ->
     e.preventDefault()
     $('.gh-ribbon').toggle()
-    template.showProjectInfo.set !template.showProjectInfo.get()
+    _app.showProjectInfo.set !_app.showProjectInfo.get()
     false

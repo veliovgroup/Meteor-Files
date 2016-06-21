@@ -41,6 +41,12 @@ template(name="_layout")
   .main-container.full-height
     .main-row
       .main-cell
-        .container.container-main: .row
-          +uploadForm
-          +yield
+        .container.container-main
+          .row(class="{{#if showProjectInfo}}invisible{{/if}}")
+            +uploadForm
+            +yield
+          .row(class="{{#unless showProjectInfo}}invisible{{/unless}}")
+            .col-50.bg-diagonal: .sm-row: .block-info.no-padding
+              +projectInfoFirst
+            .col-50: .sm-row: .block-info
+              +projectInfoSecond

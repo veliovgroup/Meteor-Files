@@ -1,5 +1,5 @@
 template(name="listingRow")
-  tr#showFile(data-id="#{_id}")
+  tr(data-show-file)
     td.width-1.preview
       .preview-circle
         if isPDF
@@ -19,26 +19,50 @@ template(name="listingRow")
           i.fa.fa-fw.fa-file-code-o
         else
           i.fa.fa-fw.fa-file-o
-    td
-      table.fixed-table: tbody: tr: td
-        .file-name #{name}
-        br
-        .file-info
-          if compare userId 'is' currentUser._id
-            span.file-isOwner(title="You owns this file"): i.fa.fa-fw.fa-user
-            | &nbsp;
-            | &middot;
-            | &nbsp;
-            a.file-remove#remove(href="#" title="Remove file"): i.fa.fa-fw.fa-trash-o
-            | &nbsp;
-            | &middot;
-            | &nbsp;
-          span.file-size(title="File size") {{filesize size}}
-          | &nbsp;
-          | &middot;
-          | &nbsp;
-          span.file-ttl(title="Will be removed #{removedIn}") #{removedIn}
-          | &nbsp;
-          | &middot;
-          | &nbsp;
-          span.file-downloads(title="File was downloaded for #{meta.downloads} times") #{meta.downloads}
+    td(colspan="{{#unless compare userId 'is' currentUser._id}}2{{/unless}}" class="{{#if showSettings}}no-padding{{/if}}")
+      table.fixed-table: tbody: tr
+        if showSettings
+          unless meta.secured
+            td.file-settings(data-change-access)
+              a.file-access(href="#" title="{{#if meta.unlisted}}Show file publicity{{else}}Hide file from public list{{/if}}")
+                if meta.unlisted
+                  i.fa.fa-fw.fa-eye-slash
+                else
+                  i.fa.fa-fw.fa-eye
+          td.file-settings(data-change-privacy)
+            a.file-secured(href="#" title="{{#if meta.secured}}Allow access by link{{else}}Make file accessible to me only{{/if}}")
+              if meta.secured
+                i.fa.fa-fw.fa-lock
+              else
+                i.fa.fa-fw.fa-unlock
+          td.file-settings: a.file-remove(data-remove-file href="#" title="Remove file"): i.fa.fa-fw.fa-trash-o
+        else
+          td
+            .file-name #{name}
+            br
+            .file-info
+              if compare userId 'is' currentUser._id
+                unless meta.secured
+                  span(title="{{#if meta.unlisted}}Unlisted{{else}}Visible to everyone{{/if}}")
+                    i.fa.fa-fw(class="fa-eye{{#if meta.unlisted}}-slash{{/if}}")
+                  | &nbsp;
+                  | &middot;
+                  | &nbsp;
+                span(title="{{#if meta.secured}}Only you can see this file{{else}}Publicity availble file{{/if}}")
+                  i.fa.fa-fw(class="fa-{{#unless meta.secured}}un{{/unless}}lock")
+                | &nbsp;
+                | &middot;
+                | &nbsp;
+              span.file-size(title="File size") {{filesize size}}
+              | &nbsp;
+              | &middot;
+              | &nbsp;
+              span.file-ttl(title="Will be removed #{removedIn}") #{removedIn}
+              | &nbsp;
+              | &middot;
+              | &nbsp;
+              span.file-downloads(title="File was downloaded for #{meta.downloads} times") #{meta.downloads}
+    if compare userId 'is' currentUser._id
+      td.file-settings.width-1(data-show-settings)
+        a(href="#" title="{{#if showSettings}}Close Settings{{else}}You owns this file: Edit Settings{{/if}}" class="{{#unless showSettings}}show-settings{{/unless}}")
+          i.fa(class="fa-{{#if showSettings}}times{{else}}gear{{/if}}")

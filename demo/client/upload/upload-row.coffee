@@ -16,11 +16,7 @@ Template.uploadRow.helpers
     return "#{hours}:#{minutes}:#{seconds}"
 
 Template.uploadRow.events
-  'click #pause':    (e, template) ->
+  'click [data-toggle-upload]': (e, template) ->
     e.preventDefault()
-    @pause()
-    false
-  'click #continue': (e, template) ->
-    e.preventDefault()
-    @continue()
+    @toggle()
     false

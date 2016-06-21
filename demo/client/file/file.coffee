@@ -1,3 +1,4 @@
+timer = false
 Template.file.onCreated ->
   @fetchedText = new ReactiveVar false
   @showInfo    = new ReactiveVar false
@@ -27,7 +28,7 @@ Template.file.helpers
   fetchedText: -> Template.instance().fetchedText.get()
 
 Template.file.events
-  'click #blame': (e) ->
+  'click [data-blame]': (e) ->
     e.preventDefault()
     blamed = _app.blamed.get()
     if !!~blamed.indexOf(@_id)
@@ -40,7 +41,24 @@ Template.file.events
       Meteor.call 'blame', @_id
     return false
 
-  'click #showInfo': (e, template) ->
+  'click [data-show-info]': (e, template) ->
     e.preventDefault()
     template.showInfo.set !template.showInfo.get()
     return false
+
+  'touchmove .file-overlay': (e) ->
+    e.preventDefault()
+    return false
+
+  'touchmove .file': (e, template) ->
+    if template.$(e.currentTarget).height() < template.$('.file-table').height()
+      template.$('a.show-info').hide()
+      template.$('h1.file-title').hide()
+      template.$('a.download-file').hide()
+      Meteor.clearTimeout timer if timer
+      timer = Meteor.setTimeout ->
+        template.$('a.show-info').show()
+        template.$('h1.file-title').show()
+        template.$('a.download-file').show()
+      , 768
+    return

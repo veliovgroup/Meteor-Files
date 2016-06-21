@@ -16,8 +16,9 @@
   margin-left: 2px;
   margin-top: 2px;
   text-align: center;
-  line-height: 2.8rem;
-  font-size: 0.9rem;
+  font-size: 13px;
+  line-height: 39px;
+  transition: background-color 256ms ease-in-out;
 }
 
 .progress-radial .overlay .action {
@@ -26,7 +27,12 @@
 }
 
 .progress-radial:hover .overlay {
-  background-color: #45526d
+  background-color: #45526d;
+}
+
+.progress-radial:hover .overlay a {
+  color: #8d93ad;
+  opacity: 1;
 }
 
 .progress-radial:hover .overlay .action {

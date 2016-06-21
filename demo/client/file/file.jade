@@ -71,10 +71,10 @@ template(name="file")
             td
               | #{meta.blamed}
               | &nbsp;
-              a#blame(title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}danger{{/if}}")
+              a(data-blame title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}danger{{/if}}")
                 i.fa.fa-flag
 
-      a.info-link.show-info#showInfo(href="#" class="{{#if showInfo}}active{{/if}}")
+      a.info-link.show-info(data-show-info href="#" class="{{#if showInfo}}active{{/if}}")
         if showInfo
           i.fa.fa-fw.fa-times
         else

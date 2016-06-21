@@ -22,8 +22,18 @@ Collections.files = new FilesCollection
   chunkSize:        1024*1024
   storagePath:      'assets/app/uploads/uploadedFiles'
   collectionName:   'uploadedFiles'
-  allowClientCode:  false
-  onBeforeUpload:   ->
+  allowClientCode:  true
+  protected: (fileObj) ->
+    if not fileObj.meta?.secured
+      return true
+    else if fileObj.meta?.secured and @userId is fileObj.userId
+      return true
+    return false
+  onBeforeRemove: (cursor) ->
+    file = cursor.get()?[0]
+    return true if file and file?.userId is @userId
+    return false
+  onBeforeUpload: ->
     return if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
   downloadCallback: (fileObj) ->
     if @params?.query.download is 'true'
@@ -156,13 +166,29 @@ if Meteor.isServer
   ,
     120000
 
-  Meteor.publish 'latest', (take = 50)->
+  Meteor.publish 'latest', (take = 10)->
     check take, Number
     return Collections.files.collection.find {
-      $or: [
-        {'meta.blamed': $lt: 3},
-        {'meta.blamed': $exists: false}
-      ]
+      $or: [{
+        'meta.unlisted': false
+        'meta.secured': false
+        'meta.blamed': $lt: 3
+      },{
+        'meta.blamed': $exists: false
+        'meta.unlisted': $exists: false
+        'meta.secured': $exists: false
+      },{
+        'meta.blamed': $lt: 3
+        'meta.unlisted': $exists: false
+        'meta.secured': $exists: false
+      },{
+        'meta.unlisted': true
+        'meta.secured': true
+        userId: @userId
+      },{
+        'meta.unlisted': true
+        userId: @userId
+      }]
     }, {
       limit: take
       sort: 'meta.created_at': -1
@@ -177,6 +203,7 @@ if Meteor.isServer
         isVideo: 1
         isAudio: 1
         isImage: 1
+        userId: 1
         'versions.thumbnail40.path': 1
         extension: 1
         _collectionName: 1
@@ -185,15 +212,59 @@ if Meteor.isServer
 
   Meteor.publish 'file', (_id)->
     check _id, String
-    return Collections.files.collection.find _id
+    return Collections.files.collection.find {
+        $or: [{
+          _id: _id
+          'meta.secured': false
+        },{
+          _id: _id
+          'meta.secured': $exists: false
+        },{
+          _id: _id
+          'meta.secured': true
+          userId: @userId
+        }]
+      }, {
+        fields:
+          _id: 1
+          name: 1
+          size: 1
+          type: 1
+          meta: 1
+          isPDF: 1
+          isText: 1
+          isJSON: 1
+          isVideo: 1
+          isAudio: 1
+          isImage: 1
+          extension: 1
+          _collectionName: 1
+          _downloadRoute: 1
+      }
 
   Meteor.methods
     filesLenght: ->
       return Collections.files.collection.find({
-        $or: [
-          {'meta.blamed': $lt: 3},
-          {'meta.blamed': $exists: false}
-        ]
+        $or: [{
+          'meta.unlisted': false
+          'meta.secured': false
+          'meta.blamed': $lt: 3
+        },{
+          'meta.blamed': $exists: false
+          'meta.unlisted': $exists: false
+          'meta.secured': $exists: false
+        },{
+          'meta.blamed': $lt: 3
+          'meta.unlisted': $exists: false
+          'meta.secured': $exists: false
+        },{
+          'meta.unlisted': true
+          'meta.secured': true
+          userId: @userId
+        },{
+          'meta.unlisted': true
+          userId: @userId
+        }]
       }).count()
 
     unblame: (_id) ->
@@ -205,3 +276,21 @@ if Meteor.isServer
       check _id, String
       Collections.files.collection.update {_id}, {$inc: 'meta.blamed': 1}, _app.NOOP
       return true
+
+    changeAccess: (_id) ->
+      check _id, String
+      if Meteor.userId()
+        file = Collections.files.collection.findOne {_id, userId: Meteor.userId()}
+        if file
+          Collections.files.collection.update _id, {$set: 'meta.unlisted': if file.meta.unlisted then false else true}
+          return true
+      throw new Meteor.Error 401, 'Access denied!'
+
+    changePrivacy: (_id) ->
+      check _id, String
+      if Meteor.userId()
+        file = Collections.files.collection.findOne {_id, userId: Meteor.userId()}
+        if file
+          Collections.files.collection.update _id, {$set: 'meta.unlisted': true, 'meta.secured': if file.meta.secured then false else true}
+          return true
+      throw new Meteor.Error 401, 'Access denied!'
