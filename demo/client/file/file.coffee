@@ -3,6 +3,7 @@ Template.file.onCreated ->
   @fetchedText = new ReactiveVar false
   @showInfo    = new ReactiveVar false
   @warning     = new ReactiveVar false
+  return
 
 Template.file.onRendered ->
   @warning.set false
@@ -19,6 +20,8 @@ Template.file.onRendered ->
             self.fetchedText.set resp.content
           else
             self.warning.set true
+  window.IS_RENDERED = true
+  return
 
 Template.file.helpers
   warning:     -> Template.instance().warning.get()

@@ -37,10 +37,14 @@ aldeed:collection2
 cfs:graphicsmagick
 ostrio:files
 ostrio:flow-router-extra
-ostrio:flow-router-title
 ostrio:templatehelpers
 ostrio:cstorage
 arillo:flow-router-helpers
+
+# SEO
+ostrio:flow-router-title
+ostrio:flow-router-meta
+ostrio:spiderable-middleware
 
 # Accounts Packages
 accounts-base

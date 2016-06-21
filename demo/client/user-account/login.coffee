@@ -9,6 +9,10 @@ Template.login.onCreated ->
     return
   return
 
+Template.login.onRendered ->
+  window.IS_RENDERED = true
+  return
+
 Template.login.helpers
   unlist:               -> _app.unlist.get()
   secured:              -> _app.secured.get()

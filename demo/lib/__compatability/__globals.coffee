@@ -3,6 +3,7 @@
 Package['kadira:flow-router'] = Package['ostrio:flow-router-extra'];
 
 if Meteor.isClient
+  window.IS_RENDERED = false
   ClientStorage.set('blamed', []) if not ClientStorage.has('blamed') or not _.isArray ClientStorage.get 'blamed'
   ClientStorage.set('unlist', true) if not ClientStorage.has('unlist') or not _.isBoolean ClientStorage.get 'unlist'
   ClientStorage.set('secured', false) if not ClientStorage.has('secured') or not _.isBoolean ClientStorage.get 'secured'
@@ -13,6 +14,7 @@ if Meteor.isClient
   _app.secured         = new ReactiveVar ClientStorage.get 'secured'
   _app.uploads         = new ReactiveVar false
   _app.storeTTL        = 86400000
+  _app.currentUrl      = -> Meteor.absoluteUrl((FlowRouter.current().path or document.location.pathname).replace(/^\//g, '')).split('?')[0].split('#')[0].replace '!', ''
   _app.storeTTLUser    = 432000000
   _app.showProjectInfo = new ReactiveVar false
   
@@ -55,3 +57,10 @@ if Meteor.isClient
     sanitize: true
     smartLists: true
     smartypants: false
+
+  Meteor.startup ->
+    $('html').attr 'itemscope', ''
+    $('html').attr 'itemtype', 'http://schema.org/WebPage'
+    $('html').attr 'xmlns:og', 'http://ogp.me/ns#'
+    $('html').attr 'xml:lang', 'en'
+    $('html').attr 'lang', 'en'

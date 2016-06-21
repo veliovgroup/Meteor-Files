@@ -1,11 +1,18 @@
 head
+  meta(charset="UTF-8")
   meta(name="fragment" content="!")
+  meta(name="robots" content="index, follow")
+  meta(http-equiv="X-UA-Compatible" content="IE=edge,chrome=1")
+  meta(name="format-detection" content="telephone=no, date=no, address=no, email=no")
   meta(name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
 
-  meta(charset="UTF-8")
-  meta(http-equiv="X-UA-Compatible" content="IE=edge,chrome=1")
-  meta(name="robots" content="index, follow")
-  meta(name="format-detection" content="telephone=no, date=no, address=no, email=no")
+  meta(content="website" name="og:type")
+  meta(content="summary" name="twitter:card")
+  //- meta(content="@xxx" name="twitter:site")
+  //- meta(name="fb:app_id" property="fb:app_id" content="xxx")
+  //- link(href="https://plus.google.com/+xxx" rel="publisher")
+  //- meta(name="ostrio-domain" content="xxx")
+  //- script(async defer type="text/javascript" src="https://analytics.ostr.io/xxx.js")
 
   link(rel='apple-touch-icon' sizes='57x57' href='/apple-touch-icon-57x57.png')
   link(rel='apple-touch-icon' sizes='60x60' href='/apple-touch-icon-60x60.png')
@@ -32,8 +39,9 @@ head
   meta(name='msapplication-TileImage' content='/mstile-144x144.png')
   meta(name='theme-color' content='#2b3850')
 
-  meta(name="description" content="Meteor Files: Upload, Serve and Manage files within Meteor application")
-  title Meteor Files: Upload, Stream and Manage files
+  meta(itemprop="name" content="Meteor Files: Upload and Share")
+  meta(name="og:site_name" property="og:site_name" content="Meteor Files: Upload and Share")
+  title Meteor Files: Upload and Share
 
 template(name="_layout")
   a.gh-ribbon(href='https://github.com/VeliovGroup/Meteor-Files')

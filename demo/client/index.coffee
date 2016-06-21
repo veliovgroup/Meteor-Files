@@ -25,6 +25,11 @@ Template.index.onCreated ->
   @autorun ->
     _app.subs.subscribe 'latest', self.take.get()
     return
+  return
+
+Template.index.onRendered ->
+  window.IS_RENDERED = true
+  return
 
 Template.index.helpers
   take:        -> Template.instance().take.get()
