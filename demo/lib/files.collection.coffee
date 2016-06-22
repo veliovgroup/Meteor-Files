@@ -169,7 +169,7 @@ if Meteor.isServer
   Meteor.publish 'latest', (take = 10, userOnly = false)->
     check take, Number
     check userOnly, Boolean
-    if userOnly
+    if userOnly and @userId
       selector = userId: @userId
     else
       selector = {
@@ -236,7 +236,7 @@ if Meteor.isServer
   Meteor.methods
     filesLenght: (userOnly = false) ->
       check userOnly, Boolean
-      if userOnly
+      if userOnly and @userId
         selector = userId: @userId
       else
         selector = {
