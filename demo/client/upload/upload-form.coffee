@@ -50,7 +50,7 @@ Template.uploadForm.onCreated ->
       secured  = false
       ttl      = new Date(created_at + _app.storeTTL)
 
-    _.each files, (file) ->
+    _.each files, (file, i) ->
       Collections.files.insert(
         file: file
         meta:
@@ -59,7 +59,7 @@ Template.uploadForm.onCreated ->
           expireAt:   ttl
           unlisted:   unlisted
           downloads:  0
-          created_at: created_at
+          created_at: created_at + 1 + i
         streams: 'dynamic'
         chunkSize: 'dynamic'
         transport: transport
