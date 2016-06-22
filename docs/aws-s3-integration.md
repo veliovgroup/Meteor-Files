@@ -27,6 +27,10 @@ Prepare: Get access to DropBox API:
 var knox, bound, client, Request, cfdomain, Collections = {};
 
 if (Meteor.isServer) {
+  // Fix CloudFront certificate issue
+  // Read: https://github.com/chilts/awssum/issues/164
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+
   knox    = Npm.require('knox');
   Request = Npm.require('request');
   bound = Meteor.bindEnvironment(function(callback) {
@@ -36,7 +40,8 @@ if (Meteor.isServer) {
   client = knox.createClient({
     key: 'xxx',
     secret: 'yyy',
-    bucket: 'zzz'
+    bucket: 'zzz',
+    region: 'jjj'
   });
 }
 
