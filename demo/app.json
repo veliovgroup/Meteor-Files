@@ -11,6 +11,7 @@
   "dependencies": {
     "connect": "^3.4.1",
     "dropbox": "^0.10.3",
+    "knox": "^0.9.2",
     "fibers": "^1.0.13",
     "fs-extra": "0.30.0",
     "http-proxy": "^1.13.2",
@@ -41,6 +42,10 @@
     },
     "DROPBOX": {
       "description": "[Optional] DropBox credentials object, format: {\"dropbox\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"token\": \"xxx\"}}",
+      "required": false
+    },
+    "AWS S3 Bucket": {
+      "description": "[Optional] AWS S3 Bucket credentials object, format: {\"s3\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"bucket\": \"xxx\", \"region\": \"xxx\", \"cfdomain\": \"https://xxx.cloudfront.net\"}}",
       "required": false
     },
     "ACCOUNTS_METEOR_ID": {
