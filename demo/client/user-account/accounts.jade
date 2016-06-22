@@ -1,7 +1,8 @@
 template(name="accounts")
   if currentUser
+    if compare currentRouteName 'is' 'index'
+      a.info-link.user-only(data-show-user-only href="#" class="{{#if userOnly}}active{{/if}}" title="Show my files only"): i.fa.fa-fw.fa-user-secret
     a.info-link.user-account(href="{{#if isActiveRoute 'login'}}{{pathFor 'index'}}{{else}}{{pathFor 'login'}}{{/if}}" class="{{#if isActiveRoute 'login'}}active{{/if}}"): i.fa.fa-fw.fa-user
-    a.info-link.user-only(data-show-user-only href="#" class="{{#if userOnly}}active{{/if}}" title="Show my files only"): i.fa.fa-fw.fa-user-secret
   else
     if loggingIn
       a.info-link.user-account.loggingIn(href="#"): i.fa.fa-fw.fa-spin.fa-spinner
