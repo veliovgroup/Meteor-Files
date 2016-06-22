@@ -18,7 +18,7 @@ template(name="projectInfoFirst")
 
   p.project-info
     a.info-img(href="https://www.meteor.com/" target="_blank")
-      img(src="https://worldvectorlogo.com/logos/meteor-icon.svg" alt="Meteor.com" title="Powered by Meteor")
+      img(src="/meteor-icon.svg" alt="Meteor.com" title="Powered by Meteor")
 
   a.info-link.right.active(data-show-project-info href="#"): i.fa.fa-fw.fa-times
 
@@ -55,11 +55,20 @@ template(name="projectInfoSecond")
         meta(itemprop="height" content="630")
 
     article(itemprop="articleBody")
-      p.project-info This is a demo application for <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> package. With <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> you can easily Upload, Download, Serve and Stream files within your Meteor application.
+      p.project-info This is a demo application for <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> package. <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> will help you Upload, Download, Serve and Stream files with ease.
 
-      p.project-info This package is <strong><a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank">GCAA Winner 2016</a></strong>. Big thanks to Benjamin Willems (<em>The Chef</em>) and all <a href="https://themeteorchef.com" target="_blank">The Meteor Chef</a> team!
+      p.project-info This package is the <strong><a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank">GCAA Winner 2016</a></strong>. Big thanks to Benjamin Willems and Ryan Glover (<em>The Chef</em>) and all <a href="https://themeteorchef.com" target="_blank">The Meteor Chef</a> team!
 
-      p.project-info <strong>Support this package</strong>: Star this package on <a href="https://github.com/VeliovGroup/Meteor-Files">GitHub</a> or <a href="https://atmospherejs.com/ostrio/files">Atmosphere</a>.
+      p.project-info.no-margin <strong>Support this project:</strong>
+      h4.share-options
+        a(href="https://twitter.com/share?url={{url}}&text=Easily%20Upload%20and%20Share%20files%20with%20%23MeteorFiles!" title="Tell the world on Twitter" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-twitter
+        a(href="https://www.facebook.com/sharer.php?u={{url}}" title="Tell the world on Facebook" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-facebook-official
+        a(href="https://github.com/VeliovGroup/Meteor-Files" title="Star this package on GitHub" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-github
+        a(href="https://atmospherejs.com/ostrio/files" title="Star this package on Atmosphere" target="_blank")
+          img(src="/meteor-icon.svg")
       p.project-info
         | Brought to you by <a href="https://ostr.io">ostr.io</a> and <a href="https://veliovgroup.com">Veliov Group</a>
         br
