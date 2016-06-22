@@ -59,7 +59,7 @@ Template.uploadForm.onCreated ->
           expireAt:   ttl
           unlisted:   unlisted
           downloads:  0
-          created_at: created_at + 1 + i
+          created_at: created_at - 1 - i
         streams: 'dynamic'
         chunkSize: 'dynamic'
         transport: transport
