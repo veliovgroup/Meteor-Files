@@ -100,22 +100,24 @@ class FilesCollection
       EventEmitter.call @
     {storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove} = config if config
 
-    self               = @
-    cookie             = new Cookies()
-    @debug            ?= false
-    @public           ?= false
-    @protected        ?= false
-    @chunkSize        ?= 1024*512
-    @chunkSize         = Math.floor(@chunkSize / 8) * 8
+    self        = @
+    cookie      = new Cookies()
+    @debug     ?= false
+    @public    ?= false
+    @protected ?= false
+    @chunkSize ?= 1024*512
+    @chunkSize  = Math.floor(@chunkSize / 8) * 8
+
     if @public and not @downloadRoute
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be explicitly provided on \"public\" collections! Note: \"downloadRoute\" must be equal on be inside of your web/proxy-server (relative) root."
-    @downloadRoute    ?= '/cdn/storage'
-    @downloadRoute     = @downloadRoute.replace /\/$/, ''
-    @collectionName   ?= 'MeteorUploadFiles'
-    @namingFunction   ?= false
-    @onBeforeUpload   ?= false
-    @allowClientCode  ?= true
-    @interceptDownload?= false
+
+    @downloadRoute     ?= '/cdn/storage'
+    @downloadRoute      = @downloadRoute.replace /\/$/, ''
+    @collectionName    ?= 'MeteorUploadFiles'
+    @namingFunction    ?= false
+    @onBeforeUpload    ?= false
+    @allowClientCode   ?= true
+    @interceptDownload ?= false
 
     if Meteor.isClient
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
@@ -350,7 +352,7 @@ class FilesCollection
                 version: uris[1]
                 name: uris[2]
               http = {request, response, params}
-              self.findOne(uris[0]).download.call(self, http, uris[1]) if self.checkAccess http
+              self.download http, uris[1], self.collection.findOne(uris[0]) if self.checkAccess http
             else
               next()
           else
@@ -378,7 +380,7 @@ class FilesCollection
                 version: version
                 name: _file
               http = {request, response, params}
-              self.findOne(params._id).download.call self, http, version
+              self.download http, version, self.collection.findOne params._id
             else
               next()
           else
@@ -1509,149 +1511,173 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name download
-  @param {Object|Files} self - Instance of FilesCollection
+  @param {Object} http - Server HTTP object
+  @param {String} version - Requested file version
+  @param {Object} fileRef - Requested file Object
   @summary Initiates the HTTP response
   @returns {undefined}
   ###
-  download: if Meteor.isServer then (http, version = 'original') ->
+  download: if Meteor.isServer then (http, version = 'original', fileRef) ->
     console.info "[FilesCollection] [download(#{http.request.originalUrl}, #{version})]" if @debug
-    responseType = '200'
-    if @currentFile
-      if _.has(@currentFile, 'versions') and _.has @currentFile.versions, version
-        fileRef = @currentFile.versions[version]
+    fileRef ?= _.clone @currentFile
+    if fileRef
+      if _.has(fileRef, 'versions') and _.has fileRef.versions, version
+        vRef = fileRef.versions[version]
+        vRef._id = fileRef._id
       else
-        fileRef = @currentFile
+        vRef = fileRef
     else
-      fileRef = false
+      vRef = false
 
-    if not fileRef or not _.isObject(fileRef)
+    if not vRef or not _.isObject(vRef)
       return @_404 http
-    else if @currentFile
+    else if fileRef
       self = @
 
       if @downloadCallback
-        unless @downloadCallback.call _.extend(http, @getUser(http)), @currentFile
+        unless @downloadCallback.call _.extend(http, @getUser(http)), fileRef
           return @_404 http
 
       if @interceptDownload and _.isFunction @interceptDownload
-        if @interceptDownload(http, @currentFile, version) is true
+        if @interceptDownload(http, fileRef, version) is true
           return
 
-      fs.stat fileRef.path, (statErr, stats) -> bound ->
+      fs.stat vRef.path, (statErr, stats) -> bound ->
         if statErr or not stats.isFile()
           return self._404 http
 
-        fileRef.size = stats.size if stats.size isnt fileRef.size and not self.integrityCheck
-        responseType = '400' if stats.size isnt fileRef.size and self.integrityCheck
-        partiral     = false
-        reqRange     = false
-
-        if http.params.query.download and http.params.query.download == 'true'
-          dispositionType = 'attachment; '
-        else
-          dispositionType = 'inline; '
-
-        dispositionName     = "filename=\"#{encodeURIComponent(self.currentFile.name)}\"; filename=*UTF-8\"#{encodeURIComponent(self.currentFile.name)}\"; "
-        dispositionEncoding = 'charset=utf-8'
-
-        http.response.setHeader 'Content-Type', fileRef.type
-        http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
-        http.response.setHeader 'Accept-Ranges', 'bytes'
-        http.response.setHeader 'Last-Modified', self.currentFile?.updatedAt?.toUTCString() if self.currentFile?.updatedAt?.toUTCString()
-        http.response.setHeader 'Connection', 'keep-alive'
-
-        if http.request.headers.range
-          partiral = true
-          array    = http.request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
-          start    = parseInt array[1]
-          end      = parseInt array[2]
-          if isNaN(end)
-            end    = fileRef.size - 1
-          take     = end - start
-        else
-          start    = 0
-          end      = fileRef.size - 1
-          take     = fileRef.size
-
-        if partiral or (http.params.query.play and http.params.query.play == 'true')
-          reqRange = {start, end}
-          if isNaN(start) and not isNaN end
-            reqRange.start = end - take
-            reqRange.end   = end
-          if not isNaN(start) and isNaN end
-            reqRange.start = start
-            reqRange.end   = start + take
-
-          reqRange.end = fileRef.size - 1 if ((start + take) >= fileRef.size)
-          http.response.setHeader 'Pragma', 'private'
-          http.response.setHeader 'Expires', new Date(+new Date + 1000*32400).toUTCString()
-          http.response.setHeader 'Cache-Control', 'private, maxage=10800, s-maxage=32400'
-
-          if self.strict and (reqRange.start >= (fileRef.size - 1) or reqRange.end > (fileRef.size - 1))
-            responseType = '416'
-          else
-            responseType = '206'
-        else
-          http.response.setHeader 'Cache-Control', self.cacheControl
-          responseType = '200'
-
-        streamErrorHandler = (error) ->
-          http.response.writeHead 500
-          http.response.end error.toString()
-
-        switch responseType
-          when '400'
-            console.warn "[FilesCollection] [download(#{fileRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
-            text = 'Content-Length mismatch!'
-            http.response.writeHead 400,
-              'Content-Type':   'text/plain'
-              'Cache-Control':  'no-cache'
-              'Content-Length': text.length
-            http.response.end text
-            break
-          when '404'
-            return self._404 http
-            break
-          when '416'
-            console.info "[FilesCollection] [download(#{fileRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
-            http.response.writeHead 416,
-              'Content-Range': "bytes */#{fileRef.size}"
-            http.response.end()
-            break
-          when '200'
-            console.info "[FilesCollection] [download(#{fileRef.path}, #{version})] [200]" if self.debug
-            stream = fs.createReadStream fileRef.path
-            stream.on('open', =>
-              http.response.writeHead 200
-              if self.throttle
-                stream.pipe( new Throttle {bps: self.throttle, chunksize: self.chunkSize}
-                ).pipe http.response
-              else
-                stream.pipe http.response
-            ).on 'error', streamErrorHandler
-            break
-          when '206'
-            console.info "[FilesCollection] [download(#{fileRef.path}, #{version})] [206]" if self.debug
-            http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{fileRef.size}"
-            http.response.setHeader 'Trailer', 'expires'
-            http.response.setHeader 'Transfer-Encoding', 'chunked'
-            if self.throttle
-              stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-              stream.on('open', -> http.response.writeHead 206
-              ).on('error', streamErrorHandler
-              ).on('end', -> http.response.end()
-              ).pipe( new Throttle {bps: self.throttle, chunksize: self.chunkSize}
-              ).pipe http.response
-            else
-              stream = fs.createReadStream fileRef.path, {start: reqRange.start, end: reqRange.end}
-              stream.on('open', -> http.response.writeHead 206
-              ).on('error', streamErrorHandler
-              ).on('end', -> http.response.end()
-              ).pipe http.response
-            break
+        vRef.size    = stats.size if stats.size isnt vRef.size and not self.integrityCheck
+        responseType = '400' if stats.size isnt vRef.size and self.integrityCheck
+        self.serve http, fileRef, vRef, version, null, (responseType or '200')
       return
     else
       return @_404 http
+  else undefined
+
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name serve
+  @param {Object} http - Server HTTP object
+  @param {Object} fileRef - Requested file Object
+  @param {Object} vRef - Requested file version Object
+  @param {String} version - Requested file version
+  @param {stream.Readable|null} readableStream - Readable stream, which serves binary file data
+  @param {String} responseType - Response code
+  @param {Boolean} force200 - Force 200 response code over 206
+  @summary Handle and reply to incoming request
+  @returns {undefined}
+  ###
+  serve: if Meteor.isServer then (http, fileRef, vRef, version = 'original', readableStream = null, responseType = '200', force200 = false) ->
+    self     = @
+    partiral = false
+    reqRange = false
+
+    if http.params.query.download and http.params.query.download == 'true'
+      dispositionType = 'attachment; '
+    else
+      dispositionType = 'inline; '
+
+    dispositionName     = "filename=\"#{encodeURIComponent(fileRef.name)}\"; filename=*UTF-8\"#{encodeURIComponent(fileRef.name)}\"; "
+    dispositionEncoding = 'charset=utf-8'
+
+    http.response.setHeader 'Content-Type', vRef.type
+    http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
+    http.response.setHeader 'Accept-Ranges', 'bytes'
+    http.response.setHeader 'Last-Modified', fileRef?.updatedAt?.toUTCString() if fileRef?.updatedAt?.toUTCString()
+    http.response.setHeader 'Connection', 'keep-alive'
+
+    if http.request.headers.range and not force200
+      partiral = true
+      array    = http.request.headers.range.split /bytes=([0-9]*)-([0-9]*)/
+      start    = parseInt array[1]
+      end      = parseInt array[2]
+      end      = vRef.size - 1 if isNaN(end)
+      take     = end - start
+    else
+      start    = 0
+      end      = vRef.size - 1
+      take     = vRef.size
+
+    if partiral or (http.params.query.play and http.params.query.play == 'true')
+      reqRange = {start, end}
+      if isNaN(start) and not isNaN end
+        reqRange.start = end - take
+        reqRange.end   = end
+      if not isNaN(start) and isNaN end
+        reqRange.start = start
+        reqRange.end   = start + take
+
+      reqRange.end = vRef.size - 1 if ((start + take) >= vRef.size)
+      http.response.setHeader 'Pragma', 'private'
+      http.response.setHeader 'Expires', new Date(+new Date + 1000*32400).toUTCString()
+      http.response.setHeader 'Cache-Control', 'private, maxage=10800, s-maxage=32400'
+
+      if self.strict and (reqRange.start >= (vRef.size - 1) or reqRange.end > (vRef.size - 1))
+        responseType = '416'
+      else
+        responseType = '206'
+    else
+      http.response.setHeader 'Cache-Control', self.cacheControl
+      responseType = '200'
+
+    streamErrorHandler = (error) ->
+      http.response.writeHead 500
+      http.response.end error.toString()
+      console.error "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error if self.debug
+      return
+
+    switch responseType
+      when '400'
+        console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
+        text = 'Content-Length mismatch!'
+        http.response.writeHead 400,
+          'Content-Type':   'text/plain'
+          'Cache-Control':  'no-cache'
+          'Content-Length': text.length
+        http.response.end text
+        break
+      when '404'
+        return self._404 http
+        break
+      when '416'
+        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
+        http.response.writeHead 416,
+          'Content-Range': "bytes */#{vRef.size}"
+        http.response.end()
+        break
+      when '200'
+        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [200]" if self.debug
+        stream = readableStream or fs.createReadStream vRef.path
+        http.response.writeHead 200 if readableStream
+        stream.on('open', ->
+          http.response.writeHead 200
+          return
+        ).on('error', streamErrorHandler
+        ).on 'end', ->
+          http.response.end()
+          return
+        stream.pipe new Throttle {bps: self.throttle, chunksize: self.chunkSize} if self.throttle
+        stream.pipe http.response
+        break
+      when '206'
+        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [206]" if self.debug
+        http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
+        http.response.setHeader 'Trailer', 'expires'
+        http.response.setHeader 'Transfer-Encoding', 'chunked'
+        stream = readableStream or fs.createReadStream vRef.path, {start: reqRange.start, end: reqRange.end}
+        http.response.writeHead 206 if readableStream
+        stream.on('open', -> 
+          http.response.writeHead 206
+          return
+        ).on('error', streamErrorHandler
+        ).on 'end', ->
+          http.response.end()
+          return
+        stream.pipe new Throttle {bps: self.throttle, chunksize: self.chunkSize} if self.throttle
+        stream.pipe http.response
+        break
+    return
   else undefined
 
   ###
