@@ -39,6 +39,12 @@ html, body
   -webkit-font-smooth: always !important
   text-rendering: optimizeLegibility !important
 
+body
+  background-size: 50px 50px
+  background-image: url('/logo-bg.png')
+  background-repeat: no-repeat
+  background-position: 50% 96%
+
 &::selection
   background-color: rgba(37,50,107,0.333)
   color: #FAFAFA
@@ -365,6 +371,7 @@ h1, h2, h3, h4, h5, h6, div, form, table, p
 
 .login-options
   line-height: 3rem
+.login-options, .share-options
   a
     margin: 0px 7px
     transition: none
@@ -698,6 +705,8 @@ pre, code, kbd, samp
   box-sizing: border-box
 
 @media(max-height: 455px)
+  p.project-info
+    margin: 0.9rem 0rem
   .gh-ribbon
     left: 0px
     right: initial
@@ -730,6 +739,8 @@ pre, code, kbd, samp
     max-width: 50vw
 
 @media(max-width: 480px)
+  p.project-info
+    margin: 0.9rem 0rem
   .info-link
     font-size: 2rem
   .col-50
