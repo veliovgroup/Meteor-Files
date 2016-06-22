@@ -1,6 +1,20 @@
 Meteor-Files
 ========
 
+<table>
+  <tbody>
+    <tr>
+      <td>
+        <a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
+      </td>
+      <td>
+        This package is the <strong><a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank">GCAA Winner 2016</a></strong>. Big thanks to Benjamin Willems and Ryan Glover (<em>The Chef</em>) and all <a href="https://themeteorchef.com" target="_blank">The Meteor Chef</a> team!
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
 ### About:
  - Event-driven API
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
@@ -9,9 +23,9 @@ Meteor-Files
     * Ready for small and large files (RAM used only for chunk reading - [read about `chunkSize`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)))
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted
-    * Multi-stream async upload (faster than ever)
+    * Multi-stream async upload (*faster than ever*)
  - Use third-party storage:
-    * AWS
+    * [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
     * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
     * Google Drive
     * Google Storage
@@ -35,19 +49,29 @@ Meteor-Files
     * Download is ready for small and large files, with support of progressive (`chunked`) download
  - Store wherever you like
     * You may use `Meteor-Files` as temporary storage
-    * After file is uploaded and stored on FS you able to `mv` or `cp` its content
+    * After file is uploaded and stored on FS you able to `mv` or `cp` its content, see [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration) and [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) integration
  - Support of non-latin (non-Roman) file names
  - Subscribe on files (*collections*) you need
 
 ### ToC:
 ##### API:
  - [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) [*Isomorphic*] - Initialize FilesCollection
+   * [SimpleSchema Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#attach-schema-isomorphic)
+   * [Collection `deny` rules](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#deny-collection-interaction-on-client-server)
+   * [Collection `allow` rules](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#allow-collection-interaction-on-client-server)
+   * [Control upload access](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeupload-to-avoid-unauthorized-upload)
+   * [Control remove access](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeremove-to-avoid-unauthorized-remove)
+ - [Default Collection Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
+   * [Attach SimpleSchema and Collection2](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema#attach-schema-recommended)
+   * [Extend Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema#extend-default-schema)
+   * [Override Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema#pass-your-own-schema-not-recommended)
  - [`write()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Write) [*Server*] - Write `Buffer` to FS and FilesCollection
  - [`load()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Load) [*Server*] - Write file to FS and FilesCollection from remote URL
  - [`addFile()`](https://github.com/VeliovGroup/Meteor-Files/wiki/addFile) [*Server*] - Add local file to FilesCollection from FS
  - [`findOne()`](https://github.com/VeliovGroup/Meteor-Files/wiki/findOne) [*Isomorphic*] - Find one file in FilesCollection
  - [`find()`](https://github.com/VeliovGroup/Meteor-Files/wiki/find) [*Isomorphic*] - Create cursor for FilesCollection
  - [`insert()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)) [*Client*] - Upload file to server
+   * [`FileUpload.pipe()`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)#piping)
  - [`remove()`](https://github.com/VeliovGroup/Meteor-Files/wiki/remove) [*Isomorphic*] - Remove files from FilesCollection and unlink from FS
  - [`unlink()`](https://github.com/VeliovGroup/Meteor-Files/wiki/unlink) [*Server*] - Unlink file from FS
  - [`link()`](https://github.com/VeliovGroup/Meteor-Files/wiki/link) [*Isomorphic*] - Generate downloadable link
@@ -55,6 +79,6 @@ Meteor-Files
  - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
- - [Third-party storage (DropBox example)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ - [Third-party storage (AWS S3 & DropBox)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
