@@ -13,7 +13,7 @@ Or:
 meteor npm install knox
 ```
 
-Prepare: Get access to DropBox API:
+Prepare: Get access to AWS S3:
  - Go to http://aws.amazon.com/s3/ (*Sign(in|up) if required*)
  - Click on [Create Bucket](https://console.aws.amazon.com/s3/home)
  - Follow steps __1-3__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
