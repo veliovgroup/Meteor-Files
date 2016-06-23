@@ -76,6 +76,7 @@ Template.uploadForm.onCreated ->
         cleanUploaded @
         return
       ).on('error', (error) ->
+        console.error error
         self.error.set (if self.error.get() then self.error.get() + '<br />' else '') + @file.name + ': ' + (error?.reason or error)
         Meteor.setTimeout ->
           self.error.set false

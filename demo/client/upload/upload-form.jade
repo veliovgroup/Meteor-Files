@@ -1,7 +1,7 @@
 template(name="uploadForm")
   form.col-50.upload-form#uploadFile: .sm-row
     unless uploads
-      input.invisible#userfile(type="file" name="userfile" required multiple)
+      input.invisible#userfile(class="{{#if showSettings}}settings-open{{/if}}" type="file" name="userfile" required multiple)
       a.info-link.show-settings(data-show-settings href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
 
       if showSettings
