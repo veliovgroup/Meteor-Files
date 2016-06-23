@@ -22,6 +22,7 @@ Template.index.onCreated ->
       self.getFilesLenght()
       return
     removed: ->
+      self.filesLength.set self.filesLength.get() - 1
       self.getFilesLenght()
       return
 
