@@ -269,9 +269,9 @@ class FilesCollection
 
         if _.isFunction self.protected
           if http?.params?._id
-            self.findOne http.params._id
+            _currentFile = self.collection.findOne http.params._id
 
-          result = if http then self.protected.call(_.extend(http, userFuncs), (self.currentFile or null)) else self.protected.call userFuncs, (self.currentFile or null)
+          result = if http then self.protected.call(_.extend(http, userFuncs), (_currentFile or self.currentFile or null)) else self.protected.call userFuncs, (_currentFile or self.currentFile or null)
         else
           result = !!user
 
@@ -539,7 +539,7 @@ class FilesCollection
       binary = new Buffer opts.binData, 'base64'
 
     try
-      writeDelayed = ->
+      writeDelayed = (callback) ->
         chunks = Object.keys self._writableStreams[result._id].delayed
         if chunks.length
           chunks.sort sortNumber
@@ -547,23 +547,25 @@ class FilesCollection
             if self._writableStreams[result._id].stream.bytesWritten is opts.chunkSize * (chunk - 1)
               self._writableStreams[result._id].stream.write self._writableStreams[result._id].delayed?[chunk]
               delete self._writableStreams[result._id].delayed[chunk]
+        callback and callback()
         return true
 
       @_writableStreams[result._id] ?=
-        stream: fs.createWriteStream result.path, {flags: 'a', mode: @permissions}
+        stream: fs.createWriteStream(result.path, {flags: 'a', mode: @permissions}).on 'drain', () -> bound ->
+          writeDelayed()
+          return
         delayed: {}
 
       if opts.eof
-        writeDelayed()
-        @_writableStreams[result._id].stream.end()
-        delete @_writableStreams[result._id]
-        @emit 'finishUpload', result, opts, cb
+        writeDelayed ->
+          self._writableStreams[result._id].stream.end -> bound ->
+            delete self._writableStreams[result._id]
+            self.emit 'finishUpload', result, opts, cb
+            return
+          return
 
       else if opts.chunkId is 1
         @_writableStreams[result._id].stream.write binary
-        @_writableStreams[result._id].stream.on 'drain', () ->
-          writeDelayed()
-          return
 
       else if opts.chunkId > 0
         start = opts.chunkSize * (opts.chunkId - 1)
