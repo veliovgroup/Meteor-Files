@@ -1,5 +1,5 @@
 template(name="index")
-  .col-50.sm-row
+  .col-50.sm-row(class="{{#unless compare latest.count 'or' uploads}}no-file{{/unless}}")
     if compare latest.count 'or' uploads
       .listing: table.table: tbody
         each uploads
