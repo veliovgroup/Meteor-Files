@@ -30,7 +30,7 @@ template(name="uploadForm")
     else
       if error
         h4.danger {{{error}}}
-      h2 #{status.progress}%
+      h1.percentage #{status.progress}%
       progress(max="100" value="#{status.progress}")
       p
         | #{status.estimateDuration}
