@@ -166,9 +166,13 @@
         Function which returns <code>String</code>
       </td>
       <td>
-        <code>Random.id()</code>
+        <code>false</code>
       </td>
-      <td></td>
+      <td>
+        Primary sets file name on `FS`<br />
+        if <code>namingFunction</code> is not set<br />
+        `FS`-name is equal to file's record `_id`
+      </td>
     </tr>
     <tr>
       <td align="right">
@@ -403,7 +407,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
-        <p><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1) and on eof (eof=true)</i></p>
+        <p><del><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1 or chunkId=-1) and on eof (eof=true or chunkId=-1)</i></del> (<i>Fixed</i>. Since <code>v1.6.0</code> full file object is available in <code>onBeforeUpload</code> callback)</p>
       </td>
     </tr>
     <tr>
