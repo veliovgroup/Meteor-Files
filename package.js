@@ -8,7 +8,7 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.1');
-  api.use('ostrio:cookies@2.0.3', ['server', 'client']);
+  api.use('ostrio:cookies@2.0.4', ['server', 'client']);
   api.addFiles('event-emitter.js', 'client');
   api.addAssets('worker.js', 'client');
   api.addFiles('files.coffee', ['server', 'client']);
