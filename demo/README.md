@@ -11,20 +11,19 @@ __Functionality:__
  - Images, PDFs, Texts preview
  - Drag'n'drop support (*files only, folders is not supported yet*)
  - Image processing (*thumbnails, preview*)
- - DropBox as storage
- - AWS:S3 as storage
+ - DropBox as storage (__note:__ *you can use only one of DropBox or S3 at the same app*)
+ - AWS:S3 as storage (__note:__ *you can use only one of DropBox or S3 at the same app*)
  - Login via social networks (*allows to make uploaded files unlisted and/or private*)
  - Heroku support (*including one-click-deploy*)
 
 Activate AWS:S3
 ======
- 1. Read [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
- 2. Read docs of [lepozepo:s3](https://github.com/Lepozepo/S3) package
- 3. After creating S3 bucket, create CloudFront Distribution and attach it to S3 bucket
- 4. Set S3 credentials into `METEOR_SETTINGS` env.var or pass as file, read [here for more info](http://docs.meteor.com/#/full/meteor_settings), alternatively (*if something not working*) set `S3` env.var
- 5. You can pass S3 credentials as JSON-string when using "*Heroku's one click install-button*"
+ 1. Read [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
+ 2. After creating S3 bucket, create CloudFront Distribution and attach it to S3 bucket
+ 3. Set S3 credentials into `METEOR_SETTINGS` env.var or pass as file, read [here for more info](http://docs.meteor.com/#/full/meteor_settings), alternatively (*if something not working*) set `S3` env.var
+ 4. You can pass S3 credentials as JSON-string when using "*Heroku's one click install-button*"
 
-S3 credentials format (*region is required*):
+S3 credentials format (*region and cfdomain is required*):
 ```json
 {
   "s3": {
@@ -39,7 +38,7 @@ S3 credentials format (*region is required*):
 
 Activate DropBox
 ======
- 1. Read [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ 1. Read [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
  2. Set DropBox credentials into `METEOR_SETTINGS` env.var or pass as file, read [here for more info](http://docs.meteor.com/#/full/meteor_settings), alternatively (*if something not working*) set `DROPBOX` env.var
  3. You can pass DropBox credentials as JSON-string when using "*Heroku's one click install-button*"
 
