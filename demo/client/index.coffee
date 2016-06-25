@@ -2,7 +2,7 @@ Template.index.onCreated ->
   timer           = false
   self            = @
   @take           = new ReactiveVar 10
-  @latest         = new ReactiveVar Collections.files.collection.find {}, sort: 'meta.created_at': -1
+  @latest         = new ReactiveVar new Mongo.Cursor
   @filesLength    = new ReactiveVar 0
   @getFilesLenght = ->
     Meteor.clearTimeout timer if timer
@@ -28,9 +28,9 @@ Template.index.onCreated ->
 
   @autorun ->
     if _app.userOnly.get() and Meteor.userId()
-      cursor = Collections.files.collection.find {userId: Meteor.userId()}, sort: 'meta.created_at': -1
+      cursor = Collections.files.find {userId: Meteor.userId()}, sort: 'meta.created_at': -1
     else
-      cursor = Collections.files.collection.find {}, sort: 'meta.created_at': -1
+      cursor = Collections.files.find {}, sort: 'meta.created_at': -1
 
     cursor.observeChanges observers
     self.latest.set cursor

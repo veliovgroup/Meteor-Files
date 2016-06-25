@@ -29,32 +29,27 @@ FlowRouter.route '/login',
 FlowRouter.route '/:_id',
   name: 'file'
   title: (params, queryParams, file) ->
-    if file 
-      file = file.fetch()?[0]
-      return if file.name then "View File: #{file.name}" else '404: Page not found'
+    if file
+      return "View File: #{file.get('name')}"
     else
       return '404: Page not found'
   meta: (params, queryParams, file) ->
-    if file 
-      file = file.fetch()?[0]
-      keywords: 
-        name: 'keywords'
-        itemprop: 'keywords'
-        content: if file.name then "file, view, preview, uploaded, shared, #{file.name}, #{file.extension}, #{file.type}, meteor, open source, javascript" else '404, page, not found'
-      description:
-        name: 'description'
-        itemprop: 'description'
-        property: 'og:description'
-        content: "View uploaded and shared file: #{file.name}"
-      'twitter:description': "View uploaded and shared file: #{file.name}"
-      'og:image':
-        property: 'og:image'
-        content: if file.isImage then Collections.files.link(file) else Meteor.absoluteUrl 'icon_1200x630.png'
-      'twitter:image':
-        name: 'twitter:image'
-        content: if file.isImage then Collections.files.link(file) else Meteor.absoluteUrl 'icon_750x560.png'
-    else
-      return
+    keywords: 
+      name: 'keywords'
+      itemprop: 'keywords'
+      content: if file then "file, view, preview, uploaded, shared, #{file.get('name')}, #{file.get('extension')}, #{file.get('type')}, meteor, open source, javascript" else '404, page, not found'
+    description:
+      name: 'description'
+      itemprop: 'description'
+      property: 'og:description'
+      content: if file then "View uploaded and shared file: #{file.get('name')}" else '404: No such page'
+    'twitter:description': if file then "View uploaded and shared file: #{file.get('name')}" else '404: No such page'
+    'og:image':
+      property: 'og:image'
+      content: if file and file.get('isImage') then file.link()[0] else Meteor.absoluteUrl 'icon_1200x630.png'
+    'twitter:image':
+      name: 'twitter:image'
+      content: if file and file.get('isImage') then file.link()[0] else Meteor.absoluteUrl 'icon_750x560.png'
   action: (params, queryParams, file) ->
     @render '_layout', 'file', {file}
     return
@@ -66,7 +61,8 @@ FlowRouter.route '/:_id',
     @render '_layout', '_404'
     return
   data: (params) -> 
-    if Collections.files.collection.findOne params._id
-      return Collections.files.collection.find params._id
+    file = Collections.files.find params._id
+    if file.count()
+      return file
     else
       return false

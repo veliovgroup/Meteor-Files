@@ -8,10 +8,9 @@ Template.file.onCreated ->
 Template.file.onRendered ->
   @warning.set false
   @fetchedText.set false
-  @data.file = @data.file.fetch()?[0]
-  if @data.file and (@data.file.isText or @data.file.isJSON)
+  if (@data.file.get('isText') or @data.file.get('isJSON'))
     self = @
-    HTTP.call 'GET', Collections.files.link(@data.file), (error, resp) ->
+    HTTP.call 'GET', @data.file.link()[0], (error, resp) ->
       if error
         console.error error
       else
