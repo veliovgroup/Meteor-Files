@@ -36,9 +36,6 @@ var defaultSchema = {
   isPDF: {
     type: Boolean
   },
-  _prefix: {
-    type: String
-  },
   extension: {
     type: String,
     optional: true
