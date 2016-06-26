@@ -10,9 +10,9 @@
 </body>
 
 <template name='file'>
-  {{#if fileRef}}
-    <a href="{{fileURL fileRef}}?download=true" target="_parent" download="{{fileRef.name}}">
-      {{fileRef.name}}
+  {{#if file.count}}
+    <a href="{{file.link}}?download=true" target="_parent" download="{{file.name}}">
+      {{file.name}}
     </a>
   {{else}}
     loading...
