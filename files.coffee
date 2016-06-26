@@ -95,7 +95,7 @@ class FileCursor
   constructor: (@_selector = {}, options, @_collection, @_findOne = false) ->
     console.info '[FilesCollection] [FileCursor] [Constructor]', @_selector if @_collection.debug
     self      = @
-    @_current = 0
+    @_current = -1
     if @_findOne
       @_cursor = @_collection.collection.findOne @_selector, options
       self     = _.extend self, @_cursor if @_cursor
@@ -106,6 +106,10 @@ class FileCursor
       get: -> self._cursor
     Object.defineProperty self, 'data',
       get: -> self.current()
+    Object.defineProperty self, '_next',
+      get: -> self.next()
+    Object.defineProperty self, '_previous',
+      get: -> self._previous()
 
   ###
   @locus Anywhere
@@ -141,11 +145,7 @@ class FileCursor
     if @_findOne
       return if @_cursor then @_collection.link(@_cursor, version) else ''
     else
-      res  = []
-      self = @
-      @forEach (file) ->
-        res.push self._collection.link file, version
-      return res
+      return @_collection.link @current(), version
 
   ###
   @locus Anywhere
@@ -159,7 +159,7 @@ class FileCursor
     if @_findOne
       return false
     else
-      return @_current < (@_cursor.count() - 1)
+      return @_current < @_cursor.count() - 1
 
   ###
   @locus Anywhere
@@ -171,9 +171,7 @@ class FileCursor
   next: ->
     console.info '[FilesCollection] [FileCursor] [next()]' if @_collection.debug
     if @hasNext()
-      _current = _.clone @_current
-      @_current++
-      return @_cursor.fetch()[_current]
+      return @_cursor.fetch()[++@_current]
 
   ###
   @locus Anywhere
@@ -187,7 +185,7 @@ class FileCursor
     if @_findOne
       return false
     else
-      return @_current isnt (@_cursor.count() - 1)
+      return @_current isnt -1
 
   ###
   @locus Anywhere
@@ -199,9 +197,7 @@ class FileCursor
   previous: ->
     console.info '[FilesCollection] [FileCursor] [previous()]' if @_collection.debug
     if @hasPrevious()
-      _current = _.clone @_current
-      @_current--
-      return @_cursor.fetch()[_current]
+      return @_cursor.fetch()[--@_current]
 
   ###
   @locus Anywhere
@@ -226,7 +222,8 @@ class FileCursor
   ###
   first: ->
     console.info '[FilesCollection] [FileCursor] [first()]' if @_collection.debug
-    return @fetch()?[0]
+    @_current = 0
+    return @fetch()?[@_current]
 
   ###
   @locus Anywhere
@@ -237,8 +234,8 @@ class FileCursor
   ###
   last: ->
     console.info '[FilesCollection] [FileCursor] [last()]' if @_collection.debug
-    _fetched = @fetch()
-    return _fetched?[_fetched.length - 1]
+    @_current = @count() - 1
+    return @fetch()?[@_current]
 
   ###
   @locus Anywhere
@@ -312,6 +309,7 @@ class FileCursor
   ###
   current: ->
     console.info '[FilesCollection] [FileCursor] [current()]' if @_collection.debug
+    @_current = 0 if @_current < 0
     return @fetch()[@_current]
 
   ###
