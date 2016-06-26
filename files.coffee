@@ -287,6 +287,19 @@ class FileCursor
   ###
   @locus Anywhere
   @memberOf FileCursor
+  @name each
+  @summary Returns an Array of FileCursor made for each document on current cursor
+           Useful for using in {{#each FileCursor.each}}...{{/each}} template-tag
+  @returns {[FileCursor]}
+  ###
+  each: ->
+    self = @
+    return @map (file) ->
+      return self._collection.findOne file._id
+
+  ###
+  @locus Anywhere
+  @memberOf FileCursor
   @name map
   @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
   @param context {Object} - An object which will be the value of `this` inside `callback`
