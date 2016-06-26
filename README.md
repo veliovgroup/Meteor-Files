@@ -250,8 +250,8 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 Supporters:
 ========
 Big thanks to all supporters. *Only because of this guys this project can have 100% of our attention*.
-[@themeteorchef](https://github.com/themeteorchef)
-[@MeDBejoHok](https://github.com/medbejohok)
+ - [@themeteorchef](https://github.com/themeteorchef)
+ - [@MeDBejoHok](https://github.com/medbejohok)
 
 ----
 
