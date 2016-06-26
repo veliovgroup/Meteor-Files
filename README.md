@@ -246,6 +246,13 @@ Template.file.helpers({
 ```
 For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
 
+
+Supporters:
+========
+Big thanks to all supporters. *Only because of this guys this project can have 100% of our attention*.
+[@themeteorchef](https://github.com/themeteorchef)
+[@MeDBejoHok](https://github.com/medbejohok)
+
 ----
 
 | Meteor-Files | Expressive package to manage files within Meteor |
