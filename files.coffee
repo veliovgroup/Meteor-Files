@@ -92,11 +92,11 @@ if Meteor.isServer
 @summary Implementation of Cursor for FilesCollection
 ###
 class FileCursor
-  constructor: (@_selector = {}, options, @_collection, @findOne = false) ->
-    console.info '[FilesCollection] [FileCursor] [Constructor]', {@_selector, options, @findOne} if @_collection.debug
+  constructor: (@_selector = {}, options, @_collection, @_findOne = false) ->
+    console.info '[FilesCollection] [FileCursor] [Constructor]', @_selector if @_collection.debug
     self      = @
     @_current = 0
-    if @findOne
+    if @_findOne
       @_cursor = @_collection.collection.findOne @_selector, options
       self     = _.extend self, @_cursor if @_cursor
     else
@@ -117,7 +117,7 @@ class FileCursor
   ###
   get: (property = null) ->
     console.info "[FilesCollection] [FileCursor] [get(#{property})]" if @_collection.debug
-    if @findOne
+    if @_findOne
       if property
         return @_cursor?[property]
       else
@@ -138,8 +138,8 @@ class FileCursor
   ###
   link: (version) ->
     console.info "[FilesCollection] [FileCursor] [link(#{version})]" if @_collection.debug
-    if @findOne
-      return @_collection.link @_cursor, version
+    if @_findOne
+      return if @_cursor then @_collection.link(@_cursor, version) else ''
     else
       res  = []
       self = @
@@ -156,7 +156,7 @@ class FileCursor
   ###
   hasNext: ->
     console.info '[FilesCollection] [FileCursor] [hasNext()]' if @_collection.debug
-    if @findOne
+    if @_findOne
       return false
     else
       return @_current < (@_cursor.count() - 1)
@@ -184,7 +184,7 @@ class FileCursor
   ###
   hasPrevious: ->
     console.info '[FilesCollection] [FileCursor] [hasPrevious()]' if @_collection.debug
-    if @findOne
+    if @_findOne
       return false
     else
       return @_current isnt (@_cursor.count() - 1)
@@ -212,7 +212,7 @@ class FileCursor
   ###
   fetch: ->
     console.info '[FilesCollection] [FileCursor] [fetch()]' if @_collection.debug
-    if @findOne
+    if @_findOne
       return [@_cursor]
     else
       return @_cursor.fetch()
@@ -249,7 +249,7 @@ class FileCursor
   ###
   count: ->
     console.info '[FilesCollection] [FileCursor] [count()]' if @_collection.debug
-    if @findOne
+    if @_findOne
       return if @_cursor then 1 else 0
     else
       return @_cursor.count()
@@ -264,7 +264,7 @@ class FileCursor
   ###
   remove: (callback) ->
     console.info '[FilesCollection] [FileCursor] [remove()]' if @_collection.debug
-    if @findOne
+    if @_findOne
       @_collection.remove @_cursor._id, callback, @
     else
       @_collection.remove @_selector, callback, @
@@ -281,7 +281,7 @@ class FileCursor
   ###
   forEach: (callback, context = {}) ->
     console.info '[FilesCollection] [FileCursor] [forEach()]' if @_collection.debug
-    if @findOne and @_cursor
+    if @_findOne and @_cursor
       callback.call context, @_cursor, 0, [@_cursor]
     else
       @_cursor.forEach callback, context
@@ -298,7 +298,7 @@ class FileCursor
   ###
   map: (callback, context = {}) ->
     console.info '[FilesCollection] [FileCursor] [map()]' if @_collection.debug
-    if @findOne and @_cursor
+    if @_findOne and @_cursor
       [callback.call(context, @_cursor, 0, [@_cursor])]
     else
       return @_cursor.map callback, context
@@ -325,7 +325,7 @@ class FileCursor
   ###
   observe: (callbacks) ->
     console.info '[FilesCollection] [FileCursor] [observe()]' if @_collection.debug
-    unless @findOne
+    unless @_findOne
       return @_cursor.observe callbacks
     return
 
@@ -340,7 +340,7 @@ class FileCursor
   ###
   observeChanges: (callbacks) ->
     console.info '[FilesCollection] [FileCursor] [observeChanges()]' if @_collection.debug
-    unless @findOne
+    unless @_findOne
       return @_cursor.observeChanges callbacks
     return
 
@@ -400,6 +400,7 @@ fixJSONStringify = (obj) ->
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
 @param config.throttle       {Number}  - [Server] bps throttle threshold
 @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
+@param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
 @param config.collectionName {String}  - [Both]   Collection name
 @param config.namingFunction {Function}- [Both]   Function which returns `String`
 @param config.integrityCheck {Boolean} - [Server] Check file's integrity before serving to users
@@ -422,7 +423,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -435,6 +436,9 @@ class FilesCollection
     if @public and not @downloadRoute
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal on be inside of your web/proxy-server (relative) root."
 
+    @collection        ?= new Mongo.Collection @collectionName
+    @collectionName    ?= @collection._name
+    check @collectionName, String
     @downloadRoute     ?= '/cdn/storage'
     @downloadRoute      = @downloadRoute.replace /\/$/, ''
     @collectionName    ?= 'MeteorUploadFiles'
@@ -575,7 +579,6 @@ class FilesCollection
         isText: type: Boolean
         isJSON: type: Boolean
         isPDF: type: Boolean
-        _prefix: type: String
         extension:
           type: String
           optional: true
@@ -605,16 +608,12 @@ class FilesCollection
     check @protected, Match.OneOf Boolean, Function
     check @chunkSize, Number
     check @downloadRoute, String
-    check @collectionName, String
     check @namingFunction, Match.OneOf false, Function
     check @onBeforeUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
 
     if @public and @protected
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: Files can not be public and protected at the same time!"
-    
-    @_prefix    = SHA256 @collectionName + @downloadRoute
-    @collection = new Mongo.Collection @collectionName
 
     @_checkAccess = (http) ->
       if self.protected
@@ -647,10 +646,10 @@ class FilesCollection
         return true
 
     @_methodNames =
-      MeteorFileAbort:  "MeteorFileAbort#{@_prefix}"
-      MeteorFileWrite:  "MeteorFileWrite#{@_prefix}"
-      MeteorFileStart:  "MeteorFileStart#{@_prefix}"
-      MeteorFileRemove: "MeteorFileRemove#{@_prefix}"
+      _Abort:  "_FilesCollectionAbort_#{@collectionName}"
+      _Write:  "_FilesCollectionWrite_#{@collectionName}"
+      _Start:  "_FilesCollectionStart_#{@collectionName}"
+      _Remove: "_FilesCollectionRemove_#{@collectionName}"
 
     if Meteor.isServer
       @on '_handleUpload', @_handleUpload
@@ -752,7 +751,7 @@ class FilesCollection
 
       # Method used to remove file
       # from Client side
-      _methods[self._methodNames.MeteorFileRemove] = (selector) ->
+      _methods[self._methodNames._Remove] = (selector) ->
         check selector, Match.OneOf String, Object
         console.info "[FilesCollection] [Unlink Method] [.remove(#{selector})]" if self.debug
         
@@ -780,7 +779,7 @@ class FilesCollection
       # Basically it prepares everything
       # So user can pause/disconnect and
       # continue upload later, during `continueUploadTTL`
-      _methods[self._methodNames.MeteorFileStart] = (opts) ->
+      _methods[self._methodNames._Start] = (opts) ->
         check opts, {
           file:       Object
           fileId:     String
@@ -801,7 +800,7 @@ class FilesCollection
       # Method used to write file chunks
       # it receives very limited amount of meta-data
       # This method also responsible for EOF
-      _methods[self._methodNames.MeteorFileWrite] = (opts) ->
+      _methods[self._methodNames._Write] = (opts) ->
         check opts, {
           eof:     Match.Optional Boolean
           fileId:  String
@@ -831,7 +830,7 @@ class FilesCollection
       # - Removing temporary record from @_preCollection
       # - Removing record from @collection
       # - .unlink()ing chunks from FS
-      _methods[self._methodNames.MeteorFileAbort] = (_id) ->
+      _methods[self._methodNames._Abort] = (_id) ->
         check _id, String
 
         _continueUpload = self._continueUpload _id
@@ -1055,7 +1054,6 @@ class FilesCollection
       isText:  !!~data.type.toLowerCase().indexOf('text')
       isJSON:  !!~data.type.toLowerCase().indexOf('json')
       isPDF:   !!~data.type.toLowerCase().indexOf('pdf')
-      _prefix: data._prefix or @_prefix
       _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
@@ -1383,7 +1381,7 @@ class FilesCollection
         @fileData = _.extend @fileData, @collection._getExt(self.config.file.name), {mime: @collection._getMimeType(@fileData)}
         @fileData['mime-type'] = @fileData.mime
 
-        @result = new @collection._FileUpload _.extend self.config, {@fileData, @fileId, MeteorFileAbort: @collection._methodNames.MeteorFileAbort}
+        @result = new @collection._FileUpload _.extend self.config, {@fileData, @fileId, _Abort: @collection._methodNames._Abort}
 
         @beforeunload = (e) ->
           message = if _.isFunction(self.collection.onbeforeunloadMessage) then self.collection.onbeforeunloadMessage.call(self.result, self.fileData) else self.collection.onbeforeunloadMessage
@@ -1458,7 +1456,7 @@ class FilesCollection
 
       if opts.binData and opts.binData.length
         if @config.transport is 'ddp'
-          Meteor.call @collection._methodNames.MeteorFileWrite, opts, (error) ->
+          Meteor.call @collection._methodNames._Write, opts, (error) ->
             self.transferTime += (+new Date) - evt.data.start
             if error
               if self.result.state.get() isnt 'aborted'
@@ -1500,7 +1498,7 @@ class FilesCollection
           fileId: @fileId
 
         if @config.transport is 'ddp'
-          Meteor.call @collection._methodNames.MeteorFileWrite, opts, ->
+          Meteor.call @collection._methodNames._Write, opts, ->
             self.emitEvent 'end', arguments
             return
         else
@@ -1593,9 +1591,9 @@ class FilesCollection
         fileLength: @fileLength
       opts.FSName = @FSName if @FSName isnt @fileId
 
-      Meteor.call @collection._methodNames.MeteorFileStart, opts, (error) ->
+      Meteor.call @collection._methodNames._Start, opts, (error) ->
         if error
-          console.error '[FilesCollection] [.call(MeteorFileStart)] Error:', error if self.collection.debug
+          console.error '[FilesCollection] [.call(_Start)] Error:', error if self.collection.debug
           self.emitEvent 'end', [error]
         else
           self.result.continueFunc = ->
@@ -1723,7 +1721,7 @@ class FilesCollection
       @config._onEnd()
       @state.set 'aborted'
       console.timeEnd('insert ' + @config.file.name) if @config.debug
-      Meteor.call @config.MeteorFileAbort, @config.fileId
+      Meteor.call @config._Abort, @config.fileId
       return
   else undefined
 
@@ -1743,7 +1741,7 @@ class FilesCollection
 
     if Meteor.isClient
       if @allowClientCode
-        Meteor.call @_methodNames.MeteorFileRemove, search, (callback or NOOP)
+        Meteor.call @_methodNames._Remove, search, (callback or NOOP)
       else
         callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug

@@ -14,7 +14,7 @@ Package.onUse(function(api) {
   api.addFiles('files.coffee', ['server', 'client']);
   api.use('webapp', 'server');
   api.use(['templating', 'reactive-var', 'tracker', 'http'], 'client');
-  api.use(['underscore', 'check', 'sha', 'random', 'coffeescript'], ['client', 'server']);
+  api.use(['underscore', 'check', 'random', 'coffeescript'], ['client', 'server']);
   api.export('FilesCollection');
 });
 
