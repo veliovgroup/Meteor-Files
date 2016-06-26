@@ -1156,30 +1156,46 @@ class FilesCollection
     opts.meta ?= {}
     opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
 
-    request.get(url).on('error', (error)-> bound ->
-      callback and callback error
-      console.error "[FilesCollection] [load] [request.get(#{url})] Error:", error if self.debug
-    ).on('response', (response) -> bound ->
-
-      console.info "[FilesCollection] [load] Received: #{url}" if self.debug
-
-      result = self._dataToSchema
-        name:      fileName
-        path:      opts.path
-        meta:      opts.meta
-        type:      opts.type or response.headers['content-type']
-        size:      opts.size or parseInt(response.headers['content-length'] or 0)
-        extension: extension
-
+    storeResult = (result, callback) ->
       result._id = fileId
 
-      self.collection.insert _.clone(result), (error) ->
+      self.collection.insert result, (error) ->
         if error
           callback and callback error
           console.error "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
         else
           callback and callback null, result
           console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
+        return
+      return
+
+    request.get(url).on('error', (error)-> bound ->
+      callback and callback error
+      console.error "[FilesCollection] [load] [request.get(#{url})] Error:", error if self.debug
+    ).on('response', (response) -> bound ->
+      response.on 'end', -> bound ->
+        console.info "[FilesCollection] [load] Received: #{url}" if self.debug
+        result = self._dataToSchema
+          name:      fileName
+          path:      opts.path
+          meta:      opts.meta
+          type:      opts.type or response.headers['content-type'] or self._getMimeType {path: opts.path}
+          size:      opts.size or parseInt(response.headers['content-length'] or 0)
+          extension: extension
+
+        unless result.size
+          fs.stat opts.path, (error, stats) -> bound ->
+            if error
+              callback and callback error
+            else
+              result.versions.original.size = result.size = stats.size
+              storeResult result, callback
+            return
+        else
+          storeResult result, callback
+        return
+      return
+
     ).pipe fs.createWriteStream(opts.path, {flags: 'w', mode: @permissions})
 
     return @
@@ -1981,7 +1997,7 @@ class FilesCollection
         return self._404 http
         break
       when '416'
-        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
+        console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
         http.response.writeHead 416,
           'Content-Range': "bytes */#{vRef.size}"
         http.response.end()
