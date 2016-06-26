@@ -63,7 +63,7 @@ var Images = new FilesCollection({
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload: function (file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
-    if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.ext)) {
+    if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.extension)) {
       return true;
     } else {
       return 'Please upload image, with size equal or less than 10MB';
@@ -77,7 +77,7 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 }
 ```
@@ -89,14 +89,12 @@ Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Fil
 Upload form (template):
 ```html
 <template name="uploadForm">
-  {{#if currentUpload}}
-    {{#with currentUpload}}
-      Uploading <b>{{file.name}}</b>: 
-      <span id="progress">{{progress.get}}%</span>
-    {{/with}}
+  {{#with currentUpload}}
+    Uploading <b>{{file.name}}</b>: 
+    <span id="progress">{{progress.get}}%</span>
   {{else}}
     <input id="fileInput" type="file" />
-  {{/if}}
+  {{/with}}
 </template>
 ```
 
@@ -155,10 +153,10 @@ To display files you will use `fileURL` template helper.
 Template:
 ```html
 <template name='file'>
-  <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" />
+  <img src="{{imageFile.link}}" alt="{{imageFile.name}}" />
   <hr>
   <video height="auto" controls="controls">
-    <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" />
+    <source src="{{videoFile.link}}?play=true" type="{{videoFile.type}}" />
   </video>
 </template>
 ```
@@ -180,10 +178,10 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
   Meteor.publish('files.videos.all', function () {
-    return Videos.collection.find({});
+    return Videos.find().cursor;
   });
 
 } else {
@@ -196,10 +194,10 @@ Client's code:
 ```javascript
 Template.file.helpers({
   imageFile: function () {
-    return Images.collection.findOne({});
+    return Images.findOne();
   },
   videoFile: function () {
-    return Videos.collection.findOne({});
+    return Videos.findOne();
   }
 });
 ```
@@ -211,8 +209,8 @@ For more expressive example see [Streaming demo app](https://github.com/VeliovGr
 Template:
 ```html
 <template name='file'>
-  <a href="{{fileURL fileRef}}?download=true" download="{{fileRef.name}}" target="_parent">
-    {{fileRef.name}}
+  <a href="{{file.link}}?download=true" download="{{file.name}}" target="_parent">
+    {{file.name}}
   </a>
 </template>
 ```
@@ -231,7 +229,7 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 } else {
   Meteor.subscribe('files.images.all');
@@ -242,7 +240,7 @@ Client's code:
 ```javascript
 Template.file.helpers({
   fileRef: function () {
-    return Images.collection.findOne({});
+    return Images.findOne();
   }
 });
 ```

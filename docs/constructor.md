@@ -65,6 +65,22 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.collection</code> {<em>Mongo.Collection</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Mongo.Collection Instance
+      </td>
+      <td>
+      </td>
+      <td>
+        You can pass your own Mongo Collection instance <code>{collection: new Mongo.Collection('myFiles')}</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.collectionName</code> {<em>String</em>}
       </td>
       <td>
@@ -77,6 +93,23 @@
         <code>MeteorUploadFiles</code>
       </td>
       <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.continueUploadTTL</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+      </td>
+      <td>
+        <code>10800</code> (3 hours)
+      </td>
+      <td>
+        If upload is not continued during this time, memory used for this upload will be freed. And uploaded chunks is removed. Server will no longer wait for upload, and if upload will be tied to be continued - Server will return <code>408</code> Error (<code>Can't continue upload, session expired. Start upload again.</code>)
+      </td>
     </tr>
     <tr>
       <td align="right">
