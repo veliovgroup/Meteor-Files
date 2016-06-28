@@ -17,7 +17,7 @@ template(name="file")
     div.invisible(itemprop="author" itemscope itemtype="https://schema.org/Person")
       meta(itemprop="name" content="User of Meteor Files")
 
-    each file
+    +with file.with
       time.invisible(itemprop="datePublished" datetime="{{DateToISO meta.created_at}}")
       time.invisible(itemprop="dateModified" datetime="{{DateToISO meta.created_at}}")
       h4.invisible(itemprop="headline") Uploaded file: {{name}}
@@ -30,28 +30,28 @@ template(name="file")
           span(itemprop="name") {{extless name}}
 
         if isPDF
-          .file-cell: iframe.file-preview(src="{{fileURL this}}" frameborder="0")
+          .file-cell: iframe.file-preview(src="{{link}}" frameborder="0")
         else if isImage
           picture.file-preview(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
             meta(itemprop="caption" content="Meteor Files: Uploaded file: {{name}}")
             meta(itemprop="exifData" content="{{type}}")
-            link(itemprop="contentUrl" href="{{fileURL this}}" content="{{fileURL this}}")
+            link(itemprop="contentUrl" href="{{link}}" content="{{link}}")
             link(itemprop="url" href="{{urlCurrent}}" content="{{urlCurrent}}")
             meta(itemprop="width" content="{{meta.width}}")
             meta(itemprop="height" content="{{meta.height}}")
-            source(type="#{type}" srcset="{{fileURL this 'preview'}}")
-            img.file-preview(src="{{fileURL this 'preview'}}" alt="#{name}")
+            source(type="#{type}" srcset="{{link 'preview'}}")
+            img.file-preview(src="{{link 'preview'}}" alt="#{name}")
         else if isAudio
           .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
-            source(src="{{fileURL this}}?play=true" type="#{type}")
+            source(src="{{link}}?play=true" type="#{type}")
         else if isVideo
           .file-cell: video.file-preview(controls autoplay preload="auto" loop)
-            source(src="{{fileURL this}}?play=true" type="#{type}")
+            source(src="{{link}}?play=true" type="#{type}")
         else if compare isText 'or' isJSON
           if warning
             .file-cell: h3.files-note
               | File too big to show preview, please 
-              a(title="Download \"#{name}\"" href="{{fileURL this}}?download=true" download="#{name}") download it
+              a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download it
           else if fetchedText
             .markdown-body
               if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
@@ -65,11 +65,11 @@ template(name="file")
           else
             .file-cell: h3.files-note
               | Preview is not available, please 
-              a(title="Download \"#{name}\"" href="{{fileURL this}}?download=true" download="#{name}") download file
+              a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
         else
           .file-cell: h3.files-note
             | Preview is not available, please 
-            a(title="Download \"#{name}\"" href="{{fileURL this}}?download=true" download="#{name}") download file
+            a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
 
         unless isImage
           picture.invisible(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
@@ -103,7 +103,7 @@ template(name="file")
               td
                 | #{meta.downloads}
                 | &nbsp;
-                a(title="Download \"#{name}\"" href="{{fileURL this}}?download=true" target="_parent" download="#{name}")
+                a(title="Download \"#{name}\"" href="{{link}}?download=true" target="_parent" download="#{name}")
                   i.fa.fa-fw.fa-download
             tr
               th Abuse:
@@ -120,5 +120,5 @@ template(name="file")
             i.fa.fa-fw.fa-info-circle
 
         unless showInfo
-          a.info-link.right.download-file(title="Download \"#{name}\"" href="{{fileURL this}}?download=true" target="_parent" download="#{name}")
+          a.info-link.right.download-file(title="Download \"#{name}\"" href="{{link}}?download=true" target="_parent" download="#{name}")
             i.fa.fa-fw.fa-download

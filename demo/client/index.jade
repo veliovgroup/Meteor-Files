@@ -4,7 +4,7 @@ template(name="index")
       .listing: table.table: tbody
         each uploads
           +uploadRow
-        each latest
+        each latest.each
           +listingRow
         if compare filesLength '>' latest.count
           tr: td(data-load-more colspan="3"): h3.no-margin.center Load More

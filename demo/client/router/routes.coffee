@@ -46,10 +46,10 @@ FlowRouter.route '/:_id',
     'twitter:description': if file then "View uploaded and shared file: #{file.get('name')}" else '404: No such page'
     'og:image':
       property: 'og:image'
-      content: if file and file.get('isImage') then file.link()[0] else Meteor.absoluteUrl 'icon_1200x630.png'
+      content: if file and file.get('isImage') then file.link('preview') else Meteor.absoluteUrl 'icon_1200x630.png'
     'twitter:image':
       name: 'twitter:image'
-      content: if file and file.get('isImage') then file.link()[0] else Meteor.absoluteUrl 'icon_750x560.png'
+      content: if file and file.get('isImage') then file.link('preview') else Meteor.absoluteUrl 'icon_750x560.png'
   action: (params, queryParams, file) ->
     @render '_layout', 'file', {file}
     return
@@ -61,8 +61,8 @@ FlowRouter.route '/:_id',
     @render '_layout', '_404'
     return
   data: (params) -> 
-    file = Collections.files.find params._id
-    if file.count()
+    file = Collections.files.findOne params._id
+    if file
       return file
     else
       return false

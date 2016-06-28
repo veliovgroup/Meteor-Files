@@ -9,7 +9,7 @@ Template.listingRow.events
   'click [data-remove-file]': (e) ->
     e.stopPropagation()
     e.preventDefault()
-    Collections.files.remove @_id, (error) ->
+    @remove (error) ->
       if error
         console.log error
       return
