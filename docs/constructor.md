@@ -511,6 +511,27 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.onAfterRemove</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Callback, triggered after file(s) is removed from Collection<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>files</code> {<em>[Object]</em>} - Array of removed documents
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.onbeforeunloadMessage</code> {<em>String</em>|<em>Function</em>}
       </td>
       <td>

@@ -426,6 +426,7 @@ fixJSONStringify = (obj) ->
 @param config.namingFunction {Function}- [Both]   Function which returns `String`
 @param config.integrityCheck {Boolean} - [Server] Check file's integrity before serving to users
 @param config.onAfterUpload  {Function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
+@param config.onAfterRemove  {Function} - [Server] Called right after file is removed. Removed objects is passed to callback
 @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
 @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
 return `true` to continue
@@ -444,7 +445,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -476,10 +477,11 @@ class FilesCollection
       delete @parentDirPermissions
       delete @cacheControl
       delete @onAfterUpload
+      delete @onAfterRemove
+      delete @onBeforeRemove
       delete @integrityCheck
       delete @downloadCallback
       delete @interceptDownload
-      delete @onBeforeRemove
       delete @continueUploadTTL
 
       if _.has(Package, 'accounts-base')
@@ -512,8 +514,9 @@ class FilesCollection
       @permissions       ?= parseInt('644', 8)
       @parentDirPermissions ?= parseInt('755', 8)
       @cacheControl      ?= 'public, max-age=31536000, s-maxage=31536000'
-      @onBeforeRemove    ?= false
       @onAfterUpload     ?= false
+      @onAfterRemove     ?= false
+      @onBeforeRemove    ?= false
       @integrityCheck    ?= true
       @_currentUploads   ?= {}
       @downloadCallback  ?= false
@@ -550,6 +553,7 @@ class FilesCollection
       check @permissions, Number
       check @storagePath, String
       check @cacheControl, String
+      check @onAfterRemove, Match.OneOf false, Function
       check @onAfterUpload, Match.OneOf false, Function
       check @integrityCheck, Boolean
       check @onBeforeRemove, Match.OneOf false, Function
@@ -1790,7 +1794,17 @@ class FilesCollection
       if files.count() > 0
         self = @
         files.forEach (file) -> self.unlink file
-      @collection.remove selector, (callback or NOOP)
+      
+      if @onAfterRemove
+        self = @
+        docs = files.fetch()
+
+        @collection.remove selector, ->
+          callback and callback.apply @, arguments
+          self.onAfterRemove docs
+          return
+      else
+        @collection.remove selector, (callback or NOOP)
     return @
 
   ###
