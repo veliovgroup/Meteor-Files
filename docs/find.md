@@ -1,29 +1,42 @@
-##### `find(selector)` [*Isomorphic*]
+##### `find(selector, options)` [*Isomorphic*]
 
-Set cursor in FilesCollection. *This method doesn't returns file, it only sets cursor to files (if files exists)*. To get records from collection use `files.collection.find({}).fetch()`. To get cursor use `files.find({}).cursor`
+Find and return Cursor for matching documents.
 
- - `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
- - Returns {*FilesCollection*} - Current FilesCollection instance
+ - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
+ - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
+ - Returns {*[FilesCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor)*}
 
 ```javascript
 var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Set cursor
-Images.find({});
-// Get cursor
-Images.find({}).cursor
-// Get cursor's data
-Images.find({}).fetch();
-// Get cursor's data (alternative)
-Images.find({}).get();
-// Remove all cursor's records and associated files
-Images.find({}).remove();
-// Remove all files and records
-Images.remove();
+var filesCursor = Images.find();
 
-// Direct Collection usage
-Images.collection.find({})
+// Get Mongo cursor
+Meteor.publish('images', function() {
+  Images.find().cursor;
+});
+
+// Get cursor's data
+filesCursor.fetch();
+// Get cursor's data (alternative)
+filesCursor.get();
+
+// Remove all cursor's records and associated files
+filesCursor.remove(function (error) {
+  if (error) {
+    console.error('File(s) is not removed!', error);
+  }
+});
 // Remove only Collection records from DB
-Images.collection.remove({})
+Images.collection.remove();
+
+// Each
+filesCursor.each(function (file) {
+  // Only available in .each()
+  file.link();
+  file.remove();
+  file.with(); // <-- Reactive object
+});
 ```

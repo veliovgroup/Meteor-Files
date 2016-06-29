@@ -6,11 +6,11 @@ See [real, production code](https://github.com/VeliovGroup/Meteor-Files/blob/mas
 
 Prepare: install [dropbox-js](https://github.com/dropbox/dropbox-js):
 ```shell
-npm install --save dropbox
+npm install --save dropbox@=0.10.3
 ```
 Or:
 ```shell
-meteor npm install dropbox
+meteor npm install dropbox@=0.10.3
 ```
 
 Prepare: Get access to DropBox API:
