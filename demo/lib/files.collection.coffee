@@ -1,16 +1,15 @@
 # DropBox usage:
-# Read: https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage
+# Read: https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration
 # env.var example: DROPBOX='{"dropbox":{"key": "xxx", "secret": "xxx", "token": "xxx"}}'
 useDropBox = false
 
 # AWS:S3 usage:
 # Read: https://github.com/Lepozepo/S3#create-your-amazon-s3
-# Read: https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage
+# Read: https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration
 # Create and attach CloudFront to S3 bucket: https://console.aws.amazon.com/cloudfront/
 
 # env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx", "cfdomain": "https://xxx.cloudfront.net"}}'
 useS3 = false
-
 
 if Meteor.isServer
   if process.env?.DROPBOX
@@ -31,7 +30,8 @@ if Meteor.isServer
     })
   else if Meteor.settings.s3 and Meteor.settings.s3.key and Meteor.settings.s3.secret and Meteor.settings.s3.bucket and Meteor.settings.s3.region and Meteor.settings.s3.cfdomain
     
-
+    # Fix CloudFront certificate issue
+    # Read: https://github.com/chilts/awssum/issues/164
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
 
     useS3   = true
@@ -46,7 +46,6 @@ if Meteor.isServer
 
     # Normalize cfdomain
     Meteor.settings.s3.cfdomain = Meteor.settings.s3.cfdomain.replace /\/+$/, ''
-  console.log Meteor.settings
 
 Collections.files = new FilesCollection
   debug:            false
@@ -62,9 +61,10 @@ Collections.files = new FilesCollection
       return true
     return false
   onBeforeRemove: (cursor) ->
-    file = cursor.get()?[0]
-    return true if file and file?.userId is @userId
-    return false
+    self = @
+    res  = cursor.map (file) ->
+      return file?.userId is self.userId
+    return !~res.indexOf false
   onBeforeUpload: ->
     return if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
   downloadCallback: (fileObj) ->
@@ -75,13 +75,21 @@ Collections.files = new FilesCollection
     if useDropBox or useS3
       path = fileRef?.versions?[version]?.meta?.pipeFrom
       if path
-        # If file is moved to Storage
+        # If file is successfully moved to Storage
         # We will pipe request to Storage
         # So, original link will stay always secure
-        Request(
-          url: path
-          headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'accept-encoding', 'cache-control', 'pragma', 'connection')
-        ).pipe http.response
+
+        # To force ?play and ?download parameters
+        # and to keep original file name, content-type,
+        # content-disposition and cache-control
+        # we're' using low-level .serve() method
+        @serve http,
+          fileRef,
+          fileRef.versions[version],
+          version,
+          Request
+            url: path
+            headers: _.pick http.request.headers, 'range', 'accept-language', 'accept', 'accept-encoding', 'cache-control', 'pragma', 'connection'
         return true
       else
         # While file is not yet uploaded to Storage
@@ -99,11 +107,12 @@ if Meteor.isServer
     if useDropBox
       makeUrl = (stat, fileRef, version, triesUrl = 0) ->
         client.makeUrl stat.path, {long: true, downloadHack: true}, (error, xml) -> bound ->
-          # Store downloadable in file's meta object
+          # Store downloadable link in file's meta object
           if error
             if triesUrl < 10
               Meteor.setTimeout ->
                 makeUrl stat, fileRef, version, ++triesUrl
+                return
               , 2048
             else
               console.error error, {triesUrl}
@@ -123,6 +132,7 @@ if Meteor.isServer
             if triesUrl < 10
               Meteor.setTimeout ->
                 makeUrl stat, fileRef, version, ++triesUrl
+                return
               , 2048
             else
               console.error "client.makeUrl doesn't returns xml", {triesUrl}
@@ -137,6 +147,7 @@ if Meteor.isServer
             if triesSend < 10
               Meteor.setTimeout ->
                 writeToDB fileRef, version, data, ++triesSend
+                return
               , 2048
             else
               console.error error, {triesSend}
@@ -188,6 +199,7 @@ if Meteor.isServer
                   # after successful upload to AWS:S3
                   self.unlink self.collection.findOne(fileRef._id), version
                 return
+            return
           return
         return
 
@@ -204,39 +216,32 @@ if Meteor.isServer
   # This line now commented due to Heroku usage
   # Collections.files.collection._ensureIndex {'meta.expireAt': 1}, {expireAfterSeconds: 0, background: true}
 
-  # DropBox usage:
-  if useDropBox
-    # Intercept File's collection remove method
-    # to remove file from DropBox
+  # Intercept FileCollection's remove method
+  # to remove file from DropBox or AWS S3
+  if useDropBox or useS3
     _origRemove = Collections.files.remove
     Collections.files.remove = (search) ->
       cursor = @collection.find search
       cursor.forEach (fileRef) ->
         _.each fileRef.versions, (vRef, version) ->
           if vRef?.meta?.pipePath
-            client.remove vRef.meta.pipePath, (error) -> bound ->
-              if error
-                console.error error
-              return
+            if useDropBox
+              # DropBox usage:
+              client.remove vRef.meta.pipePath, (error) -> bound ->
+                if error
+                  console.error error
+                return
+            else
+              # AWS:S3 usage:
+              client.deleteFile vRef.meta.pipePath, (error) -> bound ->
+                if error
+                  console.error error
+                return
+          return
+        return
       # Call original method
       _origRemove.call @, search
-
-  # AWS:S3 usage:
-  else if useS3
-    # Intercept File's collection remove method
-    # to remove file from S3 Bucket
-    _origRemove = Collections.files.remove
-    Collections.files.remove = (search) ->
-      cursor = @collection.find search
-      cursor.forEach (fileRef) ->
-        _.each fileRef.versions, (vRef, version) ->
-          if vRef?.meta?.pipePath
-            client.deleteFile vRef.meta.pipePath, (error) -> bound ->
-              if error
-                console.error error
-              return
-      # Call original method
-      _origRemove.call @, search
+      return
 
   # Remove all files on server load/reload, useful while testing/development
   # Meteor.startup -> Collections.files.remove {}
@@ -265,7 +270,7 @@ if Meteor.isServer
           userId: @userId
         }]
       }
-    return Collections.files.collection.find selector, {
+    return Collections.files.find(selector, {
       limit: take
       sort: 'meta.created_at': -1
       fields:
@@ -284,11 +289,11 @@ if Meteor.isServer
         extension: 1
         _collectionName: 1
         _downloadRoute: 1
-    }
+    }).cursor
 
   Meteor.publish 'file', (_id)->
     check _id, String
-    return Collections.files.collection.find {
+    return Collections.files.find({
         $or: [{
           _id: _id
           'meta.secured': false
@@ -313,7 +318,7 @@ if Meteor.isServer
           extension: 1
           _collectionName: 1
           _downloadRoute: 1
-      }
+      }).cursor
 
   Meteor.methods
     filesLenght: (userOnly = false) ->
@@ -330,32 +335,32 @@ if Meteor.isServer
             userId: @userId
           }]
         }
-      return Collections.files.collection.find(selector).count()
+      return Collections.files.find(selector).count()
 
     unblame: (_id) ->
       check _id, String
-      Collections.files.collection.update {_id}, {$inc: 'meta.blamed': -1}, _app.NOOP
+      Collections.files.update {_id}, {$inc: 'meta.blamed': -1}, _app.NOOP
       return true
 
     blame: (_id) ->
       check _id, String
-      Collections.files.collection.update {_id}, {$inc: 'meta.blamed': 1}, _app.NOOP
+      Collections.files.update {_id}, {$inc: 'meta.blamed': 1}, _app.NOOP
       return true
 
     changeAccess: (_id) ->
       check _id, String
       if Meteor.userId()
-        file = Collections.files.collection.findOne {_id, userId: Meteor.userId()}
+        file = Collections.files.findOne {_id, userId: Meteor.userId()}
         if file
-          Collections.files.collection.update _id, {$set: 'meta.unlisted': if file.meta.unlisted then false else true}
+          Collections.files.update _id, {$set: 'meta.unlisted': if file.meta.unlisted then false else true}, _app.NOOP
           return true
       throw new Meteor.Error 401, 'Access denied!'
 
     changePrivacy: (_id) ->
       check _id, String
       if Meteor.userId()
-        file = Collections.files.collection.findOne {_id, userId: Meteor.userId()}
+        file = Collections.files.findOne {_id, userId: Meteor.userId()}
         if file
-          Collections.files.collection.update _id, {$set: 'meta.unlisted': true, 'meta.secured': if file.meta.secured then false else true}
+          Collections.files.update _id, {$set: 'meta.unlisted': true, 'meta.secured': if file.meta.secured then false else true}, _app.NOOP
           return true
       throw new Meteor.Error 401, 'Access denied!'
