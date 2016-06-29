@@ -85,191 +85,211 @@ if Meteor.isServer
 @private
 @locus Anywhere
 @class FileCursor
-@param _selector   {String|Object}   - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-@param options     {Object}          - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#selectors)
+@param _fileRef    {Object} - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
 @param _collection {FilesCollection} - FilesCollection Instance
-@param findOne     {Boolean}         - FindOne
-@summary Implementation of Cursor for FilesCollection
+@summary Internal class, represents each record in `FilesCursor.each()` or document returned from `.findOne()` method
 ###
 class FileCursor
-  constructor: (@_selector = {}, options, @_collection, @_findOne = false) ->
-    console.info '[FilesCollection] [FileCursor] [Constructor]', @_selector if @_collection.debug
-    self      = @
-    @_current = -1
-    if @_findOne
-      @_cursor = @_collection.collection.findOne @_selector, options
-      self     = _.extend self, @_cursor if @_cursor
-    else
-      @_cursor = @_collection.collection.find @_selector, options
-
-    Object.defineProperty self, 'cursor',
-      get: -> self._cursor
-    Object.defineProperty self, 'data',
-      get: -> self.current()
-    Object.defineProperty self, '_next',
-      get: -> self.next()
-    Object.defineProperty self, '_previous',
-      get: -> self._previous()
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name get
-  @param property {String} - Name of sub-object property
-  @summary Get current record(s) on cursor, if `property` is set - returns value of sub-object property
-  @returns {[Object]|Object|mix}
-  ###
-  get: (property = null) ->
-    console.info "[FilesCollection] [FileCursor] [get(#{property})]" if @_collection.debug
-    if @_findOne
-      if property
-        return @_cursor?[property]
-      else
-        return @_cursor
-    else
-      if property
-        return @first()?[property]
-      else
-        return @_cursor.fetch()
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name link
-  @param version {String} - Name of file's subversion
-  @summary Returns downloadable URL
-  @returns {String}
-  ###
-  link: (version) ->
-    console.info "[FilesCollection] [FileCursor] [link(#{version})]" if @_collection.debug
-    if @_findOne
-      return if @_cursor then @_collection.link(@_cursor, version) else ''
-    else
-      return @_collection.link @current(), version
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name hasNext
-  @summary Returns `true` if there is next item available on Cursor
-  @returns {Boolean}
-  ###
-  hasNext: ->
-    console.info '[FilesCollection] [FileCursor] [hasNext()]' if @_collection.debug
-    if @_findOne
-      return false
-    else
-      return @_current < @_cursor.count() - 1
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name next
-  @summary Returns next item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  next: ->
-    console.info '[FilesCollection] [FileCursor] [next()]' if @_collection.debug
-    if @hasNext()
-      return @_cursor.fetch()[++@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name hasPrevious
-  @summary Returns `true` if there is previous item available on Cursor
-  @returns {Boolean}
-  ###
-  hasPrevious: ->
-    console.info '[FilesCollection] [FileCursor] [hasPrevious()]' if @_collection.debug
-    if @_findOne
-      return false
-    else
-      return @_current isnt -1
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name previous
-  @summary Returns previous item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  previous: ->
-    console.info '[FilesCollection] [FileCursor] [previous()]' if @_collection.debug
-    if @hasPrevious()
-      return @_cursor.fetch()[--@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name fetch
-  @summary Return all matching documents as an Array.
-  @returns {[Object]}
-  ###
-  fetch: ->
-    console.info '[FilesCollection] [FileCursor] [fetch()]' if @_collection.debug
-    if @_findOne
-      return [@_cursor]
-    else
-      return @_cursor.fetch()
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name first
-  @summary Returns first item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  first: ->
-    console.info '[FilesCollection] [FileCursor] [first()]' if @_collection.debug
-    @_current = 0
-    return @fetch()?[@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name last
-  @summary Returns last item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  last: ->
-    console.info '[FilesCollection] [FileCursor] [last()]' if @_collection.debug
-    @_current = @count() - 1
-    return @fetch()?[@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name count
-  @summary Returns the number of documents that match a query
-  @returns {Number}
-  ###
-  count: ->
-    console.info '[FilesCollection] [FileCursor] [count()]' if @_collection.debug
-    if @_findOne
-      return if @_cursor then 1 else 0
-    else
-      return @_cursor.count()
+  constructor: (@_fileRef, @_collection) ->
+    self = @
+    self = _.extend self, @_fileRef
 
   ###
   @locus Anywhere
   @memberOf FileCursor
   @name remove
   @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
-  @summary Removes all records in Cursor
+  @summary Remove document
   @returns {FileCursor}
   ###
   remove: (callback) ->
     console.info '[FilesCollection] [FileCursor] [remove()]' if @_collection.debug
-    if @_findOne
-      @_collection.remove @_cursor._id, callback, @
-    else
-      @_collection.remove @_selector, callback, @
+    if @_fileRef then @_collection.remove(@_fileRef._id, callback) else callback new Meteor.Error 404, 'No such file'
     return @
 
   ###
   @locus Anywhere
   @memberOf FileCursor
+  @name link
+  @param version {String} - Name of file's subversion
+  @summary Returns downloadable URL to File
+  @returns {String}
+  ###
+  link: (version) ->
+    console.info "[FilesCollection] [FileCursor] [link(#{version})]" if @_collection.debug
+    return if @_fileRef then @_collection.link(@_fileRef, version) else ''
+
+  ###
+  @locus Anywhere
+  @memberOf FileCursor
+  @name get
+  @param property {String} - Name of sub-object property
+  @summary Returns current document as a plain Object, if `property` is specified - returns value of sub-object property
+  @returns {Object|mix}
+  ###
+  get: (property) ->
+    console.info "[FilesCollection] [FileCursor] [get(#{property})]" if @_collection.debug
+    if property
+      return @_fileRef[property]
+    else
+      return @_fileRef
+
+  ###
+  @locus Anywhere
+  @memberOf FileCursor
+  @name fetch
+  @summary Returns document as plain Object in Array
+  @returns {[Object]}
+  ###
+  fetch: ->
+    console.info '[FilesCollection] [FileCursor] [fetch()]' if @_collection.debug
+    return [@_fileRef]
+
+  ###
+  @locus Anywhere
+  @memberOf FileCursor
+  @name with
+  @summary Returns reactive version of current FileCursor, useful to use with `{{#with}}...{{/with}}` block template helper
+  @returns {[Object]}
+  ###
+  with: ->
+    console.info '[FilesCollection] [FileCursor] [with()]' if @_collection.debug
+    self = @
+    return _.extend self, @_collection.collection.findOne @_fileRef._id
+
+###
+@private
+@locus Anywhere
+@class FilesCursor
+@param _selector   {String|Object}   - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+@param options     {Object}          - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#selectors)
+@param _collection {FilesCollection} - FilesCollection Instance
+@summary Implementation of Cursor for FilesCollection
+###
+class FilesCursor
+  constructor: (@_selector = {}, options, @_collection) ->
+    @_current = -1
+    @cursor   = @_collection.collection.find @_selector, options
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name get
+  @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
+  @returns {[Object]}
+  ###
+  get: ->
+    console.info "[FilesCollection] [FilesCursor] [get()]" if @_collection.debug
+    return @cursor.fetch()
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name hasNext
+  @summary Returns `true` if there is next item available on Cursor
+  @returns {Boolean}
+  ###
+  hasNext: ->
+    console.info '[FilesCollection] [FilesCursor] [hasNext()]' if @_collection.debug
+    return @_current < @cursor.count() - 1
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name next
+  @summary Returns next item on Cursor, if available
+  @returns {Object|undefined}
+  ###
+  next: ->
+    console.info '[FilesCollection] [FilesCursor] [next()]' if @_collection.debug
+    if @hasNext()
+      return @cursor.fetch()[++@_current]
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name hasPrevious
+  @summary Returns `true` if there is previous item available on Cursor
+  @returns {Boolean}
+  ###
+  hasPrevious: ->
+    console.info '[FilesCollection] [FilesCursor] [hasPrevious()]' if @_collection.debug
+    return @_current isnt -1
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name previous
+  @summary Returns previous item on Cursor, if available
+  @returns {Object|undefined}
+  ###
+  previous: ->
+    console.info '[FilesCollection] [FilesCursor] [previous()]' if @_collection.debug
+    if @hasPrevious()
+      return @cursor.fetch()[--@_current]
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name fetch
+  @summary Returns all matching document(s) as an Array.
+  @returns {[Object]}
+  ###
+  fetch: ->
+    console.info '[FilesCollection] [FilesCursor] [fetch()]' if @_collection.debug
+    return @cursor.fetch()
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name first
+  @summary Returns first item on Cursor, if available
+  @returns {Object|undefined}
+  ###
+  first: ->
+    console.info '[FilesCollection] [FilesCursor] [first()]' if @_collection.debug
+    @_current = 0
+    return @fetch()?[@_current]
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name last
+  @summary Returns last item on Cursor, if available
+  @returns {Object|undefined}
+  ###
+  last: ->
+    console.info '[FilesCollection] [FilesCursor] [last()]' if @_collection.debug
+    @_current = @count() - 1
+    return @fetch()?[@_current]
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name count
+  @summary Returns the number of documents that match a query
+  @returns {Number}
+  ###
+  count: ->
+    console.info '[FilesCollection] [FilesCursor] [count()]' if @_collection.debug
+    return @cursor.count()
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
+  @name remove
+  @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+  @summary Removes all documents that match a query
+  @returns {FilesCursor}
+  ###
+  remove: (callback) ->
+    console.info '[FilesCollection] [FilesCursor] [remove()]' if @_collection.debug
+    @_collection.remove @_selector, callback, @
+    return @
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCursor
   @name forEach
   @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
   @param context {Object} - An object which will be the value of `this` inside `callback`
@@ -277,29 +297,26 @@ class FileCursor
   @returns {undefined}
   ###
   forEach: (callback, context = {}) ->
-    console.info '[FilesCollection] [FileCursor] [forEach()]' if @_collection.debug
-    if @_findOne and @_cursor
-      callback.call context, @_cursor, 0, [@_cursor]
-    else
-      @_cursor.forEach callback, context
+    console.info '[FilesCollection] [FilesCursor] [forEach()]' if @_collection.debug
+    @cursor.forEach callback, context
     return
 
   ###
   @locus Anywhere
-  @memberOf FileCursor
+  @memberOf FilesCursor
   @name each
   @summary Returns an Array of FileCursor made for each document on current cursor
-           Useful for using in {{#each FileCursor.each}}...{{/each}} template-tag
+           Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
   @returns {[FileCursor]}
   ###
   each: ->
     self = @
     return @map (file) ->
-      return self._collection.findOne file._id
+      return new FileCursor file, self._collection
 
   ###
   @locus Anywhere
-  @memberOf FileCursor
+  @memberOf FilesCursor
   @name map
   @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
   @param context {Object} - An object which will be the value of `this` inside `callback`
@@ -307,53 +324,46 @@ class FileCursor
   @returns {Array}
   ###
   map: (callback, context = {}) ->
-    console.info '[FilesCollection] [FileCursor] [map()]' if @_collection.debug
-    if @_findOne and @_cursor
-      [callback.call(context, @_cursor, 0, [@_cursor])]
-    else
-      return @_cursor.map callback, context
+    console.info '[FilesCollection] [FilesCursor] [map()]' if @_collection.debug
+    return @cursor.map callback, context
 
   ###
   @locus Anywhere
-  @memberOf FileCursor
+  @memberOf FilesCursor
   @name current
   @summary Returns current item on Cursor, if available
   @returns {Object|undefined}
   ###
   current: ->
-    console.info '[FilesCollection] [FileCursor] [current()]' if @_collection.debug
+    console.info '[FilesCollection] [FilesCursor] [current()]' if @_collection.debug
     @_current = 0 if @_current < 0
     return @fetch()[@_current]
 
   ###
   @locus Anywhere
-  @memberOf FileCursor
+  @memberOf FilesCursor
   @name observe
   @param callbacks {Object} - Functions to call to deliver the result set as it changes
   @summary Watch a query. Receive callbacks as the result set changes.
   @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observe
-  @returns {Object|undefined}
+  @returns {Object} - live query handle
   ###
   observe: (callbacks) ->
-    console.info '[FilesCollection] [FileCursor] [observe()]' if @_collection.debug
-    unless @_findOne
-      return @_cursor.observe callbacks
-    return
+    console.info '[FilesCollection] [FilesCursor] [observe()]' if @_collection.debug
+    return @cursor.observe callbacks
 
   ###
   @locus Anywhere
-  @memberOf FileCursor
+  @memberOf FilesCursor
   @name observeChanges
   @param callbacks {Object} - Functions to call to deliver the result set as it changes
   @summary Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
   @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges
-  @returns {Object|undefined} - live query handle
+  @returns {Object} - live query handle
   ###
   observeChanges: (callbacks) ->
-    console.info '[FilesCollection] [FileCursor] [observeChanges()]' if @_collection.debug
-    unless @_findOne
-      return @_cursor.observeChanges callbacks
-    return
+    console.info '[FilesCollection] [FilesCursor] [observeChanges()]' if @_collection.debug
+    return @cursor.observeChanges callbacks
 
 ###
 @var {Function} fixJSONParse - Fix issue with Date parse
@@ -1283,28 +1293,31 @@ class FilesCollection
   @memberOf FilesCollection
   @name findOne
   @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @summary Load file
-  @returns {FilesCollection} Instance
+  @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+  @summary Find and return Cursor for matching document Object
+  @returns {FileCursor} Instance
   ###
-  findOne: (selector) ->
+  findOne: (selector = {}, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String
-    return new FileCursor selector, {}, @, true
+    check selector, Match.OneOf Object, String
+    check options, Match.Optional Object
+    doc = @collection.findOne selector, options
+    return if doc then new FileCursor(doc, @) else doc
 
   ###
   @locus Anywhere
   @memberOf FilesCollection
   @name find
   @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#selectors)
-  @summary Load file or bunch of files
-  @returns {FilesCollection} Instance
+  @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+  @summary Find and return Cursor for matching documents
+  @returns {FilesCursor} Instance
   ###
-  find: (selector, options) ->
-    console.info "[FilesCollection] [find(#{JSON.stringify(selector)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String
+  find: (selector = {}, options) ->
+    console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
+    check selector, Match.OneOf Object, String
     check options, Match.Optional Object
-    return new FileCursor selector, options, @
+    return new FilesCursor selector, options, @
 
   ###
   @locus Client
@@ -1756,28 +1769,28 @@ class FilesCollection
   @locus Anywhere
   @memberOf FilesCollection
   @name remove
-  @param {String|Object} search - `_id` of the file or `Object` like, {prop:'val'}
+  @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
   @param {Function} callback - Callback with one `error` argument
-  @summary Remove file(s) on cursor or find and remove file(s) if search is set
+  @summary Remove documents from the collection
   @returns {FilesCollection} Instance
   ###
-  remove: (search, callback, filesCursor) ->
-    console.info "[FilesCollection] [remove(#{JSON.stringify(search)})]" if @debug
-    check search, Match.Optional Match.OneOf Object, String
+  remove: (selector, callback) ->
+    console.info "[FilesCollection] [remove(#{JSON.stringify(selector)})]" if @debug
+    check selector, Match.Optional Match.OneOf Object, String
     check callback, Match.Optional Function
 
     if Meteor.isClient
       if @allowClientCode
-        Meteor.call @_methodNames._Remove, search, (callback or NOOP)
+        Meteor.call @_methodNames._Remove, selector, (callback or NOOP)
       else
         callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug
     else
-      files = filesCursor or @collection.find search
+      files = @collection.find selector
       if files.count() > 0
         self = @
         files.forEach (file) -> self.unlink file
-      @collection.remove search, (callback or NOOP)
+      @collection.remove selector, (callback or NOOP)
     return @
 
   ###
