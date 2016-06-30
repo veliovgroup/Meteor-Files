@@ -1,4 +1,4 @@
-### How to use GridFS
+##### Use GridFS as a storage
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
@@ -8,19 +8,23 @@ Firstly you need to install [gridfs-stream](https://github.com/aheckmann/gridfs-
 ```shell
 npm install --save gridfs-stream
 ```
+Or:
+```shell
+meteor npm install gridfs-stream
+```
 
-#### Create collection
+##### Create collection
 
-On the next step you'd need to create a FilesCollection instance like this:
+Create a `FilesCollection` instance:
 
 ```javascript
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
 export const Images = new FilesCollection({
+  debug: false, // Change to `true` for debugging
   collectionName: 'images',
   allowClientCode: false,
-  debug: Meteor.isServer && process.env.NODE_ENV === 'development',
   onBeforeUpload(file) {
     if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.extension)) return true;
     return 'Please upload image, with size equal or less than 10MB';
@@ -32,14 +36,13 @@ if (Meteor.isServer) {
 }
 ```
 
-#### Get required packages and set up gfs instance
+##### Get required packages and create up gfs instance
 
-Firstly we need to import and set up required variables we'll be using. To do this add
-the following at the top at the file:
+Import and set up required variables:
 
 ```javascript
 import Grid from 'gridfs-stream'; // We'll use this package to work with GridFS
-import fs from 'fs';              // Required to read files intially uploaded via Meteor-Files
+import fs from 'fs';              // Required to read files initially uploaded via Meteor-Files
 
 // Set up gfs instance
 let gfs;
@@ -49,10 +52,9 @@ if (Meteor.isServer) {
 }
 ```
 
-#### Store and serve from GridFS
+##### Store and serve files from GridFS
 
-Next thing we need to do is to add `onAfterUpload` and `interceptDownload` hooks that would move
-file to GridFS once it's uploaded and to serve file from GridFS once it's requested:
+Add `onAfterUpload` and `interceptDownload` hooks that would move file to GridFS once it's uploaded, and serve file from GridFS on request:
 
 ```javascript
   onAfterUpload(image) {
@@ -66,10 +68,10 @@ file to GridFS once it's uploaded and to serve file from GridFS once it's reques
       writeStream.on('close', Meteor.bindEnvironment(file => {
         const property = `versions.${versionName}.meta.gridFsFileId`;
 
-        // If we store the ObjectID itself, Meteor (EJSON?) seems to convert it to a
+        // Convert ObjectID to String. Because Meteor (EJSON?) seems to convert it to a
         // LocalCollection.ObjectID, which GFS doesn't understand.
         this.collection.update(image._id, { $set: { [property]: file._id.toString() } });
-        this.unlink(this.collection.findOne(image._id), versionName); // Unlink files from FS
+        this.unlink(this.collection.findOne(image._id), versionName); // Unlink file by version from FS
       }));
     });
   },
@@ -81,12 +83,12 @@ file to GridFS once it's uploaded and to serve file from GridFS once it's reques
       readStream.pipe(http.response);
     }
     return Boolean(_id); // Serve file from either GridFS or FS if it wasn't uploaded yet
-  },
+  }
 ```
 
-#### Handle removing
+##### Handle removing
 
-OK, we can now store files to GridFS and serve them. But what will happen if we decide to
+From now we can store/serve files to/from GridFS. But what will happen if we decide to
 delete an image? An Image document will be deleted, but a GridFS record will stay in db forever!
 That's not what we want, right?
 
@@ -100,12 +102,12 @@ So let's fix this by adding `onAfterRemove` hook:
         if (_id) gfs.remove({ _id }, err => { if (err) throw err; });
       });
     });
-  },
+  }
 ```
 
-#### Final result
+##### Final result
 
-Here's a full listing of what we get in the end:
+Here's a final code:
 
 ```javascript
 import { Meteor } from 'meteor/meteor';
@@ -163,7 +165,7 @@ export const Images = new FilesCollection({
         if (_id) gfs.remove({ _id }, err => { if (err) throw err; });
       });
     });
-  },
+  }
 });
 
 if (Meteor.isServer) {
