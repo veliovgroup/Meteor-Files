@@ -51,18 +51,15 @@ if (Meteor.isServer) {
 
 #### Store and serve from GridFS
 
-Next thing we need to do is to add onAfterUpload and interceptDownload hooks that would move
+Next thing we need to do is to add `onAfterUpload` and `interceptDownload` hooks that would move
 file to GridFS once it's uploaded and to serve file from GridFS once it's requested:
 
 ```javascript
   onAfterUpload(image) {
     // Move file to GridFS
     Object.keys(image.versions).forEach(versionName => {
-      const writeStream = gfs.createWriteStream({
-        filename: image.name,
-        contentType: image.type,
-        metadata: { versionName, imageId: image._id, storedAt: new Date() }, // Optional
-      });
+      const metadata = { versionName, imageId: image._id, storedAt: new Date() }; // Optional
+      const writeStream = gfs.createWriteStream({ filename: image.name, metadata });
 
       fs.createReadStream(image.versions[versionName].path).pipe(writeStream);
 
@@ -93,24 +90,17 @@ OK, we can now store files to GridFS and serve them. But what will happen if we 
 delete an image? An Image document will be deleted, but a GridFS record will stay in db forever!
 That's not what we want, right?
 
-So let's fix this:
+So let's fix this by adding `onAfterRemove` hook:
 
 ```javascript
-if (Meteor.isServer) {
-  // Intercept Image collection remove method to remove file from GridFS
-  Images._origRemove = Images.remove;
-  Images.remove = function remove(search) {
-    this.collection.find(search).fetch().forEach(image => {
+  onAfterRemove(images) {
+    images.forEach(image => {
       Object.keys(image.versions).forEach(versionName => {
         const _id = (image.versions[versionName].meta || {}).gridFsFileId;
         if (_id) gfs.remove({ _id }, err => { if (err) throw err; });
       });
     });
-
-    // Call original method
-    Images._origRemove(search);
-  };
-}
+  },
 ```
 
 #### Final result
@@ -140,11 +130,8 @@ export const Images = new FilesCollection({
   onAfterUpload(image) {
     // Move file to GridFS
     Object.keys(image.versions).forEach(versionName => {
-      const writeStream = gfs.createWriteStream({
-        filename: image.name,
-        contentType: image.type,
-        metadata: { versionName, imageId: image._id, storedAt: new Date() },
-      });
+      const metadata = { versionName, imageId: image._id, storedAt: new Date() }; // Optional
+      const writeStream = gfs.createWriteStream({ filename: image.name, metadata });
 
       fs.createReadStream(image.versions[versionName].path).pipe(writeStream);
 
@@ -159,6 +146,7 @@ export const Images = new FilesCollection({
     });
   },
   interceptDownload(http, image, versionName) {
+    // Serve file from GridFS
     const _id = (image.versions[versionName].meta || {}).gridFsFileId;
     if (_id) {
       const readStream = gfs.createReadStream({ _id });
@@ -167,23 +155,18 @@ export const Images = new FilesCollection({
     }
     return Boolean(_id); // Serve file from either GridFS or FS if it wasn't uploaded yet
   },
-});
-
-if (Meteor.isServer) {
-  Images.denyClient();
-
-  // Intercept Image collection remove method to remove file from GridFS
-  Images._origRemove = Images.remove;
-  Images.remove = function remove(search) {
-    this.collection.find(search).fetch().forEach(image => {
+  onAfterRemove(images) {
+    // Remove corresponding file from GridFS
+    images.forEach(image => {
       Object.keys(image.versions).forEach(versionName => {
         const _id = (image.versions[versionName].meta || {}).gridFsFileId;
         if (_id) gfs.remove({ _id }, err => { if (err) throw err; });
       });
     });
+  },
+});
 
-    // Call original method
-    Images._origRemove(search);
-  };
+if (Meteor.isServer) {
+  Images.denyClient();
 }
 ```
