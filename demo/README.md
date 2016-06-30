@@ -98,6 +98,8 @@ heroku create <your-app-name> --buildpack https://github.com/heroku/heroku-build
 # This command will output something like: 
 # - https://<your-app-name>.herokuapp.com/
 # - https://git.heroku.com/<your-app-name>.git
+
+git init
 heroku git:remote -a <your-app-name>
 
 # Copy this: `https://<your-app-name>.herokuapp.com`, note `http(s)://` protocol
@@ -128,7 +130,6 @@ heroku config:set MONGO_URL=mongodb://<dbuser>:<dbpassword>@dt754268.mlab.com:19
 # Enable sticky sessions, to support HTTP upload:
 heroku features:enable http-session-affinity
 
-git init
 git add .
 git commit -m "initial"
 git push heroku master
