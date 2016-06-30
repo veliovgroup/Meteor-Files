@@ -89,7 +89,7 @@ Collections.files = new FilesCollection
           version,
           Request
             url: path
-            headers: _.pick http.request.headers, 'range', 'accept-language', 'accept', 'accept-encoding', 'cache-control', 'pragma', 'connection'
+            headers: _.pick http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent'
         return true
       else
         # While file is not yet uploaded to Storage
