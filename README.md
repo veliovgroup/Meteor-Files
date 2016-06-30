@@ -148,15 +148,19 @@ For more expressive example see [Upload demo app](https://github.com/VeliovGroup
 
 
 #### Stream files
-To display files you will use `fileURL` template helper.
+To display files you can use `fileURL` template helper or `.link()` method of `FileCursor`.
 
 Template:
 ```html
 <template name='file'>
   <img src="{{imageFile.link}}" alt="{{imageFile.name}}" />
+  <!-- Same as: -->
+  <!-- <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" /> -->
   <hr>
   <video height="auto" controls="controls">
     <source src="{{videoFile.link}}?play=true" type="{{videoFile.type}}" />
+    <!-- Same as: -->
+    <!-- <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" /> -->
   </video>
 </template>
 ```
