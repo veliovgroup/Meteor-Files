@@ -96,7 +96,7 @@ Collections.files = new FilesCollection({
       // So, original link will stay always secure
       Request({
         url: path,
-        headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'accept-encoding', 'cache-control', 'pragma', 'connection')
+        headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent')
       }).pipe(http.response);
       return true;
     } else {
