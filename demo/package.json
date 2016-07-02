@@ -1,6 +1,6 @@
 {
   "name": "Meteor-Files-Demo",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Demo application for ostrio:files package",
   "main": "main.js",
   "scripts": {

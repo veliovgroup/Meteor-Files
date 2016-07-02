@@ -686,7 +686,7 @@ class FilesCollection
 
             body        = ''
             handleError = (error) ->
-              console.warn "[FilesCollection] [Upload] [HTTP] Exception:", e
+              console.warn "[FilesCollection] [Upload] [HTTP] Exception:", error
               response.writeHead 500
               response.end JSON.stringify {error}
               return
