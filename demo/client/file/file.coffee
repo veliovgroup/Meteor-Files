@@ -1,6 +1,7 @@
 timer = false
 Template.file.onCreated ->
   @fetchedText = new ReactiveVar false
+  @showPreview = new ReactiveVar false
   @showInfo    = new ReactiveVar false
   @warning     = new ReactiveVar false
   return
@@ -10,7 +11,8 @@ Template.file.onRendered ->
   @fetchedText.set false
   if (@data.file.get('isText') or @data.file.get('isJSON'))
     self = @
-    HTTP.call 'GET', @data.file.link()[0], (error, resp) ->
+    HTTP.call 'GET', @data.file.link(), (error, resp) ->
+      self.showPreview.set true
       if error
         console.error error
       else
@@ -19,6 +21,15 @@ Template.file.onRendered ->
             self.fetchedText.set resp.content
           else
             self.warning.set true
+      return
+
+  else if @data.file.get('isImage')
+    self = @
+    img  = new Image()
+    img.onload = ->
+      self.showPreview.set true
+      return
+    img.src = @data.file.link 'preview'
   window.IS_RENDERED = true
   return
 
@@ -27,6 +38,7 @@ Template.file.helpers
   getCode:     -> if @type and !!~@type.indexOf('/') then @type.split('/')[1] else ''
   isBlamed:    -> !!~_app.blamed.get().indexOf(@_id)
   showInfo:    -> Template.instance().showInfo.get()
+  showPreview: -> Template.instance().showPreview.get()
   fetchedText: -> Template.instance().fetchedText.get()
 
 Template.file.events

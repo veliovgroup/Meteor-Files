@@ -1,8 +1,21 @@
 Template.listingRow.onCreated ->
   @showSettings = new ReactiveVar false
+  @showPreview  = new ReactiveVar false
+  return
+
+Template.listingRow.onRendered ->
+  if @data.isImage
+    self = @
+    img  = new Image()
+    img.onload = ->
+      self.showPreview.set true
+      return
+    img.src = self.data.link 'thumbnail40'
+  return
 
 Template.listingRow.helpers
   removedIn:    -> moment(@meta.expireAt).fromNow()
+  showPreview:  -> Template.instance().showPreview.get()
   showSettings: -> Template.instance().showSettings.get() is @_id
 
 Template.listingRow.events

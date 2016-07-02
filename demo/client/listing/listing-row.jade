@@ -10,7 +10,10 @@ template(name="listingRow")
           i.fa.fa-fw.fa-file-video-o
         else if isImage
           if versions.thumbnail40
-            img(src="{{link 'thumbnail40'}}" alt="#{name}")
+            if showPreview
+              img(src="{{link 'thumbnail40'}}" alt="#{name}")
+            else
+              i.fa.fa-fw.fa-file-image-o
           else
             i.fa.fa-fw.fa-file-image-o
         else if isText

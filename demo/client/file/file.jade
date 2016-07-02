@@ -40,7 +40,10 @@ template(name="file")
             meta(itemprop="width" content="{{meta.width}}")
             meta(itemprop="height" content="{{meta.height}}")
             source(type="#{type}" srcset="{{link 'preview'}}")
-            img.file-preview(src="{{link 'preview'}}" alt="#{name}")
+            if showPreview
+              img.file-preview(src="{{link 'preview'}}" alt="#{name}")
+            else
+              h1.files-note: i.fa.fa-fw.fa-spin.fa-spinner
         else if isAudio
           .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
             source(src="{{link}}?play=true" type="#{type}")
@@ -63,9 +66,13 @@ template(name="file")
                   #{fetchedText}
                   ```
           else
-            .file-cell: h3.files-note
-              | Preview is not available, please 
-              a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
+            .file-cell
+              if showPreview
+                h3.files-note
+                  | Preview is not available, please 
+                  a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
+              else
+                h1.files-note: i.fa.fa-fw.fa-spin.fa-spinner
         else
           .file-cell: h3.files-note
             | Preview is not available, please 
