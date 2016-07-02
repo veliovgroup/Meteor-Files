@@ -10,17 +10,17 @@
 </body>
 
 <template name='file'>
-  {{#if imageFile.count}}
-    <img src="{{imageFile.link}}" alt="{{imageFile.name}}" />
+  {{#with imageFile.with}}
+    <img src="{{link}}" alt="{{name}}" />
   {{else}}
     Loading Image...
-  {{/if}}
+  {{/with}}
   <hr>
-  {{#if videoFile.count}}
+  {{#with videoFile.with}}
     <video height="auto" controls preload="auto" autoplay>
-      <source src="{{videoFile.link}}?play=true" type="{{videoFile.type}}" />
+      <source src="{{link}}?play=true" type="{{type}}" />
     </video>
   {{else}}
     Loading Video...
-  {{/if}}
+  {{/with}}
 </template>

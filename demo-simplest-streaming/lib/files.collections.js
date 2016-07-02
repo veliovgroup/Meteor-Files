@@ -22,13 +22,13 @@ if (Meteor.isServer) {
   Videos.denyClient();
   
   Meteor.startup(function () {
-    if (!Images.findOne().count()) {
+    if (!Images.findOne()) {
       Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
         fileName: 'logo.png'
       });
     }
 
-    if (!Videos.findOne().count()) {
+    if (!Videos.findOne()) {
       Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_10mb.mp4', {
         fileName: 'Big-Buck-Bunny.mp4'
       });
