@@ -22,6 +22,8 @@ Template.listingRow.events
   'click [data-remove-file]': (e) ->
     e.stopPropagation()
     e.preventDefault()
+    icon = $(e.currentTarget).find 'i.fa'
+    icon.removeClass('fa-trash-o').addClass 'fa-spin fa-spinner'
     @remove (error) ->
       if error
         console.log error
@@ -30,6 +32,8 @@ Template.listingRow.events
   'click [data-change-access]': (e) ->
     e.stopPropagation()
     e.preventDefault()
+    icon = $(e.currentTarget).find 'i.fa'
+    icon.removeClass('fa-eye-slash fa-eye').addClass 'fa-spin fa-spinner'
     Meteor.call 'changeAccess', @_id, (error) ->
       if error
         console.log error
@@ -38,6 +42,8 @@ Template.listingRow.events
   'click [data-change-privacy]': (e) ->
     e.stopPropagation()
     e.preventDefault()
+    icon = $(e.currentTarget).find 'i.fa'
+    icon.removeClass('fa-lock fa-unlock').addClass 'fa-spin fa-spinner'
     Meteor.call 'changePrivacy', @_id, (error) ->
       if error
         console.log error
