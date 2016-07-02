@@ -1,4 +1,4 @@
-##### `find(selector, options)` [*Isomorphic*]
+##### `find([selector, options])` [*Isomorphic*]
 
 Find and return Cursor for matching documents.
 
@@ -10,31 +10,31 @@ Find and return Cursor for matching documents.
 var Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
-// Set cursor
+// Set cursor:
 var filesCursor = Images.find();
 
-// Get Mongo cursor
+// Get Mongo cursor:
 Meteor.publish('images', function() {
   Images.find().cursor;
 });
 
-// Get cursor's data
+// Get cursor's data:
 filesCursor.fetch();
-// Get cursor's data (alternative)
+// Get cursor's data (alternative):
 filesCursor.get();
 
-// Remove all cursor's records and associated files
+// Remove all cursor's records and associated files:
 filesCursor.remove(function (error) {
   if (error) {
     console.error('File(s) is not removed!', error);
   }
 });
-// Remove only Collection records from DB
+// Remove only Collection records from DB:
 Images.collection.remove();
 
-// Each
+// Each:
 filesCursor.each(function (file) {
-  // Only available in .each()
+  // Only available in .each():
   file.link();
   file.remove();
   file.with(); // <-- Reactive object

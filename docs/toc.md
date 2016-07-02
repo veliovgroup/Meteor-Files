@@ -26,7 +26,7 @@ Meteor-Files
     * Multi-stream async upload (*faster than ever*)
  - Use third-party storage:
     * [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
-    * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+    * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
     * [GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
     * Google Drive
     * Google Storage
@@ -62,6 +62,21 @@ Meteor-Files
    * [Collection `allow` rules](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#allow-collection-interaction-on-client-server)
    * [Control upload access](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeupload-to-avoid-unauthorized-upload)
    * [Control remove access](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeremove-to-avoid-unauthorized-remove)
+ - [`FileCursor` Class](https://github.com/VeliovGroup/Meteor-Files/wiki/FileCursor) - Instance of this class is returned from `.findOne()` method
+   * `remove(callback)` - {*undefined*} - Remove document
+   * `link()` - {*String*} - Returns downloadable URL to File
+   * `get(property)` - {*Object*|*mix*} - Returns current document as a plain Object
+   * `fetch()` - {[*Object*]}- Returns current document as plain Object in Array
+   * `with()` - {*FileCursor*} - Returns reactive version of current FileCursor
+ - [`FilesCursor` Class](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor) - Instance of this class is returned from `.find()` method
+   * `fetch()` - {*[Object]*} - Returns all matching document(s) as an Array
+   * `count()` - {*Number*} - Returns the number of documents that match a query
+   * `remove(callback)` - {*undefined*} - Removes all documents that match a query
+   * `forEach(callback, context)` - {*undefined*} - Call `callback` once for each matching document
+   * `each()` - {*[FileCursor]*} - Returns an Array of `FileCursor` made for each document on current Cursor
+   * `observe(callbacks)` - {*Object*} - Functions to call to deliver the result set as it changes
+   * `observeChanges(callbacks)` - {*Object*} - Watch a query. Receive callbacks as the result set changes
+   * [See all methods](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor)
  - [Default Collection Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema)
    * [Attach SimpleSchema and Collection2](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema#attach-schema-recommended)
    * [Extend Schema](https://github.com/VeliovGroup/Meteor-Files/wiki/Schema#extend-default-schema)
@@ -80,7 +95,7 @@ Meteor-Files
  - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
- - [Third-party storage (AWS S3 & DropBox)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ - [Third-party storage (AWS S3 & DropBox & GridFS)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
 
