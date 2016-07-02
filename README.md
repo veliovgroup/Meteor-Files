@@ -31,7 +31,7 @@ ToC:
  - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
-   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-client)
+   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
    * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
    * [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
 
@@ -39,9 +39,9 @@ Why `Meteor-Files`?
 ========
 The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
  - Support for both `HTTP` and `DDP` transports for upload
- - You need store to *GridFS*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
+ - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
- - You need to resize images after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
 
