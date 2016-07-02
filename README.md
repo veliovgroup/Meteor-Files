@@ -20,8 +20,9 @@ Awards:
 
 Demo application:
 ========
- - [Live](https://meteor-files.herokuapp.com/) (*Unavailable after 6 hours of uptime, due to [free plan](https://www.heroku.com/pricing)*)
+ - [Live](https://files.veliov.com)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
+ - [Compiled Demo App](https://github.com/VeliovGroup/Meteor-Files-Demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
 ToC:
