@@ -27,6 +27,7 @@ Meteor-Files
  - Use third-party storage:
     * [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
     * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+    * [GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
     * Google Drive
     * Google Storage
     * any other with JS/REST API
@@ -82,3 +83,6 @@ Meteor-Files
  - [Third-party storage (AWS S3 & DropBox)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
+
+##### Articles:
+ - [MongoDB with Replica Set & OpLog setup](https://veliovgroup.com/article/2qsjtNf8NSB9XxZDh/mongodb-replica-set-with-oplog) - Find out how to speed-up *reactivity* in you Meteor application
