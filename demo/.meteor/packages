@@ -15,16 +15,17 @@ audit-argument-checks
 reactive-var
 coffeescript
 markdown
+random
 check
 http
 
 # UI/UX packages
+fastclick
 fortawesome:fontawesome
 simple:highlight.js
 mquandalle:jade
 fourseven:scss@2.1.1
 momentjs:moment
-twbs:bootstrap
 perak:markdown
 mrt:filesize
 
@@ -37,7 +38,19 @@ aldeed:collection2
 cfs:graphicsmagick
 ostrio:files
 ostrio:flow-router-extra
-ostrio:flow-router-title
-arillo:flow-router-helpers
 ostrio:templatehelpers
 ostrio:cstorage
+arillo:flow-router-helpers
+
+# SEO
+ostrio:flow-router-title
+ostrio:flow-router-meta
+ostrio:spiderable-middleware
+
+# Accounts Packages
+accounts-base
+service-configuration
+accounts-github
+accounts-twitter
+accounts-facebook
+accounts-meteor-developer

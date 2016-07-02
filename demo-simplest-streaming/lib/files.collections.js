@@ -1,4 +1,5 @@
 this.Images = new Meteor.Files({
+  debug: true,
   collectionName: 'Images',
   onBeforeUpload: function () {
     // Disallow uploads from client
@@ -7,6 +8,7 @@ this.Images = new Meteor.Files({
 });
 
 this.Videos = new Meteor.Files({
+  debug: true,
   collectionName: 'Videos',
   onBeforeUpload: function () {
     // Disallow uploads from client
@@ -20,25 +22,25 @@ if (Meteor.isServer) {
   Videos.denyClient();
   
   Meteor.startup(function () {
-    if (!Images.collection.findOne({})) {
+    if (!Images.findOne()) {
       Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
         fileName: 'logo.png'
       });
     }
 
-    if (!Videos.collection.findOne({})) {
-      Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
+    if (!Videos.findOne()) {
+      Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_10mb.mp4', {
         fileName: 'Big-Buck-Bunny.mp4'
       });
     }
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 
   Meteor.publish('files.videos.all', function () {
-    return Videos.collection.find({});
+    return Videos.find().cursor;
   });
 
 } else {

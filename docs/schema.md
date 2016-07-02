@@ -33,8 +33,8 @@ var defaultSchema = {
   isJSON: {
     type: Boolean
   },
-  _prefix: {
-    type: String
+  isPDF: {
+    type: Boolean
   },
   extension: {
     type: String,
@@ -64,9 +64,7 @@ var defaultSchema = {
   },
   updatedAt: {
     type: Date,
-    autoValue: function() {
-      return new Date();
-    }
+    optional: true
   },
   versions: {
     type: Object,

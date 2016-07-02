@@ -1,0 +1,47 @@
+template(name="uploadForm")
+  form.col-50.upload-form#uploadFile: .sm-row
+    unless uploads
+      input.invisible#userfile(class="{{#if showSettings}}settings-open{{/if}}" type="file" name="userfile" required multiple)
+      a.info-link.show-settings(data-show-settings href="#" class="{{#if showSettings}}active{{/if}}"): i.fa.fa-fw.fa-gear
+
+      if showSettings
+        .block-info
+          p.annotation.white
+            h3.no-margin Upload via:
+            label.radio-inline
+              input(type="radio" name="transport" value="ddp" checked="{{#if compare uploadTransport 'is' 'ddp'}}checked{{/if}}")
+              | DDP
+            label.radio-inline
+              input(type="radio" name="transport" value="http" checked="{{#if compare uploadTransport 'is' 'http'}}checked{{/if}}")
+              | HTTP (<em>3x performance</em>)
+
+          p.annotation Any file-type.<br />With size less or equal to 128MB,<br />up to 6 files.
+          p.annotation This form supports drag'n'drop.
+      else
+        .fake-upload#fakeUpload
+          i.fa.fa-cloud-upload
+          if error
+            h4.danger {{{error}}}
+          else
+            h2 UPLOAD A FILE
+
+        +accounts
+        a.info-link.right(data-show-project-info href="#"): i.fa.fa-fw.fa-info
+    else
+      if error
+        h4.danger {{{error}}}
+      h1.percentage #{status.progress}%
+      progress(max="100" value="#{status.progress}")
+      p
+        | #{status.estimateDuration}
+        | &nbsp;
+        | &middot;
+        | &nbsp;
+        | #{status.estimateBitrate}
+      p
+        if status.onPause
+          a(data-continue-all href="#" title="Resume upload"): i.fa.fa-fw.fa-play
+        else
+          a(data-pause-all href="#" title="Pause upload"): i.fa.fa-fw.fa-pause
+        | &nbsp;
+        a(data-abort-all href="#" title="Abort upload"): i.fa.fa-fw.fa-stop

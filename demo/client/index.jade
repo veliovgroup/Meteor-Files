@@ -1,63 +1,16 @@
 template(name="index")
-  .panel.panel-default
-    .panel-heading: h3.panel-title Recently uploaded files
-    if latest.count
-      .table-responsive: table.table.table-bordered.table-striped: tbody
-        each latest
-          tr
-            td.center.width-1.table-preview(class="{{#if compare isImage 'and' versions.thumbnail40}}thumbnail40{{/if}}")
-              a(href="{{pathFor 'file' _id=_id}}")
-                if isAudio
-                  i.fa.fa-fw.fa-file-audio-o
-                else if isVideo
-                  i.fa.fa-fw.fa-file-video-o
-                else if isImage
-                  if versions.thumbnail40
-                    img(src="{{fileURL this 'thumbnail40'}}" alt="#{name}")
-                  else
-                    i.fa.fa-fw.fa-file-image-o
-                else if isText
-                  i.fa.fa-fw.fa-file-text-o
-                else if isJSON
-                  i.fa.fa-fw.fa-file-code-o
-                else
-                  i.fa.fa-fw.fa-file-o
-            td.ellipsis.width-270
-              a(href="{{pathFor 'file' _id=_id}}") {{extless name}}
-            td.text-right.ellipsis
-              if extension
-                span.label.label-default(title="Extension")
-                  if isAudio
-                    i.fa.fa-fw.fa-file-audio-o
-                  else if isVideo
-                    i.fa.fa-fw.fa-file-video-o
-                  else if isImage
-                    i.fa.fa-fw.fa-file-image-o
-                  else if isText
-                    i.fa.fa-fw.fa-file-text-o
-                  else if isJSON
-                    i.fa.fa-fw.fa-file-code-o
-                  else
-                    i.fa.fa-fw.fa-file-o
-                  | #{extension}
-                |  
-              span.label.label-default(title="Size")
-                i.fa.fa-fw.fa-hdd-o
-                | {{filesize size}}
-              |  
-              span.label.label-default(title="Will be removed {{removedIn}}")
-                i.fa.fa-fw.fa-history
-                | #{removedIn}
-              |  
-              span.label.label-default(title="Downloads")
-                i.fa.fa-fw.fa-download
-                | #{meta.downloads}
-            //- Remove button example, won't work with allowClientCode: false
-            //- td
-              button#remove.btn.btn-sm Remove
+  .col-50.sm-row(class="{{#unless compare latest.count 'or' uploads}}no-file{{/unless}}")
+    if compare latest.count 'or' uploads
+      .listing: table.table: tbody
+        each uploads
+          +uploadRow
+        each latest.each
+          +listingRow
+        if compare filesLength '>' latest.count
+          tr: td(data-load-more colspan="3"): h3.no-margin.center Load More
     else
-      .panel-body.center: .alert.alert-info Be the first to upload a file
-
-    if compare filesLength '>' latest.count
-      .panel-footer
-        button.btn.btn-default.btn-block#loadMore(type="button" title="Show older files") Load More
+      h3.files-note
+        if userOnly
+          | You have no uploaded files
+        else
+          | Be the first to upload a file

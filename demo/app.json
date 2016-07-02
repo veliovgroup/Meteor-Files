@@ -1,6 +1,6 @@
 {
   "name": "Meteor-Files-Demo",
-  "version": "1.5.6",
+  "version": "1.6.0",
   "description": "Demo application for ostrio:files package",
   "repository": "https://github.com/VeliovGroup/Meteor-Files-Demo",
   "website": "https://github.com/VeliovGroup/Meteor-Files-Demo",
@@ -10,14 +10,15 @@
   },
   "dependencies": {
     "connect": "^3.4.1",
-    "dropbox": "^0.10.3",
-    "fibers": "^1.0.8",
+    "dropbox": "0.10.3",
+    "knox": "^0.9.2",
+    "fibers": "^1.0.13",
     "fs-extra": "0.30.0",
     "http-proxy": "^1.13.2",
     "keypress": "^0.2.1",
     "meteor-deque": "*",
     "meteor-node-stubs": "~0.2.0",
-    "meteor-promise": "0.5.1",
+    "meteor-promise": "0.7.2",
     "mime": "^1.3.4",
     "mongodb": "^2.1.15",
     "progress": "^1.1.8",
@@ -42,6 +43,42 @@
     "DROPBOX": {
       "description": "[Optional] DropBox credentials object, format: {\"dropbox\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"token\": \"xxx\"}}",
       "required": false
+    },
+    "AWS S3 Bucket": {
+      "description": "[Optional] AWS S3 Bucket credentials object, format: {\"s3\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"bucket\": \"xxx\", \"region\": \"xxx\", \"cfdomain\": \"https://xxx.cloudfront.net\"}}",
+      "required": false
+    },
+    "ACCOUNTS_METEOR_ID": {
+      "description": "[Optional] Meteor Account Services App ID (https://www.meteor.com/account-settings)",
+      "required": false
+    },
+    "ACCOUNTS_METEOR_SEC": {
+      "description": "[Optional] Meteor Account Services App Secret (https://www.meteor.com/account-settings)",
+      "required": false
+    },
+    "ACCOUNTS_GITHUB_ID": {
+      "description": "[Optional] GitHub OAuth application Client ID (https://github.com/settings/developers)",
+      "required": false
+    },
+    "ACCOUNTS_GITHUB_SEC": {
+      "description": "[Optional] GitHub OAuth application Client Secret (https://github.com/settings/developers)",
+      "required": false
+    },
+    "ACCOUNTS_TWITTER_ID": {
+      "description": "[Optional] Twitter Application API Key (https://apps.twitter.com)",
+      "required": false
+    },
+    "ACCOUNTS_TWITTER_SEC": {
+      "description": "[Optional] Twitter Application API Secret (https://apps.twitter.com)",
+      "required": false
+    },
+    "ACCOUNTS_FACEBOOK_ID": {
+      "description": "[Optional] Facebook App: App ID (https://developers.facebook.com/apps)",
+      "required": false
+    },
+    "ACCOUNTS_FACEBOOK_SEC": {
+      "description": "[Optional] Facebook App: App Secret (https://developers.facebook.com/apps)",
+      "required": false
     }
   },
   "keywords": [
@@ -63,7 +100,7 @@
     }
   ],
   "engines": {
-    "node": "0.10.43",
+    "node": "0.10.45",
     "npm": "2.15.3"
   }
 }

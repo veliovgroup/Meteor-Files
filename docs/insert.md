@@ -265,7 +265,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>toggleUpload()</code> {<em>Function</em>}
+        <code>toggle()</code> {<em>Function</em>}
       </td>
       <td>
         Toggle <code>continue</code>/<code>pause</code> if upload in the progress
@@ -298,7 +298,7 @@
         Current upload speed in <strong>bytes/second</strong>
       </td>
       <td>
-        To convert into speed, take a look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: 
+        To convert into speed, take a look on <a href="https://github.com/avoidwork/filesize.js">filesize package</a>, usage: 
         <code>filesize(estimateSpeed, {bits: true}) + '/s';</code>
       </td>
     </tr>

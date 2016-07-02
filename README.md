@@ -13,10 +13,16 @@ Support:
  - [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
  - For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
 
+Awards:
+========
+<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
+
+
 Demo application:
 ========
- - [Live](https://meteor-files.herokuapp.com/) (*Unavailable after 6 hours of uptime, due to [free plan](https://www.heroku.com/pricing)*)
+ - [Live](https://files.veliov.com)
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
+ - [Compiled Demo App](https://github.com/VeliovGroup/Meteor-Files-Demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
 ToC:
@@ -26,7 +32,7 @@ ToC:
  - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
-   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-client)
+   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
    * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
    * [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
 
@@ -34,9 +40,9 @@ Why `Meteor-Files`?
 ========
 The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
  - Support for both `HTTP` and `DDP` transports for upload
- - You need store to *GridFS*, *AWS* or *DropBox*? (*[Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
+ - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
- - You need to resize images after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
 
@@ -58,7 +64,7 @@ var Images = new FilesCollection({
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload: function (file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
-    if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.ext)) {
+    if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.extension)) {
       return true;
     } else {
       return 'Please upload image, with size equal or less than 10MB';
@@ -72,7 +78,7 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 }
 ```
@@ -84,14 +90,12 @@ Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Fil
 Upload form (template):
 ```html
 <template name="uploadForm">
-  {{#if currentUpload}}
-    {{#with currentUpload}}
-      Uploading <b>{{file.name}}</b>: 
-      <span id="progress">{{progress}}%</span>
-    {{/with}}
+  {{#with currentUpload}}
+    Uploading <b>{{file.name}}</b>: 
+    <span id="progress">{{progress.get}}%</span>
   {{else}}
     <input id="fileInput" type="file" />
-  {{/if}}
+  {{/with}}
 </template>
 ```
 
@@ -145,15 +149,19 @@ For more expressive example see [Upload demo app](https://github.com/VeliovGroup
 
 
 #### Stream files
-To display files you will use `fileURL` template helper.
+To display files you can use `fileURL` template helper or `.link()` method of `FileCursor`.
 
 Template:
 ```html
 <template name='file'>
-  <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" />
+  <img src="{{imageFile.link}}" alt="{{imageFile.name}}" />
+  <!-- Same as: -->
+  <!-- <img src="{{fileURL imageFile}}" alt="{{imageFile.name}}" /> -->
   <hr>
   <video height="auto" controls="controls">
-    <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" />
+    <source src="{{videoFile.link}}?play=true" type="{{videoFile.type}}" />
+    <!-- Same as: -->
+    <!-- <source src="{{fileURL videoFile}}?play=true" type="{{videoFile.type}}" /> -->
   </video>
 </template>
 ```
@@ -175,10 +183,10 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
   Meteor.publish('files.videos.all', function () {
-    return Videos.collection.find({});
+    return Videos.find().cursor;
   });
 
 } else {
@@ -191,10 +199,10 @@ Client's code:
 ```javascript
 Template.file.helpers({
   imageFile: function () {
-    return Images.collection.findOne({});
+    return Images.findOne();
   },
   videoFile: function () {
-    return Videos.collection.findOne({});
+    return Videos.findOne();
   }
 });
 ```
@@ -206,8 +214,8 @@ For more expressive example see [Streaming demo app](https://github.com/VeliovGr
 Template:
 ```html
 <template name='file'>
-  <a href="{{fileURL fileRef}}?download=true" download="{{fileRef.name}}" target="_parent">
-    {{fileRef.name}}
+  <a href="{{file.link}}?download=true" download="{{file.name}}" target="_parent">
+    {{file.name}}
   </a>
 </template>
 ```
@@ -226,7 +234,7 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 } else {
   Meteor.subscribe('files.images.all');
@@ -237,11 +245,18 @@ Client's code:
 ```javascript
 Template.file.helpers({
   fileRef: function () {
-    return Images.collection.findOne({});
+    return Images.findOne();
   }
 });
 ```
 For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
+
+
+Supporters:
+========
+Big thanks to all supporters. *Only because of this guys this project can have 100% of our attention*.
+ - [@themeteorchef](https://github.com/themeteorchef)
+ - [@MeDBejoHok](https://github.com/medbejohok)
 
 ----
 
