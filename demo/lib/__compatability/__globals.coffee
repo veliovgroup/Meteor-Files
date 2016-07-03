@@ -19,6 +19,14 @@ if Meteor.isClient
   _app.currentUrl      = -> Meteor.absoluteUrl((FlowRouter.current().path or document.location.pathname).replace(/^\//g, '')).split('?')[0].split('#')[0].replace '!', ''
   _app.storeTTLUser    = 432000000
   _app.showProjectInfo = new ReactiveVar false
+
+  _app.serviceConfiguration = new ReactiveVar {}
+  Meteor.call 'getServiceConfiguration', (error, serviceConfiguration) ->
+    if error
+      console.error error
+    else
+      _app.serviceConfiguration.set serviceConfiguration
+    return
   
   Meteor.autorun ->
     ClientStorage.set 'blamed', _app.blamed.get()

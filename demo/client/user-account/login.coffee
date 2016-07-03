@@ -1,14 +1,3 @@
-Template.login.onCreated ->
-  self = @
-  @serviceConfiguration = new ReactiveVar {}
-  Meteor.call 'getServiceConfiguration', (error, serviceConfiguration) ->
-    if error
-      console.error error
-    else
-      self.serviceConfiguration.set serviceConfiguration
-    return
-  return
-
 Template.login.onRendered ->
   window.IS_RENDERED = true
   return
@@ -16,7 +5,7 @@ Template.login.onRendered ->
 Template.login.helpers
   unlist:               -> _app.unlist.get()
   secured:              -> _app.secured.get()
-  serviceConfiguration: -> Template.instance().serviceConfiguration.get()
+  serviceConfiguration: -> _app.serviceConfiguration.get()
 
 Template.login.events
   'click [data-login-meteor]': (e) ->
