@@ -484,7 +484,7 @@ class FilesCollection
       delete @interceptDownload
       delete @continueUploadTTL
 
-      if _.has(Package, 'accounts-base') and Accounts
+      if _.has(Package, 'accounts-base')
         setTokenCookie = ->
           if (not cookie.has('meteor_login_token') and Accounts._lastLoginTokenWhenPolled) or (cookie.has('meteor_login_token') and (cookie.get('meteor_login_token') isnt Accounts._lastLoginTokenWhenPolled))
             cookie.set 'meteor_login_token', Accounts._lastLoginTokenWhenPolled, null, '/'
@@ -1024,13 +1024,13 @@ class FilesCollection
     if Meteor.isServer
       if http
         cookie = http.request.Cookies
-        if _.has(Package, 'accounts-base') and Accounts and cookie.has 'meteor_login_token'
+        if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
           user = Meteor.users.findOne 'services.resume.loginTokens.hashedToken': Accounts._hashLoginToken cookie.get 'meteor_login_token'
           if user
             result.user = () -> return user
             result.userId = user._id
     else
-      if _.has(Package, 'accounts-base') and Accounts and Meteor.userId()
+      if _.has(Package, 'accounts-base') and Meteor.userId()
         result.user = -> return Meteor.user()
         result.userId = Meteor.userId()
 
