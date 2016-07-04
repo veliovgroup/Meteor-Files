@@ -1881,7 +1881,9 @@ class FilesCollection
       if fileRef.versions and not _.isEmpty fileRef.versions
         _.each fileRef.versions, (vRef) -> bound ->
           fs.unlink vRef.path, NOOP
-      fs.unlink fileRef.path, NOOP
+          return
+      else
+        fs.unlink fileRef.path, NOOP
     return @
   else undefined
 
