@@ -525,14 +525,14 @@ class FilesCollection
       if @public and not storagePath
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
 
-      storagePath ?=  "assets/app/uploads/#{@collectionName}"
+      storagePath ?= "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{@collectionName}"
       Object.defineProperty self, 'storagePath', {
         get: ->
           sp = ''
           if _.isString storagePath
             sp = storagePath
           else if _.isFunction storagePath
-            sp = storagePath.call self, "assets/app/uploads/#{self.collectionName}"
+            sp = storagePath.call self, "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{self.collectionName}"
           
           unless _.isString sp
             throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
@@ -888,7 +888,7 @@ class FilesCollection
     {extension, extensionWithDot} = @_getExt fileName
 
     result           = opts.file
-    result.path      = "#{@storagePath}/#{opts.FSName}#{extensionWithDot}"
+    result.path      = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
@@ -1115,7 +1115,7 @@ class FilesCollection
 
     self       = @
     opts      ?= {}
-    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
     opts.type  = @_getMimeType opts
     opts.meta ?= {}
     opts.size ?= buffer.length
@@ -1179,7 +1179,7 @@ class FilesCollection
     
     {extension, extensionWithDot} = @_getExt fileName
     opts.meta ?= {}
-    opts.path  = "#{@storagePath}/#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
 
     storeResult = (result, callback) ->
       result._id = fileId
@@ -1274,7 +1274,7 @@ class FilesCollection
           type:         opts.type
           size:         opts.size
           extension:    extension
-          _storagePath: path.replace "/#{fileName}", ''
+          _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
 
         result._id = Random.id()
 
