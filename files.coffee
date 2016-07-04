@@ -1823,16 +1823,25 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name deny
-  @name allow
   @param {Object} rules
-  @see http://docs.meteor.com/#/full/allow
-  @summary link Mongo.Collection allow/deny methods
+  @see  https://docs.meteor.com/api/collections.html#Mongo-Collection-deny
+  @summary link Mongo.Collection deny methods
   @returns {Mongo.Collection} Instance
   ###
   deny: if Meteor.isServer then (rules) ->
     @collection.deny rules
     return @collection
   else undefined
+
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name allow
+  @param {Object} rules
+  @see https://docs.meteor.com/api/collections.html#Mongo-Collection-allow
+  @summary link Mongo.Collection allow methods
+  @returns {Mongo.Collection} Instance
+  ###
   allow: if Meteor.isServer then (rules) ->
     @collection.allow rules
     return @collection
@@ -1842,9 +1851,8 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name denyClient
-  @name allowClient
-  @see http://docs.meteor.com/#/full/allow
-  @summary Shorthands for Mongo.Collection allow/deny methods
+  @see https://docs.meteor.com/api/collections.html#Mongo-Collection-deny
+  @summary Shorthands for Mongo.Collection deny method
   @returns {Mongo.Collection} Instance
   ###
   denyClient: if Meteor.isServer then ->
@@ -1854,6 +1862,15 @@ class FilesCollection
       remove: -> true
     return @collection
   else undefined
+
+  ###
+  @locus Server
+  @memberOf FilesCollection
+  @name allowClient
+  @see https://docs.meteor.com/api/collections.html#Mongo-Collection-allow
+  @summary Shorthands for Mongo.Collection allow method
+  @returns {Mongo.Collection} Instance
+  ###
   allowClient: if Meteor.isServer then ->
     @collection.allow
       insert: -> true
