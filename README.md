@@ -68,6 +68,8 @@ meteor add ostrio:files
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========
+Note: When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
+
 #### `new FilesCollection([config])` [*Isomorphic*]
 Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
