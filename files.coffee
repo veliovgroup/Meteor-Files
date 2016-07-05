@@ -1778,9 +1778,9 @@ class FilesCollection
   @summary Remove documents from the collection
   @returns {FilesCollection} Instance
   ###
-  remove: (selector, callback) ->
+  remove: (selector = {}, callback) ->
     console.info "[FilesCollection] [remove(#{JSON.stringify(selector)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String
+    check selector, Match.OneOf Object, String
     check callback, Match.Optional Function
 
     if Meteor.isClient
