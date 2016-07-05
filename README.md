@@ -1,3 +1,10 @@
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
+[![GitHub issues](https://img.shields.io/github/issues/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/issues)
+[![GitHub forks](https://img.shields.io/github/forks/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/network)
+[![GitHub stars](https://img.shields.io/github/stars/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/stargazers)
+[![Twitter](https://img.shields.io/twitter/url/https/github.com/VeliovGroup/Meteor-Files.svg?style=social)](https://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
+
 Files for Meteor
 ========
 Extremely fast and robust package for file uploading, managing and streaming (*Audio & Video & Images*), with support of server's file system (FS) or third party storage, like: *AWS*, *DropBox*, *Google Storage*, *Google Drive*, *GridFS* or any other with API.
@@ -8,10 +15,17 @@ For current upload *pause/continue*, *speed*, *remaining time* and *progress* se
 
 Support:
 ========
- - [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
+ - [Ask a question via Gitter chat](https://gitter.im/VeliovGroup/Meteor-Files)
  - [Ask a question or submit an issue](https://github.com/VeliovGroup/Meteor-Files/issues)
  - [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
  - For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
+
+Support Meteor-Files project:
+========
+ - [Donate via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2)
+ - Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
+ - Stat on [Atmosphere](https://atmospherejs.com/ostrio/files)
+ - Share on [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 
 Awards:
 ========
@@ -54,6 +68,8 @@ meteor add ostrio:files
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========
+Note: When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
+
 #### `new FilesCollection([config])` [*Isomorphic*]
 Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
@@ -254,7 +270,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 
 Supporters:
 ========
-Big thanks to all supporters. *Only because of this guys this project can have 100% of our attention*.
+I would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
  - [@themeteorchef](https://github.com/themeteorchef)
  - [@MeDBejoHok](https://github.com/medbejohok)
 
@@ -262,4 +278,4 @@ Big thanks to all supporters. *Only because of this guys this project can have 1
 
 | Meteor-Files | Expressive package to manage files within Meteor |
 |:-------------:|:------------- |
-| [![logo](https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png)](https://github.com/VeliovGroup/Meteor-Files) | If you found this package useful, please do not hesitate to star it at both [GitHub](https://github.com/VeliovGroup/Meteor-Files) and [Atmosphere](https://atmospherejs.com/ostrio/files). Also you may like to [Tweet](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files&text=File%20upload%20and%20delivery%20in%20Meteorjs%20-%20now%20it's%20easy!) about it or share at [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) |
+| [![logo](https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo-bw.png)](https://github.com/VeliovGroup/Meteor-Files) | If you found this package useful, please do not hesitate to star it at both [GitHub](https://github.com/VeliovGroup/Meteor-Files) and [Atmosphere](https://atmospherejs.com/ostrio/files). Also you may like to [Tweet](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files&text=File%20upload%20and%20delivery%20in%20Meteorjs%20-%20now%20it's%20easy!) about it or share at [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) <br /> [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2) |

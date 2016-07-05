@@ -9,21 +9,24 @@ Template.file.onCreated ->
 Template.file.onRendered ->
   @warning.set false
   @fetchedText.set false
-  if (@data.file.get('isText') or @data.file.get('isJSON'))
-    self = @
-    HTTP.call 'GET', @data.file.link(), (error, resp) ->
-      self.showPreview.set true
-      if error
-        console.error error
-      else
-        if !~[500, 404, 400].indexOf resp.statusCode
-          if resp.content.length < 1024 * 64
-            self.fetchedText.set resp.content
-          else
-            self.warning.set true
-      return
+  if @data.file.isText or @data.file.isJSON
+    if  @data.file.size < 1024 * 64
+      self = @
+      HTTP.call 'GET', @data.file.link(), (error, resp) ->
+        self.showPreview.set true
+        if error
+          console.error error
+        else
+          if !~[500, 404, 400].indexOf resp.statusCode
+            if resp.content.length < 1024 * 64
+              self.fetchedText.set resp.content
+            else
+              self.warning.set true
+        return
+    else
+      @warning.set true
 
-  else if @data.file.get('isImage')
+  else if @data.file.isImage
     self = @
     img  = new Image()
     img.onload = ->
