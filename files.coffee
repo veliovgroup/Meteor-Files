@@ -23,7 +23,7 @@ if Meteor.isServer
   @param path      {String} - Path to file on FS
   @param maxLength {Number} - Max amount of chunks in stream
   @param file      {Object} - fileRef Object
-  @summary writableStream wrapper class, makes sure chunks is written in given order
+  @summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
   ###
   class writeStream
     constructor: (@path, @maxLength, @file) ->
@@ -66,7 +66,7 @@ if Meteor.isServer
     @memberOf writeStream
     @name end
     @param {Function} callback - Callback
-    @summary Write chunk in given order
+    @summary Finishes writing to writableStream, only after all chunks in queue is written
     @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
     ###
     end: (callback) ->
