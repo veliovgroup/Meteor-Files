@@ -49,7 +49,7 @@ npm-mongo@1.4.44_1
 observe-sequence@1.0.12
 ordered-dict@1.0.8
 ostrio:cookies@2.0.4
-ostrio:files@1.6.0
+ostrio:files@1.6.2
 ostrio:templatehelpers@1.1.2
 promise@0.7.2_1
 random@1.0.10
