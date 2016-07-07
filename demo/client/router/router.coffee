@@ -28,6 +28,16 @@ FlowRouter.globals.push
       name: 'twitter:image'
       content: Meteor.absoluteUrl 'icon_750x560.png'
 
+FlowRouter.globals.push
+  link:
+    canonical:
+      rel: 'canonical'
+      itemprop: 'url'
+      href: -> _app.currentUrl()
+    image:
+      itemprop: 'image'
+      href: -> Meteor.absoluteUrl 'icon_1200x630.png'
+
 FlowRouter.notFound =
   action: -> 
     @render '_layout', '_404'
