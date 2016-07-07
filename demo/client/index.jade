@@ -7,7 +7,12 @@ template(name="index")
         each latest.each
           +listingRow
         if compare filesLength '>' latest.count
-          tr: td(data-load-more colspan="3"): h3.no-margin.center Load More
+          tr: td(data-load-more colspan="3")
+            h3.no-margin.center
+              if loadMore
+                i.fa.fa-fw.fa-spin.fa-spinner
+              else
+                | Load More
     else
       h3.files-note
         if userOnly
