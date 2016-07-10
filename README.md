@@ -5,6 +5,24 @@
 [![GitHub stars](https://img.shields.io/github/stars/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/stargazers)
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/VeliovGroup/Meteor-Files.svg?style=social)](https://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 
+ToC:
+========
+ - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
+ - [About this package](https://github.com/VeliovGroup/Meteor-Files#files-for-meteor)
+ - [Help / Support](https://github.com/VeliovGroup/Meteor-Files#support)
+ - [Support the *MF* project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
+ - [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
+ - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
+ - [See *MF* in action](https://github.com/VeliovGroup/Meteor-Files#demo-application) - Demo application
+ - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
+ - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
+ - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
+   * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
+   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
+   * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
+   * [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
+ - [Supporters](https://github.com/VeliovGroup/Meteor-Files#supporters)
+
 Files for Meteor
 ========
 Extremely fast and robust package for file uploading, managing and streaming (*Audio & Video & Images*), with support of server's file system (FS) or third party storage, like: *AWS*, *DropBox*, *Google Storage*, *Google Drive*, *GridFS* or any other with API.
@@ -27,6 +45,10 @@ Support Meteor-Files project:
  - Stat on [Atmosphere](https://atmospherejs.com/ostrio/files)
  - Share on [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 
+Contribution:
+========
+All PRs is always welcome on [`dev` branch](https://github.com/VeliovGroup/Meteor-Files/tree/dev). Please, always give expressive description to your changes and additions.
+
 Awards:
 ========
 <a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
@@ -39,22 +61,12 @@ Demo application:
  - [Compiled Demo App](https://github.com/VeliovGroup/Meteor-Files-Demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
-ToC:
-========
- - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
- - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
- - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
- - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
-   * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
-   * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
-   * [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
-   * [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
 
 Why `Meteor-Files`?
 ========
 The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
  - Support for both `HTTP` and `DDP` transports for upload
- - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
+ - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
  - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 

@@ -29,7 +29,7 @@ Meteor-Files
     * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
     * [GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
     * Google Drive
-    * Google Storage
+    * [Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)
     * any other with JS/REST API
  - Display upload speed
  - Display remaining upload time
