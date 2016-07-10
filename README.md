@@ -43,7 +43,7 @@ Support Meteor-Files project:
 ========
  - [Donate via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2)
  - Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
- - Stat on [Atmosphere](https://atmospherejs.com/ostrio/files)
+ - Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
  - Share on [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 
 Contribution:
