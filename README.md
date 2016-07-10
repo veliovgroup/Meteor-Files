@@ -16,7 +16,7 @@ ToC:
  - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
  - [See *MF* in action](https://github.com/VeliovGroup/Meteor-Files#demo-application) - Demo application
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
- - [Install](https://github.com/VeliovGroup/Meteor-Files#install)
+ - [Installation](https://github.com/VeliovGroup/Meteor-Files#install)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
    * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
