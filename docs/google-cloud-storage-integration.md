@@ -1,37 +1,37 @@
-## Using Google Cloud Storage as your storage provider
+#### Using Google Cloud Storage as your storage provider
 This example shows how to add and retrieve files using Google Cloud Storage.
-Additionally, this example will also show you how to list all of your files and remove
-any unnecessary files.
+Additionally, this example will also show you how to list uploaded files and remove any of them.
 
-See real, production code
+*See production-ready code below.*
 
-Step 1: install [gcloud-node](https://github.com/googlecloudplatform/gcloud-node)
-```
+##### Step 1: install [gcloud-node](https://github.com/googlecloudplatform/gcloud-node)
+
+```shell
 npm install --save gcloud
 ```
 Or
-```
+```shell
 meteor npm install gcloud
 ```
 
-Step 2: Setup your Google Cloud Storage
+##### Step 2: Setup your Google Cloud Storage
 - Sign into the Google Cloud Console site: https://console.developers.google.com
 - Go to your project and under Storage click on Create Bucket, and name your Bucket
   * Don't forget the name of this bucket, you'll need it later
-- Under APIs & auth click on Credentials
-- Create an OAuth Service Account for your project if you don't already have one
-- If you do not have a private key, click Generate new key to generate one
+- Under APIs & Auth click on Credentials
+- Create an OAuth Service Account for your project (*if you don't already have one*)
+- If you do not have a private key, click "*Generate new key*"
   * This will download a JSON file to your computer
   * Keep this JSON file, it is your key to the account, and you will need it later
-  * Also, GUARD THIS JSON FILE WITH YOUR LIFE. IF ANY ONE GETS AHOLD OF IT, THEY HAVE FULL ACCESS TO YOUR ACCOUNT!!!
+  * Also, __GUARD THIS JSON FILE AS YOUR LIFE__. IF ANYONE GETS AHOLD OF IT, THEY WILL HAVE FULL ACCESS TO YOUR ACCOUNT!
 
 ```javascript
-var gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {}
+var gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {};
 
 if (Meteor.isServer) {
   gcloud = Npm.require('gcloud')({
     projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
-    keyFilename: 'YOUR_KEY_JSON', // <-- Replace this with the path to your key.json
+    keyFilename: 'YOUR_KEY_JSON'  // <-- Replace this with the path to your key.json
   });
   gcs = gcloud.storage();
   bucket = gcs.bucket('YOUR_BUCKET_NAME'); // <-- Replace this with your bucket name
@@ -49,7 +49,7 @@ if (Meteor.isServer) {
 }
 
 Collections.files = new FilesCollection({
-  debug: false, // Set this to true to enable debugging messages
+  debug: false, // Set to true to enable debugging messages
   throttle: false,
   storagePath: 'assets/app/uploads/uploadedFiles',
   collectionName: 'uploadedFiles',
@@ -88,8 +88,8 @@ Collections.files = new FilesCollection({
               console.error(error);
             } else {
               // Unlink original files from FS
-                // after successful upload to Google Cloud Storage
-                self.unlink(self.collection.findOne(fileRef._id), version);
+              // after successful upload to Google Cloud Storage
+              self.unlink(self.collection.findOne(fileRef._id), version);
             }
           });
         }
