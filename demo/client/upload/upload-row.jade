@@ -8,7 +8,7 @@ template(name="uploadRow")
           else
             span.progress #{progress.get}%
             span.action(title="Pause upload"): i.fa.fa-lg.fa-fw.fa-pause
-    td
+    td(colspan="2")
       table.fixed-table: tbody: tr: td
         .file-name #{file.name}
         br

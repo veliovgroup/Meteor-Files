@@ -3,6 +3,7 @@ Template.index.onCreated ->
   self            = @
   @take           = new ReactiveVar 10
   @latest         = new ReactiveVar new Mongo.Cursor
+  @loadMore       = new ReactiveVar false
   @filesLength    = new ReactiveVar 0
   @getFilesLenght = ->
     Meteor.clearTimeout timer if timer
@@ -37,7 +38,9 @@ Template.index.onCreated ->
     return
 
   @autorun ->
-    _app.subs.subscribe 'latest', self.take.get(), _app.userOnly.get()
+    _app.subs.subscribe 'latest', self.take.get(), _app.userOnly.get(), ->
+      self.loadMore.set false
+      return
     return
   return
 
@@ -50,9 +53,11 @@ Template.index.helpers
   latest:      -> Template.instance().latest.get()
   uploads:     -> _app.uploads.get()
   userOnly:    -> _app.userOnly.get()
+  loadMore:    -> Template.instance().loadMore.get()
   filesLength: -> Template.instance().filesLength.get()
 
 Template.index.events
   'click [data-load-more]': (e, template) ->
+    template.loadMore.set true
     template.take.set template.take.get() + 10
     return

@@ -50,6 +50,10 @@ FlowRouter.route '/:_id',
     'twitter:image':
       name: 'twitter:image'
       content: if file and file.get('isImage') then file.link('preview') else Meteor.absoluteUrl 'icon_750x560.png'
+  link: (params, queryParams, file) ->
+    image:
+      itemprop: 'image'
+      href: -> if file and file.get('isImage') then file.link('preview') else Meteor.absoluteUrl 'icon_1200x630.png'
   action: (params, queryParams, file) ->
     @render '_layout', 'file', {file}
     return

@@ -82,7 +82,7 @@ Collections.files = new FilesCollection
         # To force ?play and ?download parameters
         # and to keep original file name, content-type,
         # content-disposition and cache-control
-        # we're' using low-level .serve() method
+        # we're using low-level .serve() method
         @serve http,
           fileRef,
           fileRef.versions[version],
