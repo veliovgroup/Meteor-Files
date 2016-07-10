@@ -24,7 +24,7 @@ Meteor-Files
     * Pause / Resume upload
     * Auto-pause when connection to server is interrupted
     * Multi-stream async upload (*faster than ever*)
- - Use third-party storage:
+ - [Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage):
     * [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
     * [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
     * [GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
@@ -33,25 +33,25 @@ Meteor-Files
     * any other with JS/REST API
  - Display upload speed
  - Display remaining upload time
- - Serving files
+ - Serving files:
     * Make files `public`, so your proxy server like __nginx__ can serve them
     * Protect/Restrict access to files
     * Files CRC check (*integrity check*)
- - Write to file system (*FS*)
+ - Write to file system (*FS*):
     * Automatically writes files on FS and special Collection
     * `path`, collection name, schema, chunk size and naming function is under your control
     * Support for file subversions, like thumbnails, audio/video file formats, revisions, and etc.
- - Streaming via HTTP
+ - Streaming via HTTP:
     * Correct `mime-type` and `Content-Range` headers
     * Correct `206` and `416` responses
     * Following [RFC 2616](https://tools.ietf.org/html/rfc2616)
- - Download via HTTP
+ - Download via HTTP:
     * You able to specify `route`
     * Download is ready for small and large files, with support of progressive (`chunked`) download
- - Store wherever you like
+ - Store wherever you like:
     * You may use `Meteor-Files` as temporary storage
-    * After file is uploaded and stored on FS you able to `mv` or `cp` its content, see [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration) and [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) integration
- - Support of non-latin (non-Roman) file names
+    * After file is uploaded and stored on FS you able to `mv` or `cp` its content, see [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) examples
+ - Support of non-Latin (non-Roman) file names
  - Subscribe on files (*collections*) you need
 
 ### ToC:
@@ -95,7 +95,7 @@ Meteor-Files
  - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
- - [Third-party storage (AWS S3 & DropBox & GridFS)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
+ - [Third-party storage (AWS S3, DropBox, GridFS and Google Storage)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
 

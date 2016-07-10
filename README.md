@@ -9,6 +9,7 @@ ToC:
 ========
  - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
  - [About this package](https://github.com/VeliovGroup/Meteor-Files#files-for-meteor)
+ - [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) examples - AWS S3, DropBox, GridFS and Google Storage
  - [Help / Support](https://github.com/VeliovGroup/Meteor-Files#support)
  - [Support the *MF* project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
  - [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
