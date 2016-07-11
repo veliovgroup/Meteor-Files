@@ -419,6 +419,7 @@ fixJSONStringify = (obj) ->
 @param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
 @param config.storagePath    {String|Function}  - [Server] Storage path on file system
 @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
+@param config.responseHeaders {Object|Function} - [Server] Custom response headers, if function is passed, must return Object
 @param config.throttle       {Number}  - [Server] bps throttle threshold
 @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
 @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
@@ -445,7 +446,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -483,6 +484,7 @@ class FilesCollection
       delete @downloadCallback
       delete @interceptDownload
       delete @continueUploadTTL
+      delete @responseHeaders
 
       if _.has(Package, 'accounts-base')
         setTokenCookie = ->
@@ -521,6 +523,22 @@ class FilesCollection
       @_currentUploads   ?= {}
       @downloadCallback  ?= false
       @continueUploadTTL ?= 10800
+      @responseHeaders   ?= (responseCode, fileRef, versionRef) ->
+        headers = {}
+        switch responseCode
+          when '206'
+            headers['Pragma']            = 'private'
+            headers['Trailer']           = 'expires'
+            headers['Transfer-Encoding'] = 'chunked'
+          when '400'
+            headers['Cache-Control']     = 'no-cache'
+          when '416'
+            headers['Content-Range']     = "bytes */#{versionRef.size}"
+
+        headers['Connection']    = 'keep-alive'
+        headers['Content-Type']  = versionRef.type or 'application/octet-stream'
+        headers['Accept-Ranges'] = 'bytes'
+        return headers
 
       if @public and not storagePath
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
@@ -560,6 +578,7 @@ class FilesCollection
       check @downloadCallback, Match.OneOf false, Function
       check @interceptDownload, Match.OneOf false, Function
       check @continueUploadTTL, Number
+      check @responseHeaders, Match.OneOf Object, Function
 
       @_preCollection = new Mongo.Collection '__pre_' + @collectionName
       @_preCollection._ensureIndex {'createdAt': 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
@@ -1994,11 +2013,7 @@ class FilesCollection
     dispositionName     = "filename=\"#{encodeURIComponent(fileRef.name)}\"; filename=*UTF-8\"#{encodeURIComponent(fileRef.name)}\"; "
     dispositionEncoding = 'charset=utf-8'
 
-    http.response.setHeader 'Content-Type', vRef.type
     http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
-    http.response.setHeader 'Accept-Ranges', 'bytes'
-    http.response.setHeader 'Last-Modified', fileRef?.updatedAt?.toUTCString() if fileRef?.updatedAt?.toUTCString()
-    http.response.setHeader 'Connection', 'keep-alive'
 
     if http.request.headers.range and not force200
       partiral = true
@@ -2022,16 +2037,12 @@ class FilesCollection
         reqRange.end   = start + take
 
       reqRange.end = vRef.size - 1 if ((start + take) >= vRef.size)
-      http.response.setHeader 'Pragma', 'private'
-      http.response.setHeader 'Expires', new Date(+new Date + 1000*32400).toUTCString()
-      http.response.setHeader 'Cache-Control', 'private, maxage=10800, s-maxage=32400'
 
       if self.strict and (reqRange.start >= (vRef.size - 1) or reqRange.end > (vRef.size - 1))
         responseType = '416'
       else
         responseType = '206'
     else
-      http.response.setHeader 'Cache-Control', self.cacheControl
       responseType = '200'
 
     streamErrorHandler = (error) ->
@@ -2040,13 +2051,20 @@ class FilesCollection
       console.error "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error if self.debug
       return
 
+    headers = if _.isFunction(self.responseHeaders) then self.responseHeaders(responseType, fileRef, vRef, version) else self.responseHeaders
+
+    unless headers['Cache-Control']
+      http.response.setHeader 'Cache-Control', self.cacheControl
+
+    for key, value of headers
+      http.response.setHeader key, value
+
     switch responseType
       when '400'
         console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
         text = 'Content-Length mismatch!'
         http.response.writeHead 400,
           'Content-Type':   'text/plain'
-          'Cache-Control':  'no-cache'
           'Content-Length': text.length
         http.response.end text
         break
@@ -2055,8 +2073,7 @@ class FilesCollection
         break
       when '416'
         console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
-        http.response.writeHead 416,
-          'Content-Range': "bytes */#{vRef.size}"
+        http.response.writeHead 416
         http.response.end()
         break
       when '200'
@@ -2076,8 +2093,6 @@ class FilesCollection
       when '206'
         console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [206]" if self.debug
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
-        http.response.setHeader 'Trailer', 'expires'
-        http.response.setHeader 'Transfer-Encoding', 'chunked'
         stream = readableStream or fs.createReadStream vRef.path, {start: reqRange.start, end: reqRange.end}
         http.response.writeHead 206 if readableStream
         stream.on('open', -> 

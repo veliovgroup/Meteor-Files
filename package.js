@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.6.2',
+  version: '1.6.3',
   summary: 'Fast and robust file upload package, with support of FS, AWS, GridFS, DropBox or Google Drive',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -20,7 +20,7 @@ Package.onUse(function(api) {
 
 Npm.depends({
   'fs-extra': '0.30.0', // NOTE: this package has dropped support for Node v0.10, since v0.29.0; Brought back Node v0.10 support in v0.30.0, official support will end 2016-10-01
-  'request': '2.72.0',
+  'request': '2.73.0',
   'throttle': '1.0.3',
   'file-type': '3.8.0'
 });
