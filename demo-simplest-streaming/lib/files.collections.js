@@ -1,16 +1,18 @@
-this.Images = new Meteor.Files({
+import { FilesCollection } from 'meteor/ostrio:files';
+
+let Images = new FilesCollection({
   debug: true,
   collectionName: 'Images',
-  onBeforeUpload: function () {
+  onBeforeUpload() {
     // Disallow uploads from client
     return false;
   }
 });
 
-this.Videos = new Meteor.Files({
+let Videos = new FilesCollection({
   debug: true,
   collectionName: 'Videos',
-  onBeforeUpload: function () {
+  onBeforeUpload() {
     // Disallow uploads from client
     return false;
   }
@@ -21,7 +23,7 @@ if (Meteor.isServer) {
   Images.denyClient();
   Videos.denyClient();
   
-  Meteor.startup(function () {
+  Meteor.startup(() => {
     if (!Images.findOne()) {
       Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
         fileName: 'logo.png'
@@ -35,16 +37,13 @@ if (Meteor.isServer) {
     }
   });
 
-  Meteor.publish('files.images.all', function () {
-    return Images.find().cursor;
-  });
-
-  Meteor.publish('files.videos.all', function () {
-    return Videos.find().cursor;
-  });
+  Meteor.publish('files.images.all', () => Images.find().cursor);
+  Meteor.publish('files.videos.all', () => Videos.find().cursor);
 
 } else {
 
   Meteor.subscribe('files.images.all');
   Meteor.subscribe('files.videos.all');
 }
+
+export { Videos, Images }

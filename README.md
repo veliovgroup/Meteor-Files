@@ -16,7 +16,8 @@ ToC:
  - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
  - [See *MF* in action](https://github.com/VeliovGroup/Meteor-Files#demo-application) - Demo application
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
- - [Installation](https://github.com/VeliovGroup/Meteor-Files#install)
+ - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
+ - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
    * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
@@ -73,10 +74,16 @@ The `cfs` is a well known package, but it's huge monster which combines everythi
 
 Easy-peasy kids, *yeah*?
 
-Install:
+Installation:
 ========
 ```shell
 meteor add ostrio:files
+```
+
+ES6 Import:
+========
+```jsx
+import { FilesCollection } from 'meteor/ostrio:files';
 ```
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
@@ -286,6 +293,7 @@ Supporters:
 I would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
  - [@themeteorchef](https://github.com/themeteorchef)
  - [@MeDBejoHok](https://github.com/medbejohok)
+ - [@martunta](https://github.com/martunta)
 
 ----
 
