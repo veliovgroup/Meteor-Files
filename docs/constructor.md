@@ -137,10 +137,10 @@
         Allows to change default response headers
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Responce-Headers#default-function">Default <em>Function</em></a>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Response-Headers#default-function">Default <em>Function</em></a>
       </td>
       <td>
-        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Responce-Headers#adding-custom-header-example">example altering default headers</a>
+        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Response-Headers#adding-custom-header-example">example altering default headers</a>
       </td>
     </tr>
     <tr>
