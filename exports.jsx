@@ -1,0 +1,1 @@
+export {FilesCollection} from __coffeescriptShare;

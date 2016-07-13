@@ -2125,6 +2125,11 @@ class FilesCollection
     return formatFleURL fileRef, version
 
 ###
+Export the FilesCollection class
+###
+__coffeescriptShare.FilesCollection = FilesCollection
+
+###
 @locus Anywhere
 @private
 @name formatFleURL
