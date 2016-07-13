@@ -59,6 +59,7 @@ if Meteor.isServer
           self = @
           Meteor.setTimeout ->
             self.write num, chunk
+            return
           , 25
       return false
 
@@ -78,8 +79,11 @@ if Meteor.isServer
           self = @
           Meteor.setTimeout ->
             self.end callback
+            return
           , 25
       return false
+else
+  `import { EventEmitter } from './event-emitter.jsx'`
 
 ###
 @private
@@ -104,7 +108,10 @@ class FileCursor
   ###
   remove: (callback) ->
     console.info '[FilesCollection] [FileCursor] [remove()]' if @_collection.debug
-    if @_fileRef then @_collection.remove(@_fileRef._id, callback) else callback new Meteor.Error 404, 'No such file'
+    if @_fileRef
+      @_collection.remove(@_fileRef._id, callback)
+    else
+      callback and callback new Meteor.Error 404, 'No such file'
     return @
 
   ###
@@ -284,7 +291,7 @@ class FilesCursor
   ###
   remove: (callback) ->
     console.info '[FilesCollection] [FilesCursor] [remove()]' if @_collection.debug
-    @_collection.remove @_selector, callback, @
+    @_collection.remove @_selector, callback
     return @
 
   ###
@@ -593,8 +600,7 @@ class FilesCollection
         return
 
       @_createStream = (_id, path, opts) ->
-        self._currentUploads[_id] = new writeStream path, opts.fileLength, opts
-        return self._currentUploads[_id]
+        return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts
 
       # This little function allows to continue upload
       # even after server is restarted (*not on dev-stage*)
@@ -1161,6 +1167,8 @@ class FilesCollection
           else
             callback and callback null, result
             console.info "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}" if self.debug
+          return
+      return
     return @
   else
     undefined
@@ -1304,8 +1312,10 @@ class FilesCollection
           else
             callback and callback null, result
             console.info "[FilesCollection] [addFile]: #{fileName} -> #{self.collectionName}" if self.debug
+          return
       else
         callback and callback new Meteor.Error 400, "[FilesCollection] [addFile(#{path})]: File does not exist"
+      return
 
     return @
   else
@@ -1321,7 +1331,7 @@ class FilesCollection
   @returns {FileCursor} Instance
   ###
   findOne: (selector = {}, options) ->
-    console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)})]" if @debug
+    console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
     check selector, Match.OneOf Object, String
     check options, Match.Optional Object
     doc = @collection.findOne selector, options
@@ -1374,8 +1384,7 @@ class FilesCollection
     {Function}    readAsDataURL - Current file as data URL, use to create image preview and etc. Be aware of big files, may lead to browser crash
   ###
   insert: if Meteor.isClient then (config, autoStart = true) ->
-    mName = if autoStart then 'start' else 'manual'
-    return (new @_UploadInstance(config, @))[mName]()
+    return (new @_UploadInstance(config, @))[if autoStart then 'start' else 'manual']()
   else undefined
 
   ###
@@ -1812,7 +1821,9 @@ class FilesCollection
       files = @collection.find selector
       if files.count() > 0
         self = @
-        files.forEach (file) -> self.unlink file
+        files.forEach (file) ->
+          self.unlink file
+          return
       
       if @onAfterRemove
         self = @
@@ -2125,11 +2136,6 @@ class FilesCollection
     return formatFleURL fileRef, version
 
 ###
-Export the FilesCollection class
-###
-__coffeescriptShare.FilesCollection = FilesCollection
-
-###
 @locus Anywhere
 @private
 @name formatFleURL
@@ -2173,4 +2179,8 @@ if Meteor.isClient
     else
       return ''
 
+###
+Export the FilesCollection class
+###
+`export { FilesCollection }`
 Meteor.Files = FilesCollection
