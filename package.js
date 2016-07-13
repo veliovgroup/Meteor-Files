@@ -12,6 +12,7 @@ Package.onUse(function(api) {
   api.addFiles('event-emitter.js', 'client');
   api.addAssets('worker.js', 'client');
   api.addFiles('files.coffee', ['server', 'client']);
+  api.addAssets('exports.jsx', ['server', 'client']);
   api.use('webapp', 'server');
   api.use(['templating', 'reactive-var', 'tracker', 'http'], 'client');
   api.use(['underscore', 'check', 'random', 'coffeescript'], ['client', 'server']);
