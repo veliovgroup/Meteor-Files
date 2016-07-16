@@ -39,9 +39,12 @@ template(name="file")
             link(itemprop="url" href="{{urlCurrent}}" content="{{urlCurrent}}")
             meta(itemprop="width" content="{{meta.width}}")
             meta(itemprop="height" content="{{meta.height}}")
-            source(type="#{type}" srcset="{{link 'preview'}}")
             if showPreview
+              source(type="#{type}" srcset="{{link 'preview'}}")
               img.file-preview(src="{{link 'preview'}}" alt="#{name}")
+            else if showOriginal
+              source(type="#{type}" srcset="{{link}}")
+              img.file-preview(src="{{link}}" alt="#{name}")
             else
               h1.files-note: i.fa.fa-fw.fa-spin.fa-spinner
         else if isAudio
