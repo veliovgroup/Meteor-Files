@@ -1,4 +1,4 @@
-##### `load(url [, opts, callback, onAfterUpload])` [*Server*]
+##### `load(url [, opts, callback, proceedAfterUpload])` [*Server*]
 *Write file to FS from remote URL (external resource) and add record to FilesCollection*
 
  - `url` {*String*} - Full address to file, like `scheme://example.com/sample.png`

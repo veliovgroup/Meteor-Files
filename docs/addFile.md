@@ -1,4 +1,4 @@
-##### `addFile(path [, opts, callback, onAfterUpload])` [*Server*]
+##### `addFile(path [, opts, callback, proceedAfterUpload])` [*Server*]
 
 *Add local file to FilesCollection from FS.*
 
