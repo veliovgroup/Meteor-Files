@@ -1119,18 +1119,25 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {Function} callback - function(error, fileObj){...}
+  @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Write buffer to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
-  write: if Meteor.isServer then (buffer, opts = {}, callback) ->
+  write: if Meteor.isServer then (buffer, opts = {}, callback, proceedAfterUpload) ->
     console.info '[FilesCollection] [write()]' if @debug
 
     if _.isFunction opts
+      proceedAfterUpload = callback
       callback = opts
       opts     = {}
+    else if _.isBoolean callback
+      proceedAfterUpload = callback
+    else if _.isBoolean opts
+      proceedAfterUpload = opts
 
     check opts, Match.Optional Object
     check callback, Match.Optional Function
+    check proceedAfterUpload, Match.Optional Boolean
 
     fileId   = Random.id()
     FSName   = if @namingFunction then @namingFunction() else fileId
@@ -1166,6 +1173,9 @@ class FilesCollection
             console.warn "[FilesCollection] [write] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
             callback and callback null, result
+            if proceedAfterUpload is true
+              self.onAfterUpload and self.onAfterUpload.call self, result
+              self.emit 'afterUpload', result
             console.info "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}" if self.debug
           return
       return
@@ -1183,19 +1193,26 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {Function} callback - function(error, fileObj){...}
+  @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Download file, write stream to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
-  load: if Meteor.isServer then (url, opts, callback) ->
+  load: if Meteor.isServer then (url, opts, callback, proceedAfterUpload) ->
     console.info "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
 
     if _.isFunction opts
+      proceedAfterUpload = callback
       callback = opts
       opts     = {}
+    else if _.isBoolean callback
+      proceedAfterUpload = callback
+    else if _.isBoolean opts
+      proceedAfterUpload = opts
 
     check url, String
     check opts, Match.Optional Object
     check callback, Match.Optional Function
+    check proceedAfterUpload, Match.Optional Boolean
 
     self      = @
     opts     ?= {}
@@ -1217,6 +1234,9 @@ class FilesCollection
           console.error "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
         else
           callback and callback null, result
+          if proceedAfterUpload is true
+            self.onAfterUpload and self.onAfterUpload.call self, result
+            self.emit 'afterUpload', result
           console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
         return
       return
@@ -1263,20 +1283,27 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {Function} callback - function(error, fileObj){...}
+  @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Add file from FS to FilesCollection
   @returns {FilesCollection} Instance
   ###
-  addFile: if Meteor.isServer then (path, opts, callback) ->
+  addFile: if Meteor.isServer then (path, opts, callback, proceedAfterUpload) ->
     console.info "[FilesCollection] [addFile(#{path})]" if @debug
 
     if _.isFunction opts
+      proceedAfterUpload = callback
       callback = opts
       opts     = {}
+    else if _.isBoolean callback
+      proceedAfterUpload = callback
+    else if _.isBoolean opts
+      proceedAfterUpload = opts
 
     throw new Meteor.Error 403, 'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection' if @public
     check path, String
     check opts, Match.Optional Object
     check callback, Match.Optional Function
+    check proceedAfterUpload, Match.Optional Boolean
 
     self = @
     fs.stat path, (error, stats) -> bound ->
@@ -1311,6 +1338,9 @@ class FilesCollection
             console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
             callback and callback null, result
+            if proceedAfterUpload is true
+              self.onAfterUpload and self.onAfterUpload.call self, result
+              self.emit 'afterUpload', result
             console.info "[FilesCollection] [addFile]: #{fileName} -> #{self.collectionName}" if self.debug
           return
       else
