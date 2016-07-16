@@ -4,7 +4,7 @@ Template.listingRow.onCreated ->
   return
 
 Template.listingRow.onRendered ->
-  if @data.isImage
+  if @data.isImage and /png|jpe?g/i.test @data.type
     self = @
     img  = new Image()
     img.onload = ->

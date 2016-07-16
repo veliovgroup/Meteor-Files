@@ -278,6 +278,7 @@ if Meteor.isServer
         name: 1
         size: 1
         meta: 1
+        type: 1
         isPDF: 1
         isText: 1
         isJSON: 1

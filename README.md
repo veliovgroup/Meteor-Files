@@ -18,6 +18,7 @@ ToC:
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
  - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
+ - [FAQ](https://github.com/VeliovGroup/Meteor-Files#faq)
  - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
    * [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
    * [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
@@ -31,7 +32,6 @@ Files for Meteor
 
 Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-application), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
-For current upload *pause/continue*, *speed*, *remaining time* and *progress* see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)).
 
 Support:
 ========
@@ -85,6 +85,13 @@ ES6 Import:
 ```jsx
 import { FilesCollection } from 'meteor/ostrio:files';
 ```
+
+FAQ:
+========
+ 1. __Where files is stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) it's equals to `assets/app/uploads` and relative to running script:
+   * On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`, note: __all files will be removed as soon as your application will rebuild__ or you run `meteor reset`. To keep you storage persistent use absolute path *outside of your project folder*, we recommend to use `/data` directory
+   * On `production`: `yourProdAppDir/programs/server`
+ 2. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========

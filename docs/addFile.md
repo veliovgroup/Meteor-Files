@@ -1,4 +1,4 @@
-##### `addFile(path [, opts, callback])` [*Server*]
+##### `addFile(path [, opts, callback, proceedAfterUpload])` [*Server*]
 
 *Add local file to FilesCollection from FS.*
 
@@ -11,6 +11,7 @@
    - `opts.type` {*String*} - Mime-type, like `image/png`
    - `opts.size` {*Number*} - File size in bytes, if not set - size will be calculated from file
  - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
+ - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
  - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```javascript
