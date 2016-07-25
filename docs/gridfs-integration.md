@@ -43,12 +43,15 @@ Import and set up required variables:
 ```javascript
 import Grid from 'gridfs-stream'; // We'll use this package to work with GridFS
 import fs from 'fs';              // Required to read files initially uploaded via Meteor-Files
+import { MongoInternals } from 'meteor/mongo';
 
 // Set up gfs instance
 let gfs;
 if (Meteor.isServer) {
-  const mongo = MongoInternals.NpmModules.mongodb.module; // eslint-disable-line no-undef
-  gfs = Grid(Meteor.users.rawDatabase(), mongo);
+  gfs = Grid(
+    MongoInternals.defaultRemoteCollectionDriver().mongo.db,
+    MongoInternals.NpmModule
+  );
 }
 ```
 
@@ -113,12 +116,15 @@ Here's a final code:
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 import Grid from 'gridfs-stream';
+import { MongoInternals } from 'meteor/mongo';
 import fs from 'fs';
 
 let gfs;
 if (Meteor.isServer) {
-  const mongo = MongoInternals.NpmModules.mongodb.module; // eslint-disable-line no-undef
-  gfs = Grid(Meteor.users.rawDatabase(), mongo);
+  gfs = Grid(
+    MongoInternals.defaultRemoteCollectionDriver().mongo.db,
+    MongoInternals.NpmModule
+  );
 }
 
 export const Images = new FilesCollection({
