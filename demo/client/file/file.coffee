@@ -29,7 +29,7 @@ Template.file.onRendered ->
 
   else if @data.file.isImage
     self = @
-    if /png|jpe?g/i.test @data.type
+    if /png|jpe?g/i.test @data.file.type
       img  = new Image()
       img.onload = ->
         self.showPreview.set true
