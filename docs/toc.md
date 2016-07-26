@@ -100,4 +100,4 @@ Meteor-Files
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
 
 ##### Articles:
- - [MongoDB with Replica Set & OpLog setup](https://veliovgroup.com/article/2qsjtNf8NSB9XxZDh/mongodb-replica-set-with-oplog) - Find out how to speed-up *reactivity* in you Meteor application
+ - [MongoDB with Replica Set & OpLog setup](https://veliovgroup.com/article/2qsjtNf8NSB9XxZDh/mongodb-replica-set-with-oplog) - Find out how to speed-up *reactivity* in your Meteor application
