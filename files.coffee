@@ -2212,5 +2212,5 @@ if Meteor.isClient
 ###
 Export the FilesCollection class
 ###
-`export { FilesCollection }`
 Meteor.Files = FilesCollection
+`export { FilesCollection }`
