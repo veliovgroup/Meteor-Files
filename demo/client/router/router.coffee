@@ -36,6 +36,7 @@ FlowRouter.globals.push
       href: -> _app.currentUrl()
     image:
       itemprop: 'image'
+      content: -> Meteor.absoluteUrl 'icon_1200x630.png'
       href: -> Meteor.absoluteUrl 'icon_1200x630.png'
 
 FlowRouter.notFound =

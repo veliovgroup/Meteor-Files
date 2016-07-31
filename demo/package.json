@@ -1,6 +1,6 @@
 {
   "name": "Meteor-Files-Demo",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "description": "Demo application for ostrio:files package",
   "main": "main.js",
   "scripts": {
@@ -51,10 +51,10 @@
     "throttle": "1.0.3",
     "underscore": "1.5.2",
     "useragent": "^2.1.9",
-    "request": "2.73.0"
+    "request": "2.74.0"
   },
   "engines": {
-    "node": "0.10.46",
+    "node": "4.4.7",
     "npm": "3.10.5"
   }
 }
