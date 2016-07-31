@@ -5,17 +5,17 @@ template(name="listingRow")
         if isPDF
           i.fa.fa-fw.fa-file-pdf-o
         else if isAudio
-          i.fa.fa-fw.fa-file-audio-o
+          i.fa.fa-fw.fa-music
         else if isVideo
-          i.fa.fa-fw.fa-file-video-o
+          i.fa.fa-fw.fa-video-camera
         else if isImage
           if versions.thumbnail40
             if showPreview
               img(src="{{link 'thumbnail40'}}" alt="#{name}")
             else
-              i.fa.fa-fw.fa-file-image-o
+              i.fa.fa-fw.fa-picture-o
           else
-            i.fa.fa-fw.fa-file-image-o
+            i.fa.fa-fw.fa-picture-o
         else if isText
           i.fa.fa-fw.fa-file-text-o
         else if isJSON
