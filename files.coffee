@@ -494,7 +494,7 @@ class FilesCollection
       delete @responseHeaders
 
       if _.has(Package, 'accounts-base')
-        Accounts ?= Package['accounts-base'].Accounts
+        Accounts = Package['accounts-base'].Accounts unless Accounts
         setTokenCookie = ->
           if (not cookie.has('meteor_login_token') and Accounts._lastLoginTokenWhenPolled) or (cookie.has('meteor_login_token') and (cookie.get('meteor_login_token') isnt Accounts._lastLoginTokenWhenPolled))
             cookie.set 'meteor_login_token', Accounts._lastLoginTokenWhenPolled, null, '/'
@@ -1051,7 +1051,7 @@ class FilesCollection
       if http
         cookie = http.request.Cookies
         if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
-          Accounts ?= Package['accounts-base'].Accounts
+          Accounts = Package['accounts-base'].Accounts unless Accounts
           user = Meteor.users.findOne 'services.resume.loginTokens.hashedToken': Accounts._hashLoginToken cookie.get 'meteor_login_token'
           if user
             result.user = () -> return user
