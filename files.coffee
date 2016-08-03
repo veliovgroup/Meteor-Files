@@ -830,7 +830,7 @@ class FilesCollection
       # Basically it prepares everything
       # So user can pause/disconnect and
       # continue upload later, during `continueUploadTTL`
-      _methods[self._methodNames._Start] = (opts) ->
+      _methods[self._methodNames._Start] = (opts, returnMeta) ->
         check opts, {
           file:       Object
           fileId:     String
@@ -839,13 +839,22 @@ class FilesCollection
           fileLength: Number
         }
 
+        check returnMeta, Match.Optional Boolean
+
         console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
         {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
         opts._id       = opts.fileId
         opts.createdAt = new Date()
         self._preCollection.insert opts
         self._createStream result._id, result.path, opts
-        return true
+
+        if returnMeta
+          return {
+            uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
+            file: result
+          }
+        else
+          return true
 
 
       # Method used to write file chunks
