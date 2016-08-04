@@ -99,5 +99,9 @@ Meteor-Files
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
 
+##### Related Packages:
+ - [pyfiles (meteor-python-files))](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
+ - [meteor-autoform-file](https://github.com/VeliovGroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)
+
 ##### Articles:
  - [MongoDB with Replica Set & OpLog setup](https://veliovgroup.com/article/2qsjtNf8NSB9XxZDh/mongodb-replica-set-with-oplog) - Find out how to speed-up *reactivity* in your Meteor application
