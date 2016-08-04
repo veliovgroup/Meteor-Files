@@ -16,6 +16,7 @@ ToC:
  - [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
  - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
  - [See *MF* in action](https://github.com/VeliovGroup/Meteor-Files#demo-application) - Demo application
+ - [Related Packages](https://github.com/VeliovGroup/Meteor-Files#related-packages)
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
  - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
@@ -32,7 +33,6 @@ Files for Meteor
 [Award winning](https://themeteorchef.com/blog/giant-cotton-apron-awards-show), extremely fast and robust package for file uploading, managing and streaming (*Audio & Video & Images*), with support of server's file system (FS) or third party storage, like: *AWS*, *DropBox*, *Google Storage*, *Google Drive*, *GridFS* or any other with API.
 
 Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-application), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
-
 
 Support:
 ========
@@ -63,6 +63,12 @@ Demo application:
  - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
  - [Compiled Demo App](https://github.com/VeliovGroup/Meteor-Files-Demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
+
+
+Related Packages:
+========
+ - [pyfiles (meteor-python-files))](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
+ - [meteor-autoform-file](https://github.com/VeliovGroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)
 
 
 Why `Meteor-Files`?
