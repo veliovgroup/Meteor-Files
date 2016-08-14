@@ -1082,7 +1082,7 @@ class FilesCollection
   ###
   _getExt: (fileName) ->
     if !!~fileName.indexOf('.')
-      extension = fileName.split('.').pop()
+      extension = fileName.split('.').pop().split('?')[0]
       return { ext: extension, extension, extensionWithDot: '.' + extension }
     else
       return { ext: '', extension: '', extensionWithDot: '' }
