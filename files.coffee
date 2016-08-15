@@ -38,6 +38,7 @@ if Meteor.isServer
         return
 
       @stream.on 'error', (error) -> bound ->
+        console.error "[FilesCollection] [writeStream] [ERROR:]", error
         return
 
     ###
@@ -710,20 +711,27 @@ class FilesCollection
         if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}/__upload"
           if request.method is 'POST'
 
-            body        = ''
             handleError = (error) ->
               console.warn "[FilesCollection] [Upload] [HTTP] Exception:", error
               response.writeHead 500
               response.end JSON.stringify {error}
               return
 
+            body = ''
             request.on 'data', (data) -> bound ->
               body += data
               return
 
             request.on 'end', -> bound ->
               try
-                opts            = JSON.parse body
+                opts = fileId: request.headers['x-fileid']
+
+                if request.headers['x-eof'] is '1'
+                  opts.eof = true
+                else
+                  opts.binData = new Buffer body, 'base64'
+                  opts.chunkId = parseInt request.headers['x-chunkid']
+
                 user            = self._getUser {request, response}
                 _continueUpload = self._continueUpload opts.fileId
                 unless _continueUpload
@@ -868,13 +876,13 @@ class FilesCollection
           chunkId: Match.Optional Number
         }
 
+        opts.binData = new Buffer(opts.binData, 'base64') if opts.binData
         _continueUpload = self._continueUpload opts.fileId
         unless _continueUpload
           throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
 
         @unblock()
         {result, opts} = self._prepareUpload _.extend(opts, _continueUpload), @userId, 'DDP'
-
         if opts.eof
           try
             return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
@@ -991,14 +999,13 @@ class FilesCollection
   ###
   _handleUpload: if Meteor.isServer then (result, opts, cb) ->
     self = @
-
     try
       if opts.eof
         @_currentUploads[result._id].end -> bound ->
           self.emit '_finishUpload', result, opts, cb
           return
       else
-        @_currentUploads[result._id].write opts.chunkId, new Buffer(opts.binData, 'base64'), cb
+        @_currentUploads[result._id].write opts.chunkId, opts.binData, cb
     catch e
       cb and cb e
     return
@@ -1554,9 +1561,9 @@ class FilesCollection
     sendChunk: (evt) ->
       self = @
       opts =
-        fileId:     @fileId
-        binData:    evt.data.bin
-        chunkId:    evt.data.chunkId
+        fileId:  @fileId
+        binData: evt.data.bin
+        chunkId: evt.data.chunkId
 
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
@@ -1567,7 +1574,7 @@ class FilesCollection
         console.timeEnd('loadFile ' + @config.file.name) if @collection.debug
         @emitEvent 'readEnd'
 
-      if opts.binData and opts.binData.length
+      if opts.binData
         if @config.transport is 'ddp'
           Meteor.call @collection._methodNames._Write, opts, (error) ->
             self.transferTime += (+new Date) - evt.data.start
@@ -1583,8 +1590,13 @@ class FilesCollection
               self.emitEvent 'calculateStats'
             return
         else
-          opts.file.meta = fixJSONStringify opts.file.meta if opts?.file?.meta
-          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
+          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
+            content: opts.binData
+            headers:
+              'x-fileid':     opts.fileId
+              'x-chunkid':    opts.chunkId
+              'content-type': 'text/plain'
+          }, (error, result) ->
             self.transferTime += (+new Date) - evt.data.start
             if error
               if "#{error}" is "Error: network"
@@ -1615,7 +1627,13 @@ class FilesCollection
             self.emitEvent 'end', arguments
             return
         else
-          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {data: opts}, (error, result) ->
+          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
+            content: ''
+            headers:
+              'x-eof':        1
+              'x-fileId':     opts.fileId
+              'content-type': 'text/plain'
+          }, (error, result) ->
             res      = JSON.parse result?.content or {}
             res.meta = fixJSONParse res.meta if res?.meta
             self.emitEvent 'end', [error, res]
@@ -1625,23 +1643,38 @@ class FilesCollection
     proceedChunk: (chunkId, start) ->
       self       = @
       chunk      = @config.file.slice (@config.chunkSize * (chunkId - 1)), (@config.chunkSize * chunkId)
-      fileReader = new FileReader
 
-      fileReader.onloadend = (evt) ->
+      if FileReader
+        fileReader = new FileReader
+
+        fileReader.onloadend = (evt) ->
+          self.emitEvent 'sendChunk', [{
+            data: {
+              bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
+              chunkId: chunkId
+              start: start
+            }
+          }]
+          return
+
+        fileReader.onerror = (e) ->
+          self.emitEvent 'end', [(e.target or e.srcElement).error]
+          return
+
+        fileReader.readAsDataURL chunk
+
+      else if FileReaderSync
+        fileReader = new FileReaderSync
+        
         self.emitEvent 'sendChunk', [{
           data: {
-            bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
+            bin: fileReader.readAsDataURL(chunk).split(',')[1]
             chunkId: chunkId
             start: start
           }
         }]
-        return
-
-      fileReader.onerror = (e) ->
-        self.emitEvent 'end', [(e.target or e.srcElement).error]
-        return
-
-      fileReader.readAsDataURL chunk
+      else
+        self.emitEvent 'end', ['FileReader and FileReaderSync is not supported in this Browser!']
       return
 
     upload: -> 
@@ -1756,7 +1789,8 @@ class FilesCollection
           else
             self.emitEvent 'sendChunk', [evt]
           return
-        @worker.onerror   = (e) -> 
+        @worker.onerror   = (e) ->
+          console.error '[FilesCollection] [insert] [worker] [ERROR:]', e if self.collection.debug
           self.emitEvent 'end', [e.message]
           return
 
@@ -1769,7 +1803,7 @@ class FilesCollection
       self.emitEvent 'prepare'
       return @result
 
-    manual: -> 
+    manual: ->
       self = @
       @result.start = ->
         self.emitEvent 'start'
