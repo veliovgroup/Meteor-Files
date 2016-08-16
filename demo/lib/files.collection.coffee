@@ -48,7 +48,7 @@ if Meteor.isServer
     Meteor.settings.s3.cfdomain = Meteor.settings.s3.cfdomain.replace /\/+$/, ''
 
 Collections.files = new FilesCollection
-  debug:            false
+  # debug:            true
   throttle:         false
   chunkSize:        1024*1024
   storagePath:      'assets/app/uploads/uploadedFiles'

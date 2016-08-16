@@ -63,6 +63,7 @@ Template.uploadForm.onCreated ->
         streams: 'dynamic'
         chunkSize: 'dynamic'
         transport: transport
+        # allowWebWorkers: false
       ,
         false # Use manual start, so we can attach event listeners
       ).on('end', (error, fileObj) ->
