@@ -1478,7 +1478,7 @@ class FilesCollection
           console.time('loadFile ' + @config.file.name)
 
         if Worker and @config.allowWebWorkers
-          @worker = new Worker '/packages/ostrio_files/worker.js'
+          @worker = new Worker Meteor.absoluteUrl 'packages/ostrio_files/worker.js'
         else
           @worker = null
 
