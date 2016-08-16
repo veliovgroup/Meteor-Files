@@ -41,7 +41,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>config.storagePath</code> {<em>String</em>}
+        <code>config.storagePath</code> {<em>String</em>|<em>Function</em>}
       </td>
       <td>
         Server
@@ -53,7 +53,30 @@
         <code>assets/app/uploads</code>
       </td>
       <td>
-        Relative to running script
+        Relative to running script<br />
+        If <em>Function</em> is passed it must return <em>String</em>, arguments:
+        <ul>
+          <li>
+            <code>defaultPath</code> - Default recommended path
+          </li>
+        </ul>
+        Context is current <em>FilesCollction</em> instance
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.collection</code> {<em>Mongo.Collection</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Mongo.Collection Instance
+      </td>
+      <td>
+      </td>
+      <td>
+        You can pass your own Mongo Collection instance <code>{collection: new Mongo.Collection('myFiles')}</code>
       </td>
     </tr>
     <tr>
@@ -73,6 +96,23 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.continueUploadTTL</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+      </td>
+      <td>
+        <code>10800</code> (3 hours)
+      </td>
+      <td>
+        If upload is not continued during this time, memory used for this upload will be freed. And uploaded chunks is removed. Server will no longer wait for upload, and if upload will be tied to be continued - Server will return <code>408</code> Error (<code>Can't continue upload, session expired. Start upload again.</code>)
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.cacheControl</code> {<em>String</em>}
       </td>
       <td>
@@ -85,6 +125,23 @@
         <code>public, max-age=31536000, s-maxage=31536000</code>
       </td>
       <td></td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.responseHeaders</code> {<em>Object</em>|<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Allows to change default response headers
+      </td>
+      <td>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Response-Headers#default-function">Default <em>Function</em></a>
+      </td>
+      <td>
+        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Custom-Response-Headers#adding-custom-header-example">example altering default headers</a>
+      </td>
     </tr>
     <tr>
       <td align="right">
@@ -159,16 +216,20 @@
         Function which returns <code>String</code>
       </td>
       <td>
-        <code>Random.id()</code>
+        <code>false</code>
       </td>
-      <td></td>
+      <td>
+        Primary sets file name on `FS`<br />
+        if <code>namingFunction</code> is not set<br />
+        `FS`-name is equal to file's record `_id`
+      </td>
     </tr>
     <tr>
       <td align="right">
         <code>config.permissions</code> {<em>Number</em>}
       </td>
       <td>
-        Isomorphic
+        Server
       </td>
       <td>
         FS-permissions (access rights) in octal
@@ -178,6 +239,23 @@
       </td>
       <td>
         ex.: <code>0755</code>, <code>0777</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.parentDirPermissions</code> {<em>Number</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        FS-permissions for parent directory (access rights) in octal
+      </td>
+      <td>
+        <code>0755</code>
+      </td>
+      <td>
+        ex.: <code>0777</code>
       </td>
     </tr>
     <tr>
@@ -359,6 +437,12 @@
           <li>
             <code>this.userId</code>
           </li>
+          <li>
+            <code>this.chunkId</code> {<em>Number</em>} - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.eof</code> {<em>Boolean</em>} - On <strong>server only</strong>
+          </li>
         </ul>
       </td>
       <td>
@@ -373,6 +457,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><del><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1 or chunkId=-1) and on eof (eof=true or chunkId=-1)</i></del> (<i>Fixed</i>. Since <code>v1.6.0</code> full file object is available in <code>onBeforeUpload</code> callback)</p>
       </td>
     </tr>
     <tr>
@@ -440,6 +525,27 @@
       <td>
         Alternatively use: <code>addListener('afterUpload', func)</code>
       </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.onAfterRemove</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Callback, triggered after file(s) is removed from Collection<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>files</code> {<em>[Object]</em>} - Array of removed documents
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td></td>
     </tr>
     <tr>
       <td align="right">
@@ -625,15 +731,15 @@ Images = new FilesCollection({
 
 *You're free to modify/overwrite* `FilesCollection.schema` *object.*
 ```javascript
-var Images = new new FilesCollection({/* ... */});
-Images.collection.attachSchema(Images.schema);
+var Images = new FilesCollection({/* ... */});
+Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 #### Deny collection interaction on client [*Server*]:
 *Deny insert/update/remove from client*
 ```javascript
 if (Meteor.isServer) {
-  var Images = new new FilesCollection({/* ... */});
+  var Images = new FilesCollection({/* ... */});
   Images.deny({
     insert: function() {
       return true;
@@ -655,7 +761,7 @@ if (Meteor.isServer) {
 *Allow insert/update/remove from client*
 ```javascript
 if (Meteor.isServer) {
-  var Images = new new FilesCollection({/* ... */});
+  var Images = new FilesCollection({/* ... */});
   Images.allow({
     insert: function() {
       return true;
@@ -675,7 +781,7 @@ if (Meteor.isServer) {
 
 #### Events listeners:
 ```javascript
-var Images = new new FilesCollection({/* ... */});
+var Images = new FilesCollection({/* ... */});
 // Alias addListener
 Images.on('afterUpload', function (fileRef) {
   /* ... */

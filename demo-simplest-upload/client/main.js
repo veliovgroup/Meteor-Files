@@ -5,17 +5,17 @@ import './main.html';
 
 Template.uploadedFiles.helpers({
   uploadedFiles: function () {
-    return Images.collection.find({});
+    return Images.find();
   }
 });
 
 Template.uploadForm.onCreated(function () {
-  this.currentFile = new ReactiveVar(false);
+  this.currentUpload = new ReactiveVar(false);
 });
 
 Template.uploadForm.helpers({
-  currentFile: function () {
-    return Template.instance().currentFile.get();
+  currentUpload: function () {
+    return Template.instance().currentUpload.get();
   }
 });
 
@@ -33,12 +33,7 @@ Template.uploadForm.events({
         }, false);
 
         uploadInstance.on('start', function() {
-          template.currentFile.set(this);
-        });
-
-        uploadInstance.on('error', function(error) {
-          console.error(error);
-          template.currentFile.set(false);
+          template.currentUpload.set(this);
         });
 
         uploadInstance.on('end', function(error, fileObj) {
@@ -47,7 +42,7 @@ Template.uploadForm.events({
           } else {
             alert('File "' + fileObj.name + '" successfully uploaded');
           }
-          template.currentFile.set(false);
+          template.currentUpload.set(false);
         });
 
         uploadInstance.start();

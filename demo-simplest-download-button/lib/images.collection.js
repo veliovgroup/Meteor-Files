@@ -1,4 +1,7 @@
-this.Images = new Meteor.Files({collectionName: 'Images'});
+this.Images = new Meteor.Files({
+  debug: true,
+  collectionName: 'Images'
+});
 
 // To have sample image in DB we will upload it on server startup:
 if (Meteor.isServer) {
@@ -6,7 +9,7 @@ if (Meteor.isServer) {
   Images.collection.attachSchema(Images.schema);
 
   Meteor.startup(function () {
-    if (!Images.collection.findOne({})) {
+    if (!Images.find().count()) {
       Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
         fileName: 'logo.png',
         meta: {}
@@ -15,7 +18,7 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return Images.find().cursor;
   });
 
 } else {

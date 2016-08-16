@@ -1,0 +1,139 @@
+template(name="file")
+  .col-50.sm-row: .file(itemscope itemtype="http://schema.org/Article")
+
+    div.invisible(itemprop="publisher" itemscope itemtype="https://schema.org/Organization")
+      meta(itemprop="name" content="Veliov Group, LLC")
+      picture(itemprop="logo" itemscope itemtype="https://schema.org/ImageObject")
+        meta(itemprop="caption" content="We code for your Projects, Sites and Apps")
+        meta(itemprop="exifData" content="image/png")
+        link(itemprop="contentUrl" content="https://veliovgroup.com/images/logo-social-1200x630.png" href="https://veliovgroup.com/images/logo-social-1200x630.png")
+        link(itemprop="url" content="https://veliovgroup.com" href="https://veliovgroup.com")
+        meta(itemprop="width" content="1200")
+        meta(itemprop="height" content="630")
+
+    link(itemprop="url" content="{{urlCurrent}}" href="{{urlCurrent}}")
+    meta(itemscope itemprop="mainEntityOfPage" itemType="https://schema.org/WebPage" itemid="{{urlCurrent}}")
+
+    div.invisible(itemprop="author" itemscope itemtype="https://schema.org/Person")
+      meta(itemprop="name" content="User of Meteor Files")
+
+    +with file.with
+      time.invisible(itemprop="datePublished" datetime="{{DateToISO meta.created_at}}")
+      time.invisible(itemprop="dateModified" datetime="{{DateToISO meta.created_at}}")
+      h4.invisible(itemprop="headline") Uploaded file: {{name}}
+      p.invisible(itemprop="description") View uploaded and shared file: {{name}}
+      
+      .file-table: article.file-row(itemprop="articleBody")
+        h1.file-title.ellipsis
+          a.go-back(href="/") &lt;
+          | &nbsp;
+          span(itemprop="name") {{extless name}}
+
+        if isPDF
+          .file-cell: iframe.file-preview(src="{{link}}" frameborder="0")
+        else if isImage
+          if compare extension 'is' 'png|gif|jpg|jpeg|webp|bmp'
+            picture.file-preview(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
+              meta(itemprop="caption" content="Meteor Files: Uploaded file: {{name}}")
+              meta(itemprop="exifData" content="{{type}}")
+              link(itemprop="contentUrl" href="{{link}}" content="{{link}}")
+              link(itemprop="url" href="{{urlCurrent}}" content="{{urlCurrent}}")
+              meta(itemprop="width" content="{{meta.width}}")
+              meta(itemprop="height" content="{{meta.height}}")
+              if showPreview
+                source(type="#{type}" srcset="{{link 'preview'}}")
+                img.file-preview(src="{{link 'preview'}}" alt="#{name}")
+              else if showOriginal
+                source(type="#{type}" srcset="{{link}}")
+                img.file-preview(src="{{link}}" alt="#{name}")
+              else
+                h1.files-note: i.fa.fa-fw.fa-spin.fa-spinner
+          else
+            .file-cell: h3.files-note
+              | Browser can't display this image, please 
+              a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
+        else if isAudio
+          .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
+            source(src="{{link}}?play=true" type="#{type}")
+        else if isVideo
+          .file-cell: video.file-preview(controls autoplay preload="auto" loop)
+            source(src="{{link}}?play=true" type="#{type}")
+        else if compare isText 'or' isJSON
+          if warning
+            .file-cell: h3.files-note
+              | File too big to show preview, please 
+              a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download it
+          else if fetchedText
+            .markdown-body
+              if compare extension 'is' 'md|mdown|makrdown|MD|MDOWN|MARKDOWN'
+                +markdown
+                  {{fetchedText}}
+              else
+                +markdown
+                  ```{{getCode}}
+                  #{fetchedText}
+                  ```
+          else
+            .file-cell
+              if showPreview
+                h3.files-note
+                  | Preview is not available, please 
+                  a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
+              else
+                h1.files-note: i.fa.fa-fw.fa-spin.fa-spinner
+        else
+          .file-cell: h3.files-note
+            | Preview is not available, please 
+            a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
+
+        unless isImage
+          picture.invisible(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
+            meta(itemprop="caption" content="Upload, Store and Share files with speed of Meteor")
+            meta(itemprop="exifData" content="image/png")
+            link(itemprop="contentUrl" href="{{url 'icon_1200x630.png'}}" content="{{url 'icon_1200x630.png'}}")
+            link(itemprop="url" href="{{urlCurrent}}" content="{{urlCurrent}}")
+            meta(itemprop="width" content="1200")
+            meta(itemprop="height" content="630")
+
+        if showInfo
+          .file-overlay: table: tbody: tr: td: table.fixed-table: tbody
+            tr
+              th Name:
+              td #{name}
+            tr
+              th Mime-type:
+              td #{type}
+            tr
+              th Size:
+              td {{filesize size}}
+            tr
+              th Extension:
+              td 
+                if extension
+                  | .#{extension}
+                else
+                  | extension-less
+            tr
+              th Downloads:
+              td
+                | #{meta.downloads}
+                | &nbsp;
+                a(title="Download \"#{name}\"" href="{{link}}?download=true" target="_parent" download="#{name}")
+                  i.fa.fa-fw.fa-download
+            tr
+              th Abuse:
+              td
+                | #{meta.blamed}
+                | &nbsp;
+                a(data-blame title="Mark this upload as inappropriate" href="#" class="{{#if isBlamed}}danger{{/if}}")
+                  i.fa.fa-flag
+
+        a.info-link.show-info(data-show-info href="#" class="{{#if showInfo}}active{{/if}}")
+          if showInfo
+            i.fa.fa-fw.fa-times
+          else
+            i.fa.fa-fw.fa-info-circle
+
+        unless showInfo
+          a.info-link.right.download-file(title="Download \"#{name}\"" href="{{link}}?download=true" target="_parent" download="#{name}")
+            i.fa.fa-fw.fa-download

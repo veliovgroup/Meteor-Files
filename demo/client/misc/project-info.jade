@@ -1,0 +1,75 @@
+template(name="projectInfoFirst")
+  picture.invisible(itemscope="" itemtype="http://schema.org/ImageObject" itemprop="primaryImageOfPage")
+    meta(itemprop="caption" content="Upload, Store and Share files with speed of Meteor")
+    meta(itemprop="exifData" content="image/png")
+    link(itemprop="url" href="{{url}}" content="{{url}}")
+    link(itemprop="contentUrl" href="{{url 'icon_1200x630.png'}}" content="{{url 'icon_1200x630.png'}}")
+
+  p.project-info
+    a.info-img.gcaa(href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank")
+      img(src="https://camo.githubusercontent.com/513a14500082d198359dc4450bc2d1a9cd960776/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f746d632d706f73742d636f6e74656e742f676361612d323031362d77696e6e65722d62616467652e737667" title="Giant Cotton Apron Awards Winner" alt="GCAA Badge" data-canonical-src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg")
+
+  p.project-info
+    a.info-img(href="https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo" target="_blank")
+      img(src="https://camo.githubusercontent.com/83b0e95b38892b49184e07ad572c94c8038323fb/68747470733a2f2f7777772e6865726f6b7563646e2e636f6d2f6465706c6f792f627574746f6e2e737667" title="Deploy to Heroku in one click!" alt="Deploy to Heroku" data-canonical-src="https://www.herokucdn.com/deploy/button.svg")
+
+    //- a.info-img(href="https://ostr.io/en/info/protected/files.veliov.com" target="_blank")
+    //-   img(src="https://ostr.io/images/ostrio-badge-color.png" alt="Protected by ostr.io" title="This website is protected by ostr.io")
+
+  p.project-info
+    a.info-img(href="https://www.meteor.com/" target="_blank")
+      img(src="/meteor-icon.svg" alt="Meteor.com" title="Powered by Meteor")
+
+  a.info-link.right.active(data-show-project-info href="#"): i.fa.fa-fw.fa-times
+
+template(name="projectInfoSecond")
+  main(itemscope itemtype="http://schema.org/Article")
+    h1.invisible(itemprop="name") Meteor Files
+    h4.invisible(itemprop="headline") Upload and Share files
+    p.invisible(itemprop="description") Upload, Store and Share files with speed of Meteor
+    
+    time.invisible(itemprop="datePublished" datetime="2016-06-22T08:00:00+00:00")
+    time.invisible(itemprop="dateModified" datetime="2016-07-31T08:00:00+00:00")
+
+    link(itemprop="url" content="{{url}}" href="{{url}}")
+    meta(itemscope itemprop="mainEntityOfPage" itemType="https://schema.org/WebPage" itemid="{{url}}")
+    picture.invisible(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
+      meta(itemprop="caption" content="Upload, Store and Share files with speed of Meteor")
+      meta(itemprop="exifData" content="image/png")
+      link(itemprop="contentUrl" href="{{url 'icon_1200x630.png'}}" content="{{url 'icon_1200x630.png'}}")
+      link(itemprop="url" href="{{url}}" content="{{url}}")
+      meta(itemprop="width" content="1200")
+      meta(itemprop="height" content="630")
+
+    div.invisible(itemprop="author" itemscope itemtype="https://schema.org/Person")
+      meta(itemprop="name" content="Dmitriy A.")
+
+    div.invisible(itemprop="publisher" itemscope itemtype="https://schema.org/Organization")
+      meta(itemprop="name" content="Veliov Group, LLC")
+      picture(itemprop="logo" itemscope itemtype="https://schema.org/ImageObject")
+        meta(itemprop="caption" content="We code for your Projects, Sites and Apps")
+        meta(itemprop="exifData" content="image/png")
+        link(itemprop="contentUrl" content="https://veliovgroup.com/images/logo-social-1200x630.png" href="https://veliovgroup.com/images/logo-social-1200x630.png")
+        link(itemprop="url" content="https://veliovgroup.com" href="https://veliovgroup.com")
+        meta(itemprop="width" content="1200")
+        meta(itemprop="height" content="630")
+
+    article(itemprop="articleBody")
+      p.project-info This is a demo application for <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> package. <a href="https://github.com/VeliovGroup/Meteor-Files" target="_blank">Meteor-Files</a> will help you Upload, Download, Serve and Stream files with ease.
+
+      p.project-info This package is the <strong><a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank">GCAA Winner 2016</a></strong>. Big thanks to Benjamin Willems and Ryan Glover (<em>The Chef</em>) and all <a href="https://themeteorchef.com" target="_blank">The Meteor Chef</a> team!
+
+      p.project-info.no-margin <strong>Support this project:</strong>
+      h4.share-options
+        a(href="https://twitter.com/share?url={{url}}&text=Easily%20Upload%20and%20Share%20files%20with%20%23MeteorFiles!" title="Tell the world on Twitter" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-twitter
+        a(href="https://www.facebook.com/sharer.php?u={{url}}" title="Tell the world on Facebook" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-facebook-official
+        a(href="https://github.com/VeliovGroup/Meteor-Files" title="Star this package on GitHub" target="_blank")
+          i.fa.fa-lg.fa-fw.fa-github
+        a(href="https://atmospherejs.com/ostrio/files" title="Star this package on Atmosphere" target="_blank")
+          img(src="/meteor-icon.svg")
+      p.project-info
+        | Brought to you by <a href="https://ostr.io">ostr.io</a> and <a href="https://veliovgroup.com">Veliov Group</a>
+        br
+        | 2016 <a href="https://github.com/VeliovGroup/Meteor-Files">ostrio:files</a>

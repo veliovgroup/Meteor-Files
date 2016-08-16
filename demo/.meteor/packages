@@ -1,30 +1,31 @@
 # Basic packages
-meteor-base
-mobile-experience
-mongo
-blaze-html-templates
-session
-jquery
-tracker
+meteor-base@1.0.4
+mobile-experience@1.0.4
+mongo@1.1.10
+blaze-html-templates@1.0.4
+session@1.1.6
+jquery@1.11.9
+tracker@1.1.0
 
-standard-minifier-css
-standard-minifier-js
+seba:minifiers-autoprefixer
+standard-minifier-js@1.1.8
 
 # Additional MDG packages
-audit-argument-checks
-reactive-var
-coffeescript
-markdown
-check
-http
+audit-argument-checks@1.0.7
+reactive-var@1.0.10
+coffeescript@1.2.3
+markdown@1.0.10
+random@1.0.10
+check@1.2.3
+http@1.2.8
 
 # UI/UX packages
+fastclick@1.0.12
 fortawesome:fontawesome
 simple:highlight.js
 mquandalle:jade
-fourseven:scss@2.1.1
+fourseven:scss
 momentjs:moment
-twbs:bootstrap
 perak:markdown
 mrt:filesize
 
@@ -37,6 +38,19 @@ aldeed:collection2
 cfs:graphicsmagick
 ostrio:files
 ostrio:flow-router-extra
-ostrio:flow-router-title
-arillo:flow-router-helpers
 ostrio:templatehelpers
+ostrio:cstorage
+arillo:flow-router-helpers
+
+# SEO
+ostrio:flow-router-title
+ostrio:flow-router-meta
+ostrio:spiderable-middleware
+
+# Accounts Packages
+accounts-base@1.2.9
+service-configuration@1.0.10
+accounts-github@1.0.10
+accounts-twitter@1.1.11
+accounts-facebook@1.0.10
+accounts-meteor-developer@1.0.10

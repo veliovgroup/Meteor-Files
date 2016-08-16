@@ -51,6 +51,20 @@
     </tr>
     <tr>
       <td align="right">
+        <code>settings.transport</code> {<em>String</em>}
+      </td>
+      <td>
+        Must be set to 
+        <code>http</code> or <code>ddp</code>
+      </td>
+      <td>
+        Note: upload via <code>http</code> is at least twice faster. <code>HTTP</code> will properly work only with "sticky sessions"
+        <br />
+        Default: <code>ddp</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>settings.onStart</code> {<em>Function</em>}
       </td>
       <td>
@@ -251,7 +265,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>toggleUpload()</code> {<em>Function</em>}
+        <code>toggle()</code> {<em>Function</em>}
       </td>
       <td>
         Toggle <code>continue</code>/<code>pause</code> if upload in the progress
@@ -284,7 +298,7 @@
         Current upload speed in <strong>bytes/second</strong>
       </td>
       <td>
-        To convert into speed, take a look on [filesize](https://github.com/avoidwork/filesize.js) package, usage: 
+        To convert into speed, take a look on <a href="https://github.com/avoidwork/filesize.js">filesize package</a>, usage: 
         <code>filesize(estimateSpeed, {bits: true}) + '/s';</code>
       </td>
     </tr>

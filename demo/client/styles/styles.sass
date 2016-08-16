@@ -1,0 +1,821 @@
+$link-color: #4e546d
+$text-color: #97a2d0
+
+@import url(https://fonts.googleapis.com/css?family=Lato:300,400,400italic,700)
+
+html, body, span, div, p, td, button, video, audio, img, picture, h1, h2, h3, h4, h5, h6, .preview-circle > img
+  animation: newElement 350ms ease-in-out 1
+
+@keyframes newElement
+  from
+    opacity: 0
+  to
+    opacity: 1
+
+html, body
+  background-color: #2b3850
+  font-family: 'Lato', sans-serif
+  font-weight: 400
+  padding: 0px
+  margin: 0px
+  color: $text-color
+  font-size: 14px
+  line-height: 1.2rem
+  position: relative
+  scroll-behavior: smooth
+  -ms-text-size-adjust: 100%
+  -webkit-text-size-adjust: 100%
+  -webkit-tap-highlight-color: rgba(0,0,0,0)
+  -webkit-tap-highlight-color: transparent
+  -moz-tap-highlight-color: rgba(0,0,0,0)
+  -moz-tap-highlight-color: transparent
+  -ms-tap-highlight-color: rgba(0,0,0,0)
+  -ms-tap-highlight-color: transparent
+  tap-highlight-color: rgba(0,0,0,0)
+  tap-highlight-color: transparent
+  font-smoothing: antialiased !important
+  font-smooth: always !important
+  -webkit-font-smoothing: antialiased !important
+  -webkit-font-smooth: always !important
+  text-rendering: optimizeLegibility !important
+
+body
+  background-size: 50px 50px
+  background-image: url('/logo-bg.png')
+  background-repeat: no-repeat
+  background-position: 50% 96%
+
+::selection
+  background-color: rgba(37,50,107,0.333)
+  color: #FAFAFA
+::-moz-selection
+  background-color: rgba(37,50,107,0.333)
+  color: #FAFAFA
+
+a, picture, img, video, button, input, pre, i, select, option, label, tr, td, p
+  user-select: none
+  outline: none !important
+  -webkit-tap-highlight-color: rgba(0,0,0,0)
+  -webkit-tap-highlight-color: transparent
+  -moz-tap-highlight-color: rgba(0,0,0,0)
+  -moz-tap-highlight-color: transparent
+  -ms-tap-highlight-color: rgba(0,0,0,0)
+  -ms-tap-highlight-color: transparent
+  tap-highlight-color: rgba(0,0,0,0)
+  tap-highlight-color: transparent
+  &:hover, &:focus, &:active
+    outline: none !important
+    -webkit-tap-highlight-color: rgba(0,0,0,0)
+    -webkit-tap-highlight-color: transparent
+    -moz-tap-highlight-color: rgba(0,0,0,0)
+    -moz-tap-highlight-color: transparent
+    -ms-tap-highlight-color: rgba(0,0,0,0)
+    -ms-tap-highlight-color: transparent
+    tap-highlight-color: rgba(0,0,0,0)
+    tap-highlight-color: transparent
+
+a, a:active
+  transition: color 128ms ease-in-out, opacity 128ms ease-in-out, text-shadow 128ms ease-in-out
+  color: lighten($link-color, 20%)
+  opacity: 0.777
+  text-decoration: underline
+a
+  &:hover, &.active
+    opacity: 1
+    text-decoration: none
+    color: lighten($link-color, 30%)
+
+strong, b
+  font-weight: 700
+
+p
+  margin: 1rem 0rem
+  line-height: 1.5rem
+
+hr
+  height: 2px
+  border: 0
+  background-color: rgba(255,255,255,0.05)
+
+.danger
+  color: #a94442
+
+.invisible
+  display: none !important
+  visibility: hidden !important
+
+.width-1
+  width: 1%
+
+.white
+  color: #FAFAFA !important
+
+.center
+  text-align: center
+  margin-right: auto
+  margin-left: auto
+
+.container
+  margin: 0px auto
+  max-width: 768px
+  width: 100%
+  position: relative
+  display: table
+
+.container-main
+  box-shadow: 0px 0px 20px rgba(0,0,0,0.5)
+  background-color: mix(#080c15, #1c222e)
+
+.preview-circle
+  height: 40px
+  width: 40px
+  text-align: center
+  overflow: hidden
+  border-radius: 40px
+  border: 2px solid #9ca8be
+  box-shadow: inset 0px 0px 8px rgba(0,0,0,0.25)
+  position: relative
+  margin: 0px auto
+  i
+    font-size: 20px
+    line-height: 0px
+    margin-top: 18px
+  img
+    width: 36px
+    height: 36px
+    border-radius: 40px
+
+.main-container
+  display: table
+  min-height: 100%
+  width: 100%
+  .main-row
+    display: table-row
+    min-height: 100%
+    width: 100%
+    .main-cell
+      display: table-cell
+      min-height: 100%
+      width: 100%
+      vertical-align: middle
+
+.row
+  display: table-row
+  width: 100%
+
+.col-50
+  display: table-cell
+  width: 50%
+  max-width: 50%
+  min-height: 455px
+  max-height: 455px
+  height: 455px
+  vertical-align: middle
+  position: relative
+  &.info
+    width: 20%
+    max-width: 20%
+
+.ellipsis
+  white-space: nowrap
+  overflow: hidden
+  max-width: 100%
+  text-overflow: ellipsis
+  -o-text-overflow: ellipsis
+
+.scroll
+  -webkit-overflow-scrolling: touch
+  transform: translate3d(0,0,0)
+.scroll-x
+  overflow-y: hidden
+  overflow-x: auto
+
+button, input, select, textarea, .label
+  user-select: none !important
+
+button, select, input, button, form, textarea, a, pre, i
+  outline: none !important
+  &:active, &:focus, &:visited
+    outline: none !important
+
+pre, pre code
+  white-space: pre
+pre
+  overflow: auto
+  transform: translate3d(0,0,0)
+  -webkit-overflow-scrolling: touch
+
+th
+  text-align: center
+  vertical-align: middle
+  word-break: break-word
+
+.no-margin
+  margin: 0px !important
+
+.no-padding
+  padding: 0px !important
+
+.no-radius
+  border-radius: 0px
+
+.file-preview
+  margin: 0 auto
+  max-width: 100%
+  display: block
+  &.file-audio
+    margin: 25px 0px
+
+iframe.file-preview
+  border: 0
+  background: none
+  margin: 0
+  padding: 0
+  font: inherit
+  vertical-align: baseline
+  height: 100%
+  width: 100%
+
+.file-overlay
+  position: absolute
+  transform: translate3d(0,0,0)
+  background-color: rgba(0,0,0,0.777)
+  -webkit-backdrop-filter: blur(3px)
+  -moz-backdrop-filter: blur(3px)
+  -ms-backdrop-filter: blur(3px)
+  backdrop-filter: blur(3px)
+  top: 0px
+  left: 0px
+  z-index: 200
+  width: 100%
+  height: 100%
+  vertical-align: middle
+  text-align: center
+  overflow: hidden
+  table
+    height: 100%
+    width: 100%
+    td
+      vertical-align: middle
+      text-align: center
+  table.fixed-table
+    height: auto
+    td, th
+      line-height: 1.4rem
+      word-break: break-all
+      padding: 5px 10px
+      vertical-align: middle
+    td
+      text-align: left
+    th
+      text-align: right
+      font-weight: 700
+
+.full-height
+  min-height: 100%
+  min-height: 100vh
+
+.gh-ribbon
+  transition: opacity 256ms ease-in-out
+  transform: translate3d(0,0,0)
+  position: absolute
+  top: 0
+  right: 0
+  border: 0
+  z-index: 300
+  opacity: .555
+  &:hover
+    opacity: .777
+  img
+    height: 130px
+    width: 130px
+
+.radio input[type="radio"], .radio-inline input[type="radio"]
+  position: absolute
+  margin-top: 4px \9
+  margin-left: -20px
+
+.radio + .radio
+  margin-top: -5px
+
+.radio-inline
+  position: relative
+  display: inline-block
+  padding-left: 20px
+  margin-bottom: 0
+  font-weight: normal
+  vertical-align: middle
+  cursor: pointer
+
+.radio-inline + .radio-inline
+  margin-top: 0
+  margin-left: 10px
+
+fieldset[disabled] input
+  &[type="radio"]
+    cursor: not-allowed
+
+.radio-inline.disabled
+  cursor: not-allowed
+
+fieldset[disabled]
+  .radio-inline
+    cursor: not-allowed
+
+h1, h2, h3, h4
+  font-weight: 300
+
+h1
+  font-size: 1.7rem
+  line-height: 2.2rem
+
+h2
+  font-size: 1.5rem
+  line-height: 2rem
+  margin: 1rem 0rem
+
+h3
+  font-size: 1.3rem
+  line-height: 1.8rem
+  margin: 0.8rem 0rem
+
+h4
+  font-size: 1.1rem
+  line-height: 1.6rem
+  margin: 0.6rem 0rem
+
+h1, h2, h3, h4, h5, h6, div, form, table, p
+  box-sizing: border-box
+
+.info-link
+  color: inherit
+  font-size: 1.1rem
+  position: absolute
+  animation: newElement 350ms ease-in-out 1
+  transform: translate3d(0,0,0)
+  bottom: 6px
+  right: 8px
+  padding: 7px
+  z-index: 201
+  &:hover, &.active
+    color: #BBB
+    opacity: 1 !important
+  &.right
+    left: 8px
+    right: initial
+  &.user-account
+    right: 50px
+  &.user-only
+    right: 100px
+  &.loggingIn
+    pointer-events: none
+
+.login-options
+  line-height: 3rem
+.login-options, .share-options
+  a
+    margin: 0px 7px
+    transition: none
+    i
+      transition: color 256ms ease-in-out
+    img
+      max-height: 1.33333333em
+      position: relative
+      bottom: -5px
+      transition: all 256ms ease-in-out
+      filter: grayscale(100%)
+    &:hover
+      color: lighten($link-color, 10%)
+      img
+        filter: grayscale(0%)
+      i.fa-github
+        color: #999999
+      i.fa-twitter
+        color: #55acee
+      i.fa-facebook-official
+        color: #3b5998
+      i.fa-paypal
+        color: #009cde
+
+.block-info
+  color: $text-color
+  text-align: center
+  padding: 20px
+  .annotation:first-child, .project-info:first-child
+    margin-top: 0px
+  .annotation:last-child, .project-info:last-child
+    margin-bottom: 0px
+
+.annotation
+  color: $text-color
+  font-size: 0.98rem
+  line-height: 1.6rem
+  margin: 2rem 0rem
+  font-weight: 400
+
+.bg-diagonal
+  background: linear-gradient(45deg, #080c15 0%, #1c222e 100%)
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#080c15', endColorstr='#1c222e', GradientType=1)
+.bg-horizontal
+  background: linear-gradient(to right, #222938 0%, #212834 100%)
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#222938', endColorstr='#212834', GradientType=1)
+
+.listing, .file, ._loading, ._404
+  @extend .bg-horizontal
+
+.upload-form
+  .percentage
+    font-size: 3.6rem
+    margin-bottom: 2.2rem
+    margin-top: 0px
+    line-height: 3.4rem
+  @extend .bg-diagonal
+  position: relative
+  user-select: none
+  i.fa.fa-cloud-upload
+    font-size: 4rem
+  h2
+    font-size: 1.5rem
+    line-height: 2rem
+  color: $link-color
+  font-weight: 700
+  text-align: center
+  vertical-align: middle
+  .radio-inline
+    user-select: none
+    input[type="radio"]
+      margin-left: -20px
+      margin-top: 2.5px
+  &.file-over
+    background:
+      color: mix(#080c15, #1c222e)
+      image: url(/dnd.png)
+      repeat: no-repeat
+      position: 50% 50%
+      size: 80px 80px
+    & *
+      display: none
+      visibility: hidden
+      opacity: 0
+      pointer-events: none
+  .fake-upload
+    cursor: pointer
+    transition: color 256ms ease-in-out, opacity 256ms ease-in-out
+    width: 85%
+    margin: 0px auto
+    opacity: 0.777
+    &:hover
+      opacity: 1
+      color: lighten($link-color, 25%)
+  .sm-row
+    width: 85%
+    margin: 0px auto
+
+.show-settings
+  opacity: 0.7
+  display: inline-block
+  transition: color 256ms ease-in-out, transform 256ms ease-in-out, opacity 256ms ease-in-out
+  &:hover, &.active
+    opacity: 1
+    transform: rotate(144deg)
+
+.listing, .file, ._loading
+  width: 100%
+  max-width: 384px
+  color: #aebad2
+  overflow-x: hidden
+  overflow-y: auto
+  -webkit-overflow-scrolling: touch
+  max-height: 100%
+  min-height: 455px
+
+.files-note
+  text-align: center
+
+._loading
+  vertical-align: middle
+  text-align: center
+
+.markdown-body
+  height: 100%
+  width: 100%
+  max-width: 384px
+  max-height: 100%
+  min-height: 455px
+
+.file
+  display: block
+  .file-table
+    display: table
+    width: 100%
+    min-height: 455px
+    height: 100%
+    .file-row
+      display: table-row
+      width: 100%
+      height: 100%
+      .file-cell
+        display: table-cell
+        width: 100%
+        height: 100%
+        vertical-align: middle
+        text-align: center
+  .file-preview
+    margin: 0 auto
+  picture.file-preview
+    height: 100%
+    width: 100%
+    text-align: center
+    display: table-cell
+    vertical-align: middle
+  picture, img
+    pointer-events: none
+  h1.file-title
+    position: absolute
+    transform: translate3d(0,0,0)
+    top: 0px
+    left: 0px
+    background-color: rgba(0,0,0,0.555)
+    -webkit-backdrop-filter: blur(2px)
+    -moz-backdrop-filter: blur(2px)
+    -ms-backdrop-filter: blur(2px)
+    backdrop-filter: blur(2px)
+    margin: 0px
+    padding: 7px 0px
+    z-index: 100
+    padding-left: 40px
+    padding-right: 10px
+    width: 100%
+    max-width: 100%
+    .go-back
+      background-color: rgba(0,0,0,0.15)
+      border-right: 1px solid rgba(0,0,0,0.1)
+      padding: 0px 10px
+      margin: 0px 0px
+      display: inline-block
+      height: 100%
+      text-decoration: none
+      font-size: 2.2rem
+      line-height: 3rem
+      position: absolute
+      left: 0px
+      top: 0px
+      font-weight: 700
+      color: rgba(255,255,255,0.777)
+      &:hover
+        color: #fff
+        background-color: rgba(0,0,0,0.25)
+  .info-link
+    background-color: rgba(0,0,0,0.7)
+    border-radius: 20px
+    overflow: hidden
+    opacity: 0.5
+    transition: color 256ms ease-in-out, opacity 256ms ease-in-out
+
+.file-settings
+  text-align: center
+  vertical-align: middle
+  font-size: 2rem
+
+.fixed-table .file-settings
+  a
+    width: 100%
+    height: 100%
+    min-width: 100%
+    min-height: 100%
+    display: inline-block
+
+.file-name
+  color: #aebad2
+
+.file-info
+  color: #606c80
+  font-size: 0.9rem
+
+.file-access, .file-secured
+  i
+    transition: color 256ms ease-in-out, opacity 256ms ease-in-out
+
+.file-remove:hover
+  color: #bd362f
+.file-access:hover
+  i.fa.fa-eye
+    color: #bd362f
+.file-secured:hover
+  i.fa.fa-unlock
+    color: #bd362f
+
+.file-name, .file-info
+  padding: 0px
+  margin: 0px
+  display: inline
+
+.file-info-container
+  max-width: 70%
+
+.btn
+  padding: 10px 20px
+  text-align: center
+  background: none
+  background-color: transparent
+  border: 1px solid rgba(0,0,0,0.3)
+  margin: 0px
+
+button
+  cursor: pointer
+
+.table
+  border-collapse: collapse
+  border-spacing: 0
+  border: 0
+  & > tbody > tr > 
+    & td
+      padding: 12px 10px
+      vertical-align: middle
+    & td.ellipsis
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
+    & td
+      border-bottom: 1px solid #1a2333
+  & > tbody > tr
+    border-bottom: 1px solid #1a2333
+    &:hover
+      cursor: pointer
+      background-color: rgba(0,0,0,0.1)
+
+.fixed-table
+  width: 100%
+  table-layout: fixed
+  border-collapse: collapse
+  border-spacing: 0
+  border: 0
+  td
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+    -o-text-overflow: ellipsis
+
+.info-img
+  transition: opacity 256ms ease-in-out
+  opacity: .555
+  &:hover
+    opacity: 1
+  img
+    height: 32px
+    width: auto
+    border-radius: 5px
+    margin: 0px 5px
+  &.gcaa
+    img
+      height: 120px
+      max-height: 50%
+      max-width: 50% !important
+
+input.info-img
+  height: 32px
+  width: auto
+  margin: 0px 5px
+
+._404
+  text-align: center
+  padding: 15px
+
+progress
+  display: block
+  width: 90%
+  height: 2px
+  border: none
+  color: #FEFEFE
+  background-color: #000
+  margin: 0px auto
+  border-radius: 0px
+  -webkit-appearance: none
+  -moz-appearance: none
+  -ms-appearance: none
+  appearance: none
+
+progress::-webkit-progress-bar
+  background: #000
+  color: #000
+  border-radius: 0px
+
+progress::-webkit-progress-value
+  background: #FEFEFE
+  color: #FEFEFE
+
+progress::-moz-progress-bar
+  background: #aaa
+  color: #aaa
+  border-radius: 0px
+
+progress::-moz-progress-value
+  background: red
+  color: #FEFEFE
+
+pre, code, kbd, samp
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace
+  box-sizing: border-box
+
+@media(max-height: 455px)
+  p.project-info
+    margin: 0.9rem 0rem
+  .gh-ribbon
+    left: 0px
+    right: initial
+    img
+      transform: rotate(-90deg)
+      height: 90px
+      width: 90px
+  .upload-form
+    .fake-upload
+      width: 100%
+    #userfile:not(.settings-open)
+      display: block !important
+      visibility: visible !important
+      position: absolute
+      top: 0px
+      left: 0px
+      z-index: 100
+      height: 100%
+      width: 100%
+      opacity: 0
+  .col-50, .listing, .file, ._loading, .file .file-table, .no-file, ._404
+    min-height: 100vh
+    max-height: 100vh
+    height: 100vh
+  html, body
+    font-size: 13px
+
+@media(max-width: 768px)
+  .col-50
+    max-width: 50vw
+
+@media(max-width: 480px)
+  p.project-info
+    margin: 0.9rem 0rem
+  .info-link
+    font-size: 2rem
+  .col-50
+    display: table-row
+    position: initial
+    max-height: 50%
+    max-height: 50vh
+    height: 50%
+    height: 50vh
+  .col-50.upload-form
+    max-height: 40%
+    max-height: 40vh
+    height: 40%
+    height: 40vh
+    .sm-row
+      width: 100%
+      margin: initial
+    .fake-upload
+      width: 100%
+    #userfile:not(.settings-open)
+      display: block !important
+      visibility: visible !important
+      position: absolute
+      top: 0px
+      left: 0px
+      z-index: 100
+      height: 100%
+      width: 100%
+      opacity: 0
+  .row
+    display: initial
+    min-width: 100vw
+    width: 100vw
+  .sm-row
+    display: table-cell
+    position: relative
+    min-width: 100vw
+    width: 100vw
+    vertical-align: middle
+  .file, .listing, .file-table, ._loading, ._login, .no-file, ._404
+    max-width: 100%
+    max-width: 100vw
+    min-width: 100vw
+    width: 100%
+    width: 100vw
+    max-height: 60%
+    max-height: 60vh
+    min-height: initial !important
+    height: 60%
+    height: 60vh
+  .markdown-body
+    max-width: 100%
+    max-width: 100vw
+    min-width: 100vw
+    width: 100%
+    width: 100vw
+  .gh-ribbon
+    left: 0px
+    right: initial
+    img
+      height: 85px
+      width: 85px
+      transform: rotate(-90deg)
+  html, body
+    font-size: 12px
