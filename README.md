@@ -74,7 +74,7 @@ Related Packages:
 Why `Meteor-Files`?
 ========
 The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
- - Support for both `HTTP` and `DDP` transports for upload
+ - Support for both `HTTP` and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
  - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
@@ -99,10 +99,10 @@ FAQ:
    * On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`, note: __all files will be removed as soon as your application will rebuild__ or you run `meteor reset`. To keep you storage persistent use absolute path *outside of your project folder*, we recommend to use `/data` directory
    * On `production`: `yourProdAppDir/programs/server`
  2. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
+ 3. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========
-Note: When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 
 #### `new FilesCollection([config])` [*Isomorphic*]
 Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
