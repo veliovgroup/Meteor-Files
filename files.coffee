@@ -1089,7 +1089,7 @@ class FilesCollection
   ###
   _getExt: (fileName) ->
     if !!~fileName.indexOf('.')
-      extension = fileName.split('.').pop().split('?')[0]
+      extension = (fileName.split('.').pop().split('?')[0] or '').toLowerCase()
       return { ext: extension, extension, extensionWithDot: '.' + extension }
     else
       return { ext: '', extension: '', extensionWithDot: '' }
@@ -1116,12 +1116,12 @@ class FilesCollection
           size: data.size
           type: data.type
           extension: data.extension
-      isVideo: !!~data.type.toLowerCase().indexOf('video')
-      isAudio: !!~data.type.toLowerCase().indexOf('audio')
-      isImage: !!~data.type.toLowerCase().indexOf('image')
-      isText:  !!~data.type.toLowerCase().indexOf('text')
-      isJSON:  !!~data.type.toLowerCase().indexOf('json')
-      isPDF:   !!~data.type.toLowerCase().indexOf('pdf')
+      isVideo: /^video\//i.test data.type
+      isAudio: /^audio\//i.test data.type
+      isImage: /^image\//i.test data.type
+      isText:  /^text\//i.test data.type
+      isJSON:  /application\/json/i.test data.type
+      isPDF:   /application\/pdf|application\/x-pdf/i.test data.type
       _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
