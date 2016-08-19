@@ -1,24 +1,46 @@
 "use strict";
 self.onmessage = function(e) {
-  var fileReader;
-  if (self.FileReader) {
-    fileReader = new FileReader();
-    fileReader.onloadend = function(chunk) {
-      postMessage({bin: (fileReader.result || chunk.srcElement || chunk.target).split(',')[1], chunkId: e.data.currentChunk, start: e.data.start});
-    };
+  var read = function (method, callback) {
+    var fileReader;
+    if (self.FileReader) {
+      fileReader = new FileReader();
+      fileReader.onloadend = function(chunk) {
+        callback(null, (fileReader.result || chunk.srcElement || chunk.target));
+      };
 
-    fileReader.onerror = function(error) {
-      throw (error.target || error.srcElement).error;
-    };
+      fileReader.onerror = function(error) {
+        callback((error.target || error.srcElement).error);
+      };
 
-    fileReader.readAsDataURL(e.data.file.slice(e.data.chunkSize * (e.data.currentChunk - 1), e.data.chunkSize * e.data.currentChunk));
+      fileReader[method](e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.cs * e.data.cc));
 
-  } else if (self.FileReaderSync) {
-    fileReader = new FileReaderSync();
-    postMessage({bin: fileReader.readAsDataURL(e.data.file.slice(e.data.chunkSize * (e.data.currentChunk - 1), e.data.chunkSize * e.data.currentChunk)).split(',')[1], chunkId: e.data.currentChunk, start: e.data.start});
+    } else if (self.FileReaderSync) {
+      fileReader = new FileReaderSync();
 
-  } else {
-    postMessage({bin: null, chunkId: e.data.currentChunk, start: e.data.start, error: 'FileReader and FileReaderSync is not supported in WebWorker!'});
+      callback(null, fileReader[method](e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.chunkSize * e.data.cc)));
+
+    } else {
+      callback('File API is not supported in WebWorker!');
+    }
+    return;
+  };
+
+  var method = 'readAsDataURL';
+  if (e.data.t === 'webrtc') {
+    method = 'readAsArrayBuffer';
   }
-  return;
+
+  read(method, function (error, chunk) {
+    var message = {bin: null, chunkId: e.data.cc, start: e.data.s};
+    if (error) {
+      message.error = error;
+    } else {
+      if (e.data.t === 'ddp' || e.data.t === 'http') {
+        message.bin = chunk.split(',')[1];
+      } else {
+        message.bin = chunk;
+      }
+    }
+    postMessage(message);
+  });
 };

@@ -5,6 +5,7 @@ if Meteor.isServer
   @summary Require NPM packages
   ###
   fs       = Npm.require 'fs-extra'
+  webrtc   = Npm.require 'wrtc'
   events   = Npm.require 'events'
   request  = Npm.require 'request'
   Throttle = Npm.require 'throttle'
@@ -30,6 +31,7 @@ if Meteor.isServer
       self           = @
       @stream        = fs.createWriteStream @path, {flags: 'a', mode: self.permissions, highWaterMark: 0}
       @drained       = true
+      @aborted       = false
       @writtenChunks = 0
 
       @stream.on 'drain', -> bound ->
@@ -39,6 +41,7 @@ if Meteor.isServer
 
       @stream.on 'error', (error) -> bound ->
         console.error "[FilesCollection] [writeStream] [ERROR:]", error
+        self.abort()
         return
 
     ###
@@ -51,15 +54,17 @@ if Meteor.isServer
     @returns {Boolean} - True if chunk is sent to stream, false if chunk is set into queue
     ###
     write: (num, chunk, callback) ->
-      if not @stream._writableState.ended and num > @writtenChunks
+      if not @aborted and (not @stream._writableState.ended and num > @writtenChunks)
         if @drained and num is (@writtenChunks + 1)
           @drained = false
           @stream.write chunk, callback
           return true
         else
           self = @
-          Meteor.setTimeout ->
-            self.write num, chunk
+          setTimeout ->
+            bound ->
+              self.write num, chunk, callback
+              return
             return
           , 25
       return false
@@ -72,17 +77,23 @@ if Meteor.isServer
     @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
     ###
     end: (callback) ->
-      unless @stream._writableState.ended
+      if not @aborted and not @stream._writableState.ended
         if @writtenChunks is @maxLength
           @stream.end callback
           return true
         else
           self = @
-          Meteor.setTimeout ->
-            self.end callback
+          setTimeout ->
+            bound ->
+              self.end callback
+              return
             return
           , 25
       return false
+
+    abort: (callback) ->
+      @aborted = true
+      return true
 else
   `import { EventEmitter } from './event-emitter.jsx'`
 
@@ -445,6 +456,8 @@ return `false` or `String` to abort upload
 @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
 @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
 @param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
+@param config.RTCConfig {Object} - RTCPeerConnection configuration object
+@param config.RTCDCConfig {Object} - RTCPeerConnection#createDataChannel configuration object
 @summary Create new instance of FilesCollection
 ###
 class FilesCollection
@@ -454,15 +467,17 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL, @RTCConfig, @RTCDCConfig} = config if config
 
-    self        = @
-    cookie      = new Cookies()
-    @debug     ?= false
-    @public    ?= false
-    @protected ?= false
-    @chunkSize ?= 1024*512
-    @chunkSize  = Math.floor(@chunkSize / 8) * 8
+    self          = @
+    cookie        = new Cookies()
+    @debug       ?= false
+    @public      ?= false
+    @protected   ?= false
+    @chunkSize   ?= 1024*512
+    @chunkSize    = Math.floor(@chunkSize / 8) * 8
+    @RTCConfig   ?= iceServers: [{url: 'stun:stun.l.google.com:19302'}]
+    @RTCDCConfig ?= {ordered: false, maxRetransmitTime: 3000}
 
     if @public and not @downloadRoute
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal on be inside of your web/proxy-server (relative) root."
@@ -519,6 +534,35 @@ class FilesCollection
           unsetTokenCookie()
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
+
+      Meteor.startup ->
+        if(!!window.mozRTCPeerConnection or !!window.webkitRTCPeerConnection or !!window.RTCPeerConnection)
+          self._PC  = new RTCPeerConnection @RTCConfig, null
+          self._PC.onicecandidate = (evt) ->
+            if evt.candidate
+              Meteor.call self._methodNames._addIC, JSON.stringify(evt.candidate), (error) ->
+                console.error '[onicecandidate] [.call(_addIC)] ERROR:', error if error
+                return
+            return
+
+          self._PC.onnegotiationneeded = ->
+            self._PC.createOffer (offer) ->
+              self._PC.setLocalDescription offer, ->
+                Meteor.call self._methodNames._RTC, JSON.stringify(self._PC.localDescription), (error, sdp) ->
+                  if error
+                    console.error '[FilesCollection] [RTCPeerConnection] [.call(_RTC)] Error:', error if self.debug
+                  else
+                    sdp = JSON.parse sdp
+                    self._PC.setRemoteDescription new RTCSessionDescription(sdp), _app.NOOP, (error) ->
+                      console.error '[FilesCollection] [RTCPeerConnection] [setRemoteDescription] Error:', error if self.debug
+                      return
+                  return
+                return
+              , () ->
+                console.error "[FilesCollection] [RTCPeerConnection] [setLocalDescription] ERROR", arguments
+            , () ->
+              console.error "[FilesCollection] [RTCPeerConnection] [createOffer] ERROR", arguments
+        return
     else
       @strict            ?= true
       @throttle          ?= false
@@ -530,6 +574,7 @@ class FilesCollection
       @onBeforeRemove    ?= false
       @integrityCheck    ?= true
       @_currentUploads   ?= {}
+      @_currentPeers     ?= {}
       @downloadCallback  ?= false
       @continueUploadTTL ?= 10800
       @responseHeaders   ?= (responseCode, fileRef, versionRef) ->
@@ -598,11 +643,46 @@ class FilesCollection
         console.info "[FilesCollection] [_preCollectionCursor.observeChanges] [removed]: #{_id}" if self.debug
         if self._currentUploads?[_id]
           self._currentUploads[_id].end()
+          self._currentUploads[_id].abort()
           delete self._currentUploads[_id]
         return
 
       @_createStream = (_id, path, opts) ->
         return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts
+
+      @_createPeerConnection = (connId) ->
+        unless self._currentPeers?[connId]
+          self._currentPeers[connId] = new webrtc.RTCPeerConnection self.RTCConfig, null
+          self._currentPeers[connId].ondatachannel = (evt) -> 
+            bound ->
+              dc = evt.channel
+              dc.onmessage = (evt) -> bound ->
+                _continueUpload = self._continueUpload dc.label
+                if not _continueUpload or not Meteor.server.sessions?[connId]
+                  dc.send '[:ERROR:]Can\'t continue upload, session expired. Start upload again.'
+                  return
+
+                opts = fileId: dc.label
+
+                {result, opts}  = self._prepareUpload _.extend(opts, _continueUpload), Meteor.server.sessions[connId]?.userId, 'RTC/DC'
+
+                opts.binData = new Buffer evt.data, 'base64'
+                self._currentUploads[dc.label].stream.write opts.binData, () ->
+                  dc.send dc.label
+                  return
+                return
+              return
+            return
+        return self._currentPeers[connId]
+
+      Meteor.onConnection (connection) ->
+        self._createPeerConnection connection.id
+        connection.onClose ->
+          if self._currentPeers?[connection.id]
+            self._currentPeers[connection.id].close()
+            delete self._currentPeers[connection.id]
+          return
+        return
 
       # This little function allows to continue upload
       # even after server is restarted (*not on dev-stage*)
@@ -698,6 +778,8 @@ class FilesCollection
         return true
 
     @_methodNames =
+      _RTC:    "_FilesCollectionRTC_#{@collectionName}"
+      _addIC:  "_FilesCollectionAddIC_#{@collectionName}"
       _Abort:  "_FilesCollectionAbort_#{@collectionName}"
       _Write:  "_FilesCollectionWrite_#{@collectionName}"
       _Start:  "_FilesCollectionStart_#{@collectionName}"
@@ -864,6 +946,58 @@ class FilesCollection
         else
           return true
 
+      _methods[self._methodNames._addIC] = (iceCandidate) ->
+        check iceCandidate, String
+        iceCandidate = JSON.parse iceCandidate
+
+        pc = self._createPeerConnection(@connection.id)
+        pc.addIceCandidate new webrtc.RTCIceCandidate iceCandidate
+        return true
+
+      _methods[self._methodNames._RTC] = (sdp) ->
+        check sdp, String
+
+        sdp = JSON.parse sdp
+        pc  = self._createPeerConnection(@connection.id)
+        setRemoteDescription = (pc, callback) ->
+          pc.setRemoteDescription new webrtc.RTCSessionDescription(sdp), -> 
+            bound ->
+              if pc.remoteDescription.type == 'offer'
+                pc.createAnswer (answer) -> 
+                  bound ->
+                    pc.setLocalDescription answer, () -> 
+                      bound ->
+                        callback null, JSON.stringify pc.localDescription
+                        return
+                      return
+                    , (error) -> 
+                      bound ->
+                        console.error "[_RTC Method] [setLocalDescription] ERROR:", arguments if self.debug
+                        callback error
+                        return
+                      return
+                    return
+                  return
+                , (error) -> 
+                  bound ->
+                    console.error "[_RTC Method] [createAnswer] ERROR:", arguments if self.debug
+                    callback error
+                    return
+                  return
+              else
+                callback null, false
+              return
+            return
+          , (error) -> 
+            bound ->
+              console.error "[_RTC Method] [setRemoteDescription] ERROR:", arguments if self.debug
+              callback error
+              return
+            return
+          return
+
+        setRemoteDescriptionSync = Meteor.wrapAsync setRemoteDescription
+        return setRemoteDescriptionSync(pc)
 
       # Method used to write file chunks
       # it receives very limited amount of meta-data
@@ -1058,13 +1192,18 @@ class FilesCollection
   @summary Returns object with `userId` and `user()` method which return user's object
   @returns {Object}
   ###
-  _getUser: (http) ->
+  _getUser: (http, token) ->
     result = 
       user: -> return null
       userId: null
       
     if Meteor.isServer
-      if http
+      if token
+        user = Meteor.users.findOne 'services.resume.loginTokens.hashedToken': Accounts._hashLoginToken token
+        if user
+          result.user = () -> return user
+          result.userId = user._id
+      else if http
         cookie = http.request.Cookies
         if _.has(Package, 'accounts-base') and cookie.has 'meteor_login_token'
           Accounts = Package['accounts-base'].Accounts unless Accounts
@@ -1464,7 +1603,7 @@ class FilesCollection
         onAbort:         Match.Optional Function
         streams:         Match.OneOf 'dynamic', Number
         onStart:         Match.Optional Function
-        transport:       Match.OneOf 'http', 'ddp'
+        transport:       Match.OneOf 'http', 'ddp', 'webrtc'
         chunkSize:       Match.OneOf 'dynamic', Number
         onUploaded:      Match.Optional Function
         onProgress:      Match.Optional Function
@@ -1472,13 +1611,22 @@ class FilesCollection
         allowWebWorkers: Boolean
       }
 
+      if @config.transport is 'webrtc'
+        if(!!window.mozRTCPeerConnection or !!window.webkitRTCPeerConnection or !!window.RTCPeerConnection)
+          @_DC = null
+        else
+          # Fallback to HTTP upload
+          @config.transport = 'http'
+          if @collection.debug
+            console.warn '[FilesCollection] [insert()] [WARNING: "webrtc" transport is not supported by this browser]'
+
       if @config.file
         if @collection.debug
           console.time('insert ' + @config.file.name)
           console.time('loadFile ' + @config.file.name)
 
         if Worker and @config.allowWebWorkers
-          @worker = new Worker Meteor.absoluteUrl 'packages/ostrio_files/worker.js'
+          @worker = new Worker Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
         else
           @worker = null
 
@@ -1538,6 +1686,7 @@ class FilesCollection
           self.trackerComp.stop() if self.trackerComp
           window.removeEventListener('beforeunload', self.beforeunload, false) if self.beforeunload
           self.result.progress.set(0) if self.result
+          self._DC.close() if self.config.transport is 'webrtc' and self._DC
       else
         throw new Meteor.Error 500, '[FilesCollection] [insert] Have you forget to pass a File itself?'
 
@@ -1584,11 +1733,15 @@ class FilesCollection
             else
               ++self.sentChunks
               if self.sentChunks >= self.fileLength
-                self.emitEvent 'sendEOF', [opts]
+                self.emitEvent 'sendEOF'
               else if self.currentChunk < self.fileLength
                 self.emitEvent 'upload'
               self.emitEvent 'calculateStats'
             return
+
+        else if @config.transport is 'webrtc'
+          self._DC.send opts.binData
+
         else
           HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
             content: opts.binData
@@ -1607,14 +1760,14 @@ class FilesCollection
             else
               ++self.sentChunks
               if self.sentChunks >= self.fileLength
-                self.emitEvent 'sendEOF', [opts]
+                self.emitEvent 'sendEOF'
               else if self.currentChunk < self.fileLength
                 self.emitEvent 'upload'
               self.emitEvent 'calculateStats'
             return
       return
 
-    sendEOF: (opts) ->
+    sendEOF: ->
       unless @EOFsent
         @EOFsent = true
         self = @
@@ -1622,7 +1775,7 @@ class FilesCollection
           eof:    true
           fileId: @fileId
 
-        if @config.transport is 'ddp'
+        if @config.transport is 'ddp' or @config.transport is 'webrtc'
           Meteor.call @collection._methodNames._Write, opts, ->
             self.emitEvent 'end', arguments
             return
@@ -1644,13 +1797,21 @@ class FilesCollection
       self       = @
       chunk      = @config.file.slice (@config.chunkSize * (chunkId - 1)), (@config.chunkSize * chunkId)
 
+      method = 'readAsDataURL'
+      if @config.transport is 'webrtc'
+        method = 'readAsArrayBuffer'
+
       if FileReader
         fileReader = new FileReader
 
         fileReader.onloadend = (evt) ->
+          bin = (fileReader?.result or evt.srcElement?.result or evt.target?.result)
+          if method is 'readAsDataURL'
+            bin = bin.split(',')[1]
+
           self.emitEvent 'sendChunk', [{
             data: {
-              bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
+              bin: bin
               chunkId: chunkId
               start: start
             }
@@ -1661,24 +1822,27 @@ class FilesCollection
           self.emitEvent 'end', [(e.target or e.srcElement).error]
           return
 
-        fileReader.readAsDataURL chunk
+        fileReader[method](chunk)
 
       else if FileReaderSync
         fileReader = new FileReaderSync
+        bin        = fileReader[method](chunk)
+        if method is 'readAsDataURL'
+          bin = bin.split(',')[1]
         
         self.emitEvent 'sendChunk', [{
           data: {
-            bin: fileReader.readAsDataURL(chunk).split(',')[1]
+            bin: bin
             chunkId: chunkId
             start: start
           }
         }]
       else
-        self.emitEvent 'end', ['FileReader and FileReaderSync is not supported in this Browser!']
+        self.emitEvent 'end', ['File API is not supported in this Browser!']
       return
 
     upload: -> 
-      start = +new Date
+      @__start = +new Date
       if @result.onPause.get()
         return
 
@@ -1688,9 +1852,9 @@ class FilesCollection
       if @currentChunk <= @fileLength
         ++@currentChunk
         if @worker
-          @worker.postMessage({@sentChunks, start, @currentChunk, chunkSize: @config.chunkSize, file: @config.file})
+          @worker.postMessage({sc: @sentChunks, s: @__start, cc: @currentChunk, cs: @config.chunkSize, f: @config.file, t: @config.transport})
         else
-          @emitEvent 'proceedChunk', [@currentChunk, start]
+          @emitEvent 'proceedChunk', [@currentChunk, @__start]
       return
 
     createStreams: ->
@@ -1717,7 +1881,11 @@ class FilesCollection
         if @config.transport is 'http'
           @config.chunkSize = Math.round @config.chunkSize / 2
 
+      if @config.transport is 'webrtc' and @config.chunkSize > 64000
+        @config.chunkSize = 64000
+
       @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
+
       _len = Math.ceil(@config.file.size / @config.chunkSize)
       if @config.streams is 'dynamic'
         @config.streams = _.clone _len
@@ -1725,6 +1893,9 @@ class FilesCollection
 
         if @config.transport is 'http'
           @config.streams = Math.round @config.streams / 2
+
+      if @config.transport is 'webrtc'
+        @config.streams = 1
 
       @fileLength               = if _len <= 0 then 1 else _len
       @config.streams           = @fileLength if @config.streams > @fileLength
@@ -1742,11 +1913,42 @@ class FilesCollection
           console.error '[FilesCollection] [.call(_Start)] Error:', error if self.collection.debug
           self.emitEvent 'end', [error]
         else
-          self.result.continueFunc = ->
-            console.info '[FilesCollection] [insert] [continueFunc]' if self.collection.debug
+          if self.config.transport is 'webrtc'
+            self._DC = self.collection._PC.createDataChannel opts.fileId, self.collection.RTCDCConfig
+            self._DC.onopen = ->
+              self.result.continueFunc = ->
+                console.info '[FilesCollection] [_DC.onopen] [continueFunc]' if self.collection.debug
+                self.emitEvent 'createStreams'
+                return
+              self.emitEvent 'createStreams'
+              return
+
+            self._DC.onmessage = (evt) ->
+              resp = 
+                fileId: evt.data
+                error: if !!~evt.data.indexOf('[:ERROR:]') then evt.data.replace('[:ERROR:]', '') else false
+              if resp.error
+                console.error '[FilesCollection] [_DC.onmessage] Error:', resp.error if self.collection.debug
+                if self.result.state.get() isnt 'aborted'
+                  self.emitEvent 'end', [new Meteor.Error(400, resp.error)]
+              else
+                if resp.fileId is self.fileId
+                  self.transferTime += (+new Date) - self.__start
+                  ++self.sentChunks
+                  if self.sentChunks >= self.fileLength
+                    self.emitEvent 'sendEOF'
+                  else if self.currentChunk < self.fileLength
+                    self.emitEvent 'upload'
+                  self.emitEvent 'calculateStats'
+                else
+                  self.emitEvent 'end', [new Meteor.Error 500, "Unexpected error, data came from wrong channel"]
+              return
+          else
+            self.result.continueFunc = ->
+              console.info '[FilesCollection] [insert] [continueFunc]' if self.collection.debug
+              self.emitEvent 'createStreams'
+              return
             self.emitEvent 'createStreams'
-            return
-          self.emitEvent 'createStreams'
         return
       return
 
@@ -1784,7 +1986,7 @@ class FilesCollection
       if @worker
         @worker.onmessage = (evt) ->
           if evt.data.error
-            console.warn evt.data.error if self.collection.debug
+            console.warn '[FilesCollection] [insert] [worker] [onmessage] [ERROR:]' if self.collection.debug
             self.emitEvent 'proceedChunk', [evt.data.chunkId, evt.data.start]
           else
             self.emitEvent 'sendChunk', [evt]

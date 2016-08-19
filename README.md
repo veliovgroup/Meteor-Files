@@ -6,6 +6,34 @@
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/VeliovGroup/Meteor-Files.svg?style=social)](https://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 [![Codewake](https://www.codewake.com/badges/codewake2.svg)](https://www.codewake.com/p/meteor-files)
 
+## This is branch with support of experimental WebRTC DataChannel upload support
+RTC/DC has it's own pros and cons. For example it uses UDP communication protocol, and has support for binary data. On other hand it's not supported in mobile web browsers, but has support in mobile native code. Also chunk size is limited to 64KB, but all of them will be sent in on open socket. Read more [here](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports#rtc-data-chanel-udp).
+
+By out tests:
+ - `DDP` is slowest upload transport
+ - `RTC/DC` up to 3x times faster than `DDP`
+ - `HTTP` up to 6x times faster than `DDP`
+
+Usage:
+
+```js
+Template.uploadForm.events({
+  'change #fileInput': function (e, template) {
+    var upload = Images.insert({
+      file: e.currentTarget.files[0],
+      transport: 'webrtc' // <-- use RTC/DC connection for upload
+      streams: 'dynamic', // <-- will be always 1 for webrtc
+      chunkSize: 'dynamic' // <-- will be always 64000 for webrtc
+    });
+
+    /* common code here */
+  }
+});
+```
+
+Any feedback on this branch and RTC/DC usage for uploads is highly appreciated!
+
+
 ToC:
 ========
  - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
@@ -85,6 +113,9 @@ Installation:
 ========
 ```shell
 meteor add ostrio:files
+# to install version from this branch use "-rtc" postfix
+# meteor add ostrio:files@1.6.11-rtc
+# Do not forget ti change "1.6.11" to latest version
 ```
 
 ES6 Import:
