@@ -42,5 +42,5 @@ if process.env['ACCOUNTS_FACEBOOK_ID'] and process.env['ACCOUNTS_FACEBOOK_SEC']
       loginStyle: 'redirect'
 
 Meteor.methods
-  'getServiceConfiguration': ->
+  getServiceConfiguration: ->
     return _sc

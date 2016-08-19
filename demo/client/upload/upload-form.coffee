@@ -91,6 +91,7 @@ Template.uploadForm.onCreated ->
       ).start()
 
 Template.uploadForm.helpers
+  webRTCSupport: -> (!!window.mozRTCPeerConnection or !!window.webkitRTCPeerConnection or !!window.RTCPeerConnection)
   error:   -> Template.instance().error.get()
   uploads: -> _app.uploads.get()
   status:  ->
