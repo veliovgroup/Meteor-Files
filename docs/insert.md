@@ -1,5 +1,5 @@
 ##### `insert(settings[, autoStart])` [*Client*]
-*Upload file to Server via DDP.*
+*Upload file to Server via DDP, [RTC/DC](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or HTTP.*
 
 <table>
   <thead>
@@ -126,7 +126,7 @@
         Callback, triggered after chunk is sent<br />
         <strong>Arguments</strong>:
         <ul>
-          <li><code>progress</code> {<em>Number</em>} - Current progress from `0` to `100`</li>
+          <li><code>progress</code> {<em>Number</em>} - Current progress from <code>0</code> to <code>100</code></li>
           <li><code>fileData</code> {<em>Object</em>}</li>
         </ul>
       </td>
@@ -283,6 +283,18 @@
     </tr>
     <tr>
       <td align="right">
+        <code>pipe()</code> {<em>Function</em>}
+      </td>
+      <td>
+        Pipe data before upload
+      </td>
+      <td>
+        All data must be in <code>data URI</code> scheme (*Base64*)<br />
+        Only for <code>webrtc</code> transport data represented as <code>ArrayBuffer</code>.
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>estimateTime</code> {<em>ReactiveVar</em>}
       </td>
       <td>
@@ -321,7 +333,7 @@
   </tbody>
 </table>
 
-### Event map:
+### Events map:
 <table>
   <thead>
     <tr>
@@ -387,7 +399,7 @@
         Triggered after each chunk is sent.<br />
         <strong>Arguments</strong>:
         <ul>
-          <li><code>progress</code> {<em>Number</em>} - Current progress from `0` to `100`</li>
+          <li><code>progress</code> {<em>Number</em>} - Current progress from <code>0</code> to <code>100</code></li>
           <li><code>fileData</code> {<em>Object</em>}</li>
         </ul>
       </td>
@@ -609,6 +621,8 @@ Template.uploadForm.events({
 ```
 
 ##### Piping:
+Note: data flow in `webrtc` transport uses ArrayBuffer, while `ddp` and `http` uses dataURI (*Base64*). `webrtc` is available only on [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch.
+
 ```javascript
 var encrypt = function encrypt(data) {
   return someHowEncryptAndReturnAsBase64(data);
