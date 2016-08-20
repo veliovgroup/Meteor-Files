@@ -1,7 +1,7 @@
 Package.describe({
   name: 'ostrio:files',
   version: '1.7.0',
-  summary: 'Fast and robust file upload package, with support of DDP, HTTP and WebRTC/DC uploads. Support of FS, AWS, GridFS, DropBox or Google Drive',
+  summary: 'Upload files via DDP, HTTP and WebRTC/DC. To server FS, AWS, GridFS, DropBox or Google Drive.',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
