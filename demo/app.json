@@ -1,6 +1,6 @@
 {
   "name": "Meteor-Files-Demo",
-  "version": "1.6.8",
+  "version": "1.7.0",
   "description": "Demo application for ostrio:files package",
   "repository": "https://github.com/VeliovGroup/Meteor-Files-Demo",
   "website": "https://github.com/VeliovGroup/Meteor-Files-Demo",
@@ -101,7 +101,7 @@
     }
   ],
   "engines": {
-    "node": "4.4.7",
-    "npm": "3.10.5"
+    "node": "4.5.0",
+    "npm": "3.10.6"
   }
 }
