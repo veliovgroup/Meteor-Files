@@ -6,6 +6,8 @@
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/VeliovGroup/Meteor-Files.svg?style=social)](https://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
 [![Codewake](https://www.codewake.com/badges/codewake2.svg)](https://www.codewake.com/p/meteor-files)
 
+#### Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch. Feedback is highly appreciated!
+
 ToC:
 ========
  - [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
@@ -74,7 +76,7 @@ Related Packages:
 Why `Meteor-Files`?
 ========
 The `cfs` is a well known package, but it's huge monster which combines everything. In `Meteor-Files` is nothing to broke, it's simply upload/store/serve files to/from server.
- - Support for both `HTTP` and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
+ - Support for `HTTP`, [RTC/DC](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
  - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
@@ -305,6 +307,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 Supporters:
 ========
 I would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
+ - [@Neobii](https://github.com/Neobii)
  - [@themeteorchef](https://github.com/themeteorchef)
  - [@MeDBejoHok](https://github.com/medbejohok)
  - [@martunta](https://github.com/martunta)
