@@ -1,23 +1,23 @@
 # Basic packages
 meteor-base@1.0.4
 mobile-experience@1.0.4
-mongo@1.1.10
+mongo@1.1.11
 blaze-html-templates@1.0.4
 session@1.1.6
 jquery@1.11.9
 tracker@1.1.0
 
 seba:minifiers-autoprefixer
-standard-minifier-js@1.1.8
+standard-minifier-js@1.2.0
 
 # Additional MDG packages
 audit-argument-checks@1.0.7
 reactive-var@1.0.10
-coffeescript@1.2.3
+coffeescript@1.2.4
 markdown@1.0.10
 random@1.0.10
 check@1.2.3
-http@1.2.8
+http@1.2.9
 
 # UI/UX packages
 fastclick@1.0.12
@@ -48,9 +48,10 @@ ostrio:flow-router-meta
 ostrio:spiderable-middleware
 
 # Accounts Packages
-accounts-base@1.2.9
+accounts-base@1.2.11
 service-configuration@1.0.10
 accounts-github@1.0.10
 accounts-twitter@1.1.11
 accounts-facebook@1.0.10
 accounts-meteor-developer@1.0.10
+shell-server
