@@ -11,7 +11,7 @@ The pros:
 The cons: 
 
  - “magic” overhead inside DDP and EJSON;
- - Only one data-transfer per time unit;
+ - Only one data-transfer per time unit (*blocks other DDP requests, like methods, subs, etc.*);
  - It's synchronous.
 
 #### HTTP (TCP/IP)
@@ -32,4 +32,18 @@ The cons:
 
 
 #### RTC Data Chanel (UDP)
-*We're working on it*
+This transport supported only in [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch. It's in testing mode, we're waiting for community feedback, before merging to `master`. If you're interested in RTC/DC uploads, try this branch locally. Any feedback on RTC/DC usage for uploads is highly appreciated!
+
+The pros:
+
+ - Single socket connection;
+ - Direct tunneled connection from Client to Server;
+ - Pure binary data support;
+ - Native implementation and support on mobile devices;
+ - It's UDP.
+
+The cons:
+
+ - No mobile browsers support;
+ - Chunk size limited to 64KB;
+ - Only single stream is supported (*so, it's currently uses synchronous chunk uploads*. If `RTC/DC` will be accepted by community we will implement asynchronous chunks upload).

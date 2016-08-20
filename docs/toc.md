@@ -14,11 +14,12 @@ Meteor-Files
   </tbody>
 </table>
 
+Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch. Feedback is highly appreciated!
 
 ### About:
  - Event-driven API
  - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
- - Upload via *HTTP* or *DDP*, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
+ - Upload via *HTTP*, [*RTC/DC*](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or *DDP*, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - File upload:
     * Ready for small and large files (RAM used only for chunk reading - [read about `chunkSize`](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)))
     * Pause / Resume upload
