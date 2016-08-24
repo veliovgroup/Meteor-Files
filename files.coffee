@@ -535,9 +535,13 @@ class FilesCollection
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
 
-      if window?.Worker
+      if window?.Worker and window?.Blob
         @_supportWebWorker = true
-        @_webWorkerUrl     = 'data:application/javascript,InVzZSBzdHJpY3QiO3NlbGYub25tZXNzYWdlPWZ1bmN0aW9uKGEpe3ZhciBiO3NlbGYuRmlsZVJlYWRlcj8oYj1uZXcgRmlsZVJlYWRlcixiLm9ubG9hZGVuZD1mdW5jdGlvbihjKXtwb3N0TWVzc2FnZSh7YmluOihiLnJlc3VsdHx8Yy5zcmNFbGVtZW50fHxjLnRhcmdldCkuc3BsaXQoIiwiKVsxXSxjaHVua0lkOmEuZGF0YS5jYyxzOmEuZGF0YS5zfSl9LGIub25lcnJvcj1mdW5jdGlvbihhKXt0aHJvdyhhLnRhcmdldHx8YS5zcmNFbGVtZW50KS5lcnJvcn0sYi5yZWFkQXNEYXRhVVJMKGEuZGF0YS5mLnNsaWNlKGEuZGF0YS5jcyooYS5kYXRhLmNjLTEpLGEuZGF0YS5jcyphLmRhdGEuY2MpKSk6c2VsZi5GaWxlUmVhZGVyU3luYz8oYj1uZXcgRmlsZVJlYWRlclN5bmMscG9zdE1lc3NhZ2Uoe2JpbjpiLnJlYWRBc0RhdGFVUkwoYS5kYXRhLmYuc2xpY2UoYS5kYXRhLmNzKihhLmRhdGEuY2MtMSksYS5kYXRhLmNzKmEuZGF0YS5jYykpLnNwbGl0KCIsIilbMV0sY2h1bmtJZDphLmRhdGEuY2N9KSk6cG9zdE1lc3NhZ2Uoe2JpbjpudWxsLGNodW5rSWQ6YS5kYXRhLmNjLGVycm9yOiJGaWxlIEFQSSBpcyBub3Qgc3VwcG9ydGVkIGluIFdlYldvcmtlciEifSl9Ow=='
+        _URL               = window.URL || window.webkitURL || window.mozURL
+        @_webWorkerUrl     = _URL.createObjectURL(new Blob(['"use strict";self.onmessage=function(a){if(a.data.ib===!0)postMessage({bin:a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc),chunkId:a.data.cc});else{var b;self.FileReader?(b=new FileReader,b.onloadend=function(c){postMessage({bin:(b.result||c.srcElement||c.target).split(",")[1],chunkId:a.data.cc,s:a.data.s})},b.onerror=function(a){throw(a.target||a.srcElement).error},b.readAsDataURL(a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc))):self.FileReaderSync?(b=new FileReaderSync,postMessage({bin:b.readAsDataURL(a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc)).split(",")[1],chunkId:a.data.cc})):postMessage({bin:null,chunkId:a.data.cc,error:"File API is not supported in WebWorker!"})}};'], {type: 'application/javascript'}))
+      else if window?.Worker
+        @_supportWebWorker = true
+        @_webWorkerUrl     = Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
       else
         @_supportWebWorker = false
 
@@ -1513,10 +1517,12 @@ class FilesCollection
         file:            Match.Any
         fileName:        Match.Optional String
         meta:            Match.Optional Object
+        type:            Match.Optional String
         onError:         Match.Optional Function
         onAbort:         Match.Optional Function
         streams:         Match.OneOf 'dynamic', Number
         onStart:         Match.Optional Function
+        isBase64:        Match.Optional Boolean
         transport:       Match.OneOf 'http', 'ddp'
         chunkSize:       Match.OneOf 'dynamic', Number
         onUploaded:      Match.Optional Function
@@ -1525,10 +1531,41 @@ class FilesCollection
         allowWebWorkers: Boolean
       }
 
+      if not @config.fileName and not @config.file.name
+        throw new Meteor.Error 400, '"fileName" must me specified for base64 upload!'
+
+      if @config.isBase64 is true
+        check @config.file, String
+        if !!~@config.file.indexOf('data:')
+          @config.file = @config.file.replace 'data:', ''
+        if !!~@config.file.indexOf(',')
+          _file = @config.file.split ','
+          @fileData =
+            size: Math.floor (_file[1].replace(/\=/g, '')).length / 4 * 3
+            type: _file[0]
+            name: @config.fileName
+            meta: @config.meta
+          @config.file = _file[1]
+        else if not @config.type
+          throw new Meteor.Error 400, '"type" must me specified for base64 upload! And represent mime-type of the file'
+        else
+          @fileData =
+            size: Math.floor (@config.file.replace(/\=/g, '')).length / 4 * 3
+            type: @config.type
+            name: @config.fileName
+            meta: @config.meta
+
       if @config.file
+        unless @config.isBase64
+          @fileData =
+            size: @config.file.size
+            type: @config.file.type
+            name: @config.fileName or @config.file.name
+            meta: @config.meta
+
         if @collection.debug
-          console.time('insert ' + @config.file.name)
-          console.time('loadFile ' + @config.file.name)
+          console.time('insert ' + @fileData.name)
+          console.time('loadFile ' + @fileData.name)
 
         if @collection._supportWebWorker and @config.allowWebWorkers
           try
@@ -1547,16 +1584,11 @@ class FilesCollection
         @sentChunks   = 0
         @fileLength   = 1
         @EOFsent      = false
-        @FSName       = if @collection.namingFunction then @collection.namingFunction(@config.file) else @fileId
+        @FSName       = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
         @fileId       = Random.id()
         @pipes        = []
-        @fileData     =
-          size: @config.file.size
-          type: @config.file.type
-          name: @config.fileName or @config.file.name
-          meta: @config.meta
 
-        @fileData = _.extend @fileData, @collection._getExt(self.config.file.name), {mime: @collection._getMimeType(@fileData)}
+        @fileData = _.extend @fileData, @collection._getExt(self.fileData.name), {mime: @collection._getMimeType(@fileData)}
         @fileData['mime-type'] = @fileData.mime
 
         @result = new @collection._FileUpload _.extend self.config, {@fileData, @fileId, _Abort: @collection._methodNames._Abort}
@@ -1600,7 +1632,7 @@ class FilesCollection
         throw new Meteor.Error 500, '[FilesCollection] [insert] Have you forget to pass a File itself?'
 
     end: (error, data) ->
-      console.timeEnd('insert ' + @config.file.name) if @collection.debug
+      console.timeEnd('insert ' + @fileData.name) if @collection.debug
       @emitEvent '_onEnd'
       @result.emitEvent 'uploaded', [error, data]
       @config.onUploaded and @config.onUploaded.call @result, error, data
@@ -1629,7 +1661,7 @@ class FilesCollection
           opts.binData = pipeFunc opts.binData
 
       if @fileLength is evt.data.chunkId
-        console.timeEnd('loadFile ' + @config.file.name) if @collection.debug
+        console.timeEnd('loadFile ' + @fileData.name) if @collection.debug
         @emitEvent 'readEnd'
 
       if opts.binData
@@ -1704,35 +1736,43 @@ class FilesCollection
       self  = @
       chunk = @config.file.slice (@config.chunkSize * (chunkId - 1)), (@config.chunkSize * chunkId)
 
-      if FileReader
-        fileReader = new FileReader
-
-        fileReader.onloadend = (evt) ->
-          self.emitEvent 'sendChunk', [{
-            data: {
-              bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
-              chunkId: chunkId
-            }
-          }]
-          return
-
-        fileReader.onerror = (e) ->
-          self.emitEvent 'end', [(e.target or e.srcElement).error]
-          return
-
-        fileReader.readAsDataURL chunk
-
-      else if FileReaderSync
-        fileReader = new FileReaderSync
-        
+      if @config.isBase64
         self.emitEvent 'sendChunk', [{
           data: {
-            bin: fileReader.readAsDataURL(chunk).split(',')[1]
+            bin: chunk
             chunkId: chunkId
           }
         }]
       else
-        self.emitEvent 'end', ['File API is not supported in this Browser!']
+        if FileReader
+          fileReader = new FileReader
+
+          fileReader.onloadend = (evt) ->
+            self.emitEvent 'sendChunk', [{
+              data: {
+                bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
+                chunkId: chunkId
+              }
+            }]
+            return
+
+          fileReader.onerror = (e) ->
+            self.emitEvent 'end', [(e.target or e.srcElement).error]
+            return
+
+          fileReader.readAsDataURL chunk
+
+        else if FileReaderSync
+          fileReader = new FileReaderSync
+          
+          self.emitEvent 'sendChunk', [{
+            data: {
+              bin: fileReader.readAsDataURL(chunk).split(',')[1]
+              chunkId: chunkId
+            }
+          }]
+        else
+          self.emitEvent 'end', ['File API is not supported in this Browser!']
       return
 
     upload: -> 
@@ -1745,7 +1785,7 @@ class FilesCollection
       if @currentChunk <= @fileLength
         ++@currentChunk
         if @worker
-          @worker.postMessage({sc: @sentChunks, cc: @currentChunk, cs: @config.chunkSize, f: @config.file})
+          @worker.postMessage({sc: @sentChunks, cc: @currentChunk, cs: @config.chunkSize, f: @config.file, ib: @config.isBase64})
         else
           @emitEvent 'proceedChunk', [@currentChunk]
       @startTime[@currentChunk] = +new Date
@@ -1766,7 +1806,7 @@ class FilesCollection
       @result.emitEvent 'start', [null, @fileData]
 
       if @config.chunkSize is 'dynamic'
-        @config.chunkSize = @config.file.size / 1000
+        @config.chunkSize = @fileData.size / 1000
         if @config.chunkSize < 327680
           @config.chunkSize = 327680
         else if @config.chunkSize > 1048576
@@ -1776,7 +1816,7 @@ class FilesCollection
           @config.chunkSize = Math.round @config.chunkSize / 2
 
       @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
-      _len = Math.ceil(@config.file.size / @config.chunkSize)
+      _len = Math.ceil(@fileData.size / @config.chunkSize)
       if @config.streams is 'dynamic'
         @config.streams = _.clone _len
         @config.streams = 24 if @config.streams > 24
@@ -1825,7 +1865,7 @@ class FilesCollection
 
     start: ->
       self = @
-      if @config.file.size <= 0
+      if @fileData.size <= 0
         @end new Meteor.Error 400, 'Can\'t upload empty file'
         return @result
 
@@ -1895,7 +1935,10 @@ class FilesCollection
     constructor: (@config) ->
       EventEmitter.call @
       self           = @
-      @file          = _.extend @config.file, @config.fileData
+      unless @config.isBase64
+        @file        = _.extend @config.file, @config.fileData
+      else
+        @file        = @config.fileData
       @state         = new ReactiveVar 'active'
       @onPause       = new ReactiveVar false
       @progress      = new ReactiveVar 0
@@ -1936,7 +1979,7 @@ class FilesCollection
       @pause()
       @config._onEnd()
       @state.set 'aborted'
-      console.timeEnd('insert ' + @config.file.name) if @config.debug
+      console.timeEnd('insert ' + @config.fileData.name) if @config.debug
       Meteor.call @config._Abort, @config.fileId
       return
   else undefined
