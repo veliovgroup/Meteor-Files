@@ -534,6 +534,13 @@ class FilesCollection
         unsetTokenCookie()
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
+
+      if window?.Worker
+        @_supportWebWorker = true
+        @_webWorkerUrl     = 'data:application/javascript,InVzZSBzdHJpY3QiO3NlbGYub25tZXNzYWdlPWZ1bmN0aW9uKGEpe3ZhciBiO3NlbGYuRmlsZVJlYWRlcj8oYj1uZXcgRmlsZVJlYWRlcixiLm9ubG9hZGVuZD1mdW5jdGlvbihjKXtwb3N0TWVzc2FnZSh7YmluOihiLnJlc3VsdHx8Yy5zcmNFbGVtZW50fHxjLnRhcmdldCkuc3BsaXQoIiwiKVsxXSxjaHVua0lkOmEuZGF0YS5jYyxzOmEuZGF0YS5zfSl9LGIub25lcnJvcj1mdW5jdGlvbihhKXt0aHJvdyhhLnRhcmdldHx8YS5zcmNFbGVtZW50KS5lcnJvcn0sYi5yZWFkQXNEYXRhVVJMKGEuZGF0YS5mLnNsaWNlKGEuZGF0YS5jcyooYS5kYXRhLmNjLTEpLGEuZGF0YS5jcyphLmRhdGEuY2MpKSk6c2VsZi5GaWxlUmVhZGVyU3luYz8oYj1uZXcgRmlsZVJlYWRlclN5bmMscG9zdE1lc3NhZ2Uoe2JpbjpiLnJlYWRBc0RhdGFVUkwoYS5kYXRhLmYuc2xpY2UoYS5kYXRhLmNzKihhLmRhdGEuY2MtMSksYS5kYXRhLmNzKmEuZGF0YS5jYykpLnNwbGl0KCIsIilbMV0sY2h1bmtJZDphLmRhdGEuY2N9KSk6cG9zdE1lc3NhZ2Uoe2JpbjpudWxsLGNodW5rSWQ6YS5kYXRhLmNjLGVycm9yOiJGaWxlIEFQSSBpcyBub3Qgc3VwcG9ydGVkIGluIFdlYldvcmtlciEifSl9Ow=='
+      else
+        @_supportWebWorker = false
+
     else
       @strict            ?= true
       @throttle          ?= false
@@ -1523,8 +1530,12 @@ class FilesCollection
           console.time('insert ' + @config.file.name)
           console.time('loadFile ' + @config.file.name)
 
-        if Worker and @config.allowWebWorkers
-          @worker = new Worker Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
+        if @collection._supportWebWorker and @config.allowWebWorkers
+          try
+            @worker = new Worker @collection._webWorkerUrl
+          catch wwError
+            @worker = false
+            console.warn '[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError if @collection.debug
         else
           @worker = null
 
