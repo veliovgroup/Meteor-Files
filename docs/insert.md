@@ -52,8 +52,8 @@
 <pre><code>Images.insert({
   file: 'data:image/png,base64str…’,
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’, // <— Mandatory
-  type: ‘image/png’
+  fileName: 'pic.png', // <— Mandatory
+  type: 'image/png'
 });</code></pre>
       </td>
     </tr>
@@ -643,25 +643,24 @@ Template.uploadForm.events({
 ```javascript
 // As dataURI
 Images.insert({
-  file: 'data:image/png,base64str…’,
+  file: 'data:image/png,base64str…',
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’ // <— Mandatory
+  fileName: 'pic.png' // <— Mandatory
 });
 
 // As base64:
 Images.insert({
-  file: 'image/png,base64str…’,
+  file: 'image/png,base64str…',
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’ // <— Mandatory
+  fileName: 'pic.png' // <— Mandatory
 });
-```
 
 // As plain base64:
 Images.insert({
-  file: 'base64str…’,
+  file: 'base64str…',
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’, // <— Mandatory
-  type: ‘image/png’ // <— Mandatory
+  fileName: 'pic.png', // <— Mandatory
+  type: 'image/png' // <— Mandatory
 });
 ```
 
