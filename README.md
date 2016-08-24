@@ -202,17 +202,17 @@ Upload base64 string (*introduced in v1.7.1*):
 ```js
 // As dataURI
 Images.insert({
-  file: 'data:image/png,base64str…’,
+  file: 'data:image/png,base64str…',
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’ // <— Mandatory
+  fileName: 'pic.png' // <— Mandatory
 });
 
 // As plain base64:
 Images.insert({
-  file: 'base64str…’,
+  file: 'base64str…',
   isBase64: true, // <— Mandatory
-  fileName: ‘pic.png’, // <— Mandatory
-  type: ‘image/png’ // <— Mandatory
+  fileName: 'pic.png', // <— Mandatory
+  type: 'image/png' // <— Mandatory
 });
 ```
 
