@@ -782,9 +782,8 @@ class FilesCollection
                   response.end()
 
                 else
-
-                  console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts           = JSON.parse body
+                  console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
                   {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
                   opts._id       = opts.fileId
@@ -1559,7 +1558,7 @@ class FilesCollection
         unless @config.isBase64
           @fileData =
             size: @config.file.size
-            type: @config.file.type
+            type: @config.type or @config.file.type
             name: @config.fileName or @config.file.name
             meta: @config.meta
 
