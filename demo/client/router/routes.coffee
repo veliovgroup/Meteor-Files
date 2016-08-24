@@ -28,11 +28,7 @@ FlowRouter.route '/login',
 
 FlowRouter.route '/:_id',
   name: 'file'
-  title: (params, queryParams, file) ->
-    if file
-      return "View File: #{file.get('name')}"
-    else
-      return '404: Page not found'
+  title: (params, queryParams, file) -> if file then "View File: #{file.get('name')}" else '404: Page not found'
   meta: (params, queryParams, file) ->
     keywords: 
       name: 'keywords'
@@ -65,9 +61,4 @@ FlowRouter.route '/:_id',
   onNoData: ->
     @render '_layout', '_404'
     return
-  data: (params) -> 
-    file = Collections.files.findOne params._id
-    if file
-      return file
-    else
-      return false
+  data: (params) -> Collections.files.findOne(params._id) or false

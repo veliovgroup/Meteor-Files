@@ -1,7 +1,7 @@
 {
-  "name": "Meteor-Files-Demo",
-  "version": "1.7.0",
-  "description": "Demo application for ostrio:files package",
+  "name": "Meteor-Files",
+  "version": "1.7.1",
+  "description": "Upload files with speed on Meteor. Application build on top of ostrio:files package",
   "main": "main.js",
   "scripts": {
     "preinstall": "cd ./programs/server && npm install",
