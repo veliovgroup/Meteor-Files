@@ -55,6 +55,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
  - Support of non-Latin (non-Roman) file names
  - Subscribe on files (*collections*) you need
 
+
 ### ToC:
 ##### API:
  - [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) [*Isomorphic*] - Initialize FilesCollection
