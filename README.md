@@ -197,6 +197,25 @@ Template.uploadForm.events({
   }
 });
 ```
+
+Upload base64 string (*introduced in v1.7.1*):
+```js
+// As dataURI
+Images.insert({
+  file: 'data:image/png,base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’ // <— Mandatory
+});
+
+// As plain base64:
+Images.insert({
+  file: 'base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’, // <— Mandatory
+  type: ‘image/png’ // <— Mandatory
+});
+```
+
 For more expressive example see [Upload demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-upload)
 
 

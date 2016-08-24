@@ -29,13 +29,32 @@
     </tr>
     <tr>
       <td align="right">
-        <code>settings.file</code> {<em>File</em>} or {<em>Object</em>}
+        <code>settings.file</code> {<em>File</em>} or {<em>Object</em>} or {<em>String</em>}
       </td>
       <td>
         [REQUIRED] HTML5 <code>files</code> item
       </td>
       <td>
         Ex.: From event: <code>event.currentTarget.files[0]</code>
+        <br />
+        Set to dataURI {<em>String</em>} for Base64
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.isBase64</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Upload as base64 string, useful for data taken from <code>canvas</code>
+      </td>
+      <td>
+        Example:
+<pre><code>Images.insert({
+  file: 'data:image/png,base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’, // <— Mandatory
+  type: ‘image/png’
+});</code></pre>
       </td>
     </tr>
     <tr>
@@ -585,12 +604,12 @@ Template.uploadForm.events({
 });
 ```
 
-##### Other events based example:
+##### Events based example:
 ```javascript
 Template.uploadForm.events({
   'change #fileInput': function (e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      uploader = Images.insert({
+      var uploader = Images.insert({
         file: e.currentTarget.files[0],
         streams: 'dynamic',
         chunkSize: 'dynamic'
@@ -617,6 +636,32 @@ Template.uploadForm.events({
       uploader.start();
     }
   }
+});
+```
+
+##### Upload base64 string:
+```javascript
+// As dataURI
+Images.insert({
+  file: 'data:image/png,base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’ // <— Mandatory
+});
+
+// As base64:
+Images.insert({
+  file: 'image/png,base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’ // <— Mandatory
+});
+```
+
+// As plain base64:
+Images.insert({
+  file: 'base64str…’,
+  isBase64: true, // <— Mandatory
+  fileName: ‘pic.png’, // <— Mandatory
+  type: ‘image/png’ // <— Mandatory
 });
 ```
 

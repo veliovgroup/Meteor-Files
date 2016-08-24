@@ -32,7 +32,7 @@ template(name="file")
         if isPDF
           .file-cell: iframe.file-preview(src="{{link}}" frameborder="0")
         else if isImage
-          if compare extension 'is' 'png|gif|jpg|jpeg|webp|bmp'
+          if compare extension 'is' 'png|gif|jpg|jpeg|webp|bmp|svg'
             picture.file-preview(itemprop="image" itemscope itemtype="http://schema.org/ImageObject")
               meta(itemprop="caption" content="Meteor Files: Uploaded file: {{name}}")
               meta(itemprop="exifData" content="{{type}}")

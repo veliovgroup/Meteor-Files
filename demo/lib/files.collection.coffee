@@ -49,8 +49,8 @@ if Meteor.isServer
 
 Collections.files = new FilesCollection
   # debug:            true
-  throttle:         false
-  chunkSize:        1024*1024
+  # throttle:         false
+  # chunkSize:        1024*1024
   storagePath:      'assets/app/uploads/uploadedFiles'
   collectionName:   'uploadedFiles'
   allowClientCode:  true
