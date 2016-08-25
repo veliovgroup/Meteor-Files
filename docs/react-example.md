@@ -94,7 +94,7 @@ const FileUploadComponent = React.createClass({
 
         uploadInstance.on('progress', function (progress, fileObj) {
           console.log('Upload Percentage: ' + progress);
-          //update our progress bar
+          // Update our progress bar
           self.setState({
             progress: progress
           })
@@ -141,7 +141,7 @@ const FileUploadComponent = React.createClass({
 
         let link = UserFiles.findOne({_id: aFile._id}).link();  //The "view/download" link
 
-        //send out components that show details of each file
+        // Send out components that show details of each file
         return <div key={'file' + key}>
           <IndividualFile
             fileName={aFile.name}
