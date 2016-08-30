@@ -785,7 +785,7 @@ class FilesCollection
                   opts           = JSON.parse body
                   console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                  {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
+                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'Start Method'
                   opts._id       = opts.fileId
                   opts.createdAt = new Date()
                   self._preCollection.insert opts
@@ -989,7 +989,7 @@ class FilesCollection
     result.ext       = extension
     result           = @_dataToSchema result
     result._id       = opts.fileId
-    result.userId    = userId if userId
+    result.userId    = userId or null
 
     if @onBeforeUpload and _.isFunction @onBeforeUpload
       isUploadAllowed = @onBeforeUpload.call(_.extend({
