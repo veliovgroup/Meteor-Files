@@ -462,6 +462,44 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.onInitiateUpload</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Function which executes on server right before upload is begin and right after <code>onBeforeUpload</code> hook returns <code>true</code>. This hook <strong>called only once per upload</strong> and fully asynchronous.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>fileData</code> {<em>Object</em>} - Current file metadata
+          </li>
+        </ul><br>
+        <strong>Context</strong>:
+        <ul>
+          <li>
+            <code>this.file</code>
+          </li>
+          <li>
+            <code>this.user()</code>
+          </li>
+          <li>
+            <code>this.userId</code>
+          </li>
+          <li>
+            <code>this.chunkId</code> {<em>Number</em>} - On <strong>server only</strong>
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        See: <a href="https://github.com/VeliovGroup/Meteor-Files/issues/208">#208</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.onBeforeRemove</code> {<em>Function</em>}
       </td>
       <td>

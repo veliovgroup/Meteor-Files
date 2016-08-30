@@ -452,6 +452,7 @@ fixJSONStringify = (obj) ->
 @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
 return `true` to continue
 return `false` or `String` to abort upload
+@param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
 @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
 @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
 @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
@@ -466,7 +467,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -477,7 +478,7 @@ class FilesCollection
     @chunkSize  = Math.floor(@chunkSize / 8) * 8
 
     if @public and not @downloadRoute
-      throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal on be inside of your web/proxy-server (relative) root."
+      throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal or be inside of your web/proxy-server (relative) root."
 
     @collection        ?= new Mongo.Collection @collectionName
     @collectionName    ?= @collection._name
@@ -488,6 +489,7 @@ class FilesCollection
     @namingFunction    ?= false
     @onBeforeUpload    ?= false
     @allowClientCode   ?= true
+    @onInitiateUpload  ?= false
     @interceptDownload ?= false
 
     if Meteor.isClient
@@ -500,6 +502,7 @@ class FilesCollection
       delete @onAfterUpload
       delete @onAfterRemove
       delete @onBeforeRemove
+      @onInitiateUpload = false
       delete @integrityCheck
       delete @downloadCallback
       delete @interceptDownload
@@ -689,6 +692,7 @@ class FilesCollection
     check @downloadRoute, String
     check @namingFunction, Match.OneOf false, Function
     check @onBeforeUpload, Match.OneOf false, Function
+    check @onInitiateUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
 
     if @public and @protected
@@ -783,13 +787,14 @@ class FilesCollection
 
                 else
                   opts           = JSON.parse body
+                  opts.___s      = true
                   console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                  {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
+                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'Start Method'
                   opts._id       = opts.fileId
                   opts.createdAt = new Date()
-                  self._preCollection.insert opts
-                  self._createStream result._id, result.path, opts
+                  self._preCollection.insert _.omit(opts, '___s')
+                  self._createStream result._id, result.path, _.omit(opts, '___s')
 
                   if opts.returnMeta
                     response.writeHead 200
@@ -901,11 +906,12 @@ class FilesCollection
         check returnMeta, Match.Optional Boolean
 
         console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
+        opts.___s      = true
         {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
         opts._id       = opts.fileId
         opts.createdAt = new Date()
-        self._preCollection.insert opts
-        self._createStream result._id, result.path, opts
+        self._preCollection.insert _.omit(opts, '___s')
+        self._createStream result._id, result.path, _.omit(opts, '___s')
 
         if returnMeta
           return {
@@ -934,6 +940,7 @@ class FilesCollection
 
         @unblock()
         {result, opts} = self._prepareUpload _.extend(opts, _continueUpload), @userId, 'DDP'
+
         if opts.eof
           try
             return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
@@ -989,20 +996,24 @@ class FilesCollection
     result.ext       = extension
     result           = @_dataToSchema result
     result._id       = opts.fileId
-    result.userId    = userId if userId
+    result.userId    = userId or null
 
     if @onBeforeUpload and _.isFunction @onBeforeUpload
-      isUploadAllowed = @onBeforeUpload.call(_.extend({
+      ctx = _.extend {
         file: opts.file
       }, {
         chunkId: opts.chunkId
         userId:  result.userId
         user:    -> if Meteor.users then Meteor.users.findOne(result.userId) else null
         eof:     opts.eof
-      }), result)
+      }
+      isUploadAllowed = @onBeforeUpload.call ctx, result
 
       if isUploadAllowed isnt true
         throw new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else '@onBeforeUpload() returned false')
+      else
+        if opts.___s is true and @onInitiateUpload and _.isFunction @onInitiateUpload
+          @onInitiateUpload.call ctx, result
 
     return {result, opts}
   else undefined
@@ -1541,7 +1552,7 @@ class FilesCollection
           _file = @config.file.split ','
           @fileData =
             size: Math.floor (_file[1].replace(/\=/g, '')).length / 4 * 3
-            type: _file[0]
+            type: _file[0].split(';')[0]
             name: @config.fileName
             meta: @config.meta
           @config.file = _file[1]
