@@ -477,7 +477,7 @@ class FilesCollection
     @chunkSize  = Math.floor(@chunkSize / 8) * 8
 
     if @public and not @downloadRoute
-      throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal on be inside of your web/proxy-server (relative) root."
+      throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal or be inside of your web/proxy-server (relative) root."
 
     @collection        ?= new Mongo.Collection @collectionName
     @collectionName    ?= @collection._name
