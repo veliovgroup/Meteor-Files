@@ -1552,7 +1552,7 @@ class FilesCollection
           _file = @config.file.split ','
           @fileData =
             size: Math.floor (_file[1].replace(/\=/g, '')).length / 4 * 3
-            type: _file[0]
+            type: _file[0].split(';')[0]
             name: @config.fileName
             meta: @config.meta
           @config.file = _file[1]
