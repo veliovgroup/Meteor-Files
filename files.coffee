@@ -700,18 +700,15 @@ class FilesCollection
 
     @_checkAccess = (http) ->
       if self.protected
-        user = false
-        userFuncs = self._getUser http
-        {user, userId} = userFuncs
-        user = user()
+        {user, userId} = self._getUser http
 
         if _.isFunction self.protected
           if http?.params?._id
             fileRef = self.collection.findOne http.params._id
 
-          result = if http then self.protected.call(_.extend(http, userFuncs), (fileRef or null)) else self.protected.call userFuncs, (fileRef or null)
+          result = if http then self.protected.call(_.extend(http, {user, userId}), (fileRef or null)) else self.protected.call {user, userId}, (fileRef or null)
         else
-          result = !!user
+          result = !!userId
 
         if (http and result is true) or not http
           return true
@@ -1137,7 +1134,7 @@ class FilesCollection
         if mtok
           userId = Meteor.server.sessions?[mtok]?.userId
           if userId
-            result.user   = -> return Meteor.users.findOne userId
+            result.user   = -> Meteor.users.findOne userId
             result.userId = userId
     else
       if Meteor.userId?()
