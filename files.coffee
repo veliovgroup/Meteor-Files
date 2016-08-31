@@ -1445,10 +1445,11 @@ class FilesCollection
   @summary Find and return Cursor for matching document Object
   @returns {FileCursor} Instance
   ###
-  findOne: (selector = {}, options) ->
+  findOne: (selector, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.OneOf Object, String
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
     check options, Match.Optional Object
+
     doc = @collection.findOne selector, options
     return if doc then new FileCursor(doc, @) else doc
 
