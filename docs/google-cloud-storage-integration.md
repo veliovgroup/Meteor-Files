@@ -72,27 +72,29 @@ Collections.files = new FilesCollection({
       };
 
       bucket.upload(fileRef.path, options, function(error, file){
-        var upd;
-        if (error) {
-          console.error(error);
-        } else {
-          upd = {
-            $set: {}
-          };
-          upd['$set']["versions." + version + ".meta.pipeFrom"] = bucketMetadata.selfLink + '/' + filePath;
-          upd['$set']["versions." + version + ".meta.pipePath"] = filePath;
-          self.collection.update({
-            _id: fileRef._id
-          }, upd, function (error) {
-            if (error) {
-              console.error(error);
-            } else {
-              // Unlink original files from FS
-              // after successful upload to Google Cloud Storage
-              self.unlink(self.collection.findOne(fileRef._id), version);
-            }
-          });
-        }
+        bound(function(){
+          var upd;
+          if (error) {
+            console.error(error);
+          } else {
+            upd = {
+              $set: {}
+            };
+            upd['$set']["versions." + version + ".meta.pipeFrom"] = bucketMetadata.selfLink + '/' + filePath;
+            upd['$set']["versions." + version + ".meta.pipePath"] = filePath;
+            self.collection.update({
+              _id: fileRef._id
+            }, upd, function (error) {
+              if (error) {
+                console.error(error);
+              } else {
+                // Unlink original files from FS
+                // after successful upload to Google Cloud Storage
+                self.unlink(self.collection.findOne(fileRef._id), version);
+              }
+            });
+          }
+        });
       });
     });
   },
