@@ -1659,6 +1659,14 @@ class FilesCollection
         binData: evt.data.bin
         chunkId: evt.data.chunkId
 
+      if @config.isBase64
+        pad = opts.binData.length % 4
+        if pad
+          p = 0
+          while p < pad
+            opts.binData += '='
+            p++
+
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
         for pipeFunc in @pipes
@@ -1819,8 +1827,13 @@ class FilesCollection
         if @config.transport is 'http'
           @config.chunkSize = Math.round @config.chunkSize / 2
 
-      @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
-      _len = Math.ceil(@fileData.size / @config.chunkSize)
+      if @config.isBase64
+        @config.chunkSize = Math.floor(@config.chunkSize / 4) * 4
+        _len = Math.ceil(@config.file.length / @config.chunkSize)
+      else
+        @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
+        _len = Math.ceil(@fileData.size / @config.chunkSize)
+
       if @config.streams is 'dynamic'
         @config.streams = _.clone _len
         @config.streams = 24 if @config.streams > 24
