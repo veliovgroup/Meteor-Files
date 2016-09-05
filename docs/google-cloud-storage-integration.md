@@ -4,7 +4,7 @@ Additionally, this example will also show you how to list uploaded files and rem
 
 *See production-ready code below.*
 
-##### Step 1: install [gcloud-node](https://github.com/GoogleCloudPlatform/google-cloud-node)
+##### Step 1: install [google-cloud-node](https://github.com/GoogleCloudPlatform/google-cloud-node)
 
 ```shell
 npm install --save google-cloud
