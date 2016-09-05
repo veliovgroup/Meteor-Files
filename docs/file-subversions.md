@@ -4,7 +4,7 @@
 this.Videos = new FilesCollection({
   /* .. other options .. */
   collectionName: 'Videos',
-  onAfterUpload: function(fileRaf) {
+  onAfterUpload: function(fileRef) {
     var formats, sourceFile;
     sourceFile = ffmpeg(fileRef.path).noProfile();
     formats = {
