@@ -524,17 +524,13 @@ class FilesCollection
           cookie.send()
         return
 
-      Tracker.autorun ->
-        if Meteor.status().connected
+      if Accounts?
+        Accounts.onLogin ->
           setTokenCookie()
-        else
+          return
+        Accounts.onLogout ->
           unsetTokenCookie()
-        return
-
-      if Meteor.connection._lastSessionId
-        setTokenCookie()
-      else
-        unsetTokenCookie()
+          return
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
 
