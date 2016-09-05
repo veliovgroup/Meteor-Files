@@ -524,17 +524,13 @@ class FilesCollection
           cookie.send()
         return
 
-      Tracker.autorun ->
-        if Meteor.status().connected
+      if Accounts?
+        Accounts.onLogin ->
           setTokenCookie()
-        else
+          return
+        Accounts.onLogout ->
           unsetTokenCookie()
-        return
-
-      if Meteor.connection._lastSessionId
-        setTokenCookie()
-      else
-        unsetTokenCookie()
+          return
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
 
@@ -700,18 +696,15 @@ class FilesCollection
 
     @_checkAccess = (http) ->
       if self.protected
-        user = false
-        userFuncs = self._getUser http
-        {user, userId} = userFuncs
-        user = user()
+        {user, userId} = self._getUser http
 
         if _.isFunction self.protected
           if http?.params?._id
             fileRef = self.collection.findOne http.params._id
 
-          result = if http then self.protected.call(_.extend(http, userFuncs), (fileRef or null)) else self.protected.call userFuncs, (fileRef or null)
+          result = if http then self.protected.call(_.extend(http, {user, userId}), (fileRef or null)) else self.protected.call {user, userId}, (fileRef or null)
         else
-          result = !!user
+          result = !!userId
 
         if (http and result is true) or not http
           return true
@@ -1137,7 +1130,7 @@ class FilesCollection
         if mtok
           userId = Meteor.server.sessions?[mtok]?.userId
           if userId
-            result.user   = -> return Meteor.users.findOne userId
+            result.user   = -> Meteor.users.findOne userId
             result.userId = userId
     else
       if Meteor.userId?()
@@ -1445,10 +1438,11 @@ class FilesCollection
   @summary Find and return Cursor for matching document Object
   @returns {FileCursor} Instance
   ###
-  findOne: (selector = {}, options) ->
+  findOne: (selector, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.OneOf Object, String
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
     check options, Match.Optional Object
+
     doc = @collection.findOne selector, options
     return if doc then new FileCursor(doc, @) else doc
 
@@ -1665,6 +1659,14 @@ class FilesCollection
         binData: evt.data.bin
         chunkId: evt.data.chunkId
 
+      if @config.isBase64
+        pad = opts.binData.length % 4
+        if pad
+          p = 0
+          while p < pad
+            opts.binData += '='
+            p++
+
       @emitEvent 'data', [evt.data.bin]
       if @pipes.length
         for pipeFunc in @pipes
@@ -1825,8 +1827,13 @@ class FilesCollection
         if @config.transport is 'http'
           @config.chunkSize = Math.round @config.chunkSize / 2
 
-      @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
-      _len = Math.ceil(@fileData.size / @config.chunkSize)
+      if @config.isBase64
+        @config.chunkSize = Math.floor(@config.chunkSize / 4) * 4
+        _len = Math.ceil(@config.file.length / @config.chunkSize)
+      else
+        @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
+        _len = Math.ceil(@fileData.size / @config.chunkSize)
+
       if @config.streams is 'dynamic'
         @config.streams = _.clone _len
         @config.streams = 24 if @config.streams > 24
