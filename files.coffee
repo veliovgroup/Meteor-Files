@@ -1443,6 +1443,7 @@ class FilesCollection
     check selector, Match.Optional Match.OneOf Object, String, Boolean, null
     check options, Match.Optional Object
 
+    selector = {} unless arguments.length
     doc = @collection.findOne selector, options
     return if doc then new FileCursor(doc, @) else doc
 
@@ -1455,10 +1456,12 @@ class FilesCollection
   @summary Find and return Cursor for matching documents
   @returns {FilesCursor} Instance
   ###
-  find: (selector = {}, options) ->
+  find: (selector, options) ->
     console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.OneOf Object, String
+    check selector, Match.OneOf Object, String, null
     check options, Match.Optional Object
+
+    selector = {} unless arguments.length
     return new FilesCursor selector, options, @
 
   ###
