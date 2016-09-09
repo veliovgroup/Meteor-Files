@@ -1440,7 +1440,7 @@ class FilesCollection
   ###
   findOne: (selector, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, null
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
     check options, Match.Optional Object
 
     selector = {} unless arguments.length
@@ -1458,7 +1458,7 @@ class FilesCollection
   ###
   find: (selector, options) ->
     console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, null
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
     check options, Match.Optional Object
 
     selector = {} unless arguments.length
