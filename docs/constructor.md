@@ -516,9 +516,6 @@
         <strong>Context</strong>:
         <ul>
           <li>
-            <code>this.file</code>
-          </li>
-          <li>
             <code>this.user()</code>
           </li>
           <li>
@@ -857,7 +854,7 @@ var Images = new FilesCollection({
     if (this.userId) {
       var user = this.user();
       if (user.profile.role === 'admin') {
-        // Allow upload only if
+        // Allow removal only if
         // current user is signed-in
         // and has role is `admin`
         return true;
