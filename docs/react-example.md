@@ -185,6 +185,7 @@ export default FileUploadComponent;
 
 ## Second Component: FileIndividualFile.jsx
 ```jsx
+import React from 'react';
 const IndividualFile = React.createClass({
 
   propTypes: {
