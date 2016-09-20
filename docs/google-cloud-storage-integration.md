@@ -138,10 +138,10 @@ if (Meteor.isServer) {
 }
 
 function getReadableStream(http, path, vRef){
-	var array, end, partiral, remoteReadStream, reqRange, responseType, start, take;
+	var array, end, partial, remoteReadStream, reqRange, responseType, start, take;
 
 	if (http.request.headers.range) {
-	  partiral = true;
+	  partial = true;
 	  array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
 	  start = parseInt(array[1]);
 	  end = parseInt(array[2]);
@@ -155,7 +155,7 @@ function getReadableStream(http, path, vRef){
 	  take = vRef.size;
 	}
 
-	if (partiral || (http.params.query.play && http.params.query.play === 'true')) {
+	if (partial || (http.params.query.play && http.params.query.play === 'true')) {
 	  reqRange = {
 	    start: start,
 	    end: end
@@ -171,7 +171,7 @@ function getReadableStream(http, path, vRef){
 	  if ((start + take) >= vRef.size) {
 	    reqRange.end = vRef.size - 1;
 	  }
-	  if (self.strict && (reqRange.start >= (vRef.size - 1) || reqRange.end > (vRef.size - 1))) {
+	  if ((reqRange.start >= (vRef.size - 1) || reqRange.end > (vRef.size - 1))) {
 	    responseType = '416';
 	  } else {
 	    responseType = '206';
