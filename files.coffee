@@ -467,7 +467,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @dynamicStoragePath, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -488,6 +488,7 @@ class FilesCollection
     @collectionName    ?= 'MeteorUploadFiles'
     @namingFunction    ?= false
     @onBeforeUpload    ?= false
+    @dynamicStoragePath     ?= false
     @allowClientCode   ?= true
     @onInitiateUpload  ?= false
     @interceptDownload ?= false
@@ -688,6 +689,7 @@ class FilesCollection
     check @downloadRoute, String
     check @namingFunction, Match.OneOf false, Function
     check @onBeforeUpload, Match.OneOf false, Function
+    check @dynamicStoragePath, Match.OneOf false, Function
     check @onInitiateUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
 
@@ -982,24 +984,34 @@ class FilesCollection
     {extension, extensionWithDot} = @_getExt fileName
 
     result           = opts.file
-    result.path      = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
+    ctx = _.extend {
+      file: opts.file
+    }, {
+      chunkId: opts.chunkId
+      userId:  result.userId
+      user:    -> if Meteor.users then Meteor.users.findOne(result.userId) else null
+      eof:     opts.eof
+    }
+
+    if @dynamicStoragePath and _.isFunction @dynamicStoragePath
+      switchedPath = @dynamicStoragePath.call ctx
+      if switchedPath
+        fs.mkdirs switchedPath, {mode: @parentDirPermissions}, (error) -> if error
+          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath}\" is not writable!", error
+        result.path    = "#{@dynamicStoragePath.call ctx}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
+      else
+        result.path    = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
+    else
+      result.path    = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
     result.ext       = extension
-    result           = @_dataToSchema result
+    result           = @_dataToSchema result, switchedPath
     result._id       = opts.fileId
     result.userId    = userId or null
 
     if @onBeforeUpload and _.isFunction @onBeforeUpload
-      ctx = _.extend {
-        file: opts.file
-      }, {
-        chunkId: opts.chunkId
-        userId:  result.userId
-        user:    -> if Meteor.users then Meteor.users.findOne(result.userId) else null
-        eof:     opts.eof
-      }
       isUploadAllowed = @onBeforeUpload.call ctx, result
 
       if isUploadAllowed isnt true
@@ -1162,7 +1174,7 @@ class FilesCollection
   @summary Internal method. Build object in accordance with default schema from File data
   @returns {Object}
   ###
-  _dataToSchema: (data) ->
+  _dataToSchema: (data, switchedPath) ->
     return {
       name:       data.name
       extension:  data.extension
@@ -1182,7 +1194,7 @@ class FilesCollection
       isText:  /^text\//i.test data.type
       isJSON:  /application\/json/i.test data.type
       isPDF:   /application\/pdf|application\/x-pdf/i.test data.type
-      _storagePath:    data._storagePath or @storagePath
+      _storagePath:    data._storagePath or switchedPath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
     }
