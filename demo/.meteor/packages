@@ -3,6 +3,7 @@ meteor-base@1.0.4
 mobile-experience@1.0.4
 mongo@1.1.12
 blaze-html-templates@1.0.4
+shell-server@0.2.1
 session@1.1.6
 jquery@1.11.9
 tracker@1.1.0
@@ -54,4 +55,3 @@ accounts-github@1.0.10
 accounts-twitter@1.1.11
 accounts-facebook@1.0.10
 accounts-meteor-developer@1.0.10
-shell-server@0.2.1
