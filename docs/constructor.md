@@ -60,8 +60,9 @@
             <code>defaultPath</code> - Default recommended path
           </li>
         </ul>
-        Context is current <em>FilesCollction</em> instance<br />
-        <b>Note: When running in development mode any files stored at a relative path are automatically (and silently) removed when Meteor is reset ('meteor reset') or restarted via shutdown/restart.</b> 
+        Context is current <em>FilesCollction</em> instance.<br /><br />
+        Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
+        To preserve files in development mode store them outside of the Meteor application, e.g. `/data/Meteor/uploads/`
       </td>
     </tr>
     <tr>
