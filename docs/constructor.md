@@ -60,7 +60,8 @@
             <code>defaultPath</code> - Default recommended path
           </li>
         </ul>
-        Context is current <em>FilesCollction</em> instance
+        Context is current <em>FilesCollction</em> instance<br />
+        <b>Note: When running in development mode any files stored at a relative path are automatically (and silently) removed when Meteor is reset or restarted via shutdown/restart.</b> 
       </td>
     </tr>
     <tr>
