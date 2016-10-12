@@ -44,18 +44,19 @@ template(name="listingRow")
             .file-name #{name}
             br
             .file-info
-              if compare userId 'is' currentUser._id
-                unless meta.secured
-                  span(title="{{#if meta.unlisted}}Unlisted{{else}}Visible to everyone{{/if}}")
-                    i.fa.fa-fw(class="fa-eye{{#if meta.unlisted}}-slash{{/if}}")
+              if userId
+                if compare userId 'is' currentUser._id
+                  unless meta.secured
+                    span(title="{{#if meta.unlisted}}Unlisted{{else}}Visible to everyone{{/if}}")
+                      i.fa.fa-fw(class="fa-eye{{#if meta.unlisted}}-slash{{/if}}")
+                    | &nbsp;
+                    | &middot;
+                    | &nbsp;
+                  span(title="{{#if meta.secured}}Only you can see this file{{else}}Publicity availble file{{/if}}")
+                    i.fa.fa-fw(class="fa-{{#unless meta.secured}}un{{/unless}}lock")
                   | &nbsp;
                   | &middot;
                   | &nbsp;
-                span(title="{{#if meta.secured}}Only you can see this file{{else}}Publicity availble file{{/if}}")
-                  i.fa.fa-fw(class="fa-{{#unless meta.secured}}un{{/unless}}lock")
-                | &nbsp;
-                | &middot;
-                | &nbsp;
               span.file-size(title="File size") {{filesize size}}
               | &nbsp;
               | &middot;
@@ -65,7 +66,8 @@ template(name="listingRow")
               | &middot;
               | &nbsp;
               span.file-downloads(title="File was downloaded for #{meta.downloads} times") #{meta.downloads}
-    if compare userId 'is' currentUser._id
-      td.file-settings.width-1(data-show-settings)
-        a(href="#" title="{{#if showSettings}}Close Settings{{else}}You owns this file: Edit Settings{{/if}}" class="{{#unless showSettings}}show-settings{{/unless}}")
-          i.fa(class="fa-{{#if showSettings}}times{{else}}gear{{/if}}")
+    if userId
+      if compare userId 'is' currentUser._id
+        td.file-settings.width-1(data-show-settings)
+          a(href="#" title="{{#if showSettings}}Close Settings{{else}}You owns this file: Edit Settings{{/if}}" class="{{#unless showSettings}}show-settings{{/unless}}")
+            i.fa(class="fa-{{#if showSettings}}times{{else}}gear{{/if}}")
