@@ -30,7 +30,7 @@
     "throttle": "1.0.3",
     "underscore": "1.5.2",
     "useragent": "^2.1.9",
-    "request": "2.74.0"
+    "request": "2.75.0"
   },
   "env": {
     "ROOT_URL": {
