@@ -4,14 +4,14 @@ Additionally, this example will also show you how to list uploaded files and rem
 
 *See production-ready code below.*
 
-##### Step 1: install [gcloud-node](https://github.com/googlecloudplatform/gcloud-node)
+##### Step 1: install [google-cloud-node](https://github.com/GoogleCloudPlatform/google-cloud-node)
 
 ```shell
-npm install --save gcloud
+npm install --save google-cloud
 ```
 Or
 ```shell
-meteor npm install gcloud
+meteor npm install google-cloud
 ```
 
 ##### Step 2: Setup your Google Cloud Storage
@@ -29,7 +29,7 @@ meteor npm install gcloud
 var gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {};
 
 if (Meteor.isServer) {
-  gcloud = Npm.require('gcloud')({
+  gcloud = Npm.require('google-cloud')({
     projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
     keyFilename: 'YOUR_KEY_JSON'  // <-- Replace this with the path to your key.json
   });
@@ -38,8 +38,6 @@ if (Meteor.isServer) {
   bucket.getMetadata(function(error, metadata, apiResponse){
     if (error) {
       console.error(error);
-    } else {
-      bucketMetadata = metadata;
     }
   });
   Request = Npm.require('request');
@@ -67,8 +65,7 @@ Collections.files = new FilesCollection({
       // https://googlecloudplatform.github.io/gcloud-node/#/docs/v0.36.0/storage/bucket?method=upload
       var options = {
         destination: filePath,
-        resumable: true,
-        public: true
+        resumable: true
       };
 
       bucket.upload(fileRef.path, options, function(error, file){
@@ -80,7 +77,6 @@ Collections.files = new FilesCollection({
             upd = {
               $set: {}
             };
-            upd['$set']["versions." + version + ".meta.pipeFrom"] = bucketMetadata.selfLink + '/' + filePath;
             upd['$set']["versions." + version + ".meta.pipePath"] = filePath;
             self.collection.update({
               _id: fileRef._id
@@ -100,15 +96,14 @@ Collections.files = new FilesCollection({
   },
   interceptDownload: function(http, fileRef, version) {
     var path, ref, ref1, ref2;
-    path = (ref= fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipeFrom : void 0 : void 0 : void 0;
+    path = (ref= fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipePath : void 0 : void 0 : void 0;
+    var vRef = ref1;
     if (path) {
       // If file is moved to Google Cloud Storage
       // We will pipe request to Google Cloud Storage
       // So, original link will stay always secure
-      Request({
-        url: path,
-        headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent')
-      }).pipe(http.response);
+      var remoteReadStream = getReadableStream(http, path, vRef);
+      self.serve(http, fileRef, vRef, version, remoteReadStream);
       return true;
     } else {
       // While the file has not been uploaded to Google Cloud Storage, we will serve it from the filesystem
@@ -140,5 +135,60 @@ if (Meteor.isServer) {
     // Call the original removal method
     _origRemove.call(this, search);
   };
+}
+
+function getReadableStream(http, path, vRef){
+	var array, end, partial, remoteReadStream, reqRange, responseType, start, take;
+
+	if (http.request.headers.range) {
+	  partial = true;
+	  array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
+	  start = parseInt(array[1]);
+	  end = parseInt(array[2]);
+	  if (isNaN(end)) {
+	    end = vRef.size - 1;
+	  }
+	  take = end - start;
+	} else {
+	  start = 0;
+	  end = vRef.size - 1;
+	  take = vRef.size;
+	}
+
+	if (partial || (http.params.query.play && http.params.query.play === 'true')) {
+	  reqRange = {
+	    start: start,
+	    end: end
+	  };
+	  if (isNaN(start) && !isNaN(end)) {
+	    reqRange.start = end - take;
+	    reqRange.end = end;
+	  }
+	  if (!isNaN(start) && isNaN(end)) {
+	    reqRange.start = start;
+	    reqRange.end = start + take;
+	  }
+	  if ((start + take) >= vRef.size) {
+	    reqRange.end = vRef.size - 1;
+	  }
+	  if ((reqRange.start >= (vRef.size - 1) || reqRange.end > (vRef.size - 1))) {
+	    responseType = '416';
+	  } else {
+	    responseType = '206';
+	  }
+	} else {
+	  responseType = '200';
+	}
+
+	if (responseType === "206") {
+	  remoteReadStream = bucket.file(path).createReadStream({
+	    start: reqRange.start,
+	    end: reqRange.end
+	  });
+	} else if (responseType === "200") {
+	  remoteReadStream = bucket.file(path).createReadStream();
+	}
+
+	return remoteReadStream;
 }
 ```
