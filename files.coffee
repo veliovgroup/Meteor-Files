@@ -593,7 +593,7 @@ class FilesCollection
       if @public and (not storagePath or not _.isString(storagePath))
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
 
-      console.info('[FilesCollection.storagePath] Set to:', @storagePath) if @debug
+      console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
 
       fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
         if error
