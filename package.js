@@ -9,7 +9,8 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.4');
   api.use('webapp', 'server');
-  api.use(['templating', 'reactive-var', 'tracker', 'http'], 'client');
+  api.use(['templating'], 'client', {weak: true});
+  api.use(['reactive-var', 'tracker', 'http'], 'client');
   api.use(['mongo','underscore', 'check', 'random', 'coffeescript', 'ecmascript', 'ostrio:cookies@2.0.5'], ['client', 'server']);
   api.addFiles('event-emitter.jsx', 'client');
   api.addAssets('worker.min.js', 'client');

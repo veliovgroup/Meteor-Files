@@ -2374,7 +2374,7 @@ formatFleURL = (fileRef, version = 'original') ->
   else
     return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
-if Meteor.isClient
+if Meteor.isClient and Template?
   ###
   @locus Client
   @TemplateHelper
