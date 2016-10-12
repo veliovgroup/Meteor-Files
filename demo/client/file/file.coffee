@@ -49,6 +49,13 @@ Template.file.onRendered ->
       video.style.display = 'none'
     else
       video.play()
+  else if @data.file.isAudio
+    audio = document.getElementById @data.file._id
+    unless audio.canPlayType @data.file.type
+      @$('#cantPlayAudio').show()
+      audio.style.display = 'none'
+    else
+      audio.play()
   window.IS_RENDERED = true
   return
 

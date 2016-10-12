@@ -53,8 +53,13 @@ template(name="file")
               | Browser can't display this image, please 
               a(title="Download \"#{name}\"" href="{{link}}?download=true" download="#{name}") download file
         else if isAudio
-          .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
-            source(src="{{link}}?play=true" type="#{type}")
+          .file-cell
+            audio.file-preview.file-audio(id="{{_id}}" controls autoplay preload="auto" loop)
+              p(style="display:none") Can not play this audio file. The "#{type}" format may be not supported in your browser
+              source(src="{{link}}?play=true" type="#{type}")
+
+            p#cantPlayAudio(style="display:none") Can not play this audio file. The "#{type}" format may be not supported in your browser
+
         else if isVideo
           .file-cell
             video.file-preview(id="{{_id}}" controls autoplay preload="auto" loop)
