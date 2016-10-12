@@ -48,13 +48,7 @@
         Upload as base64 string, useful for data taken from <code>canvas</code>
       </td>
       <td>
-        Example:
-<pre><code>Images.insert({
-  file: 'data:image/png,base64str…’,
-  isBase64: true, // <— Mandatory
-  fileName: 'pic.png', // <— Mandatory
-  type: 'image/png'
-});</code></pre>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)#upload-base64-string">See Examples</a>
       </td>
     </tr>
     <tr>
