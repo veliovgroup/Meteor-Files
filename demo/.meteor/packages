@@ -1,7 +1,7 @@
 # Basic packages
 meteor-base@1.0.4
 mobile-experience@1.0.4
-mongo@1.1.12
+mongo@1.1.12_1
 blaze-html-templates@1.0.4
 shell-server@0.2.1
 session@1.1.6
@@ -9,16 +9,16 @@ jquery@1.11.9
 tracker@1.1.0
 
 seba:minifiers-autoprefixer
-standard-minifier-js@1.2.0
+standard-minifier-js@1.2.0_1
 
 # Additional MDG packages
 audit-argument-checks@1.0.7
 reactive-var@1.0.10
-coffeescript@1.2.4_1
+coffeescript@1.2.4_2
 markdown@1.0.10
 random@1.0.10
 check@1.2.3
-http@1.2.9
+http@1.2.9_1
 
 # UI/UX packages
 fastclick@1.0.12
