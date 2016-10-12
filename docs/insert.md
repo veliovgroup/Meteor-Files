@@ -84,6 +84,17 @@
     </tr>
     <tr>
       <td align="right">
+        <code>settings.ddp</code> {<em>Object</em>}
+      </td>
+      <td>
+        Custom DDP connection for upload. Object returned form <code>DDP.connect()</code>
+      </td>
+      <td>
+        By default <code>Meteor</code> (The default DDP connection)
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>settings.onStart</code> {<em>Function</em>}
       </td>
       <td>

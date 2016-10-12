@@ -116,6 +116,21 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.ddp</code> {<em>Object</em>}
+      </td>
+      <td>
+        Client
+      </td>
+      <td>
+        Custom DDP connection for Collection. Object returned form <code>DDP.connect()</code>
+      </td>
+      <td>
+        <code>Meteor</code> (The default DDP connection)
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.cacheControl</code> {<em>String</em>}
       </td>
       <td>
