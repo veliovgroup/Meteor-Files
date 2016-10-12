@@ -56,8 +56,11 @@ template(name="file")
           .file-cell: audio.file-preview.file-audio(controls autoplay preload="auto" loop)
             source(src="{{link}}?play=true" type="#{type}")
         else if isVideo
-          .file-cell: video.file-preview(controls autoplay preload="auto" loop)
-            source(src="{{link}}?play=true" type="#{type}")
+          .file-cell
+            video.file-preview(id="{{_id}}" controls autoplay preload="auto" loop)
+              p Can not play this video. The "#{type}" format may be not supported in your browser
+              source(src="{{link}}?play=true" type="#{type}")
+            p#cantPlayVideo(style="display:none") Can not play this video. The "#{type}" format may be not supported in your browser
         else if compare isText 'or' isJSON
           if warning
             .file-cell: h3.files-note

@@ -41,6 +41,14 @@ Template.file.onRendered ->
         self.showOriginal.set true
         return
       img.src = @data.file.link()
+
+  else if @data.file.isVideo
+    video = document.getElementById @data.file._id
+    unless video.canPlayType @data.file.type
+      @$('#cantPlayVideo').show()
+      video.style.display = 'none'
+    else
+      video.play()
   window.IS_RENDERED = true
   return
 
