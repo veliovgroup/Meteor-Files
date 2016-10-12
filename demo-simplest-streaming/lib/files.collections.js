@@ -9,9 +9,9 @@ let Images = new FilesCollection({
   }
 });
 
-let Videos = new FilesCollection({
+let Sounds = new FilesCollection({
   debug: true,
-  collectionName: 'Videos',
+  collectionName: 'Sounds',
   onBeforeUpload() {
     // Disallow uploads from client
     return false;
@@ -21,7 +21,7 @@ let Videos = new FilesCollection({
 // To have sample files in DB we will upload them on server startup:
 if (Meteor.isServer) {
   Images.denyClient();
-  Videos.denyClient();
+  Sounds.denyClient();
   
   Meteor.startup(() => {
     if (!Images.findOne()) {
@@ -30,20 +30,20 @@ if (Meteor.isServer) {
       });
     }
 
-    if (!Videos.findOne()) {
-      Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_10mb.mp4', {
-        fileName: 'Big-Buck-Bunny.mp4'
+    if (!Sounds.findOne()) {
+      Sounds.load('http://www.openmusicarchive.org/audio/Deep_Blue_Sea_Blues.mp3', {
+        fileName: 'Deep_Blue_Sea_Blues.mp3'
       });
     }
   });
 
   Meteor.publish('files.images.all', () => Images.find().cursor);
-  Meteor.publish('files.videos.all', () => Videos.find().cursor);
+  Meteor.publish('files.sounds.all', () => Sounds.find().cursor);
 
 } else {
 
   Meteor.subscribe('files.images.all');
-  Meteor.subscribe('files.videos.all');
+  Meteor.subscribe('files.sounds.all');
 }
 
-export { Videos, Images }
+export { Sounds, Images }

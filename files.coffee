@@ -27,7 +27,10 @@ if Meteor.isServer
   ###
   class writeStream
     constructor: (@path, @maxLength, @file) ->
+      if not @path or not _.isString @path
+        return
       self           = @
+      fs.ensureFileSync @path
       @stream        = fs.createWriteStream @path, {flags: 'a', mode: self.permissions, highWaterMark: 0}
       @drained       = true
       @aborted       = false
@@ -426,6 +429,7 @@ fixJSONStringify = (obj) ->
 @class FilesCollection
 @param config           {Object}   - [Both]   Configuration object with next properties:
 @param config.debug     {Boolean}  - [Both]   Turn on/of debugging and extra logging
+@param config.ddp       {Object}   - [Client] Custom DDP connection. Object returned form `DDP.connect()`
 @param config.schema    {Object}   - [Both]   Collection Schema
 @param config.public    {Boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
 @param config.strict    {Boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
@@ -467,7 +471,7 @@ class FilesCollection
       events.EventEmitter.call @
     else
       EventEmitter.call @
-    {storagePath, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
+    {storagePath, @ddp, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
     cookie      = new Cookies()
@@ -489,8 +493,20 @@ class FilesCollection
     @namingFunction    ?= false
     @onBeforeUpload    ?= false
     @allowClientCode   ?= true
+    @ddp               ?= Meteor
     @onInitiateUpload  ?= false
     @interceptDownload ?= false
+    storagePath        ?= -> "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{@collectionName}"
+
+    if _.isString storagePath
+      @storagePath = -> storagePath
+    else
+      @storagePath = ->
+        sp = storagePath.apply @, arguments
+        unless _.isString sp
+          throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
+        sp = sp.replace /\/$/, ''
+        return if Meteor.isServer then nodePath.normalize(sp) else sp
 
     if Meteor.isClient
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
@@ -574,28 +590,12 @@ class FilesCollection
         headers['Accept-Ranges'] = 'bytes'
         return headers
 
-      if @public and not storagePath
+      if @public and (not storagePath or not _.isString(storagePath))
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
 
-      storagePath ?= "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{@collectionName}"
-      Object.defineProperty self, 'storagePath', {
-        get: ->
-          sp = ''
-          if _.isString storagePath
-            sp = storagePath
-          else if _.isFunction storagePath
-            sp = storagePath.call self, "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{self.collectionName}"
+      console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
 
-          unless _.isString sp
-            throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
-
-          sp = sp.replace /\/$/, ''
-          return nodePath.normalize sp
-      }
-
-      console.info('[FilesCollection.storagePath] Set to:', @storagePath) if @debug
-
-      fs.mkdirs @storagePath, {mode: @parentDirPermissions}, (error) ->
+      fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
         if error
           throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath}\" is not writable!", error
         return
@@ -603,7 +603,7 @@ class FilesCollection
       check @strict, Boolean
       check @throttle, Match.OneOf false, Number
       check @permissions, Number
-      check @storagePath, String
+      check @storagePath, Function
       check @cacheControl, String
       check @onAfterRemove, Match.OneOf false, Function
       check @onAfterUpload, Match.OneOf false, Function
@@ -690,6 +690,7 @@ class FilesCollection
     check @onBeforeUpload, Match.OneOf false, Function
     check @onInitiateUpload, Match.OneOf false, Function
     check @allowClientCode, Boolean
+    check @ddp, Match.Any
 
     if @public and @protected
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: Files can not be public and protected at the same time!"
@@ -957,7 +958,7 @@ class FilesCollection
         if _continueUpload
           self._preCollection.remove {_id}
           self.remove {_id}
-          self.unlink {_id, path: _continueUpload.file.path}
+          self.unlink {_id, path: _continueUpload.file.path} if _continueUpload?.file?.path
         return true
 
       Meteor.methods _methods
@@ -982,14 +983,14 @@ class FilesCollection
     {extension, extensionWithDot} = @_getExt fileName
 
     result           = opts.file
-    result.path      = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
     result.ext       = extension
-    result           = @_dataToSchema result
     result._id       = opts.fileId
     result.userId    = userId or null
+    result.path      = "#{@storagePath(result)}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
+    result           = _.extend result, @_dataToSchema result
 
     if @onBeforeUpload and _.isFunction @onBeforeUpload
       ctx = _.extend {
@@ -1163,7 +1164,7 @@ class FilesCollection
   @returns {Object}
   ###
   _dataToSchema: (data) ->
-    return {
+    ds =
       name:       data.name
       extension:  data.extension
       path:       data.path
@@ -1182,10 +1183,10 @@ class FilesCollection
       isText:  /^text\//i.test data.type
       isJSON:  /application\/json/i.test data.type
       isPDF:   /application\/pdf|application\/x-pdf/i.test data.type
-      _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
-    }
+    ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
+    return ds
 
   ###
   @locus Server
@@ -1225,7 +1226,7 @@ class FilesCollection
 
     self       = @
     opts      ?= {}
-    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
     opts.type  = @_getMimeType opts
     opts.meta ?= {}
     opts.size ?= buffer.length
@@ -1301,7 +1302,7 @@ class FilesCollection
 
     {extension, extensionWithDot} = @_getExt fileName
     opts.meta ?= {}
-    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
 
     storeResult = (result, callback) ->
       result._id = fileId
@@ -1440,9 +1441,10 @@ class FilesCollection
   ###
   findOne: (selector, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
     check options, Match.Optional Object
 
+    selector = {} unless arguments.length
     doc = @collection.findOne selector, options
     return if doc then new FileCursor(doc, @) else doc
 
@@ -1455,10 +1457,12 @@ class FilesCollection
   @summary Find and return Cursor for matching documents
   @returns {FilesCursor} Instance
   ###
-  find: (selector = {}, options) ->
+  find: (selector, options) ->
     console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.OneOf Object, String
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
     check options, Match.Optional Object
+
+    selector = {} unless arguments.length
     return new FilesCursor selector, options, @
 
   ###
@@ -1473,6 +1477,7 @@ class FilesCollection
     {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
     {Number|dynamic} chunkSize   - Chunk size for upload
     {String}      transport      - Upload transport `http` or `ddp`
+    {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
     {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
     {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileRef`
     {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
@@ -1481,7 +1486,7 @@ class FilesCollection
         return true to continue
         return false to abort upload
   @param {Boolean} autoStart     - Start upload immediately. If set to false, you need manually call .start() method on returned class. Useful to set EventListeners.
-  @summary Upload file to server over DDP
+  @summary Upload file to server over DDP or HTTP
   @returns {UploadInstance} Instance. UploadInstance has next properties:
     {ReactiveVar} onPause  - Is upload process on the pause?
     {ReactiveVar} state    - active|paused|aborted|completed
@@ -1509,6 +1514,7 @@ class FilesCollection
       EventEmitter.call @
       console.info '[FilesCollection] [insert()]' if @collection.debug
       self                     = @
+      @config.ddp             ?= @collection.ddp
       @config.meta            ?= {}
       @config.streams         ?= 2
       @config.streams          = 2 if @config.streams < 1
@@ -1533,6 +1539,7 @@ class FilesCollection
         onProgress:      Match.Optional Function
         onBeforeUpload:  Match.Optional Function
         allowWebWorkers: Boolean
+        ddp:             Match.Any
       }
 
       if not @config.fileName and not @config.file.name
@@ -1678,7 +1685,7 @@ class FilesCollection
 
       if opts.binData
         if @config.transport is 'ddp'
-          Meteor.call @collection._methodNames._Write, opts, (error) ->
+          @config.ddp.call @collection._methodNames._Write, opts, (error) ->
             self.transferTime += (+new Date) - self.startTime[opts.chunkId]
             if error
               if self.result.state.get() isnt 'aborted'
@@ -1726,7 +1733,7 @@ class FilesCollection
           fileId: @fileId
 
         if @config.transport is 'ddp'
-          Meteor.call @collection._methodNames._Write, opts, ->
+          @config.ddp.call @collection._methodNames._Write, opts, ->
             self.emitEvent 'end', arguments
             return
         else
@@ -1865,7 +1872,7 @@ class FilesCollection
         return
 
       if @config.transport is 'ddp'
-        Meteor.call @collection._methodNames._Start, opts, handleStart
+        @config.ddp.call @collection._methodNames._Start, opts, handleStart
       else
         opts.file.meta = fixJSONStringify opts.file.meta if opts.file?.meta
         HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
@@ -1997,7 +2004,7 @@ class FilesCollection
       @config._onEnd()
       @state.set 'aborted'
       console.timeEnd('insert ' + @config.fileData.name) if @config.debug
-      Meteor.call @config._Abort, @config.fileId
+      @config.ddp.call @config._Abort, @config.fileId
       return
   else undefined
 
@@ -2017,7 +2024,7 @@ class FilesCollection
 
     if Meteor.isClient
       if @allowClientCode
-        Meteor.call @_methodNames._Remove, selector, (callback or NOOP)
+        @ddp.call @_methodNames._Remove, selector, (callback or NOOP)
       else
         callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug

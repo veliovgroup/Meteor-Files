@@ -6,18 +6,18 @@
 
 meteor-base@1.0.4             # Packages every Meteor app needs to have
 mobile-experience@1.0.4       # Packages for a great mobile UX
-mongo@1.1.12                   # The database Meteor supports right now
+mongo@1.1.12_1                   # The database Meteor supports right now
 blaze-html-templates@1.0.4    # Compile .html files into Meteor Blaze views
 reactive-var@1.0.10            # Reactive variable for tracker
 jquery@1.11.9                  # Helpful client-side library
 tracker@1.1.0                 # Meteor's client-side reactive programming library
 
-standard-minifier-css@1.2.0   # CSS minifier run for production mode
-standard-minifier-js@1.2.0    # JS minifier run for production mode
-es5-shim@4.6.14                # ECMAScript 5 compatibility for older browsers.
-ecmascript@0.5.8              # Enable ECMAScript2015+ syntax in app code
+standard-minifier-css@1.2.0_1   # CSS minifier run for production mode
+standard-minifier-js@1.2.0_1    # JS minifier run for production mode
+es5-shim@4.6.14_1                # ECMAScript 5 compatibility for older browsers.
+ecmascript@0.5.8_1              # Enable ECMAScript2015+ syntax in app code
 
 ostrio:files
 aldeed:simple-schema
 aldeed:collection2
-shell-server
+shell-server@0.2.1

@@ -97,8 +97,9 @@ import { FilesCollection } from 'meteor/ostrio:files';
 
 FAQ:
 ========
- 1. __Where files is stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) it's equals to `assets/app/uploads` and relative to running script:
-   * On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`, note: __all files will be removed as soon as your application will rebuild__ or you run `meteor reset`. To keep you storage persistent use absolute path *outside of your project folder*, we recommend to use `/data` directory
+ 1. __Where are files stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) it's equals to `assets/app/uploads` and relative to running script:
+   * On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`
+   > __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
    * On `production`: `yourProdAppDir/programs/server`
  2. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
  3. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
@@ -143,7 +144,7 @@ Upload form (template):
 ```html
 <template name="uploadForm">
   {{#with currentUpload}}
-    Uploading <b>{{file.name}}</b>: 
+    Uploading <b>{{file.name}}</b>:
     <span id="progress">{{progress.get}}%</span>
   {{else}}
     <input id="fileInput" type="file" />
@@ -171,7 +172,7 @@ Template.uploadForm.helpers({
 Template.uploadForm.events({
   'change #fileInput': function (e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      // We upload only one file, in case 
+      // We upload only one file, in case
       // multiple files were selected
       var upload = Images.insert({
         file: e.currentTarget.files[0],
@@ -326,6 +327,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 Supporters:
 ========
 I would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
+ - [@FinnFrotscher](https://github.com/FinnFrotscher)
  - [@Neobii](https://github.com/Neobii)
  - [@themeteorchef](https://github.com/themeteorchef)
  - [@MeDBejoHok](https://github.com/medbejohok)

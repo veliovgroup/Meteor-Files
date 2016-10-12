@@ -50,7 +50,9 @@
         Storage path on file system
       </td>
       <td>
-        <code>assets/app/uploads</code>
+        <code>function { return 'assets/app/uploads'; }</code>
+        <br />
+        Always converted into the function since <code>v1.7.4</code>
       </td>
       <td>
         Relative to running script<br />
@@ -60,7 +62,10 @@
             <code>defaultPath</code> - Default recommended path
           </li>
         </ul>
-        Context is current <em>FilesCollction</em> instance
+        Context is current <em>FilesCollction</em> instance.<br /><br />
+        Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
+        To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
+        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
       </td>
     </tr>
     <tr>
@@ -110,6 +115,21 @@
       <td>
         If upload is not continued during this time, memory used for this upload will be freed. And uploaded chunks is removed. Server will no longer wait for upload, and if upload will be tied to be continued - Server will return <code>408</code> Error (<code>Can't continue upload, session expired. Start upload again.</code>)
       </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.ddp</code> {<em>Object</em>}
+      </td>
+      <td>
+        Client
+      </td>
+      <td>
+        Custom DDP connection for Collection. Object returned form <code>DDP.connect()</code>
+      </td>
+      <td>
+        <code>Meteor</code> (The default DDP connection)
+      </td>
+      <td></td>
     </tr>
     <tr>
       <td align="right">
@@ -219,9 +239,9 @@
         <code>false</code>
       </td>
       <td>
-        Primary sets file name on `FS`<br />
+        Primary sets file name on <code>FS</code><br />
         if <code>namingFunction</code> is not set<br />
-        `FS`-name is equal to file's record `_id`
+        <code>FS</code>-name is equal to file's record <code>_id</code>
       </td>
     </tr>
     <tr>
@@ -515,9 +535,6 @@
         </ul><br>
         <strong>Context</strong>:
         <ul>
-          <li>
-            <code>this.file</code>
-          </li>
           <li>
             <code>this.user()</code>
           </li>
@@ -857,7 +874,7 @@ var Images = new FilesCollection({
     if (this.userId) {
       var user = this.user();
       if (user.profile.role === 'admin') {
-        // Allow upload only if
+        // Allow removal only if
         // current user is signed-in
         // and has role is `admin`
         return true;

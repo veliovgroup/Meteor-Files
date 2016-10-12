@@ -13,6 +13,7 @@ In this example two components is used. First - to handle the uploads, adds a fi
 ## FileUpload.jsx:
 
 ```jsx
+import {ReactMeteorData} from 'meteor/react-meteor-data';
 import React from 'react';
 import {Meteor} from 'meteor/meteor';
 import IndividualFile from './FileIndividualFile.jsx';
@@ -184,6 +185,7 @@ export default FileUploadComponent;
 
 ## Second Component: FileIndividualFile.jsx
 ```jsx
+import React from 'react';
 const IndividualFile = React.createClass({
 
   propTypes: {

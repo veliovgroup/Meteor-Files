@@ -48,13 +48,7 @@
         Upload as base64 string, useful for data taken from <code>canvas</code>
       </td>
       <td>
-        Example:
-<pre><code>Images.insert({
-  file: 'data:image/png,base64str…’,
-  isBase64: true, // <— Mandatory
-  fileName: 'pic.png', // <— Mandatory
-  type: 'image/png'
-});</code></pre>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)#upload-base64-string">See Examples</a>
       </td>
     </tr>
     <tr>
@@ -80,6 +74,17 @@
         Note: upload via <code>http</code> is at least twice faster. <code>HTTP</code> will properly work only with "sticky sessions"
         <br />
         Default: <code>ddp</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>settings.ddp</code> {<em>Object</em>}
+      </td>
+      <td>
+        Custom DDP connection for upload. Object returned form <code>DDP.connect()</code>
+      </td>
+      <td>
+        By default <code>Meteor</code> (The default DDP connection)
       </td>
     </tr>
     <tr>

@@ -55,15 +55,19 @@ Collections.files = new FilesCollection
   collectionName:   'uploadedFiles'
   allowClientCode:  true
   protected: (fileObj) ->
-    if not fileObj.meta?.secured
-      return true
-    else if fileObj.meta?.secured and @userId is fileObj.userId
-      return true
+    if fileObj
+      if not fileObj.meta?.secured
+        return true
+      else if fileObj.meta?.secured and @userId is fileObj.userId
+        return true
     return false
   onBeforeRemove: (cursor) ->
     self = @
     res  = cursor.map (file) ->
-      return file?.userId is self.userId
+      if file?.userId and _.isString file.userId
+        return file.userId is self.userId
+      else
+        return false
     return !~res.indexOf false
   onBeforeUpload: ->
     return if @file.size <= 1024 * 1024 * 128 then true else "Max. file size is 128MB you've tried to upload #{filesize(@file.size)}"
