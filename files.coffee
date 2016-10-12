@@ -2027,7 +2027,7 @@ class FilesCollection
 
     if Meteor.isClient
       if @allowClientCode
-        @config.ddp.call @_methodNames._Remove, selector, (callback or NOOP)
+        @ddp.call @_methodNames._Remove, selector, (callback or NOOP)
       else
         callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug
