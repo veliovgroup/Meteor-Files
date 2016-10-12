@@ -2,7 +2,7 @@
 
 Example below shows how to store and serve uploaded file via S3. This example also covers file removing from both your application and S3.
 
-See [real, production code](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/lib/files.collection.coffee)
+See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/lib/files.collection.coffee)
 
 Prepare: install [knox](https://github.com/Automattic/knox):
 ```shell
