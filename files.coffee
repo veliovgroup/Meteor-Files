@@ -976,7 +976,6 @@ class FilesCollection
     opts.chunkId   ?= -1
     opts.FSName    ?= opts.fileId
     opts.file.meta ?= {}
-    console.warn ">>>>> opts.file.meta", opts.file.meta
 
     console.info "[FilesCollection] [Upload] [#{transport}] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if @debug
 
