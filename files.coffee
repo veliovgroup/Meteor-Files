@@ -585,7 +585,7 @@ class FilesCollection
             sp = storagePath
           else if _.isFunction storagePath
             sp = storagePath.call self, "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{self.collectionName}"
-          
+
           unless _.isString sp
             throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
 
@@ -673,7 +673,7 @@ class FilesCollection
         userId:
           type: String
           optional: true
-        updatedAt: 
+        updatedAt:
           type: Date
           optional: true
         versions:
@@ -813,7 +813,7 @@ class FilesCollection
 
             uris = uri.split '/'
             if uris.length is 3
-              params = 
+              params =
                 query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
                 _id: uris[0]
                 version: uris[1]
@@ -840,7 +840,7 @@ class FilesCollection
                 version = 'original'
                 _file   = _file.split('?')[0]
 
-              params = 
+              params =
                 query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
                 file: _file
                 _id: _file.split('.')[0]
@@ -862,7 +862,7 @@ class FilesCollection
       _methods[self._methodNames._Remove] = (selector) ->
         check selector, Match.OneOf String, Object
         console.info "[FilesCollection] [Unlink Method] [.remove(#{selector})]" if self.debug
-        
+
         if self.allowClientCode
           if self.onBeforeRemove and _.isFunction self.onBeforeRemove
             user = false
@@ -882,7 +882,7 @@ class FilesCollection
 
 
       # Method used to receive "first byte" of upload
-      # and all file's meta-data, so 
+      # and all file's meta-data, so
       # it won't be transferred with every chunk
       # Basically it prepares everything
       # So user can pause/disconnect and
@@ -1087,7 +1087,7 @@ class FilesCollection
         {mime, ext} = fileType buf
       catch error
     if not mime or not _.isString mime
-      mime = 'application/octet-stream' 
+      mime = 'application/octet-stream'
     return mime
 
   ###
@@ -1113,16 +1113,16 @@ class FilesCollection
   @returns {Object}
   ###
   _getUser: (http) ->
-    result = 
+    result =
       user: -> return null
       userId: null
-      
+
     if Meteor.isServer
       if http
         mtok = null
         if http.request.headers['x-mtok']
           mtok = http.request.headers['x-mtok']
-        else 
+        else
           cookie = http.request.Cookies
           if cookie.has 'x_mtok'
             mtok = cookie.get 'x_mtok'
@@ -1298,7 +1298,7 @@ class FilesCollection
     FSName    = if @namingFunction then @namingFunction() else fileId
     pathParts = url.split('/')
     fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
-    
+
     {extension, extensionWithDot} = @_getExt fileName
     opts.meta ?= {}
     opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
@@ -1776,7 +1776,7 @@ class FilesCollection
 
         else if FileReaderSync
           fileReader = new FileReaderSync
-          
+
           self.emitEvent 'sendChunk', [{
             data: {
               bin: fileReader.readAsDataURL(chunk).split(',')[1]
@@ -1787,7 +1787,7 @@ class FilesCollection
           self.emitEvent 'end', ['File API is not supported in this Browser!']
       return
 
-    upload: -> 
+    upload: ->
       if @result.onPause.get()
         return
 
@@ -1870,13 +1870,13 @@ class FilesCollection
         opts.file.meta = fixJSONStringify opts.file.meta if opts.file?.meta
         HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
           data: opts
-          headers: 
+          headers:
             'x-start': '1'
             'x-mtok': Meteor.connection?._lastSessionId or null
         }, handleStart
       return
 
-    pipe: (func) -> 
+    pipe: (func) ->
       @pipes.push func
       return @
 
@@ -2028,7 +2028,7 @@ class FilesCollection
         files.forEach (file) ->
           self.unlink file
           return
-      
+
       if @onAfterRemove
         self = @
         docs = files.fetch()
@@ -2310,7 +2310,7 @@ class FilesCollection
         http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
         stream = readableStream or fs.createReadStream vRef.path, {start: reqRange.start, end: reqRange.end}
         http.response.writeHead 206 if readableStream
-        stream.on('open', -> 
+        stream.on('open', ->
           http.response.writeHead 206
           return
         ).on('error', streamErrorHandler
@@ -2364,7 +2364,7 @@ formatFleURL = (fileRef, version = 'original') ->
   else
     return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
-if Meteor.isClient
+if Meteor.isClient and Template?
   ###
   @locus Client
   @TemplateHelper
