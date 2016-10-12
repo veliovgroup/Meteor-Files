@@ -426,6 +426,7 @@ fixJSONStringify = (obj) ->
 @class FilesCollection
 @param config           {Object}   - [Both]   Configuration object with next properties:
 @param config.debug     {Boolean}  - [Both]   Turn on/of debugging and extra logging
+@param config.ddp       {Object}   - [Client] Custom DDP connection. Object returned form `DDP.connect()`
 @param config.schema    {Object}   - [Both]   Collection Schema
 @param config.public    {Boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
 @param config.strict    {Boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
@@ -1443,7 +1444,7 @@ class FilesCollection
   ###
   findOne: (selector, options) ->
     console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
     check options, Match.Optional Object
 
     selector = {} unless arguments.length
@@ -1461,7 +1462,7 @@ class FilesCollection
   ###
   find: (selector, options) ->
     console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, null
+    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
     check options, Match.Optional Object
 
     selector = {} unless arguments.length
@@ -1479,7 +1480,7 @@ class FilesCollection
     {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
     {Number|dynamic} chunkSize   - Chunk size for upload
     {String}      transport      - Upload transport `http` or `ddp`
-    {DDP}         ddp            - Custom DDP connection
+    {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
     {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
     {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileRef`
     {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
@@ -1488,7 +1489,7 @@ class FilesCollection
         return true to continue
         return false to abort upload
   @param {Boolean} autoStart     - Start upload immediately. If set to false, you need manually call .start() method on returned class. Useful to set EventListeners.
-  @summary Upload file to server over DDP
+  @summary Upload file to server over DDP or HTTP
   @returns {UploadInstance} Instance. UploadInstance has next properties:
     {ReactiveVar} onPause  - Is upload process on the pause?
     {ReactiveVar} state    - active|paused|aborted|completed
@@ -1516,7 +1517,7 @@ class FilesCollection
       EventEmitter.call @
       console.info '[FilesCollection] [insert()]' if @collection.debug
       self                     = @
-      @config.ddp             = @collection.ddp
+      @config.ddp             ?= @collection.ddp
       @config.meta            ?= {}
       @config.streams         ?= 2
       @config.streams          = 2 if @config.streams < 1
@@ -1540,8 +1541,8 @@ class FilesCollection
         onUploaded:      Match.Optional Function
         onProgress:      Match.Optional Function
         onBeforeUpload:  Match.Optional Function
-        allowWebWorkers: Boolean,
-        ddp:             Match.Any,
+        allowWebWorkers: Boolean
+        ddp:             Match.Any
       }
 
       if not @config.fileName and not @config.file.name
