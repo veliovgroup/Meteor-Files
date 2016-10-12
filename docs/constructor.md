@@ -60,7 +60,10 @@
             <code>defaultPath</code> - Default recommended path
           </li>
         </ul>
-        Context is current <em>FilesCollction</em> instance
+        Context is current <em>FilesCollction</em> instance.<br /><br />
+        Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
+        To preserve files in development mode store them outside of the Meteor application, e.g. `/data/Meteor/uploads/`<br /><br />
+        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for `config.storagePath` (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
       </td>
     </tr>
     <tr>
