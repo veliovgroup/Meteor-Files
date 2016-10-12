@@ -50,7 +50,9 @@
         Storage path on file system
       </td>
       <td>
-        <code>assets/app/uploads</code>
+        <code>function { return 'assets/app/uploads'; }</code>
+        <br />
+        Always converted into the function since <code>v1.7.4</code>
       </td>
       <td>
         Relative to running script<br />

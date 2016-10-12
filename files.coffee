@@ -27,7 +27,10 @@ if Meteor.isServer
   ###
   class writeStream
     constructor: (@path, @maxLength, @file) ->
+      if not @path or not _.isString @path
+        return
       self           = @
+      fs.ensureFileSync @path
       @stream        = fs.createWriteStream @path, {flags: 'a', mode: self.permissions, highWaterMark: 0}
       @drained       = true
       @aborted       = false
@@ -493,7 +496,17 @@ class FilesCollection
     @ddp               ?= Meteor
     @onInitiateUpload  ?= false
     @interceptDownload ?= false
+    storagePath        ?= -> "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{@collectionName}"
 
+    if _.isString storagePath
+      @storagePath = -> storagePath
+    else
+      @storagePath = ->
+        sp = storagePath.apply @, arguments
+        unless _.isString sp
+          throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
+        sp = sp.replace /\/$/, ''
+        return if Meteor.isServer then nodePath.normalize(sp) else sp
 
     if Meteor.isClient
       @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
@@ -577,28 +590,12 @@ class FilesCollection
         headers['Accept-Ranges'] = 'bytes'
         return headers
 
-      if @public and not storagePath
+      if @public and (not storagePath or not _.isString(storagePath))
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
-
-      storagePath ?= "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{@collectionName}"
-      Object.defineProperty self, 'storagePath', {
-        get: ->
-          sp = ''
-          if _.isString storagePath
-            sp = storagePath
-          else if _.isFunction storagePath
-            sp = storagePath.call self, "assets#{nodePath.sep}app#{nodePath.sep}uploads#{nodePath.sep}#{self.collectionName}"
-
-          unless _.isString sp
-            throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
-
-          sp = sp.replace /\/$/, ''
-          return nodePath.normalize sp
-      }
 
       console.info('[FilesCollection.storagePath] Set to:', @storagePath) if @debug
 
-      fs.mkdirs @storagePath, {mode: @parentDirPermissions}, (error) ->
+      fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
         if error
           throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath}\" is not writable!", error
         return
@@ -606,7 +603,7 @@ class FilesCollection
       check @strict, Boolean
       check @throttle, Match.OneOf false, Number
       check @permissions, Number
-      check @storagePath, String
+      check @storagePath, Function
       check @cacheControl, String
       check @onAfterRemove, Match.OneOf false, Function
       check @onAfterUpload, Match.OneOf false, Function
@@ -961,7 +958,7 @@ class FilesCollection
         if _continueUpload
           self._preCollection.remove {_id}
           self.remove {_id}
-          self.unlink {_id, path: _continueUpload.file.path}
+          self.unlink {_id, path: _continueUpload.file.path} if _continueUpload?.file?.path
         return true
 
       Meteor.methods _methods
@@ -979,6 +976,7 @@ class FilesCollection
     opts.chunkId   ?= -1
     opts.FSName    ?= opts.fileId
     opts.file.meta ?= {}
+    console.warn ">>>>> opts.file.meta", opts.file.meta
 
     console.info "[FilesCollection] [Upload] [#{transport}] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if @debug
 
@@ -986,14 +984,14 @@ class FilesCollection
     {extension, extensionWithDot} = @_getExt fileName
 
     result           = opts.file
-    result.path      = "#{@storagePath}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
     result.name      = fileName
     result.meta      = opts.file.meta
     result.extension = extension
     result.ext       = extension
-    result           = @_dataToSchema result
     result._id       = opts.fileId
     result.userId    = userId or null
+    result.path      = "#{@storagePath(result)}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
+    result           = _.extend result, @_dataToSchema result
 
     if @onBeforeUpload and _.isFunction @onBeforeUpload
       ctx = _.extend {
@@ -1167,7 +1165,7 @@ class FilesCollection
   @returns {Object}
   ###
   _dataToSchema: (data) ->
-    return {
+    ds =
       name:       data.name
       extension:  data.extension
       path:       data.path
@@ -1186,10 +1184,10 @@ class FilesCollection
       isText:  /^text\//i.test data.type
       isJSON:  /application\/json/i.test data.type
       isPDF:   /application\/pdf|application\/x-pdf/i.test data.type
-      _storagePath:    data._storagePath or @storagePath
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
-    }
+    ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
+    return ds
 
   ###
   @locus Server
@@ -1229,7 +1227,7 @@ class FilesCollection
 
     self       = @
     opts      ?= {}
-    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
     opts.type  = @_getMimeType opts
     opts.meta ?= {}
     opts.size ?= buffer.length
@@ -1305,7 +1303,7 @@ class FilesCollection
 
     {extension, extensionWithDot} = @_getExt fileName
     opts.meta ?= {}
-    opts.path  = "#{@storagePath}#{nodePath.sep}#{FSName}#{extensionWithDot}"
+    opts.path  = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
 
     storeResult = (result, callback) ->
       result._id = fileId

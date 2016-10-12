@@ -36,7 +36,7 @@ _app.createThumbnails = (collection, fileRef, cb) ->
       }, _app.NOOP
 
       _.each sizes, (size, name) ->
-        path = "#{collection.storagePath}/#{name}-#{fileRef._id}.#{fileRef.extension}"
+        path = "#{collection.storagePath(fileRef)}/#{name}-#{fileRef._id}.#{fileRef.extension}"
 
         copyPaste = ->
           fs.copy fileRef.path, path, (error) -> bound ->
