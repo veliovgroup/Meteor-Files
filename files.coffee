@@ -2371,7 +2371,7 @@ formatFleURL = (fileRef, version = 'original') ->
   else
     return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
-if Meteor.isClient and Template?
+if Meteor.isClient
   ###
   @locus Client
   @TemplateHelper
@@ -2382,13 +2382,16 @@ if Meteor.isClient and Template?
   @example {{fileURL fileRef}}
   @returns {String}
   ###
-  Template.registerHelper 'fileURL', (fileRef, version) ->
-    return undefined if not fileRef or not _.isObject fileRef
-    version = if not version or not _.isString(version) then 'original' else version
-    if fileRef._id
-      return formatFleURL fileRef, version
-    else
-      return ''
+  Meteor.startup ->
+    if Template?
+      Template.registerHelper 'fileURL', (fileRef, version) ->
+        return undefined if not fileRef or not _.isObject fileRef
+        version = if not version or not _.isString(version) then 'original' else version
+        if fileRef._id
+          return formatFleURL fileRef, version
+        else
+          return ''
+    return
 
 ###
 Export the FilesCollection class

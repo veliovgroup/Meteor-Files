@@ -62,7 +62,7 @@ Awards:
 Demo application:
 ========
  - [Live](https://files.veliov.com)
- - [Source](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo)
+ - [Source](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo)
  - [Compiled Demo App](https://github.com/VeliovGroup/Meteor-Files-Demo)
  - [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
 
@@ -79,7 +79,7 @@ The `cfs` is a well known package, but it's huge monster which combines everythi
  - Support for `HTTP`, [RTC/DC](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
- - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
 
@@ -217,7 +217,7 @@ Images.insert({
 });
 ```
 
-For more expressive example see [Upload demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-upload)
+For more expressive example see [Upload demo app](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo-simplest-upload)
 
 
 #### Stream files
@@ -279,7 +279,7 @@ Template.file.helpers({
 });
 ```
 
-For more expressive example see [Streaming demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-streaming)
+For more expressive example see [Streaming demo app](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo-simplest-streaming)
 
 
 #### Download button
@@ -321,7 +321,7 @@ Template.file.helpers({
   }
 });
 ```
-For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo-simplest-download-button)
+For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo-simplest-download-button)
 
 
 Supporters:

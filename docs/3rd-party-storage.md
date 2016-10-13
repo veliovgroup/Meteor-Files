@@ -8,4 +8,4 @@ We made a next integration examples for you:
  - [GridFS Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
  - [Google Cloud Storage Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)
 
-*AWS S3* and *DropBox* is available in [demo app](https://github.com/VeliovGroup/Meteor-Files/tree/master/demo) out-of-the box
+*AWS S3* and *DropBox* is available in [demo app](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo) out-of-the box
