@@ -10,7 +10,7 @@ npm install --save gridfs-stream
 ```
 Or:
 ```shell
-meteor npm install gridfs-stream
+meteor npm install --save gridfs-stream
 ```
 
 ##### Create collection
