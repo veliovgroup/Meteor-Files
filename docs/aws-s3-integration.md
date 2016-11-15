@@ -28,7 +28,7 @@ As of this writing, valid values for the `region` option are:
 Prepare: Get access to AWS S3:
  - Go to http://aws.amazon.com/s3/ (*Sign(in|up) if required*)
  - Click on [Create Bucket](https://console.aws.amazon.com/s3/home)
- - Follow steps __1-3__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
+ - Follow steps __1-4__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
  - Create new [CloudFront Distribution](https://console.aws.amazon.com/cloudfront/home)
     * Select __Web__ as delivery method
     * In __Origin Domain Name__ select your previously created S3 Bucket
