@@ -590,14 +590,14 @@ class FilesCollection
         headers['Accept-Ranges'] = 'bytes'
         return headers
 
-      if @public and (not storagePath or not _.isString(storagePath))
+      if @public and not storagePath
         throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
 
       console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
 
       fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
         if error
-          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath}\" is not writable!", error
+          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath({})}\" is not writable!", error
         return
 
       check @strict, Boolean
