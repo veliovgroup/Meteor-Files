@@ -1416,10 +1416,11 @@ class FilesCollection
             callback and callback error
             console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
-            callback and callback null, result
+            fileRef = self.collection.findOne result._id
+            callback and callback null, fileRef
             if proceedAfterUpload is true
-              self.onAfterUpload and self.onAfterUpload.call self, result
-              self.emit 'afterUpload', result
+              self.onAfterUpload and self.onAfterUpload.call self, fileRef
+              self.emit 'afterUpload', fileRef
             console.info "[FilesCollection] [addFile]: #{fileName} -> #{self.collectionName}" if self.debug
           return
       else
