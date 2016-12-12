@@ -45,6 +45,7 @@ Support:
 
 Support Meteor-Files project:
 ========
+ - Try [ostr.io](https://ostr.io) project, it will help you to sleep well. And will give us funds to serve Open Source projects
  - [Donate via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2)
  - Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
  - Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
