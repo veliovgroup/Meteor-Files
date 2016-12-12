@@ -550,9 +550,9 @@ class FilesCollection
 
       check @onbeforeunloadMessage, Match.OneOf String, Function
 
-      if window?.Worker and window?.Blob
+      _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false
+      if window?.Worker and window?.Blob and _URL
         @_supportWebWorker = true
-        _URL               = window.URL || window.webkitURL || window.mozURL
         @_webWorkerUrl     = _URL.createObjectURL(new Blob(['"use strict";self.onmessage=function(a){if(a.data.ib===!0)postMessage({bin:a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc),chunkId:a.data.cc});else{var b;self.FileReader?(b=new FileReader,b.onloadend=function(c){postMessage({bin:(b.result||c.srcElement||c.target).split(",")[1],chunkId:a.data.cc,s:a.data.s})},b.onerror=function(a){throw(a.target||a.srcElement).error},b.readAsDataURL(a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc))):self.FileReaderSync?(b=new FileReaderSync,postMessage({bin:b.readAsDataURL(a.data.f.slice(a.data.cs*(a.data.cc-1),a.data.cs*a.data.cc)).split(",")[1],chunkId:a.data.cc})):postMessage({bin:null,chunkId:a.data.cc,error:"File API is not supported in WebWorker!"})}};'], {type: 'application/javascript'}))
       else if window?.Worker
         @_supportWebWorker = true
@@ -2366,9 +2366,9 @@ formatFleURL = (fileRef, version = 'original') ->
     ext = ''
 
   if fileRef.public is true
-    return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
+    return root + (if version is 'original' then "/#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "/#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
   else
-    return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
+    return root + "/#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
 if Meteor.isClient
   ###
