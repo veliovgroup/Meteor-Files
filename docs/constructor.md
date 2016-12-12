@@ -65,8 +65,8 @@
         Context is current <em>FilesCollction</em> instance.<br /><br />
         Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
         To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
-        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.<br />
-        <a href="https://github.com/bryanlimy/Meteor-Files/blob/master/docs/constructor.md#example-on-using-meteorup">Usage on MeteorUp</a>
+        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.<br /><br />
+	If using <a href="https://github.com/kadirahq/meteor-up">MeteorUp</a>, Docker volumes has to be created in <code>mup.json</code>, see <a href="https://github.com/bryanlimy/Meteor-Files/blob/master/docs/constructor.md#example-on-using-meteorup">Usage on MeteorUp</a>
       </td>
     </tr>
     <tr>
@@ -951,4 +951,4 @@ Images = new FilesCollection({
   }
 });
 ```
-*For more info see https://github.com/VeliovGroup/Meteor-Files/issues/290.*
+*For more info see [Issue #290](https://github.com/VeliovGroup/Meteor-Files/issues/290).*
