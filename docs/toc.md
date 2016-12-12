@@ -97,6 +97,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
  - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
 
 ##### Examples:
+ - [MUP/Docker Persistent Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage) - Deploy via MeteorUp to Docker container with persistent `storagePath`
  - [Third-party storage (AWS S3, DropBox, GridFS and Google Storage)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [cURL/POST upload example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
  - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.coffee)
