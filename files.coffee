@@ -26,25 +26,21 @@ if Meteor.isServer
   @summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
   ###
   class writeStream
-    constructor: (@path, @maxLength, @file) ->
+    constructor: (@path, @maxLength, @file, @permissions) ->
       if not @path or not _.isString @path
         return
-      self           = @
-      fs.ensureFileSync @path
-      @stream        = fs.createWriteStream @path, {flags: 'a', mode: self.permissions, highWaterMark: 0}
-      @drained       = true
+
+      self = @
+      @fd = null
+      fs.open @path, 'w+', @permissions, (error, fd) -> bound ->
+        if error
+          throw new Meteor.Error 500, '[FilesCollection] [writeStream] [Exception:]', error
+        else
+          self.fd = fd
+        return
+      @ended         = false
       @aborted       = false
       @writtenChunks = 0
-
-      @stream.on 'drain', -> bound ->
-        ++self.writtenChunks
-        self.drained = true
-        return
-
-      @stream.on 'error', (error) -> bound ->
-        console.error "[FilesCollection] [writeStream] [ERROR:]", error
-        self.abort()
-        return
 
     ###
     @memberOf writeStream
@@ -56,15 +52,28 @@ if Meteor.isServer
     @returns {Boolean} - True if chunk is sent to stream, false if chunk is set into queue
     ###
     write: (num, chunk, callback) ->
-      if not @aborted and (not @stream._writableState.ended and num > @writtenChunks)
-        if @drained and num is (@writtenChunks + 1)
-          @drained = false
-          @stream.write chunk, callback
-          return true
+      if not @aborted and not @ended
+        self    = @
+        if @fd
+          _stream = fs.createWriteStream @path, {
+            flags: 'r+'
+            mode: @permissions
+            highWaterMark: 0
+            fd: @fd
+            autoClose: true
+            start: (num - 1) * @file.chunkSize
+          }
+          _stream.on 'error', (error) -> bound ->
+            console.error "[FilesCollection] [writeStream] [ERROR:]", error
+            self.abort()
+            return
+          _stream.write chunk, -> bound ->
+            ++self.writtenChunks
+            callback and callback()
+            return
         else
-          self = @
           Meteor.setTimeout ->
-            self.write num, chunk
+            self.write num, chunk, callback
             return
           , 25
       return false
@@ -77,9 +86,13 @@ if Meteor.isServer
     @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
     ###
     end: (callback) ->
-      if not @aborted and not @stream._writableState.ended
+      if not @aborted and not @ended
         if @writtenChunks is @maxLength
-          @stream.end callback
+          self = @
+          fs.close @fd, -> bound ->
+            self.ended = true
+            callback and callback()
+            return
           return true
         else
           self = @
@@ -628,13 +641,13 @@ class FilesCollection
         return
 
       @_createStream = (_id, path, opts) ->
-        return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts
+        return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts, self.permissions
 
       # This little function allows to continue upload
       # even after server is restarted (*not on dev-stage*)
       @_continueUpload = (_id) ->
         if self._currentUploads?[_id]?.file
-          unless self._currentUploads[_id].stream._writableState.ended
+          if not self._currentUploads[_id].aborted and not self._currentUploads[_id].ended
             return self._currentUploads[_id].file
           else
             self._createStream _id, self._currentUploads[_id].file.file.path, self._currentUploads[_id].file
@@ -769,10 +782,12 @@ class FilesCollection
                   {result, opts}  = self._prepareUpload _.extend(opts, _continueUpload), user.userId, 'HTTP'
 
                   if opts.eof
-                    Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
-                    response.writeHead 200
-                    result.file.meta = fixJSONStringify result.file.meta if result?.file?.meta
-                    response.end JSON.stringify result
+                    self._handleUpload result, opts, ->
+                      response.writeHead 200
+                      result.file.meta = fixJSONStringify result.file.meta if result?.file?.meta
+                      response.end JSON.stringify result
+                      return
+                    return
                   else
                     self.emit '_handleUpload', result, opts, NOOP
 
@@ -1054,15 +1069,16 @@ class FilesCollection
   @returns {undefined}
   ###
   _handleUpload: if Meteor.isServer then (result, opts, cb) ->
-    self = @
     try
       if opts.eof
+        self = @
         @_currentUploads[result._id].end -> bound ->
           self.emit '_finishUpload', result, opts, cb
           return
       else
         @_currentUploads[result._id].write opts.chunkId, opts.binData, cb
     catch e
+      console.warn "[_handleUpload] [EXCEPTION:]", e if @debug
       cb and cb e
     return
   else undefined
