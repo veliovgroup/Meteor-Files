@@ -65,7 +65,8 @@
         Context is current <em>FilesCollction</em> instance.<br /><br />
         Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
         To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
-        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
+        The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.<br />
+        [Usage for MeteorUp](#UsageOnMeteorUp)
       </td>
     </tr>
     <tr>
@@ -882,6 +883,74 @@ var Images = new FilesCollection({
     }
 
     return false;
+  }
+});
+```
+
+
+### Example on using [MeteorUp](https://github.com/kadirahq/meteor-up)
+See https://github.com/VeliovGroup/Meteor-Files/issues/290#issuecomment-26639540[]5
+Create volumes in `mup.json`, in this example, create and store files under `/images` on the server.
+
+
+```javascript
+module.exports = {
+  servers: {
+    one: {
+      host: 'myapp',
+      username: 'root',
+      // pem:
+      // password:
+      // or leave blank for authenticate from ssh-agent
+    }
+  },
+
+  meteor: {
+    name: 'myapp',
+    path: '../app',
+    volumes: {
+      '/images':'/images'
+    },
+    servers: {
+      one: {}
+    },
+    buildOptions: {
+      serverOnly: true,
+    },
+    env: {
+      ROOT_URL: 'http://myapp.com',
+      MONGO_URL: 'mongodb://localhost/meteor'
+    },
+
+    //dockerImage: 'kadirahq/meteord',
+    deployCheckWaitTime: 60
+  },
+
+  mongo: {
+    oplog: true,
+    port: 27017,
+    servers: {
+      one: {},
+    },
+  },
+};
+```
+Then in the constructor for Meteor-File
+```javascript
+Images = new FilesCollection({
+	debug: true,
+	storagePath: '/images',
+	permissions: 0774,
+	parentDirPermissions: 0774,
+	collectionName: 'Images',
+	allowClientCode: false, // Disallow remove files from Client
+	onBeforeUpload: function(file) {
+    // Allow upload files under 10MB, and only in png/jpg/jpeg formats
+    if (file.size <= 1024*1024*10 && /png|jpg|jpeg/i.test(file.extension)) {
+      return true;
+    } else {
+       return 'Please upload image, with size equal or less than 10MB';
+    }
   }
 });
 ```
