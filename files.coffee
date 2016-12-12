@@ -1409,14 +1409,12 @@ class FilesCollection
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
 
-        result._id = Random.id()
-
-        self.collection.insert _.clone(result), (error) ->
+        self.collection.insert _.clone(result), (error, _id) ->
           if error
             callback and callback error
             console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
-            fileRef = self.collection.findOne result._id
+            fileRef = self.collection.findOne _id
             callback and callback null, fileRef
             if proceedAfterUpload is true
               self.onAfterUpload and self.onAfterUpload.call self, fileRef
