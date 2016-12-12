@@ -10,6 +10,7 @@
    - `opts.meta` {*Object*} - Object with custom meta-data
    - `opts.type` {*String*} - Mime-type, like `image/png`
    - `opts.size` {*Number*} - File size in bytes, if not set - size will be calculated from file
+   - `opts.userId` {*String*} - UserId, default *null*
  - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
  - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
  - Returns {*FilesCollection*} - Current FilesCollection instance
