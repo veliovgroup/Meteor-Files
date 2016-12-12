@@ -1,6 +1,14 @@
-### Example on using [MeteorUp](https://github.com/kadirahq/meteor-up
-Create volumes in `mup.json`, in this example, create and store files under `/images` on the server.
-The uploaded images can be accessed the same way as it is in the [demos](https://github.com/VeliovGroup/Meteor-Files-Demos)
+# Example on using [MeteorUp](https://github.com/kadirahq/meteor-up)
+
+### Brief
+[MeteorUp](https://github.com/kadirahq/meteor-up) uses Docker, and by default, there is no volume mounted on the server. Therefore, even if `storagePath` is declared in contructor, files that are being uploaded are still being stored in cache, and on every deploy, all the uploaded files get erased.
+
+*Read more on [Issue #270](https://github.com/VeliovGroup/Meteor-Files/issues/72) and [Issue #290](https://github.com/VeliovGroup/Meteor-Files/issues/290).*
+
+To resolve this issue, a volume has to be declared in `mup.json`.
+In this example, images will be stored under folder `images`, under `/images` on the server.
+
+### `mup.json` example 
 ```javascript
 module.exports = {
   servers: {
@@ -43,7 +51,8 @@ module.exports = {
   },
 };
 ```
-Then in the constructor for Meteor-File
+
+### Images constructor example
 ```javascript
 Images = new FilesCollection({
 	debug: true,
@@ -62,4 +71,4 @@ Images = new FilesCollection({
   }
 });
 ```
-*For more info see [Issue #290](https://github.com/VeliovGroup/Meteor-Files/issues/290).*
+Now, files will be uploaded to `/images` on server, and can be accessed just like the given [demos](https://github.com/VeliovGroup/Meteor-Files-Demos).
