@@ -890,6 +890,7 @@ var Images = new FilesCollection({
 
 ### Example on using [MeteorUp](https://github.com/kadirahq/meteor-up)
 Create volumes in `mup.json`, in this example, create and store files under `/images` on the server.
+The uploaded images can be accessed the same way as the shown in the [demos](https://github.com/VeliovGroup/Meteor-Files-Demos)
 ```javascript
 module.exports = {
   servers: {
