@@ -10,7 +10,7 @@ npm install --save knox
 ```
 Or:
 ```shell
-meteor npm install knox
+meteor npm install --save knox
 ```
 
 Important notice about [supported regions in knox](https://github.com/Automattic/knox#region) package: 
