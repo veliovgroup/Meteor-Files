@@ -1193,6 +1193,7 @@ class FilesCollection
       meta:       data.meta
       type:       data.type
       size:       data.size
+      userId:       data.userId
       versions:
         original:
           path: data.path
@@ -1416,11 +1417,12 @@ class FilesCollection
 
         {extension, extensionWithDot} = self._getExt fileName
 
-        opts      ?= {}
-        opts.path  = path
-        opts.type ?= self._getMimeType opts
-        opts.meta ?= {}
-        opts.size ?= stats.size
+        opts        ?= {}
+        opts.path   = path
+        opts.type   ?= self._getMimeType opts
+        opts.meta   ?= {}
+        opts.size   ?= stats.size
+        opts.userId ?= opts.userId or null
 
         result = self._dataToSchema
           name:         fileName
@@ -1430,6 +1432,7 @@ class FilesCollection
           size:         opts.size
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
+          userId:       opts.userId
 
         self.collection.insert _.clone(result), (error, _id) ->
           if error
