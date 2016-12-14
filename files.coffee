@@ -630,14 +630,18 @@ class FilesCollection
       @_preCollection = new Mongo.Collection '__pre_' + @collectionName
       @_preCollection._ensureIndex {'createdAt': 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
       _preCollectionCursor = @_preCollection.find {}
-      _preCollectionCursor.observeChanges removed: (_id) ->
+      _preCollectionCursor.observe removed: (doc) ->
         # Free memory after upload is done
         # Or if upload is unfinished
-        console.info "[FilesCollection] [_preCollectionCursor.observeChanges] [removed]: #{_id}" if self.debug
-        if self._currentUploads?[_id]
-          self._currentUploads[_id].end()
-          self._currentUploads[_id].abort()
-          delete self._currentUploads[_id]
+        console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
+        if self._currentUploads?[doc._id]
+          self._currentUploads[doc._id].end()
+          self._currentUploads[doc._id].abort()
+          delete self._currentUploads[doc._id]
+
+        unless doc.isFinished
+          console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
+          fs.unlink doc.file.path, NOOP
         return
 
       @_createStream = (_id, path, opts) ->
@@ -1046,16 +1050,18 @@ class FilesCollection
         cb and cb error
         console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
       else
-        self._preCollection.remove {_id: opts.fileId}, (error) ->
-          if error
-            cb and cb error
-            console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
-          else
-            result._id = _id
-            console.info "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}" if self.debug
-            self.onAfterUpload and self.onAfterUpload.call self, result
-            self.emit 'afterUpload', result
-            cb and cb null, result
+        self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}, () ->
+          self._preCollection.remove {_id: opts.fileId}, (error) ->
+            if error
+              cb and cb error
+              console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
+            else
+              result._id = _id
+              console.info "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}" if self.debug
+              self.onAfterUpload and self.onAfterUpload.call self, result
+              self.emit 'afterUpload', result
+              cb and cb null, result
+            return
           return
       return
     return
