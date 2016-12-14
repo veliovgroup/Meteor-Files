@@ -1214,7 +1214,7 @@ class FilesCollection
       meta:       data.meta
       type:       data.type
       size:       data.size
-      userId:       data.userId
+      userId:     data.userId or null
       versions:
         original:
           path: data.path
@@ -1241,6 +1241,7 @@ class FilesCollection
   @param {String} opts.name - File name, alias: `fileName`
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
+  @param {String} opts.userId - UserId, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Write buffer to FS and add to FilesCollection Collection
@@ -1268,12 +1269,12 @@ class FilesCollection
 
     {extension, extensionWithDot} = @_getExt fileName
 
-    self       = @
-    opts      ?= {}
-    opts.path  = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
-    opts.type  = @_getMimeType opts
-    opts.meta ?= {}
-    opts.size ?= buffer.length
+    self         = @
+    opts        ?= {}
+    opts.path    = "#{@storagePath(opts)}#{nodePath.sep}#{FSName}#{extensionWithDot}"
+    opts.type    = @_getMimeType opts
+    opts.meta   ?= {}
+    opts.size   ?= buffer.length
 
     result = @_dataToSchema
       name:      fileName
@@ -1281,6 +1282,7 @@ class FilesCollection
       meta:      opts.meta
       type:      opts.type
       size:      opts.size
+      userId:    opts.userId
       extension: extension
 
     result._id = fileId
@@ -1290,15 +1292,16 @@ class FilesCollection
       if error
         callback and callback error
       else
-        self.collection.insert _.clone(result), (error) ->
+        self.collection.insert result, (error, _id) ->
           if error
             callback and callback error
             console.warn "[FilesCollection] [write] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
           else
-            callback and callback null, result
+            fileRef = self.collection.findOne _id
+            callback and callback null, fileRef
             if proceedAfterUpload is true
-              self.onAfterUpload and self.onAfterUpload.call self, result
-              self.emit 'afterUpload', result
+              self.onAfterUpload and self.onAfterUpload.call self, fileRef
+              self.emit 'afterUpload', fileRef
             console.info "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}" if self.debug
           return
       return
@@ -1315,6 +1318,7 @@ class FilesCollection
   @param {String} opts.name - File name, alias: `fileName`
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
+  @param {String} opts.userId - UserId, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Download file, write stream to FS and add to FilesCollection Collection
@@ -1351,15 +1355,16 @@ class FilesCollection
     storeResult = (result, callback) ->
       result._id = fileId
 
-      self.collection.insert result, (error) ->
+      self.collection.insert result, (error, _id) ->
         if error
           callback and callback error
           console.error "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
         else
-          callback and callback null, result
+          fileRef = self.collection.findOne _id
+          callback and callback null, fileRef
           if proceedAfterUpload is true
-            self.onAfterUpload and self.onAfterUpload.call self, result
-            self.emit 'afterUpload', result
+            self.onAfterUpload and self.onAfterUpload.call self, fileRef
+            self.emit 'afterUpload', fileRef
           console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
         return
       return
@@ -1376,6 +1381,7 @@ class FilesCollection
           meta:      opts.meta
           type:      opts.type or response.headers['content-type'] or self._getMimeType {path: opts.path}
           size:      opts.size or parseInt(response.headers['content-length'] or 0)
+          userId:    opts.userId
           extension: extension
 
         unless result.size
@@ -1444,7 +1450,6 @@ class FilesCollection
         opts.type   ?= self._getMimeType opts
         opts.meta   ?= {}
         opts.size   ?= stats.size
-        opts.userId ?= opts.userId or null
 
         result = self._dataToSchema
           name:         fileName
@@ -1456,7 +1461,7 @@ class FilesCollection
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
 
-        self.collection.insert _.clone(result), (error, _id) ->
+        self.collection.insert result, (error, _id) ->
           if error
             callback and callback error
             console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
