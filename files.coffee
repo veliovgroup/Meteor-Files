@@ -91,7 +91,7 @@ if Meteor.isServer
           self = @
           fs.close @fd, -> bound ->
             self.ended = true
-            callback and callback()
+            callback and callback(true)
             return
           return true
         else
@@ -100,16 +100,31 @@ if Meteor.isServer
             self.end callback
             return
           , 25
+      else
+        callback and callback(false)
       return false
 
     ###
     @memberOf writeStream
     @name abort
-    @summary Aborts writing to writableStream, prevent memory leaks caused by unsatisfied queue
+    @param {Function} callback - Callback
+    @summary Aborts writing to writableStream, removes created file
     @returns {Boolean} - True
     ###
-    abort: ->
+    abort: (callback) ->
       @aborted = true
+      fs.unlink @path, (callback or NOOP)
+      return true
+
+    ###
+    @memberOf writeStream
+    @name stop
+    @summary Stop writing to writableStream
+    @returns {Boolean} - True
+    ###
+    stop: ->
+      @aborted = true
+      @ended   = true
       return true
 else
   `import { EventEmitter } from './event-emitter.jsx'`
@@ -635,13 +650,14 @@ class FilesCollection
         # Or if upload is unfinished
         console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
         if self._currentUploads?[doc._id]
+          self._currentUploads[doc._id].stop()
           self._currentUploads[doc._id].end()
-          self._currentUploads[doc._id].abort()
-          delete self._currentUploads[doc._id]
 
         unless doc.isFinished
           console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
-          fs.unlink doc.file.path, NOOP
+          self._currentUploads[doc._id].abort()
+
+        delete self._currentUploads[doc._id]
         return
 
       @_createStream = (_id, path, opts) ->
@@ -974,6 +990,11 @@ class FilesCollection
 
         _continueUpload = self._continueUpload _id
         console.info "[FilesCollection] [Abort Method]: #{_id} - #{_continueUpload?.file?.path}" if self.debug
+
+        if self._currentUploads?[_id]
+          self._currentUploads[_id].stop()
+          self._currentUploads[_id].abort()
+
         if _continueUpload
           self._preCollection.remove {_id}
           self.remove {_id}
@@ -1382,9 +1403,10 @@ class FilesCollection
   @name addFile
   @param {String} path - Path to file
   @param {String} opts - Object with file-data
-  @param {String} opts.type - File mime-type
-  @param {Object} opts.meta - File additional meta-data
-  @param {Function} callback - function(error, fileObj){...}
+  @param {String} opts.type   - File mime-type
+  @param {Object} opts.meta   - File additional meta-data
+  @param {String} opts.userId -  UserId, default *null*
+  @param {Function} callback  - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Add file from FS to FilesCollection
   @returns {FilesCollection} Instance
@@ -1418,7 +1440,7 @@ class FilesCollection
         {extension, extensionWithDot} = self._getExt fileName
 
         opts        ?= {}
-        opts.path   = path
+        opts.path    = path
         opts.type   ?= self._getMimeType opts
         opts.meta   ?= {}
         opts.size   ?= stats.size
@@ -1430,9 +1452,9 @@ class FilesCollection
           meta:         opts.meta
           type:         opts.type
           size:         opts.size
+          userId:       opts.userId
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
-          userId:       opts.userId
 
         self.collection.insert _.clone(result), (error, _id) ->
           if error
@@ -2151,21 +2173,22 @@ class FilesCollection
   @name unlink
   @param {Object} fileRef - fileObj
   @param {String} version - [Optional] file's version
+  @param {Function} callback - [Optional] callback function
   @summary Unlink files and it's versions from FS
   @returns {FilesCollection} Instance
   ###
-  unlink: if Meteor.isServer then (fileRef, version) ->
+  unlink: if Meteor.isServer then (fileRef, version, callback) ->
     console.info "[FilesCollection] [unlink(#{fileRef._id}, #{version})]" if @debug
     if version
       if fileRef.versions?[version] and fileRef.versions[version]?.path
-        fs.unlink fileRef.versions[version].path, NOOP
+        fs.unlink fileRef.versions[version].path, (callback or NOOP)
     else
       if fileRef.versions and not _.isEmpty fileRef.versions
         _.each fileRef.versions, (vRef) -> bound ->
-          fs.unlink vRef.path, NOOP
+          fs.unlink vRef.path, (callback or NOOP)
           return
       else
-        fs.unlink fileRef.path, NOOP
+        fs.unlink fileRef.path, (callback or NOOP)
     return @
   else undefined
 
