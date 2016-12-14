@@ -1641,8 +1641,8 @@ class FilesCollection
         @sentChunks   = 0
         @fileLength   = 1
         @EOFsent      = false
-        @FSName       = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
         @fileId       = Random.id()
+        @FSName       = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
         @pipes        = []
 
         @fileData = _.extend @fileData, @collection._getExt(self.fileData.name), {mime: @collection._getMimeType(@fileData)}
