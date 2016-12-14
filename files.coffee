@@ -792,7 +792,10 @@ class FilesCollection
                   if request.headers['x-eof'] is '1'
                     opts.eof = true
                   else
-                    opts.binData = new Buffer body, 'base64'
+                    if typeof Buffer.from == 'function'
+                      opts.binData = Buffer.from body, 'base64'
+                    else
+                      opts.binData = new Buffer body, 'base64'
                     opts.chunkId = parseInt request.headers['x-chunkid']
 
                   _continueUpload = self._continueUpload opts.fileId
