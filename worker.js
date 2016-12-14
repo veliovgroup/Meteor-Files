@@ -1,8 +1,9 @@
 ;(function(root) {
   "use strict";
   root.onmessage = function(e) {
+    var _chunk = e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.cs * e.data.cc);
     if (e.data.ib === true) {
-      postMessage({bin: e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.cs * e.data.cc), chunkId: e.data.cc});
+      postMessage({bin: _chunk, chunkId: e.data.cc});
     } else {
       var fileReader;
       if (root.FileReader) {
@@ -15,11 +16,11 @@
           throw (error.target || error.srcElement).error;
         };
 
-        fileReader.readAsDataURL(e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.cs * e.data.cc));
+        fileReader.readAsDataURL(_chunk, e.data.cs * e.data.cc);
 
       } else if (root.FileReaderSync) {
         fileReader = new FileReaderSync();
-        postMessage({bin: fileReader.readAsDataURL(e.data.f.slice(e.data.cs * (e.data.cc - 1), e.data.cs * e.data.cc)).split(',')[1], chunkId: e.data.cc});
+        postMessage({bin: fileReader.readAsDataURL(_chunk).split(',')[1], chunkId: e.data.cc});
 
       } else {
         postMessage({bin: null, chunkId: e.data.cc, error: 'File API is not supported in WebWorker!'});
