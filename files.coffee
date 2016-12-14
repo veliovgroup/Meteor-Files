@@ -2422,9 +2422,9 @@ formatFleURL = (fileRef, version = 'original') ->
     ext = ''
 
   if fileRef.public is true
-    return root + (if version is 'original' then "/#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "/#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
+    return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "/#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
   else
-    return root + "/#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
+    return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
 if Meteor.isClient
   ###
