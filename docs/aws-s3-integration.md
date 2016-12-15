@@ -4,13 +4,15 @@ Example below shows how to store and serve uploaded file via S3. This example al
 
 See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/lib/files.collection.coffee)
 
+*Please note - this docs is a bit outdated. As knox package is not maintained well. New docs is coming soon. Meanwile take a look on "Evaporate" S3 client.* Related issues: [#285](https://github.com/VeliovGroup/Meteor-Files/issues/285), [#273](https://github.com/VeliovGroup/Meteor-Files/issues/273), [#280](https://github.com/VeliovGroup/Meteor-Files/issues/280). __If you're experienced with any of up-to-date AWS:S3 clients, please - contribute.__
+
 Prepare: install [knox](https://github.com/Automattic/knox):
 ```shell
 npm install --save knox
 ```
 Or:
 ```shell
-meteor npm install knox
+meteor npm install --save knox
 ```
 
 Important notice about [supported regions in knox](https://github.com/Automattic/knox#region) package: 
@@ -28,7 +30,12 @@ As of this writing, valid values for the `region` option are:
 Prepare: Get access to AWS S3:
  - Go to http://aws.amazon.com/s3/ (*Sign(in|up) if required*)
  - Click on [Create Bucket](https://console.aws.amazon.com/s3/home)
- - Follow steps __1-3__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
+ - Follow steps __1-4__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
+    * Create an S3 bucket in your preferred region (currently only `eu-west-1` is supported)
+    * Get an "Access Key Id" and "Secret Key"
+    * "Enable Website Hosting" in bucket "Properties"
+    * Setup CORS at bucket "Permissions" tab
+    * For detailed info read [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
  - Create new [CloudFront Distribution](https://console.aws.amazon.com/cloudfront/home)
     * Select __Web__ as delivery method
     * In __Origin Domain Name__ select your previously created S3 Bucket
