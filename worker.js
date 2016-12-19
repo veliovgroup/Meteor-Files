@@ -16,7 +16,7 @@
           throw (error.target || error.srcElement).error;
         };
 
-        fileReader.readAsDataURL(_chunk, e.data.cs * e.data.cc);
+        fileReader.readAsDataURL(_chunk);
 
       } else if (root.FileReaderSync) {
         fileReader = new FileReaderSync();
