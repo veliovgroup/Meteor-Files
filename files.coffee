@@ -557,15 +557,12 @@ class FilesCollection
         Meteor.setTimeout ->
           if (not cookie.has('x_mtok') and Meteor.connection._lastSessionId) or (cookie.has('x_mtok') and (cookie.get('x_mtok') isnt Meteor.connection._lastSessionId))
             cookie.set 'x_mtok', Meteor.connection._lastSessionId, null, '/'
-            cookie.send()
           return
         , 25
         return
 
       unsetTokenCookie = ->
-        if cookie.has 'x_mtok'
-          cookie.remove 'x_mtok'
-          cookie.send()
+        cookie.remove 'x_mtok' if cookie.has 'x_mtok'
         return
 
       if Accounts?
