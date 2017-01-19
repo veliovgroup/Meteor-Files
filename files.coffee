@@ -643,7 +643,7 @@ class FilesCollection
       check @responseHeaders, Match.OneOf Object, Function
 
       @_preCollection = new Mongo.Collection '__pre_' + @collectionName
-      @_preCollection._ensureIndex {'createdAt': 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
+      @_preCollection._ensureIndex {createdAt: 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
       _preCollectionCursor = @_preCollection.find {}
       _preCollectionCursor.observe removed: (doc) ->
         # Free memory after upload is done
@@ -1059,7 +1059,7 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name _finishUpload
-  @summary Internal method. Finish upload, close Writable stream, add recored to MongoDB and flush used memory
+  @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
   @returns {undefined}
   ###
   _finishUpload: if Meteor.isServer then (result, opts, cb) ->
