@@ -1074,7 +1074,9 @@ class FilesCollection
         cb and cb error
         console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
       else
-        self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}, () ->
+        self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}
+        # we delay the remove to resolve timing issues (details see #324)
+        Meteor.setTimeout ->
           self._preCollection.remove {_id: opts.fileId}, (error) ->
             if error
               cb and cb error
@@ -1085,10 +1087,12 @@ class FilesCollection
               self.onAfterUpload and self.onAfterUpload.call self, result
               self.emit 'afterUpload', result
               cb and cb null, result
-            return
-          return
-      return
-    return
+            return  # .remove
+          return  # .setTimeout
+        , 25
+
+      return  # .insert
+    return  # .isServer
   else undefined
 
   ###
