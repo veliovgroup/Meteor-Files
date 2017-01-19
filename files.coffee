@@ -819,7 +819,9 @@ class FilesCollection
                   opts.___s      = true
                   console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'Start Method'
+                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'HTTP Start Method'
+                  if self.collection.findOne result._id
+                    throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
                   opts._id       = opts.fileId
                   opts.createdAt = new Date()
                   self._preCollection.insert _.omit(opts, '___s')
@@ -936,7 +938,9 @@ class FilesCollection
 
         console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
         opts.___s      = true
-        {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
+        {result}       = self._prepareUpload _.clone(opts), @userId, 'DDP Start Method'
+        if self.collection.findOne result._id
+          throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
         opts._id       = opts.fileId
         opts.createdAt = new Date()
         self._preCollection.insert _.omit(opts, '___s')
