@@ -527,7 +527,7 @@
         Server
       </td>
       <td>
-        Callback, triggered right before remove file (__from *Client*__)<br>
+        Callback, triggered right before remove file (<b>from <i>Client</i></b>)<br>
         <strong>Arguments</strong>:
         <ul>
           <li>
