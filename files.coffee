@@ -556,7 +556,7 @@ class FilesCollection
       setTokenCookie = ->
         Meteor.setTimeout ->
           if (not cookie.has('x_mtok') and Meteor.connection._lastSessionId) or (cookie.has('x_mtok') and (cookie.get('x_mtok') isnt Meteor.connection._lastSessionId))
-            cookie.set 'x_mtok', Meteor.connection._lastSessionId, null, '/'
+            cookie.set 'x_mtok', Meteor.connection._lastSessionId
           return
         , 25
         return
