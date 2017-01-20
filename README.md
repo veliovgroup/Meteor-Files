@@ -70,7 +70,7 @@ Demo application:
 
 Related Packages:
 ========
- - [pyfiles (meteor-python-files))](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
+ - [pyfiles (meteor-python-files)](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
  - [meteor-autoform-file](https://github.com/VeliovGroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)
 
 
