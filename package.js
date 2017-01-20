@@ -10,7 +10,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.4');
   api.use('webapp', 'server');
   api.use(['reactive-var', 'tracker', 'http'], 'client');
-  api.use(['mongo','underscore', 'check', 'random', 'coffeescript', 'ecmascript', 'ostrio:cookies@2.1.2'], ['client', 'server']);
+  api.use(['mongo', 'underscore', 'check', 'random', 'coffeescript', 'ecmascript', 'ostrio:cookies@2.1.2'], ['client', 'server']);
   api.addFiles('event-emitter.jsx', 'client');
   api.addAssets('worker.min.js', 'client');
   api.mainModule('files.coffee', ['server', 'client']);
