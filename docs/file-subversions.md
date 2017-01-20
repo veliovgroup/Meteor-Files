@@ -46,6 +46,11 @@ if (Meteor.isClient) {
             }
           },
           onBeforeUpload: function() {
+            // Note: You should never trust to extension and mime-type here
+            // as this data comes from client and can be easily substitute
+            // to check file's "magic-numbers" use `mmmagic` or `file-type` package
+            // real extension and mime-type can be checked on client (untrusted side)
+            // and on server at `onAfterUpload` hook (trusted side)
             if (['ogg', 'mp4', 'avi', 'webm'].inArray(this.ext) && this.size < 512 * 1048 * 1048) {
               return true;
             } else {

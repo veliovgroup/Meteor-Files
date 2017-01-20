@@ -527,7 +527,7 @@
         Server
       </td>
       <td>
-        Callback, triggered right before remove file<br>
+        Callback, triggered right before remove file (<b>from <i>Client</i></b>)<br>
         <strong>Arguments</strong>:
         <ul>
           <li>
@@ -753,6 +753,11 @@ Images = new FilesCollection({
   },
   onBeforeUpload: function (file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
+    // Note: You should never trust to extension and mime-type here
+    // as this data comes from client and can be easily substitute
+    // to check file's "magic-numbers" use `mmmagic` or `file-type` package
+    // real extension and mime-type can be checked on client (untrusted side)
+    // and on server at `onAfterUpload` hook (trusted side)
     if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.ext)) {
       return true;
     } else {
@@ -885,4 +890,30 @@ var Images = new FilesCollection({
     return false;
   }
 });
+```
+
+
+#### Use onAfterUpload to avoid mime-type and/or extension substitution:
+For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use https://github.com/mscdex/mmmagic for this
+```jsx
+const isImageMime = (mimeType) => mimeType.indexOf('image') === 0;
+const Images = new FilesCollection({
+  collectionName: 'Images',
+  onAfterUpload(file) {
+    const self = this;
+    if (Meteor.isServer) {
+      // check real mimetype
+      const { Magic, MAGIC_MIME_TYPE } = require('mmmagic');
+      const magic = new Magic(MAGIC_MIME_TYPE);
+      magic.detectFile(file.path, Meteor.bindEnvironment((err, mimetype) => {
+        if (err || !~mimeType.indexOf('image')) {
+          // is not a real image --> delete
+          console.log('onAfterUpload, not an image: ', file.path);
+          console.log('deleted', file.path);
+          self.remove(file._id);
+        }
+      }));
+    }
+  }
+};
 ```

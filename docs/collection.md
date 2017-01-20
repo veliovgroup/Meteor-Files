@@ -64,4 +64,18 @@ if (Meteor.isServer) {
     return Images.collection.find({});
   });
 }
+
+// Publish only necessary fields:
+// See issue #316
+if (Meteor.isServer) {
+  Meteor.publish('files.images.all', function () {
+    return Images.collection.find({}, {
+      fields: {
+        extension: 1,
+        _downloadRoute: 1,
+        _collectionName: 1
+      }
+    });
+  });
+}
 ```

@@ -556,16 +556,13 @@ class FilesCollection
       setTokenCookie = ->
         Meteor.setTimeout ->
           if (not cookie.has('x_mtok') and Meteor.connection._lastSessionId) or (cookie.has('x_mtok') and (cookie.get('x_mtok') isnt Meteor.connection._lastSessionId))
-            cookie.set 'x_mtok', Meteor.connection._lastSessionId, null, '/'
-            cookie.send()
+            cookie.set 'x_mtok', Meteor.connection._lastSessionId
           return
         , 25
         return
 
       unsetTokenCookie = ->
-        if cookie.has 'x_mtok'
-          cookie.remove 'x_mtok'
-          cookie.send()
+        cookie.remove 'x_mtok' if cookie.has 'x_mtok'
         return
 
       if Accounts?
@@ -581,7 +578,7 @@ class FilesCollection
       _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false
       if window?.Worker and window?.Blob and _URL
         @_supportWebWorker = true
-        @_webWorkerUrl     = _URL.createObjectURL(new Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c,b.data.cs*b.data.cc)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}))
+        @_webWorkerUrl     = _URL.createObjectURL(new Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}))
       else if window?.Worker
         @_supportWebWorker = true
         @_webWorkerUrl     = Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
@@ -643,7 +640,7 @@ class FilesCollection
       check @responseHeaders, Match.OneOf Object, Function
 
       @_preCollection = new Mongo.Collection '__pre_' + @collectionName
-      @_preCollection._ensureIndex {'createdAt': 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
+      @_preCollection._ensureIndex {createdAt: 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
       _preCollectionCursor = @_preCollection.find {}
       _preCollectionCursor.observe removed: (doc) ->
         # Free memory after upload is done
@@ -822,7 +819,9 @@ class FilesCollection
                   opts.___s      = true
                   console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'Start Method'
+                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'HTTP Start Method'
+                  if self.collection.findOne result._id
+                    throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
                   opts._id       = opts.fileId
                   opts.createdAt = new Date()
                   self._preCollection.insert _.omit(opts, '___s')
@@ -939,7 +938,9 @@ class FilesCollection
 
         console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
         opts.___s      = true
-        {result}       = self._prepareUpload _.clone(opts), @userId, 'Start Method'
+        {result}       = self._prepareUpload _.clone(opts), @userId, 'DDP Start Method'
+        if self.collection.findOne result._id
+          throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
         opts._id       = opts.fileId
         opts.createdAt = new Date()
         self._preCollection.insert _.omit(opts, '___s')
@@ -1059,7 +1060,7 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name _finishUpload
-  @summary Internal method. Finish upload, close Writable stream, add recored to MongoDB and flush used memory
+  @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
   @returns {undefined}
   ###
   _finishUpload: if Meteor.isServer then (result, opts, cb) ->
@@ -1074,7 +1075,9 @@ class FilesCollection
         cb and cb error
         console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
       else
-        self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}, () ->
+        self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}
+        # we delay the remove to resolve timing issues (details see #324)
+        Meteor.setTimeout ->
           self._preCollection.remove {_id: opts.fileId}, (error) ->
             if error
               cb and cb error
@@ -1085,10 +1088,12 @@ class FilesCollection
               self.onAfterUpload and self.onAfterUpload.call self, result
               self.emit 'afterUpload', result
               cb and cb null, result
-            return
-          return
-      return
-    return
+            return  # .remove
+          return  # .setTimeout
+        , 25
+
+      return  # .insert
+    return  # .isServer
   else undefined
 
   ###
@@ -2422,7 +2427,7 @@ formatFleURL = (fileRef, version = 'original') ->
     ext = ''
 
   if fileRef.public is true
-    return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "/#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
+    return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
   else
     return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
