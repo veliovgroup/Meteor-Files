@@ -562,7 +562,7 @@ class FilesCollection
         return
 
       unsetTokenCookie = ->
-        cookie.remove 'x_mtok' if cookie.has 'x_mtok'
+        cookie.remove('x_mtok', '/') if cookie.has 'x_mtok'
         return
 
       if Accounts?
