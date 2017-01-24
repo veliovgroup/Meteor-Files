@@ -641,21 +641,31 @@ class FilesCollection
 
       @_preCollection = new Mongo.Collection '__pre_' + @collectionName
       @_preCollection._ensureIndex {createdAt: 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
-      _preCollectionCursor = @_preCollection.find {}
-      _preCollectionCursor.observe removed: (doc) ->
-        # Free memory after upload is done
-        # Or if upload is unfinished
-        console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
-        if self._currentUploads?[doc._id]
-          self._currentUploads[doc._id].stop()
-          self._currentUploads[doc._id].end()
+      _preCollectionCursor = @_preCollection.find {}, {
+        fields:
+          _id: 1
+          isFinished: 1
+      }
+      _preCollectionCursor.observe
+        changed: (doc) ->
+          if doc.isFinished
+            console.info "[FilesCollection] [_preCollectionCursor.observe] [changed]: #{doc._id}" if self.debug
+            self._preCollection.remove {_id: doc._id}, NOOP
+          return
+        removed: (doc) ->
+          # Free memory after upload is done
+          # Or if upload is unfinished
+          console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
+          if self._currentUploads?[doc._id]
+            self._currentUploads[doc._id].stop()
+            self._currentUploads[doc._id].end()
 
-        unless doc.isFinished
-          console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
-          self._currentUploads[doc._id].abort()
+          unless doc.isFinished
+            console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
+            self._currentUploads[doc._id].abort()
 
-        delete self._currentUploads[doc._id]
-        return
+          delete self._currentUploads[doc._id]
+          return
 
       @_createStream = (_id, path, opts) ->
         return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts, self.permissions
@@ -1076,24 +1086,13 @@ class FilesCollection
         console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
       else
         self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}
-        # we delay the remove to resolve timing issues (details see #324)
-        Meteor.setTimeout ->
-          self._preCollection.remove {_id: opts.fileId}, (error) ->
-            if error
-              cb and cb error
-              console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
-            else
-              result._id = _id
-              console.info "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}" if self.debug
-              self.onAfterUpload and self.onAfterUpload.call self, result
-              self.emit 'afterUpload', result
-              cb and cb null, result
-            return  # .remove
-          return  # .setTimeout
-        , 25
-
-      return  # .insert
-    return  # .isServer
+        result._id = _id
+        console.info "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}" if self.debug
+        self.onAfterUpload and self.onAfterUpload.call self, result
+        self.emit 'afterUpload', result
+        cb and cb null, result
+      return
+    return
   else undefined
 
   ###
