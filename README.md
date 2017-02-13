@@ -328,6 +328,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 Supporters:
 ========
 I would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
+ - [@rikyperdana](https://github.com/rikyperdana)
  - [@derwok](https://github.com/derwok), check out his project - [4minitz](https://www.4minitz.com/)
  - [@FinnFrotscher](https://github.com/FinnFrotscher)
  - [@Neobii](https://github.com/Neobii)
