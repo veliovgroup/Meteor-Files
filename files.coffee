@@ -127,7 +127,7 @@ if Meteor.isServer
       @ended   = true
       return true
 else
-  `import { EventEmitter } from './event-emitter.jsx'`
+  EventEmitter = require('./event-emitter.jsx').EventEmitter
 
 ###
 @private
