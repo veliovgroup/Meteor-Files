@@ -976,7 +976,12 @@ class FilesCollection
           chunkId: Match.Optional Number
         }
 
-        opts.binData = new Buffer(opts.binData, 'base64') if opts.binData
+        if opts.binData
+          if typeof Buffer.from == 'function'
+            opts.binData = Buffer.from opts.binData, 'base64'
+          else
+            opts.binData = new Buffer opts.binData, 'base64'
+
         _continueUpload = self._continueUpload opts.fileId
         unless _continueUpload
           throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
@@ -1916,7 +1921,7 @@ class FilesCollection
       opts =
         file:       @fileData
         fileId:     @fileId
-        chunkSize:  @config.chunkSize
+        chunkSize:  if @config.isBase64 then ((@config.chunkSize  / 4) * 3) else @config.chunkSize
         fileLength: @fileLength
       opts.FSName = @FSName if @FSName isnt @fileId
 
