@@ -127,7 +127,7 @@ if Meteor.isServer
       @ended   = true
       return true
 else
-  `import { EventEmitter } from './event-emitter.jsx'`
+  EventEmitter = require('./event-emitter.jsx').EventEmitter
 
 ###
 @private
@@ -660,11 +660,11 @@ class FilesCollection
             self._currentUploads[doc._id].stop()
             self._currentUploads[doc._id].end()
 
-          unless doc.isFinished
-            console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
-            self._currentUploads[doc._id].abort()
+            unless doc.isFinished
+              console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
+              self._currentUploads[doc._id].abort()
 
-          delete self._currentUploads[doc._id]
+            delete self._currentUploads[doc._id]
           return
 
       @_createStream = (_id, path, opts) ->
@@ -1414,12 +1414,13 @@ class FilesCollection
   @locus Server
   @memberOf FilesCollection
   @name addFile
-  @param {String} path - Path to file
-  @param {String} opts - Object with file-data
-  @param {String} opts.type   - File mime-type
-  @param {Object} opts.meta   - File additional meta-data
-  @param {String} opts.userId -  UserId, default *null*
-  @param {Function} callback  - function(error, fileObj){...}
+  @param {String} path          - Path to file
+  @param {String} opts          - [Optional] Object with file-data
+  @param {String} opts.type     - [Optional] File mime-type
+  @param {Object} opts.meta     - [Optional] File additional meta-data
+  @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
+  @param {String} opts.userId   - [Optional] UserId, default *null*
+  @param {Function} callback    - [Optional] function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Add file from FS to FilesCollection
   @returns {FilesCollection} Instance
@@ -1447,26 +1448,28 @@ class FilesCollection
       if error
         callback and callback error
       else if stats.isFile()
-        pathParts = path.split '/'
-        fileName  = pathParts[pathParts.length - 1]
+        opts      ?= {}
+        opts.path  = path
 
-        {extension, extensionWithDot} = self._getExt fileName
+        unless opts.fileName
+          pathParts     = path.split nodePath.sep
+          opts.fileName = pathParts[pathParts.length - 1]
 
-        opts        ?= {}
-        opts.path    = path
-        opts.type   ?= self._getMimeType opts
-        opts.meta   ?= {}
-        opts.size   ?= stats.size
+        {extension, extensionWithDot} = self._getExt opts.fileName
+
+        opts.type ?= self._getMimeType opts
+        opts.meta ?= {}
+        opts.size ?= stats.size
 
         result = self._dataToSchema
-          name:         fileName
+          name:         opts.fileName
           path:         path
           meta:         opts.meta
           type:         opts.type
           size:         opts.size
           userId:       opts.userId
           extension:    extension
-          _storagePath: path.replace "#{nodePath.sep}#{fileName}", ''
+          _storagePath: path.replace "#{nodePath.sep}#{opts.fileName}", ''
 
         self.collection.insert result, (error, _id) ->
           if error
