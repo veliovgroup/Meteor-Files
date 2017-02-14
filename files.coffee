@@ -660,11 +660,11 @@ class FilesCollection
             self._currentUploads[doc._id].stop()
             self._currentUploads[doc._id].end()
 
-          unless doc.isFinished
-            console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
-            self._currentUploads[doc._id].abort()
+            unless doc.isFinished
+              console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
+              self._currentUploads[doc._id].abort()
 
-          delete self._currentUploads[doc._id]
+            delete self._currentUploads[doc._id]
           return
 
       @_createStream = (_id, path, opts) ->
