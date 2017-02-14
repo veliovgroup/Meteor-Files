@@ -1,8 +1,10 @@
-##### Use GridFS as a storage
+### Use GridFS as a storage
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
-#### Preparation
+Please note - by default all files will be served with `200` response code, which is fine if you planning to deal only with small files, or not planning to serve files back to users (*use only upload and storage*). For support of `206` partial content see [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS---206-Streaming).
+
+### Preparation
 
 Firstly you need to install [gridfs-stream](https://github.com/aheckmann/gridfs-stream):
 ```shell
@@ -13,7 +15,7 @@ Or:
 meteor npm install --save gridfs-stream
 ```
 
-##### Create collection
+#### Create collection
 
 Create a `FilesCollection` instance:
 
@@ -36,7 +38,7 @@ if (Meteor.isServer) {
 }
 ```
 
-##### Get required packages and create up gfs instance
+#### Get required packages and create up gfs instance
 
 Import and set up required variables:
 
@@ -55,7 +57,7 @@ if (Meteor.isServer) {
 }
 ```
 
-##### Store and serve files from GridFS
+#### Store and serve files from GridFS
 
 Add `onAfterUpload` and `interceptDownload` hooks that would move file to GridFS once it's uploaded, and serve file from GridFS on request:
 
@@ -89,7 +91,7 @@ Add `onAfterUpload` and `interceptDownload` hooks that would move file to GridFS
   }
 ```
 
-##### Handle removing
+#### Handle removing
 
 From now we can store/serve files to/from GridFS. But what will happen if we decide to
 delete an image? An Image document will be deleted, but a GridFS record will stay in db forever!
@@ -108,7 +110,7 @@ So let's fix this by adding `onAfterRemove` hook:
   }
 ```
 
-##### Final result
+#### Final result
 
 Here's a final code:
 
