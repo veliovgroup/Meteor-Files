@@ -661,7 +661,7 @@ class FilesCollection
             self._currentUploads[doc._id].end()
 
             unless doc.isFinished
-              console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc.file.path}" if self.debug
+              console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc._id}" if self.debug
               self._currentUploads[doc._id].abort()
 
             delete self._currentUploads[doc._id]
@@ -799,8 +799,11 @@ class FilesCollection
                   if request.headers['x-eof'] is '1'
                     opts.eof = true
                   else
-                    if typeof Buffer.from == 'function'
-                      opts.binData = Buffer.from body, 'base64'
+                    if typeof Buffer.from is 'function'
+                      try
+                        opts.binData = Buffer.from body, 'base64'
+                      catch e
+                        opts.binData = new Buffer body, 'base64'
                     else
                       opts.binData = new Buffer body, 'base64'
                     opts.chunkId = parseInt request.headers['x-chunkid']
@@ -977,8 +980,11 @@ class FilesCollection
         }
 
         if opts.binData
-          if typeof Buffer.from == 'function'
-            opts.binData = Buffer.from opts.binData, 'base64'
+          if typeof Buffer.from is 'function'
+            try
+              opts.binData = Buffer.from opts.binData, 'base64'
+            catch e
+              opts.binData = new Buffer opts.binData, 'base64'
           else
             opts.binData = new Buffer opts.binData, 'base64'
 
