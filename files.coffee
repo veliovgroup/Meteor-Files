@@ -1229,8 +1229,8 @@ class FilesCollection
     data.isAudio  = /^audio\//i.test data.type
     data.isImage  = /^image\//i.test data.type
     data.isText   = /^text\//i.test data.type
-    data.isJSON   = /application\/json/i.test data.type
-    data.isPDF    = /application\/pdf|application\/x-pdf/i.test data.type
+    data.isJSON   = /^application\/json$/i.test data.type
+    data.isPDF    = /^application\/(x-)?pdf$/i.test data.type
     return
 
   ###
