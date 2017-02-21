@@ -1090,6 +1090,7 @@ class FilesCollection
     self          = @
     result.type   = @_getMimeType opts.file
     result.public = @public
+    @_updateFileTypes result
 
     @collection.insert _.clone(result), (error, _id) ->
       if error
@@ -1219,6 +1220,22 @@ class FilesCollection
   ###
   @locus Anywhere
   @memberOf FilesCollection
+  @name _updateFileTypes
+  @param {Object} data - File data
+  @summary Internal method. Classify file based on 'type' field
+  ###
+  _updateFileTypes: (data) ->
+    data.isVideo  = /^video\//i.test data.type
+    data.isAudio  = /^audio\//i.test data.type
+    data.isImage  = /^image\//i.test data.type
+    data.isText   = /^text\//i.test data.type
+    data.isJSON   = /application\/json/i.test data.type
+    data.isPDF    = /application\/pdf|application\/x-pdf/i.test data.type
+    return
+
+  ###
+  @locus Anywhere
+  @memberOf FilesCollection
   @name _dataToSchema
   @param {Object} data - File data
   @summary Internal method. Build object in accordance with default schema from File data
@@ -1239,14 +1256,9 @@ class FilesCollection
           size: data.size
           type: data.type
           extension: data.extension
-      isVideo: /^video\//i.test data.type
-      isAudio: /^audio\//i.test data.type
-      isImage: /^image\//i.test data.type
-      isText:  /^text\//i.test data.type
-      isJSON:  /application\/json/i.test data.type
-      isPDF:   /application\/pdf|application\/x-pdf/i.test data.type
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
+    @_updateFileTypes ds
     ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
     return ds
 
