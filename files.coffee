@@ -566,6 +566,9 @@ class FilesCollection
         return
 
       if Accounts?
+        Meteor.startup ->
+          setTokenCookie()
+          return
         Accounts.onLogin ->
           setTokenCookie()
           return
