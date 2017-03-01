@@ -57,7 +57,7 @@ All PRs is always welcome on [`dev` branch](https://github.com/VeliovGroup/Meteo
 
 Awards:
 ========
-<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
+<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png"></a>
 
 
 Demo application:
