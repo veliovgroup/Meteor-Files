@@ -1496,6 +1496,9 @@ class FilesCollection
           userId:       opts.userId
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{opts.fileName}", ''
+          
+        if opts.fileId
+          result._id = opts.fileId
 
         self.collection.insert result, (error, _id) ->
           if error
