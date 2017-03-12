@@ -11,6 +11,7 @@
    - `opts.type` {*String*} - Mime-type, like `image/png`
    - `opts.size` {*Number*} - File size in bytes, if not set - size will be calculated from file
    - `opts.userId` {*String*} - UserId, default *null*
+   - `opts.fileId` {*String*} - _id of inserted file, if not set - Random.id() will be used
  - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
  - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
  - Returns {*FilesCollection*} - Current FilesCollection instance
@@ -21,6 +22,7 @@ var Images = new FilesCollection({collectionName: 'Images'});
 Images.addFile('/var/www/files/sample.png', {
   fileName: 'sample.png',
   type: 'image/png',
+  fileId: 'abc123AwesomeId',
   meta: {}
 });
 ```
