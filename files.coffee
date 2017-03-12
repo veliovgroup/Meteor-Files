@@ -1261,6 +1261,11 @@ class FilesCollection
           extension: data.extension
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
+    
+    #Optional fileId
+    if data.fileId
+       ds._id = data.fileId;
+    
     @_updateFileTypes ds
     ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
     return ds
@@ -1275,6 +1280,7 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {String} opts.userId - UserId, default *null*
+  @param {String} opts.fileId - _id, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Write buffer to FS and add to FilesCollection Collection
@@ -1296,7 +1302,7 @@ class FilesCollection
     check callback, Match.Optional Function
     check proceedAfterUpload, Match.Optional Boolean
 
-    fileId   = Random.id()
+    fileId   = opts.fileId or Random.id()
     FSName   = if @namingFunction then @namingFunction() else fileId
     fileName = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else FSName
 
@@ -1352,6 +1358,7 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {String} opts.userId - UserId, default *null*
+  @param {String} opts.fileId - _id, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Download file, write stream to FS and add to FilesCollection Collection
@@ -1376,7 +1383,7 @@ class FilesCollection
 
     self      = @
     opts     ?= {}
-    fileId    = Random.id()
+    fileId    = opts.fileId or Random.id()
     FSName    = if @namingFunction then @namingFunction() else fileId
     pathParts = url.split('/')
     fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
@@ -1496,9 +1503,8 @@ class FilesCollection
           userId:       opts.userId
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{opts.fileName}", ''
-          
-        if opts.fileId
-          result._id = opts.fileId
+          fileId:       opts.fileId or null
+
 
         self.collection.insert result, (error, _id) ->
           if error
