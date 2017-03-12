@@ -18,6 +18,7 @@ var Images = new FilesCollection({collectionName: 'Images'});
 
 Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
   fileName: 'logo.png',
+  fielId: 'abc123myId', //optional
   meta: {}
 });
 ```
