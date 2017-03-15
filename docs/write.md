@@ -9,6 +9,7 @@ Write `Buffer` to FS and add record to Files collection. This function is asynch
    - `opts.size` {*Number*} - File size in bytes, if not set file size will be calculated from `Buffer`
    - `opts.meta` {*Object*} - Object with custom meta-data
    - `opts.userId` {*String*} - UserId, default *null*
+   - `opts.fileId` {*String*} - id, optional - if not set - Random.id() will be used
  - `callback` {*Function*} - Triggered after file is written to FS. With `error`, and `fileRef`, where `fileRef` is a new record from DB
  - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after `Buffer` is written to FS
  - Returns {*Files*} - Current FilesCollection instance
@@ -22,6 +23,7 @@ fs.readFile('/data/imgs/sample.png', function (error, data) {
   } else {
     Images.write(data, {
       fileName: 'sample.png',
+      fielId: 'abc123myId', //optional
       type: 'image/png'
     }, function (error, fileRef) {
       if (error) {
