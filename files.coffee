@@ -1,3 +1,4 @@
+`import { Cookies } from 'meteor/ostrio:cookies'`
 NOOP = -> return
 
 if Meteor.isServer
