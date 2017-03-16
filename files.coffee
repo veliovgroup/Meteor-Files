@@ -929,8 +929,12 @@ class FilesCollection
             unless self.onBeforeRemove.call userFuncs, (self.find(selector) or null)
               throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
 
-          self.remove selector
-          return true
+          cursor = self.find selector
+          if cursor.count() > 0
+            self.remove selector
+            return true
+          else
+            throw new Meteor.Error 404, 'Cursor is empty, no files is removed'
         else
           throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         return
@@ -2132,6 +2136,9 @@ class FilesCollection
         files.forEach (file) ->
           self.unlink file
           return
+      else
+        callback and callback new Meteor.Error 404, 'Cursor is empty, no files is removed'
+        return @
 
       if @onAfterRemove
         self = @
