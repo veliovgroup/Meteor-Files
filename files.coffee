@@ -1,3 +1,4 @@
+`import { Cookies } from 'meteor/ostrio:cookies'`
 NOOP = -> return
 
 if Meteor.isServer
@@ -928,8 +929,12 @@ class FilesCollection
             unless self.onBeforeRemove.call userFuncs, (self.find(selector) or null)
               throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
 
-          self.remove selector
-          return true
+          cursor = self.find selector
+          if cursor.count() > 0
+            self.remove selector
+            return true
+          else
+            throw new Meteor.Error 404, 'Cursor is empty, no files is removed'
         else
           throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
         return
@@ -1261,6 +1266,11 @@ class FilesCollection
           extension: data.extension
       _downloadRoute:  data._downloadRoute or @downloadRoute
       _collectionName: data._collectionName or @collectionName
+    
+    #Optional fileId
+    if data.fileId
+       ds._id = data.fileId;
+    
     @_updateFileTypes ds
     ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
     return ds
@@ -1275,6 +1285,7 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {String} opts.userId - UserId, default *null*
+  @param {String} opts.fileId - _id, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Write buffer to FS and add to FilesCollection Collection
@@ -1296,7 +1307,7 @@ class FilesCollection
     check callback, Match.Optional Function
     check proceedAfterUpload, Match.Optional Boolean
 
-    fileId   = Random.id()
+    fileId   = opts.fileId or Random.id()
     FSName   = if @namingFunction then @namingFunction() else fileId
     fileName = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else FSName
 
@@ -1352,6 +1363,7 @@ class FilesCollection
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
   @param {String} opts.userId - UserId, default *null*
+  @param {String} opts.fileId - _id, default *null*
   @param {Function} callback - function(error, fileObj){...}
   @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
   @summary Download file, write stream to FS and add to FilesCollection Collection
@@ -1376,7 +1388,7 @@ class FilesCollection
 
     self      = @
     opts     ?= {}
-    fileId    = Random.id()
+    fileId    = opts.fileId or Random.id()
     FSName    = if @namingFunction then @namingFunction() else fileId
     pathParts = url.split('/')
     fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
@@ -1496,6 +1508,8 @@ class FilesCollection
           userId:       opts.userId
           extension:    extension
           _storagePath: path.replace "#{nodePath.sep}#{opts.fileName}", ''
+          fileId:       opts.fileId or null
+
 
         self.collection.insert result, (error, _id) ->
           if error
@@ -2122,6 +2136,9 @@ class FilesCollection
         files.forEach (file) ->
           self.unlink file
           return
+      else
+        callback and callback new Meteor.Error 404, 'Cursor is empty, no files is removed'
+        return @
 
       if @onAfterRemove
         self = @

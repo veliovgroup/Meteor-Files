@@ -6,8 +6,8 @@
  - `cb` {*Function*} - Callback, with one `error` argument
  - Returns {*FilesCollection*} - Current FilesCollection instance
 
-```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+```jsx
+const Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Drop collection's data and remove all associated files from FS
@@ -15,7 +15,7 @@ Images.remove({});
 // Remove particular file
 Images.remove({_id: 'Rfy2HLutYK4XWkwhm'});
 // Equals to above
-Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove({});
+Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
 
 
 // Direct Collection usage
@@ -23,7 +23,7 @@ Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove({});
 Images.collection.remove({})
 
 // Using callback
-Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, function (error) {
+Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
   if (error) {
     console.error("File wasn't removed, error: " + error.reason)
   } else {
@@ -33,20 +33,21 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, function (error) {
 ```
 
 *Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeremove-to-avoid-unauthorized-remove)*
-```javascript
-var Images = new FilesCollection({
+```jsx
+const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
-  onBeforeRemove: function (cursor) {
-    var records = cursor.fetch();
+  onBeforeRemove(cursor) {
+    const records = cursor.fetch();
 
     if (records && records.length) {
       if (this.userId) {
-        var user = this.user();
+        const user = this.user();
         // Assuming user.profile.docs is array 
         // with file's records _id(s)
 
-        for (var i = 0, len = records.length; i < len; i++) {
+        let file, i;
+        for (i = 0, len = records.length; i < len; i++) {
           file = records[i];
           if (!~user.profile.docs.indexOf(file._id)) {
             // Return false if at least one document

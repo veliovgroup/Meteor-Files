@@ -5,7 +5,7 @@ Meteor-Files
   <tbody>
     <tr>
       <td>
-        <a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://s3.amazonaws.com/tmc-post-content/gcaa-2016-winner-badge.svg"></a>
+        <a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png"></a>
       </td>
       <td>
         This package is the <strong><a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show" target="_blank">GCAA Winner 2016</a></strong>. Big thanks to Benjamin Willems and Ryan Glover (<em>The Chef</em>) and all <a href="https://themeteorchef.com" target="_blank">The Meteor Chef</a> team!

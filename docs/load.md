@@ -8,6 +8,7 @@
    - `opts.type` {*String*} - Mime-type, like `image/png`, if not set - mime-type will be taken from response headers
    - `opts.size` {*Number*} - File size in bytes, if not set - file size will be taken from response headers
    - `opts.userId` {*String*} - UserId, default *null*
+   - `opts.fileId` {*String*} - id, optional - if not set - Random.id() will be used
  - `callback` {*Function*} - Triggered after first byte is received. With `error`, and `fileRef`, where `fileRef` is a new record from DB
  - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after external source is loaded to FS
  - Returns {*FilesCollection*} - Current FilesCollection instance
@@ -17,6 +18,7 @@ var Images = new FilesCollection({collectionName: 'Images'});
 
 Images.load('https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo.png', {
   fileName: 'logo.png',
+  fielId: 'abc123myId', //optional
   meta: {}
 });
 ```
