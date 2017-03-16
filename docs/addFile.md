@@ -16,8 +16,8 @@
  - proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
  - Returns {*FilesCollection*} - Current FilesCollection instance
 
-```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+```jsx
+const Images = new FilesCollection({collectionName: 'Images'});
 
 Images.addFile('/var/www/files/sample.png', {
   fileName: 'sample.png',
