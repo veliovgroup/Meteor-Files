@@ -15,7 +15,7 @@ Images.remove({});
 // Remove particular file
 Images.remove({_id: 'Rfy2HLutYK4XWkwhm'});
 // Equals to above
-Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove({});
+Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
 
 
 // Direct Collection usage
