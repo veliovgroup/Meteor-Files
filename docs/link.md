@@ -21,8 +21,6 @@ Images.findOne({}).link('thumbnail');
 var fileRef = Images.collection.findOne({});
 Images.link(fileRef, 'thumbnail');
 ```
-  
-  
 
 *Optional: Share link across different domain or subdomains*
 
