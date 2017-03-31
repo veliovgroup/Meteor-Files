@@ -30,7 +30,7 @@ Optional: Share link across different domain or subdomains
 
 __[Server]__
 
-```
+```javascript
 /** Listen to incoming HTTP requests, can only be used on the server
  ** http://www.something.com/path/to/intercept
  **/
