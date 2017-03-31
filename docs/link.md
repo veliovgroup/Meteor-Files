@@ -21,9 +21,10 @@ Images.findOne({}).link('thumbnail');
 var fileRef = Images.collection.findOne({});
 Images.link(fileRef, 'thumbnail');
 ```
+  
+  
 
-
-Optional: Share link across different domain or subdomains
+*Optional: Share link across different domain or subdomains*
 
 [Cross-origin resource sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS):
 > A resource makes a cross-origin HTTP request when it requests a resource from a different domain, or port than the one which the first resource itself serves. For example, an HTML page served from http://domain-a.com makes an <img> src request for http://domain-b.com/image.jpg. Many pages on the web today load resources like CSS stylesheets, images and scripts from separate domains.
