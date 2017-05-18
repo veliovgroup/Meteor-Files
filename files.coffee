@@ -1062,6 +1062,7 @@ class FilesCollection
     result.ext       = extension
     result._id       = opts.fileId
     result.userId    = userId or null
+    opts.FSName      = opts.FSName.replace(/([^a-z0-9\-\_]+)/gi, '-')
     result.path      = "#{@storagePath(result)}#{nodePath.sep}#{opts.FSName}#{extensionWithDot}"
     result           = _.extend result, @_dataToSchema result
 
@@ -1308,7 +1309,7 @@ class FilesCollection
     check proceedAfterUpload, Match.Optional Boolean
 
     fileId   = opts.fileId or Random.id()
-    FSName   = if @namingFunction then @namingFunction() else fileId
+    FSName   = if @namingFunction then @namingFunction(opts) else fileId
     fileName = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else FSName
 
     {extension, extensionWithDot} = @_getExt fileName
@@ -1389,7 +1390,7 @@ class FilesCollection
     self      = @
     opts     ?= {}
     fileId    = opts.fileId or Random.id()
-    FSName    = if @namingFunction then @namingFunction() else fileId
+    FSName    = if @namingFunction then @namingFunction(opts) else fileId
     pathParts = url.split('/')
     fileName  = if (opts.name or opts.fileName) then (opts.name or opts.fileName) else pathParts[pathParts.length - 1] or FSName
 
