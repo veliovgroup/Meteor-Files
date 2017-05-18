@@ -1514,14 +1514,14 @@ class FilesCollection
         self.collection.insert result, (error, _id) ->
           if error
             callback and callback error
-            console.warn "[FilesCollection] [addFile] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
+            console.warn "[FilesCollection] [addFile] [insert] Error: #{result.name} -> #{self.collectionName}", error if self.debug
           else
             fileRef = self.collection.findOne _id
             callback and callback null, fileRef
             if proceedAfterUpload is true
               self.onAfterUpload and self.onAfterUpload.call self, fileRef
               self.emit 'afterUpload', fileRef
-            console.info "[FilesCollection] [addFile]: #{fileName} -> #{self.collectionName}" if self.debug
+            console.info "[FilesCollection] [addFile]: #{result.name} -> #{self.collectionName}" if self.debug
           return
       else
         callback and callback new Meteor.Error 400, "[FilesCollection] [addFile(#{path})]: File does not exist"
