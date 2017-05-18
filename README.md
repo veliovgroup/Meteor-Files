@@ -14,7 +14,7 @@ ToC:
  - [Support the *MF* project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
  - [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
  - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
- - [See *MF* in action](https://github.com/VeliovGroup/Meteor-Files#demo-application) - Demo application
+ - [Demo apps and examples](https://github.com/VeliovGroup/Meteor-Files#demo-application)
  - [Related Packages](https://github.com/VeliovGroup/Meteor-Files#related-packages)
  - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
  - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
