@@ -1072,7 +1072,7 @@ class FilesCollection
       }, {
         chunkId: opts.chunkId
         userId:  result.userId
-        user:    -> if Meteor.users then Meteor.users.findOne(result.userId) else null
+        user:    -> if (Meteor.users && result.userId) then Meteor.users.findOne(result.userId) else null
         eof:     opts.eof
       }
       isUploadAllowed = @onBeforeUpload.call ctx, result
@@ -1082,6 +1082,16 @@ class FilesCollection
       else
         if opts.___s is true and @onInitiateUpload and _.isFunction @onInitiateUpload
           @onInitiateUpload.call ctx, result
+    else if opts.___s is true and @onInitiateUpload and _.isFunction @onInitiateUpload
+      ctx = _.extend {
+        file: opts.file
+      }, {
+        chunkId: opts.chunkId
+        userId:  result.userId
+        user:    -> if (Meteor.users && result.userId) then Meteor.users.findOne(result.userId) else null
+        eof:     opts.eof
+      }
+      @onInitiateUpload.call ctx, result
 
     return {result, opts}
   else undefined
