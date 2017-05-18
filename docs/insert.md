@@ -501,7 +501,8 @@
         <code>end</code>
       </td>
       <td>
-        Triggered at the very end of upload.<br />
+        Triggered at the very end of upload or by `.abort()`.<br />
+        In case if `end` triggered by `.abort()`, the server could return a `408` response code.<br />
         <strong>Arguments</strong>:
         <ul>
           <li><code>error</code></li>
