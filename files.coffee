@@ -2384,9 +2384,9 @@ class FilesCollection
       responseType = '200'
 
     streamErrorHandler = (error) ->
-      http.response.writeHead 500
-      http.response.end error.toString()
       console.error "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error if self.debug
+      if !http.response.finished
+        http.response.end error.toString()
       return
 
     headers = if _.isFunction(self.responseHeaders) then self.responseHeaders(responseType, fileRef, vRef, version) else self.responseHeaders
