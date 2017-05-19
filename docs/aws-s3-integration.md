@@ -150,25 +150,23 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
       }
 
       if (path) {
-        //pipe the request from S3 through us and direct into the http socket
-        //need to set the header so the file shows up properly
+        // If file is successfully moved to AWS:S3
+        // We will pipe request to AWS:S3
+        // So, original link will stay always secure
 
-        //this is needed if you want to view the files in the browser
-        //set the content type and lenth to what we recorded
-        http.response.setHeader('content-type', fileRef.type || 'application/pdf');
-        http.response.setHeader('content-length', fileRef.size || 0);
-
-
-        //get the file/key and pipe it into out http response
-        s3.getObject({
+        // To force ?play and ?download parameters
+        // and to keep original file name, content-type,
+        // content-disposition, chunked "streaming" and cache-control
+        // we're using low-level .serve() method
+        const opts = {
           Bucket: s3Conf.bucket,
-          Key: path
-        }).createReadStream().on('error', (err) => {
-          bound(() => {
-            console.error(err);
-          });
-        }).pipe(http.response);
+          Key: path,
+        };
 
+        if (http.request.headers.range) {
+          opts.Range = http.request.headers.range;
+        }
+        this.serve(http, fileRef, fileRef.versions[version], version, client.getObject(opts).createReadStream());
         return true;
       }
       // While file is not yet uploaded to AWS:S3
