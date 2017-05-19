@@ -1,7 +1,7 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.7.14',
-  summary: 'Upload files via DDP, HTTP and WebRTC/DC. To server FS, AWS, GridFS, DropBox or Google Drive.',
+  version: '1.7.15',
+  summary: 'File upload via DDP/HTTP to server FS, AWS, GridFS, DropBox, Google Drive or other 3rd party storage',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
@@ -10,7 +10,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.4');
   api.use('webapp', 'server');
   api.use(['reactive-var', 'tracker', 'http'], 'client');
-  api.use(['mongo', 'underscore', 'check', 'random', 'coffeescript', 'ecmascript', 'ostrio:cookies@2.2.0'], ['client', 'server']);
+  api.use(['mongo', 'underscore', 'check', 'random', 'coffeescript', 'ecmascript', 'ostrio:cookies@2.2.1'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('files.coffee', ['server', 'client']);
   api.export('FilesCollection');
