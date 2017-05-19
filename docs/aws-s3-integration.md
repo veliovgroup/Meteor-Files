@@ -2,7 +2,7 @@
 
 The example below shows how to store and serve uploaded file via S3. This also covers removing the files from S3 when removed from *FilesCollection*.
 
-First, install aws-sdk [Official AWS SDK Docs](//http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html)
+First, install aws-sdk [Official AWS SDK Docs](http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html)
 ```shell
 npm install --save aws-sdk
 ```
@@ -26,11 +26,6 @@ Prepare: Get access to AWS S3:
  - Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
     * Create an S3 bucket in preferred region
     * Get an "Access Key Id" and "Secret Key"
- - Create new [CloudFront Distribution](https://console.aws.amazon.com/cloudfront/home)
-    * Note: if files only "piping" through the server and there is no need for public direct access, skip - CloudFront setup
-    * Select __Web__ as delivery method
-    * In __Origin Domain Name__ select previously created S3 Bucket
-    * Click __Create Distribution__
 
 ### Settings.json
 First, create the `settings.json` file and add AWS:S3 credentials to it:
@@ -82,11 +77,6 @@ const bound  = Meteor.bindEnvironment((callback) => {
 // Check settings existence in `Meteor.settings`
 // This is the best practice for app security
 if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
-  // Use this fix only if the issue exists for you.
-  // Fix for CloudFront certificate issue.
-  // Read: https://github.com/chilts/awssum/issues/164
-  // process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
-
   // Create a new S3 object
   const s3 = new S3({
     secretAccessKey: s3Conf.secret,
