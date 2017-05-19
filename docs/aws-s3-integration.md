@@ -1,23 +1,17 @@
-##### Use AWS:S3 As Storage
+### Use AWS:S3 As Storage
 
-Example below shows how to store and serve uploaded file via S3. This example also covers file removing from both your application and S3.
+The example below shows how to store and serve uploaded file via S3. This also covers removing the files from S3 when removed from *FilesCollection*.
 
-See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/lib/files.collection.coffee)
-
-*Please note - this docs is a bit outdated. As knox package is not maintained well. New docs is coming soon. Meanwile take a look on "Evaporate" S3 client.* Related issues: [#285](https://github.com/VeliovGroup/Meteor-Files/issues/285), [#273](https://github.com/VeliovGroup/Meteor-Files/issues/273), [#280](https://github.com/VeliovGroup/Meteor-Files/issues/280). __If you're experienced with any of up-to-date AWS:S3 clients, please - contribute.__
-
-Prepare: install [knox](https://github.com/Automattic/knox):
+First, install aws-sdk [Official AWS SDK Docs](http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html)
 ```shell
-npm install --save knox
+npm install --save aws-sdk
 ```
 Or:
 ```shell
-meteor npm install --save knox
+meteor npm install --save aws-sdk
 ```
 
-Important notice about [supported regions in knox](https://github.com/Automattic/knox#region) package: 
-As of this writing, valid values for the `region` option are:
-
+Typical regions are these, see full list at AWS S3 console. *Every region is supported.*
  * US Standard (default): `us-standard`
  * US West (Oregon): `us-west-2`
  * US West (Northern California): `us-west-1`
@@ -29,116 +23,173 @@ As of this writing, valid values for the `region` option are:
 
 Prepare: Get access to AWS S3:
  - Go to http://aws.amazon.com/s3/ (*Sign(in|up) if required*)
- - Click on [Create Bucket](https://console.aws.amazon.com/s3/home)
- - Follow steps __1-4__ from [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
-    * Create an S3 bucket in your preferred region (currently only `eu-west-1` is supported)
+ - Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
+    * Create an S3 bucket in preferred region
     * Get an "Access Key Id" and "Secret Key"
-    * "Enable Website Hosting" in bucket "Properties"
-    * Setup CORS at bucket "Permissions" tab
-    * For detailed info read [this docs](https://github.com/Lepozepo/S3#create-your-amazon-s3)
- - Create new [CloudFront Distribution](https://console.aws.amazon.com/cloudfront/home)
-    * Select __Web__ as delivery method
-    * In __Origin Domain Name__ select your previously created S3 Bucket
-    * Click __Create Distribution__
-    * After *Distribution* is *Deployed* pick __Domain Name__ for `cfdomain`
 
-```javascript
-var knox, bound, client, Request, cfdomain, Collections = {};
+### Settings.json
+First, create the `settings.json` file and add AWS:S3 credentials to it:
 
-if (Meteor.isServer) {
-  // Fix CloudFront certificate issue
-  // Read: https://github.com/chilts/awssum/issues/164
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+Use it with: `meteor --settings settings.json`
+```jsx
+{
+  "s3": {
+    "key": "AWSKEY",
+    "secret": "AWSSECRET",
+    "bucket": "BUCKETNAME",
+    "region": "us-west-1"
+  }
+}
+```
 
-  knox    = Npm.require('knox');
-  Request = Npm.require('request');
-  bound = Meteor.bindEnvironment(function(callback) {
-    return callback();
-  });
-  cfdomain = 'https://xxx.cloudfront.net'; // <-- Change to your Cloud Front Domain
-  client = knox.createClient({
-    key: 'xxx',
-    secret: 'yyy',
-    bucket: 'zzz',
-    region: 'jjj'
-  });
+### Use environment variable to set settings
+Instead of using `settings.json`, - environment variable can be used:
+```js
+// env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}'
+if (process.env.S3) {
+  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
+}
+```
+
+### Server-side-file-store.js
+Use this at Meteor's `imports/server` directory, __NOT__ the client
+```jsx
+import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
+import { Random } from 'meteor/random';
+import { FilesCollection } from 'meteor/ostrio:files';
+
+import S3 from 'aws-sdk/clients/s3'; // http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
+// See fs-extra and graceful-fs NPM packages
+// For better i/o performance
+import fs from 'fs';
+
+// Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' meteor
+if (process.env.S3) {
+  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
 }
 
-Collections.files = new FilesCollection({
-  debug: false, // Change to `true` for debugging
-  throttle: false,
-  storagePath: 'assets/app/uploads/uploadedFiles',
-  collectionName: 'uploadedFiles',
-  allowClientCode: false,
-  onAfterUpload: function(fileRef) {
-    // In onAfterUpload callback we will move file to AWS:S3
-    var self = this;
-    _.each(fileRef.versions, function(vRef, version) {
-      // We use Random.id() instead of real file's _id 
-      // to secure files from reverse engineering
-      // As after viewing this code it will be easy
-      // to get access to unlisted and protected files
-      var filePath = "files/" + (Random.id()) + "-" + version + "." + fileRef.extension;
-      client.putFile(vRef.path, filePath, function(error, res) {
-        bound(function() {
-          var upd;
-          if (error) {
-            console.error(error);
-          } else {
-            upd = {
-              $set: {}
-            };
-            upd['$set']["versions." + version + ".meta.pipeFrom"] = cfdomain + '/' + filePath;
-            upd['$set']["versions." + version + ".meta.pipePath"] = filePath;
-            self.collection.update({
-              _id: fileRef._id
-            }, upd, function(error) {
-              if (error) {
-                console.error(error);
-              } else {
-                // Unlink original files from FS
-                // after successful upload to AWS:S3
-                self.unlink(self.collection.findOne(fileRef._id), version);
-              }
-            });
-          }
-        });
-      });
-    });
-  },
-  interceptDownload: function(http, fileRef, version) {
-    var path, ref, ref1, ref2;
-    path = (ref = fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipeFrom : void 0 : void 0 : void 0;
-    if (path) {
-      // If file is moved to S3
-      // We will pipe request to S3
-      // So, original link will stay always secure
-      Request({
-        url: path,
-        headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent')
-      }).pipe(http.response);
-      return true;
-    } else {
-      // While file is not yet uploaded to S3
-      // We will serve file from FS
-      return false;
-    }
-  }
+const s3Conf = Meteor.settings.s3 || {};
+const bound  = Meteor.bindEnvironment((callback) => {
+  return callback();
 });
 
-if (Meteor.isServer) {
-  // Intercept File's collection remove method
-  // to remove file from S3
-  var _origRemove = Collections.files.remove;
+// Check settings existence in `Meteor.settings`
+// This is the best practice for app security
+if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
+  // Create a new S3 object
+  const s3 = new S3({
+    secretAccessKey: s3Conf.secret,
+    accessKeyId: s3Conf.key,
+    region: s3Conf.region,
+    sslEnabled: true
+  });
 
-  Collections.files.remove = function(search) {
-    var cursor = this.collection.find(search);
-    cursor.forEach(function(fileRef) {
-      _.each(fileRef.versions, function(vRef) {
-        var ref;
-        if (vRef != null ? (ref = vRef.meta) != null ? ref.pipePath : void 0 : void 0) {
-          client.deleteFile(vRef.meta.pipePath, function(error) {
-            bound(function() {
+  // Declare the Meteor file collection on the Server
+  const UserFiles = new FilesCollection({
+    debug: false, // Change to `true` for debugging
+    storagePath: 'assets/app/uploads/uploadedFiles',
+    collectionName: 'userFiles',
+    // Disallow Client to execute remove, use the Meteor.method
+    allowClientCode: false,
+
+    // Start moving files to AWS:S3
+    // after fully received by the Meteor server
+    onAfterUpload(fileRef) {
+      // Run through each of the uploaded file
+      _.each(fileRef.versions, (vRef, version) => {
+        // We use Random.id() instead of real file's _id
+        // to secure files from reverse engineering on the AWS client
+        const filePath = 'files/' + (Random.id()) + '-' + version + '.' + fileRef.extension;
+
+        // Create the AWS:S3 object.
+        // Feel free to change the storage class from, see the documentation,
+        // `STANDARD_IA` is the best deal for low access files.
+        // Key is the file name we are creating on AWS:S3, so it will be like files/XXXXXXXXXXXXXXXXX-original.XXXX
+        // Body is the file stream we are sending to AWS
+        s3.putObject({
+          ServerSideEncryption: 'AES256',
+          StorageClass: 'STANDARD_IA',
+          Bucket: s3Conf.bucket,
+          Key: filePath,
+          Body: fs.createReadStream(vRef.path),
+          ContentType: vRef.type,
+        }, (error) => {
+          bound(() => {
+            if (error) {
+              console.error(error);
+            } else {
+              // Update FilesCollection with link to the file at AWS
+              const upd = { $set: {} };
+              upd['$set']['versions.' + version + '.meta.pipePath'] = filePath;
+
+              this.collection.update({
+                _id: fileRef._id
+              }, upd, function (updError) {
+                if (updError) {
+                  console.error(updError);
+                } else {
+                  // Unlink original files from FS after successful upload to AWS:S3
+                  this.unlink(this.collection.findOne(fileRef._id), version);
+                }
+              });
+            }
+          });
+        });
+      });
+    },
+
+
+    // Intercept access to the file
+    // And redirect request to AWS:S3
+    interceptDownload(http, fileRef, version) {
+      let path;
+
+      if (fileRef && fileRef.versions && fileRef.versions[version] && fileRef.versions[version].meta && fileRef.versions[version].meta.pipePath) {
+        path = fileRef.versions[version].meta.pipePath;
+      }
+
+      if (path) {
+        //pipe the request from S3 through us and direct into the http socket
+        //need to set the header so the file shows up properly
+
+        //this is needed if you want to view the files in the browser
+        //set the content type and lenth to what we recorded
+        http.response.setHeader('content-type', fileRef.type || 'application/pdf');
+        http.response.setHeader('content-length', fileRef.size || 0);
+
+
+        //get the file/key and pipe it into out http response
+        s3.getObject({
+          Bucket: s3Conf.bucket,
+          Key: path
+        }).createReadStream().on('error', (err) => {
+          bound(() => {
+            console.error(err);
+          });
+        }).pipe(http.response);
+
+        return true;
+      }
+      // While file is not yet uploaded to AWS:S3
+      // It will be served file from FS
+      return false;
+    }
+  });
+
+  // Intercept FilesCollection's remove method to remove file from AWS:S3
+  const _origRemove = UserFiles.remove;
+  UserFiles.remove = function (search) {
+    const cursor = this.collection.find(search);
+    cursor.forEach((fileRef) => {
+      _.each(fileRef.versions, (vRef) => {
+        if (vRef && vRef.meta && vRef.meta.pipePath) {
+          // Remove the object from AWS:S3 first, then we will call the original FilesCollection remove
+          s3.deleteObject({
+            Bucket: s3Conf.bucket,
+            Key: vRef.meta.pipePath,
+          }, (error) => {
+            bound(() => {
               if (error) {
                 console.error(error);
               }
@@ -147,8 +198,11 @@ if (Meteor.isServer) {
         }
       });
     });
-    // Call original method
+
+    //remove original file from database
     _origRemove.call(this, search);
   };
+} else {
+  throw new Meteor.Error(401, 'Missing Meteor file settings');
 }
 ```

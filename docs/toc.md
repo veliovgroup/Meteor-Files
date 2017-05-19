@@ -100,7 +100,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
  - [MUP/Docker Persistent Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage) - Deploy via MeteorUp to Docker container with persistent `storagePath`
  - [Third-party storage (AWS S3, DropBox, GridFS and Google Storage)](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)
  - [cURL/POST upload example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
- - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.coffee)
+ - [Resize, create thumbnail for uploaded image](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js)
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
  - [React - Example](https://github.com/VeliovGroup/Meteor-Files/wiki/React-Example) - React with a progress bar and component with links to view, re-name, and delete the files
  - [Converting from CollectionFS/CFS](https://github.com/VeliovGroup/Meteor-Files/wiki/Converting-from-CollectionFS) - Live conversion from the depreciated CFS to Meteor-Files (*Amazon S3 specifically, but applies to all*)
