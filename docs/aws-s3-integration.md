@@ -58,6 +58,7 @@ import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
 import { Random } from 'meteor/random';
 import { FilesCollection } from 'meteor/ostrio:files';
+import stream from 'stream';
 
 import S3 from 'aws-sdk/clients/s3'; // http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
 // See fs-extra and graceful-fs NPM packages
@@ -160,14 +161,28 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
         // we're using low-level .serve() method
         const opts = {
           Bucket: s3Conf.bucket,
-          Key: path,
+          Key: path
         };
 
         if (http.request.headers.range) {
           opts.Range = http.request.headers.range;
         }
-        this.serve(http, fileRef, fileRef.versions[version], version, client.getObject(opts).createReadStream());
-        return true;
+
+        const fileColl = this;
+        client.getObject(opts, function (error, data) {
+          if (error) {
+            console.error(error);
+            http.response.end();
+          } else {
+            if (http.request.headers.range && this.httpResponse.headers['content-range']) {
+              http.request.headers.range = this.httpResponse.headers['content-range'].split('/')[0].replace('bytes ', 'bytes=');
+            }
+
+            const dataStream = new stream.PassThrough();
+            fileColl.serve(http, fileRef, fileRef.versions[version], version, dataStream);
+            dataStream.end(this.data.Body);
+          }
+        });
       }
       // While file is not yet uploaded to AWS:S3
       // It will be served file from FS
