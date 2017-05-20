@@ -83,7 +83,11 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
     secretAccessKey: s3Conf.secret,
     accessKeyId: s3Conf.key,
     region: s3Conf.region,
-    sslEnabled: true
+    // sslEnabled: true, // optional
+    httpOptions: {
+      timeout: 6000,
+      agent: false
+    }
   });
 
   // Declare the Meteor file collection on the Server
@@ -109,8 +113,8 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
         // Key is the file name we are creating on AWS:S3, so it will be like files/XXXXXXXXXXXXXXXXX-original.XXXX
         // Body is the file stream we are sending to AWS
         s3.putObject({
-          ServerSideEncryption: 'AES256',
-          StorageClass: 'STANDARD_IA',
+          // ServerSideEncryption: 'AES256', // Optional
+          StorageClass: 'STANDARD',
           Bucket: s3Conf.bucket,
           Key: filePath,
           Body: fs.createReadStream(vRef.path),
@@ -165,16 +169,32 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
         };
 
         if (http.request.headers.range) {
-          opts.Range = http.request.headers.range;
+          const vRef  = fileRef.versions[version];
+          let range   = _.clone(http.request.headers.range);
+          const array = range.split(/bytes=([0-9]*)-([0-9]*)/);
+          const start = parseInt(array[1]);
+          let end     = parseInt(array[2]);
+          if (isNaN(end)) {
+            // Request data from AWS:S3 by small chunks
+            end       = (start + this.chunkSize) - 1;
+            if (end >= vRef.size) {
+              end     = vRef.size - 1;
+            }
+          }
+          opts.Range   = `bytes=${start}-${end}`;
+          http.request.headers.range = `bytes=${start}-${end}`;
         }
 
         const fileColl = this;
-        client.getObject(opts, function (error, data) {
+        s3.getObject(opts, function (error) {
           if (error) {
             console.error(error);
-            http.response.end();
+            if (!http.response.finished) {
+              http.response.end();
+            }
           } else {
             if (http.request.headers.range && this.httpResponse.headers['content-range']) {
+              // Set proper range header in according to what is returned from AWS:S3
               http.request.headers.range = this.httpResponse.headers['content-range'].split('/')[0].replace('bytes ', 'bytes=');
             }
 
@@ -183,6 +203,8 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
             dataStream.end(this.data.Body);
           }
         });
+
+        return true;
       }
       // While file is not yet uploaded to AWS:S3
       // It will be served file from FS
