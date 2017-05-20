@@ -5,12 +5,12 @@ if Meteor.isServer
   ###
   @summary Require NPM packages
   ###
-  fs       = require 'fs-extra'
-  events   = require 'events'
-  request  = require 'request'
-  Throttle = require 'throttle'
-  fileType = require 'file-type'
-  nodePath = require 'path'
+  fs       = Npm.require 'fs-extra'
+  events   = Npm.require 'events'
+  request  = Npm.require 'request'
+  Throttle = Npm.require 'throttle'
+  fileType = Npm.require 'file-type'
+  nodePath = Npm.require 'path'
 
   ###
   @var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
@@ -758,10 +758,12 @@ class FilesCollection
           console.warn '[FilesCollection._checkAccess] WARN: Access denied!' if self.debug
           if http
             text = 'Access denied!'
-            http.response.writeHead rc,
-              'Content-Length': text.length
-              'Content-Type':   'text/plain'
-            http.response.end text
+            if !http.response.headersSent
+              http.response.writeHead rc,
+                'Content-Length': text.length
+                'Content-Type':   'text/plain'
+            if !http.response.finished
+              http.response.end text
           return false
       else
         return true
@@ -782,8 +784,10 @@ class FilesCollection
 
             handleError = (error) ->
               console.warn "[FilesCollection] [Upload] [HTTP] Exception:", error
-              response.writeHead 500
-              response.end JSON.stringify {error}
+              if !response.headersSent
+                response.writeHead 500
+              if !response.finished
+                response.end JSON.stringify {error}
               return
 
             body = ''
@@ -820,19 +824,29 @@ class FilesCollection
 
                   if opts.eof
                     self._handleUpload result, opts, ->
-                      response.writeHead 200
+                      if !response.headersSent
+                        response.writeHead 200
                       result.file.meta = fixJSONStringify result.file.meta if result?.file?.meta
-                      response.end JSON.stringify result
+                      if !response.finished
+                        response.end JSON.stringify result
                       return
                     return
                   else
                     self.emit '_handleUpload', result, opts, NOOP
 
-                  response.writeHead 204
-                  response.end()
+                  if !response.headersSent
+                    response.writeHead 204
+                  if !response.finished
+                    response.end()
 
                 else
-                  opts           = JSON.parse body
+                  try
+                    opts         = JSON.parse body
+                  catch e
+                    console.error 'Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!'
+                    console.error e
+                    opts         = file: {}
+
                   opts.___s      = true
                   console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
                   opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
@@ -845,14 +859,18 @@ class FilesCollection
                   self._createStream result._id, result.path, _.omit(opts, '___s')
 
                   if opts.returnMeta
-                    response.writeHead 200
-                    response.end JSON.stringify {
-                      uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
-                      file: result
-                    }
+                    if !response.headersSent
+                      response.writeHead 200
+                    if !response.finished
+                      response.end JSON.stringify {
+                        uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
+                        file: result
+                      }
                   else
-                    response.writeHead 204
-                    response.end()
+                    if !response.headersSent
+                      response.writeHead 204
+                    if !response.finished
+                      response.end()
               catch error
                 handleError error
               return
@@ -1857,7 +1875,11 @@ class FilesCollection
               'x-fileId':     opts.fileId
               'content-type': 'text/plain'
           }, (error, result) ->
-            result      = JSON.parse result?.content or {}
+            try
+              result    = JSON.parse result?.content or {}
+            catch e
+              console.warn 'Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.'
+              result    = {}
             result.meta = fixJSONParse result.meta if result?.meta
             self.emitEvent 'end', [error, result]
             return
@@ -2271,10 +2293,13 @@ class FilesCollection
   _404: if Meteor.isServer then (http) ->
     console.warn "[FilesCollection] [download(#{http.request.originalUrl})] [_404] File not found" if @debug
     text = 'File Not Found :('
-    http.response.writeHead 404,
-      'Content-Length': text.length
-      'Content-Type':   'text/plain'
-    http.response.end text
+
+    if !http.response.headersSent
+      http.response.writeHead 404,
+        'Content-Length': text.length
+        'Content-Type':   'text/plain'
+    if !http.response.finished
+      http.response.end text
     return
   else undefined
 
@@ -2348,10 +2373,11 @@ class FilesCollection
     else
       dispositionType = 'inline; '
 
-    dispositionName     = "filename=\"#{encodeURIComponent(fileRef.name)}\"; filename=*UTF-8\"#{encodeURIComponent(fileRef.name)}\"; "
-    dispositionEncoding = 'charset=utf-8'
+    dispositionName     = "filename=\"#{encodeURI(fileRef.name)}\"; filename*=UTF-8''#{encodeURI(fileRef.name)}; "
+    dispositionEncoding = 'charset=UTF-8'
 
-    http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
+    if !http.response.headersSent
+      http.response.setHeader 'Content-Disposition', dispositionType + dispositionName + dispositionEncoding
 
     if http.request.headers.range and not force200
       partiral = true
@@ -2384,61 +2410,109 @@ class FilesCollection
       responseType = '200'
 
     streamErrorHandler = (error) ->
-      http.response.writeHead 500
-      http.response.end error.toString()
       console.error "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error if self.debug
+      if !http.response.finished
+        http.response.end error.toString()
       return
 
     headers = if _.isFunction(self.responseHeaders) then self.responseHeaders(responseType, fileRef, vRef, version) else self.responseHeaders
 
     unless headers['Cache-Control']
-      http.response.setHeader 'Cache-Control', self.cacheControl
+      if !http.response.headersSent
+        http.response.setHeader 'Cache-Control', self.cacheControl
 
     for key, value of headers
-      http.response.setHeader key, value
+      if !http.response.headersSent
+        http.response.setHeader key, value
 
     switch responseType
       when '400'
         console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
         text = 'Content-Length mismatch!'
-        http.response.writeHead 400,
-          'Content-Type':   'text/plain'
-          'Content-Length': text.length
-        http.response.end text
+
+        if !http.response.headersSent
+          http.response.writeHead 400,
+            'Content-Type':   'text/plain'
+            'Content-Length': text.length
+        if !http.response.finished
+          http.response.end text
         break
       when '404'
         return self._404 http
         break
       when '416'
         console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
-        http.response.writeHead 416
-        http.response.end()
+        if !http.response.headersSent
+          http.response.writeHead 416
+        if !http.response.finished
+          http.response.end()
         break
       when '200'
         console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [200]" if self.debug
         stream = readableStream or fs.createReadStream vRef.path
-        http.response.writeHead 200 if readableStream
+        if !http.response.headersSent
+          http.response.writeHead 200 if readableStream
+
+        http.response.on 'close', ->
+          stream.abort?()
+          stream.end?()
+          return
+
+        http.request.on 'abort', ->
+          stream.abort?()
+          stream.end?()
+          return
+
         stream.on('open', ->
-          http.response.writeHead 200
+          if !http.response.headersSent
+            http.response.writeHead 200
+          return
+        ).on('abort', ->
+          if !http.response.finished
+            http.response.end()
+          if !http.request.aborted
+            http.request.abort()
           return
         ).on('error', streamErrorHandler
         ).on 'end', ->
-          http.response.end()
+          if !http.response.finished
+            http.response.end()
           return
         stream.pipe new Throttle {bps: self.throttle, chunksize: self.chunkSize} if self.throttle
         stream.pipe http.response
         break
       when '206'
         console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [206]" if self.debug
-        http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
+        if !http.response.headersSent
+          http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
         stream = readableStream or fs.createReadStream vRef.path, {start: reqRange.start, end: reqRange.end}
-        http.response.writeHead 206 if readableStream
+        if !http.response.headersSent
+          http.response.writeHead 206 if readableStream
+
+        http.response.on 'close', ->
+          stream.abort?()
+          stream.end?()
+          return
+
+        http.request.on 'abort', ->
+          stream.abort?()
+          stream.end?()
+          return
+
         stream.on('open', ->
-          http.response.writeHead 206
+          if !http.response.headersSent
+            http.response.writeHead 206
+          return
+        ).on('abort', ->
+          if !http.response.finished
+            http.response.end()
+          if !http.request.aborted
+            http.request.abort()
           return
         ).on('error', streamErrorHandler
         ).on 'end', ->
-          http.response.end()
+          if !http.response.finished
+            http.response.end()
           return
         stream.pipe new Throttle {bps: self.throttle, chunksize: self.chunkSize} if self.throttle
         stream.pipe http.response
