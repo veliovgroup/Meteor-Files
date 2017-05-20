@@ -73,7 +73,7 @@ Why `Meteor-Files`?
  - Support for `HTTP` and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
  - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
- - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.coffee) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
 
 Easy-peasy kids, *yeah*?
 
