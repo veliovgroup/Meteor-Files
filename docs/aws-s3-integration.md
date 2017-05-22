@@ -130,7 +130,7 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
 
               this.collection.update({
                 _id: fileRef._id
-              }, upd, function (updError) {
+              }, upd, (updError) => {
                 if (updError) {
                   console.error(updError);
                 } else {
