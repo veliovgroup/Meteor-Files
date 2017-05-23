@@ -10,6 +10,19 @@ Links:
  - [im](https://www.npmjs.com/package/im) NPM package
  - [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
 
+Requires imagemagick CLI tools to be installed. There are numerous ways to install them. For instance, if you're on OS X you can use Homebrew: brew install imagemagick /or graphicsmagick.
+
+Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as Imagemagick in this way:
+```shell
+npm install gm --save  //and then where you use it: 
+
+const gm = require('gm'); 
+const im = gm.subClass({ imageMagick: true });
+```
+Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it.
+(a past comparison)https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick
+
+
 There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
 
 ```shell
