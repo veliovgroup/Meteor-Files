@@ -748,6 +748,7 @@ Images = new FilesCollection({
   permissions: 0755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
+  // more about cacheControl: https://devcenter.heroku.com/articles/increasing-application-performance-with-http-cache-headers
   onbeforeunloadMessage: function () {
     return 'Upload is still in progress! Upload will be aborted if you leave this page!';
   },
