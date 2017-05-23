@@ -742,8 +742,8 @@ const Images = new FilesCollection({
   storagePath: 'assets/app/uploads/Images',
   downloadRoute: '/files/images'
   collectionName: 'Images',
-  chunkSize: 1024*2048,
-  throttle: 1024*512,
+  chunkSize: 1024 * 2048,
+  throttle: 1024 * 512,
   permissions: 0755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
