@@ -737,9 +737,8 @@
 
 
 ### Examples:
-```javascript
-var Images;
-Images = new FilesCollection({
+```jsx
+const Images = new FilesCollection({
   storagePath: 'assets/app/uploads/Images',
   downloadRoute: '/files/images'
   collectionName: 'Images',
@@ -748,24 +747,24 @@ Images = new FilesCollection({
   permissions: 0755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
-  // more about cacheControl: https://devcenter.heroku.com/articles/increasing-application-performance-with-http-cache-headers
-  onbeforeunloadMessage: function () {
+  // Read more about cacheControl: https://devcenter.heroku.com/articles/increasing-application-performance-with-http-cache-headers
+  onbeforeunloadMessage() {
     return 'Upload is still in progress! Upload will be aborted if you leave this page!';
   },
-  onBeforeUpload: function (file) {
+  onBeforeUpload(file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
     // Note: You should never trust to extension and mime-type here
     // as this data comes from client and can be easily substitute
     // to check file's "magic-numbers" use `mmmagic` or `file-type` package
     // real extension and mime-type can be checked on client (untrusted side)
     // and on server at `onAfterUpload` hook (trusted side)
-    if (file.size <= 10485760 && /png|jpg|jpeg/i.test(file.ext)) {
+    if (file.size <= 10485760 && /png|jpe?g/i.test(file.ext)) {
       return true;
     } else {
       return 'Please upload image, with size equal or less than 10MB';
     }
   },
-  downloadCallback: function (fileObj) {
+  downloadCallback(fileObj) {
     if (this.params.query.download == 'true') {
       // Increment downloads counter
       Images.update(fileObj._id, {$inc: {'meta.downloads': 1}});
@@ -773,8 +772,8 @@ Images = new FilesCollection({
     // Must return true to continue download
     return true;
   },
-  protected: function (fileObj) {
-    // Check if user is own this file
+  protected(fileObj) {
+    // Check if current user is owner of the file
     if (fileObj.meta.owner === this.userId) {
       return true;
     } else {
@@ -782,6 +781,9 @@ Images = new FilesCollection({
     }
   }
 });
+
+// Export FilesCollection instance, so it can be imported in other files
+export default Images;
 ```
 
 ### Add extra security:
@@ -792,24 +794,24 @@ Images = new FilesCollection({
 *To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
 *You're free to modify/overwrite* `FilesCollection.schema` *object.*
-```javascript
-var Images = new FilesCollection({/* ... */});
+```jsx
+const Images = new FilesCollection({/* ... */});
 Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 #### Deny collection interaction on client [*Server*]:
 *Deny insert/update/remove from client*
-```javascript
+```jsx
 if (Meteor.isServer) {
-  var Images = new FilesCollection({/* ... */});
+  const Images = new FilesCollection({/* ... */});
   Images.deny({
-    insert: function() {
+    insert() {
       return true;
     },
-    update: function() {
+    update() {
       return true;
     },
-    remove: function() {
+    remove() {
       return true;
     }
   });
@@ -821,17 +823,17 @@ if (Meteor.isServer) {
 
 #### Allow collection interaction on client [*Server*]:
 *Allow insert/update/remove from client*
-```javascript
+```jsx
 if (Meteor.isServer) {
-  var Images = new FilesCollection({/* ... */});
+  const Images = new FilesCollection({/* ... */});
   Images.allow({
-    insert: function() {
+    insert() {
       return true;
     },
-    update: function() {
+    update() {
       return true;
     },
-    remove: function() {
+    remove() {
       return true;
     }
   });
@@ -842,22 +844,22 @@ if (Meteor.isServer) {
 ```
 
 #### Events listeners:
-```javascript
-var Images = new FilesCollection({/* ... */});
+```jsx
+const Images = new FilesCollection({/* ... */});
 // Alias addListener
 Images.on('afterUpload', function (fileRef) {
-  /* ... */
+  /* `this` context is the Images (FilesCollection) instance */
 });
 ```
 
 #### Use onBeforeUpload to avoid unauthorized upload:
-```javascript
-var Images = new FilesCollection({
+```jsx
+const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
-  onBeforeUpload: function () {
+  onBeforeUpload() {
     if (this.userId) {
-      var user = this.user();
+      const user = this.user();
       if (user.profile.role === 'admin') {
         // Allow upload only if
         // current user is signed-in
@@ -866,20 +868,20 @@ var Images = new FilesCollection({
       }
     }
 
-    return "Not enough rights to upload a file!";
+    return 'Not enough rights to upload a file!';
   }
 });
 ```
 
 #### Use onBeforeRemove to avoid unauthorized remove:
 *For more info see [remove method](https://github.com/VeliovGroup/Meteor-Files/wiki/remove).*
-```javascript
-var Images = new FilesCollection({
+```jsx
+const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
-  onBeforeRemove: function () {
+  onBeforeRemove() {
     if (this.userId) {
-      var user = this.user();
+      const user = this.user();
       if (user.profile.role === 'admin') {
         // Allow removal only if
         // current user is signed-in
@@ -895,9 +897,8 @@ var Images = new FilesCollection({
 
 
 #### Use onAfterUpload to avoid mime-type and/or extension substitution:
-For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use https://github.com/mscdex/mmmagic for this
+For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use [`mmmagic` package](https://github.com/mscdex/mmmagic) for this:
 ```jsx
-const isImageMime = (mimeType) => mimeType.indexOf('image') === 0;
 const Images = new FilesCollection({
   collectionName: 'Images',
   onAfterUpload(file) {

@@ -10,26 +10,35 @@ Links:
  - [im](https://www.npmjs.com/package/im) NPM package
  - [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
 
-Requires imagemagick CLI tools to be installed. There are numerous ways to install them. For instance, if you're on OS X you can use Homebrew: brew install imagemagick /or graphicsmagick.
+### Install image library
+__TL;TR;__ - There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
 
-Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as Imagemagick in this way:
+Before you go - install ImageMagick or GraphicksMagick CLI tools. There are numerous ways to install it. For instance, if you're on OS X you can use Homebrew:
 ```shell
-npm install gm --save  //and then where you use it: 
+brew install graphicsmagick
+# or for ImageMagick:
+# brew install imagemagick
+```
 
+Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as ImageMagick in this way:
+```shell
+npm install gm --save
+
+And then where you use it: 
+```jsx
 const gm = require('gm'); 
 const im = gm.subClass({ imageMagick: true });
 ```
-Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it.
-(a past comparison)https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick
 
+Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it, - [see the comparison](https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick).
 
-There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
-
+### Install Meteor/NPM packages
 ```shell
 meteor add ostrio:files
 meteor npm install --save gm fs-extra
 ```
 
+### Create FilesCollection
 Initiate *FilesCollection* (`/lib/files.js`):
 ```jsx
 import { FilesCollection }   from 'meteor/ostrio:files';
@@ -41,6 +50,7 @@ const uploadsCollection = new FilesCollection({
 export default uploadsCollection;
 ```
 
+### Upload form example
 Simple upload form (`/client/upload.html`):
 ```html
 <template name="uploadForm">
@@ -105,7 +115,8 @@ Template.uploadForm.events({
 });
 ```
 
-Catch `onAfterUpload` event (`/server/files.js`):
+### Catch uploaded files
+Catch `afterUpload` event (`/server/files.js`):
 ```jsx
 import uploadsCollection from '/lib/files.js';
 import createThumbnails from '/server/image-processing.js';
@@ -122,6 +133,7 @@ uploadsCollection.on('afterUpload', function(fileRef) {
 });
 ```
 
+### Process uploaded images
 Create thumbnails (`/server/image-processing.js`):
 ```jsx
 import { check }  from 'meteor/check';
