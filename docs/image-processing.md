@@ -161,7 +161,7 @@ const createThumbnails = (collection, fileRef, cb) => {
         bound(() => {
           if (error) {
             console.error('[_app.createThumbnails] [_.each sizes]', error);
-            cb(Meteor.Error('[_app.createThumbnails] [image.size]', error));
+            cb && cb(Meteor.Error('[_app.createThumbnails] [image.size]', error));
             return;
           }
 
@@ -197,7 +197,7 @@ const createThumbnails = (collection, fileRef, cb) => {
             bound(() => {
               if (resizeError) {
                 console.error('[createThumbnails] [img.resize]', resizeError);
-                cb(resizeError);
+                cb && cb(resizeError);
                 return;
               }
 
@@ -205,7 +205,7 @@ const createThumbnails = (collection, fileRef, cb) => {
                 bound(() => {
                   if (fsStatError) {
                     console.error('[_app.createThumbnails] [img.resize] [fs.stat]', fsStatError);
-                    cb(fsStatError);
+                    cb && cb(fsStatError);
                     return;
                   }
 
@@ -213,12 +213,11 @@ const createThumbnails = (collection, fileRef, cb) => {
                     bound(() => {
                       if (gmSizeError) {
                         console.error('[_app.createThumbnails] [_.each sizes] [img.resize] [fs.stat] [gm(path).size]', gmSizeError);
-                        cb(gmSizeError);
+                        cb && cb(gmSizeError);
                         return;
                       }
 
-                      const upd = { $set: {} };
-                      upd['$set']['versions.thumbnail'] = {
+                      fileRef.versions.thumbnail = {
                         path: path,
                         size: stat.size,
                         type: fileRef.type,
@@ -229,8 +228,17 @@ const createThumbnails = (collection, fileRef, cb) => {
                         }
                       };
 
+                      const upd = { $set: {} };
+                      upd['$set']['versions.thumbnail'] = fileRef.versions.thumbnail;
+
                       collection.collection.update(fileRef._id, upd, (colUpdError) => {
-                        cb(colUpdError);
+                        if (cb) {
+                          if (colUpdError) {
+                            cb(colUpdError);
+                          } else {
+                            cb(void 0, fileRef);
+                          }
+                        }
                       });
                     });
                   });
