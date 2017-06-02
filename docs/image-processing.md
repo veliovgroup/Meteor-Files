@@ -10,13 +10,35 @@ Links:
  - [im](https://www.npmjs.com/package/im) NPM package
  - [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
 
-There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
+### Install image library
+__TL;TR;__ - There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
 
+Before you go - install ImageMagick or GraphicksMagick CLI tools. There are numerous ways to install it. For instance, if you're on OS X you can use Homebrew:
+```shell
+brew install graphicsmagick
+# or for ImageMagick:
+# brew install imagemagick
+```
+
+Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as ImageMagick in this way:
+```shell
+npm install gm --save
+
+And then where you use it: 
+```jsx
+const gm = require('gm'); 
+const im = gm.subClass({ imageMagick: true });
+```
+
+Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it, - [see the comparison](https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick).
+
+### Install Meteor/NPM packages
 ```shell
 meteor add ostrio:files
 meteor npm install --save gm fs-extra
 ```
 
+### Create FilesCollection
 Initiate *FilesCollection* (`/lib/files.js`):
 ```jsx
 import { FilesCollection }   from 'meteor/ostrio:files';
@@ -28,6 +50,7 @@ const uploadsCollection = new FilesCollection({
 export default uploadsCollection;
 ```
 
+### Upload form example
 Simple upload form (`/client/upload.html`):
 ```html
 <template name="uploadForm">
@@ -92,7 +115,8 @@ Template.uploadForm.events({
 });
 ```
 
-Catch `onAfterUpload` event (`/server/files.js`):
+### Catch uploaded files
+Catch `afterUpload` event (`/server/files.js`):
 ```jsx
 import uploadsCollection from '/lib/files.js';
 import createThumbnails from '/server/image-processing.js';
@@ -109,6 +133,7 @@ uploadsCollection.on('afterUpload', function(fileRef) {
 });
 ```
 
+### Process uploaded images
 Create thumbnails (`/server/image-processing.js`):
 ```jsx
 import { check }  from 'meteor/check';
@@ -136,7 +161,7 @@ const createThumbnails = (collection, fileRef, cb) => {
         bound(() => {
           if (error) {
             console.error('[_app.createThumbnails] [_.each sizes]', error);
-            cb(Meteor.Error('[_app.createThumbnails] [image.size]', error));
+            cb && cb(Meteor.Error('[_app.createThumbnails] [image.size]', error));
             return;
           }
 
@@ -172,7 +197,7 @@ const createThumbnails = (collection, fileRef, cb) => {
             bound(() => {
               if (resizeError) {
                 console.error('[createThumbnails] [img.resize]', resizeError);
-                cb(resizeError);
+                cb && cb(resizeError);
                 return;
               }
 
@@ -180,7 +205,7 @@ const createThumbnails = (collection, fileRef, cb) => {
                 bound(() => {
                   if (fsStatError) {
                     console.error('[_app.createThumbnails] [img.resize] [fs.stat]', fsStatError);
-                    cb(fsStatError);
+                    cb && cb(fsStatError);
                     return;
                   }
 
@@ -188,12 +213,11 @@ const createThumbnails = (collection, fileRef, cb) => {
                     bound(() => {
                       if (gmSizeError) {
                         console.error('[_app.createThumbnails] [_.each sizes] [img.resize] [fs.stat] [gm(path).size]', gmSizeError);
-                        cb(gmSizeError);
+                        cb && cb(gmSizeError);
                         return;
                       }
 
-                      const upd = { $set: {} };
-                      upd['$set']['versions.thumbnail'] = {
+                      fileRef.versions.thumbnail = {
                         path: path,
                         size: stat.size,
                         type: fileRef.type,
@@ -204,8 +228,17 @@ const createThumbnails = (collection, fileRef, cb) => {
                         }
                       };
 
+                      const upd = { $set: {} };
+                      upd['$set']['versions.thumbnail'] = fileRef.versions.thumbnail;
+
                       collection.collection.update(fileRef._id, upd, (colUpdError) => {
-                        cb(colUpdError);
+                        if (cb) {
+                          if (colUpdError) {
+                            cb(colUpdError);
+                          } else {
+                            cb(void 0, fileRef);
+                          }
+                        }
                       });
                     });
                   });

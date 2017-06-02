@@ -5,12 +5,12 @@ if Meteor.isServer
   ###
   @summary Require NPM packages
   ###
-  fs       = Npm.require 'fs-extra'
-  events   = Npm.require 'events'
+  fs       = require 'fs-extra'
+  events   = require 'events'
   request  = Npm.require 'request'
   Throttle = Npm.require 'throttle'
   fileType = Npm.require 'file-type'
-  nodePath = Npm.require 'path'
+  nodePath = require 'path'
 
   ###
   @var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
