@@ -1,134 +1,131 @@
 `import { Cookies } from 'meteor/ostrio:cookies'`
 NOOP = -> return
 
-if Meteor.isServer
-  ###
-  @summary Require NPM packages
-  ###
-  fs       = require 'fs-extra'
-  events   = require 'events'
-  request  = Npm.require 'request'
-  Throttle = Npm.require 'throttle'
-  fileType = Npm.require 'file-type'
-  nodePath = require 'path'
+###
+@summary Require NPM packages
+###
+`import fs       from 'fs-extra'`
+`import events   from 'events'`
+`import request  from 'request'`
+`import Throttle from 'throttle'`
+`import fileType from 'file-type'`
+`import nodePath from 'path'`
 
-  ###
-  @var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
-  ###
-  bound = Meteor.bindEnvironment (callback) -> return callback()
+###
+@var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
+###
+bound = Meteor.bindEnvironment (callback) -> return callback()
 
-  ###
-  @private
-  @locus Server
-  @class writeStream
-  @param path      {String} - Path to file on FS
-  @param maxLength {Number} - Max amount of chunks in stream
-  @param file      {Object} - fileRef Object
-  @summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
-  ###
-  class writeStream
-    constructor: (@path, @maxLength, @file, @permissions) ->
-      if not @path or not _.isString @path
-        return
+###
+@private
+@locus Server
+@class writeStream
+@param path      {String} - Path to file on FS
+@param maxLength {Number} - Max amount of chunks in stream
+@param file      {Object} - fileRef Object
+@summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
+###
+class writeStream
+  constructor: (@path, @maxLength, @file, @permissions) ->
+    if not @path or not _.isString @path
+      return
 
-      self = @
-      @fd = null
-      fs.open @path, 'w+', @permissions, (error, fd) -> bound ->
-        if error
-          throw new Meteor.Error 500, '[FilesCollection] [writeStream] [Exception:]', error
-        else
-          self.fd = fd
-        return
-      @ended         = false
-      @aborted       = false
-      @writtenChunks = 0
-
-    ###
-    @memberOf writeStream
-    @name write
-    @param {Number} num - Chunk position in stream
-    @param {Buffer} chunk - Chunk binary data
-    @param {Function} callback - Callback
-    @summary Write chunk in given order
-    @returns {Boolean} - True if chunk is sent to stream, false if chunk is set into queue
-    ###
-    write: (num, chunk, callback) ->
-      if not @aborted and not @ended
-        self    = @
-        if @fd
-          _stream = fs.createWriteStream @path, {
-            flags: 'r+'
-            mode: @permissions
-            highWaterMark: 0
-            fd: @fd
-            autoClose: true
-            start: (num - 1) * @file.chunkSize
-          }
-          _stream.on 'error', (error) -> bound ->
-            console.error "[FilesCollection] [writeStream] [ERROR:]", error
-            self.abort()
-            return
-          _stream.write chunk, -> bound ->
-            ++self.writtenChunks
-            callback and callback()
-            return
-        else
-          Meteor.setTimeout ->
-            self.write num, chunk, callback
-            return
-          , 25
-      return false
-
-    ###
-    @memberOf writeStream
-    @name end
-    @param {Function} callback - Callback
-    @summary Finishes writing to writableStream, only after all chunks in queue is written
-    @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
-    ###
-    end: (callback) ->
-      if not @aborted and not @ended
-        if @writtenChunks is @maxLength
-          self = @
-          fs.close @fd, -> bound ->
-            self.ended = true
-            callback and callback(true)
-            return
-          return true
-        else
-          self = @
-          Meteor.setTimeout ->
-            self.end callback
-            return
-          , 25
+    self = @
+    @fd = null
+    fs.open @path, 'w+', @permissions, (error, fd) -> bound ->
+      if error
+        throw new Meteor.Error 500, '[FilesCollection] [writeStream] [Exception:]', error
       else
-        callback and callback(false)
-      return false
+        self.fd = fd
+      return
+    @ended         = false
+    @aborted       = false
+    @writtenChunks = 0
 
-    ###
-    @memberOf writeStream
-    @name abort
-    @param {Function} callback - Callback
-    @summary Aborts writing to writableStream, removes created file
-    @returns {Boolean} - True
-    ###
-    abort: (callback) ->
-      @aborted = true
-      fs.unlink @path, (callback or NOOP)
-      return true
+  ###
+  @memberOf writeStream
+  @name write
+  @param {Number} num - Chunk position in stream
+  @param {Buffer} chunk - Chunk binary data
+  @param {Function} callback - Callback
+  @summary Write chunk in given order
+  @returns {Boolean} - True if chunk is sent to stream, false if chunk is set into queue
+  ###
+  write: (num, chunk, callback) ->
+    if not @aborted and not @ended
+      self    = @
+      if @fd
+        _stream = fs.createWriteStream @path, {
+          flags: 'r+'
+          mode: @permissions
+          highWaterMark: 0
+          fd: @fd
+          autoClose: true
+          start: (num - 1) * @file.chunkSize
+        }
+        _stream.on 'error', (error) -> bound ->
+          console.error "[FilesCollection] [writeStream] [ERROR:]", error
+          self.abort()
+          return
+        _stream.write chunk, -> bound ->
+          ++self.writtenChunks
+          callback and callback()
+          return
+      else
+        Meteor.setTimeout ->
+          self.write num, chunk, callback
+          return
+        , 25
+    return false
 
-    ###
-    @memberOf writeStream
-    @name stop
-    @summary Stop writing to writableStream
-    @returns {Boolean} - True
-    ###
-    stop: ->
-      @aborted = true
-      @ended   = true
-      return true
-else
-  EventEmitter = require('./event-emitter.jsx').EventEmitter
+  ###
+  @memberOf writeStream
+  @name end
+  @param {Function} callback - Callback
+  @summary Finishes writing to writableStream, only after all chunks in queue is written
+  @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
+  ###
+  end: (callback) ->
+    if not @aborted and not @ended
+      if @writtenChunks is @maxLength
+        self = @
+        fs.close @fd, -> bound ->
+          self.ended = true
+          callback and callback(true)
+          return
+        return true
+      else
+        self = @
+        Meteor.setTimeout ->
+          self.end callback
+          return
+        , 25
+    else
+      callback and callback(false)
+    return false
+
+  ###
+  @memberOf writeStream
+  @name abort
+  @param {Function} callback - Callback
+  @summary Aborts writing to writableStream, removes created file
+  @returns {Boolean} - True
+  ###
+  abort: (callback) ->
+    @aborted = true
+    fs.unlink @path, (callback or NOOP)
+    return true
+
+  ###
+  @memberOf writeStream
+  @name stop
+  @summary Stop writing to writableStream
+  @returns {Boolean} - True
+  ###
+  stop: ->
+    @aborted = true
+    @ended   = true
+    return true
 
 ###
 @private
@@ -458,7 +455,6 @@ fixJSONStringify = (obj) ->
 @class FilesCollection
 @param config           {Object}   - [Both]   Configuration object with next properties:
 @param config.debug     {Boolean}  - [Both]   Turn on/of debugging and extra logging
-@param config.ddp       {Object}   - [Client] Custom DDP connection. Object returned form `DDP.connect()`
 @param config.schema    {Object}   - [Both]   Collection Schema
 @param config.public    {Boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
 @param config.strict    {Boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
@@ -490,16 +486,12 @@ return `false` or `String` to abort upload
 @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
 @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
 @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
-@param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
 @summary Create new instance of FilesCollection
 ###
 class FilesCollection
-  __proto__: do -> if Meteor.isServer then events.EventEmitter.prototype else EventEmitter.prototype
+  __proto__: do -> events.EventEmitter.prototype
   constructor: (config) ->
-    if Meteor.isServer
-      events.EventEmitter.call @
-    else
-      EventEmitter.call @
+    events.EventEmitter.call @
     {storagePath, @ddp, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
 
     self        = @
@@ -535,159 +527,106 @@ class FilesCollection
         unless _.isString sp
           throw new Meteor.Error 400, "[FilesCollection.#{self.collectionName}] \"storagePath\" function must return a String!"
         sp = sp.replace /\/$/, ''
-        return if Meteor.isServer then nodePath.normalize(sp) else sp
+        return nodePath.normalize(sp)
 
-    if Meteor.isClient
-      @onbeforeunloadMessage ?= 'Upload in a progress... Do you want to abort?'
-      delete @strict
-      delete @throttle
-      delete @permissions
-      delete @parentDirPermissions
-      delete @cacheControl
-      delete @onAfterUpload
-      delete @onAfterRemove
-      delete @onBeforeRemove
-      @onInitiateUpload = false
-      delete @integrityCheck
-      delete @downloadCallback
-      delete @interceptDownload
-      delete @continueUploadTTL
-      delete @responseHeaders
+    @strict            ?= true
+    @throttle          ?= false
+    @permissions       ?= parseInt('644', 8)
+    @parentDirPermissions ?= parseInt('755', 8)
+    @cacheControl      ?= 'public, max-age=31536000, s-maxage=31536000'
+    @onAfterUpload     ?= false
+    @onAfterRemove     ?= false
+    @onBeforeRemove    ?= false
+    @integrityCheck    ?= true
+    @_currentUploads   ?= {}
+    @downloadCallback  ?= false
+    @continueUploadTTL ?= 10800
+    @responseHeaders   ?= (responseCode, fileRef, versionRef) ->
+      headers = {}
+      switch responseCode
+        when '206'
+          headers['Pragma']            = 'private'
+          headers['Trailer']           = 'expires'
+          headers['Transfer-Encoding'] = 'chunked'
+        when '400'
+          headers['Cache-Control']     = 'no-cache'
+        when '416'
+          headers['Content-Range']     = "bytes */#{versionRef.size}"
 
-      setTokenCookie = ->
-        Meteor.setTimeout ->
-          if (not cookie.has('x_mtok') and Meteor.connection._lastSessionId) or (cookie.has('x_mtok') and (cookie.get('x_mtok') isnt Meteor.connection._lastSessionId))
-            cookie.set 'x_mtok', Meteor.connection._lastSessionId, path: '/'
-          return
-        , 25
+      headers['Connection']    = 'keep-alive'
+      headers['Content-Type']  = versionRef.type or 'application/octet-stream'
+      headers['Accept-Ranges'] = 'bytes'
+      return headers
+
+    if @public and not storagePath
+      throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
+
+    console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
+
+    fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
+      if error
+        throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath({})}\" is not writable!", error
+      return
+
+    check @strict, Boolean
+    check @throttle, Match.OneOf false, Number
+    check @permissions, Number
+    check @storagePath, Function
+    check @cacheControl, String
+    check @onAfterRemove, Match.OneOf false, Function
+    check @onAfterUpload, Match.OneOf false, Function
+    check @integrityCheck, Boolean
+    check @onBeforeRemove, Match.OneOf false, Function
+    check @downloadCallback, Match.OneOf false, Function
+    check @interceptDownload, Match.OneOf false, Function
+    check @continueUploadTTL, Number
+    check @responseHeaders, Match.OneOf Object, Function
+
+    @_preCollection = new Mongo.Collection '__pre_' + @collectionName
+    @_preCollection._ensureIndex {createdAt: 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
+    _preCollectionCursor = @_preCollection.find {}, {
+      fields:
+        _id: 1
+        isFinished: 1
+    }
+    _preCollectionCursor.observe
+      changed: (doc) ->
+        if doc.isFinished
+          console.info "[FilesCollection] [_preCollectionCursor.observe] [changed]: #{doc._id}" if self.debug
+          self._preCollection.remove {_id: doc._id}, NOOP
+        return
+      removed: (doc) ->
+        # Free memory after upload is done
+        # Or if upload is unfinished
+        console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
+        if self._currentUploads?[doc._id]
+          self._currentUploads[doc._id].stop()
+          self._currentUploads[doc._id].end()
+
+          unless doc.isFinished
+            console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc._id}" if self.debug
+            self._currentUploads[doc._id].abort()
+
+          delete self._currentUploads[doc._id]
         return
 
-      unsetTokenCookie = ->
-        cookie.remove('x_mtok', '/') if cookie.has 'x_mtok'
-        return
+    @_createStream = (_id, path, opts) ->
+      return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts, self.permissions
 
-      if Accounts?
-        Meteor.startup ->
-          setTokenCookie()
-          return
-        Accounts.onLogin ->
-          setTokenCookie()
-          return
-        Accounts.onLogout ->
-          unsetTokenCookie()
-          return
-
-      check @onbeforeunloadMessage, Match.OneOf String, Function
-
-      _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false
-      if window?.Worker and window?.Blob and _URL
-        @_supportWebWorker = true
-        @_webWorkerUrl     = _URL.createObjectURL(new Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}))
-      else if window?.Worker
-        @_supportWebWorker = true
-        @_webWorkerUrl     = Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
-      else
-        @_supportWebWorker = false
-
-    else
-      @strict            ?= true
-      @throttle          ?= false
-      @permissions       ?= parseInt('644', 8)
-      @parentDirPermissions ?= parseInt('755', 8)
-      @cacheControl      ?= 'public, max-age=31536000, s-maxage=31536000'
-      @onAfterUpload     ?= false
-      @onAfterRemove     ?= false
-      @onBeforeRemove    ?= false
-      @integrityCheck    ?= true
-      @_currentUploads   ?= {}
-      @downloadCallback  ?= false
-      @continueUploadTTL ?= 10800
-      @responseHeaders   ?= (responseCode, fileRef, versionRef) ->
-        headers = {}
-        switch responseCode
-          when '206'
-            headers['Pragma']            = 'private'
-            headers['Trailer']           = 'expires'
-            headers['Transfer-Encoding'] = 'chunked'
-          when '400'
-            headers['Cache-Control']     = 'no-cache'
-          when '416'
-            headers['Content-Range']     = "bytes */#{versionRef.size}"
-
-        headers['Connection']    = 'keep-alive'
-        headers['Content-Type']  = versionRef.type or 'application/octet-stream'
-        headers['Accept-Ranges'] = 'bytes'
-        return headers
-
-      if @public and not storagePath
-        throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
-
-      console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
-
-      fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
-        if error
-          throw new Meteor.Error 401, "[FilesCollection.#{self.collectionName}] Path \"#{self.storagePath({})}\" is not writable!", error
-        return
-
-      check @strict, Boolean
-      check @throttle, Match.OneOf false, Number
-      check @permissions, Number
-      check @storagePath, Function
-      check @cacheControl, String
-      check @onAfterRemove, Match.OneOf false, Function
-      check @onAfterUpload, Match.OneOf false, Function
-      check @integrityCheck, Boolean
-      check @onBeforeRemove, Match.OneOf false, Function
-      check @downloadCallback, Match.OneOf false, Function
-      check @interceptDownload, Match.OneOf false, Function
-      check @continueUploadTTL, Number
-      check @responseHeaders, Match.OneOf Object, Function
-
-      @_preCollection = new Mongo.Collection '__pre_' + @collectionName
-      @_preCollection._ensureIndex {createdAt: 1}, {expireAfterSeconds: @continueUploadTTL, background: true}
-      _preCollectionCursor = @_preCollection.find {}, {
-        fields:
-          _id: 1
-          isFinished: 1
-      }
-      _preCollectionCursor.observe
-        changed: (doc) ->
-          if doc.isFinished
-            console.info "[FilesCollection] [_preCollectionCursor.observe] [changed]: #{doc._id}" if self.debug
-            self._preCollection.remove {_id: doc._id}, NOOP
-          return
-        removed: (doc) ->
-          # Free memory after upload is done
-          # Or if upload is unfinished
-          console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
-          if self._currentUploads?[doc._id]
-            self._currentUploads[doc._id].stop()
-            self._currentUploads[doc._id].end()
-
-            unless doc.isFinished
-              console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc._id}" if self.debug
-              self._currentUploads[doc._id].abort()
-
-            delete self._currentUploads[doc._id]
-          return
-
-      @_createStream = (_id, path, opts) ->
-        return self._currentUploads[_id] = new writeStream path, opts.fileLength, opts, self.permissions
-
-      # This little function allows to continue upload
-      # even after server is restarted (*not on dev-stage*)
-      @_continueUpload = (_id) ->
-        if self._currentUploads?[_id]?.file
-          if not self._currentUploads[_id].aborted and not self._currentUploads[_id].ended
-            return self._currentUploads[_id].file
-          else
-            self._createStream _id, self._currentUploads[_id].file.file.path, self._currentUploads[_id].file
-            return self._currentUploads[_id].file
+    # This little function allows to continue upload
+    # even after server is restarted (*not on dev-stage*)
+    @_continueUpload = (_id) ->
+      if self._currentUploads?[_id]?.file
+        if not self._currentUploads[_id].aborted and not self._currentUploads[_id].ended
+          return self._currentUploads[_id].file
         else
-          contUpld = self._preCollection.findOne {_id}
-          if contUpld
-            self._createStream _id, contUpld.file.path, contUpld.file
-          return contUpld
+          self._createStream _id, self._currentUploads[_id].file.file.path, self._currentUploads[_id].file
+          return self._currentUploads[_id].file
+      else
+        contUpld = self._preCollection.findOne {_id}
+        if contUpld
+          self._createStream _id, contUpld.file.path, contUpld.file
+        return contUpld
 
     if not @schema
       @schema =
@@ -774,285 +713,284 @@ class FilesCollection
       _Start:  "_FilesCollectionStart_#{@collectionName}"
       _Remove: "_FilesCollectionRemove_#{@collectionName}"
 
-    if Meteor.isServer
-      @on '_handleUpload', @_handleUpload
-      @on '_finishUpload', @_finishUpload
+    @on '_handleUpload', @_handleUpload
+    @on '_finishUpload', @_finishUpload
 
-      WebApp.connectHandlers.use (request, response, next) ->
-        if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}/__upload"
-          if request.method is 'POST'
+    WebApp.connectHandlers.use (request, response, next) ->
+      if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}/__upload"
+        if request.method is 'POST'
 
-            handleError = (error) ->
-              console.warn "[FilesCollection] [Upload] [HTTP] Exception:", error
-              if !response.headersSent
-                response.writeHead 500
-              if !response.finished
-                response.end JSON.stringify {error}
-              return
+          handleError = (error) ->
+            console.warn "[FilesCollection] [Upload] [HTTP] Exception:", error
+            if !response.headersSent
+              response.writeHead 500
+            if !response.finished
+              response.end JSON.stringify {error}
+            return
 
-            body = ''
-            request.on 'data', (data) -> bound ->
-              body += data
-              return
+          body = ''
+          request.on 'data', (data) -> bound ->
+            body += data
+            return
 
-            request.on 'end', -> bound ->
-              try
-                if request.headers['x-mtok'] and Meteor.server.sessions?[request.headers['x-mtok']]
-                  user = userId: Meteor.server.sessions[request.headers['x-mtok']]?.userId
+          request.on 'end', -> bound ->
+            try
+              if request.headers['x-mtok'] and Meteor.server.sessions?[request.headers['x-mtok']]
+                user = userId: Meteor.server.sessions[request.headers['x-mtok']]?.userId
+              else
+                user = self._getUser {request, response}
+
+              unless request.headers['x-start'] is '1'
+                opts = fileId: request.headers['x-fileid']
+                if request.headers['x-eof'] is '1'
+                  opts.eof = true
                 else
-                  user = self._getUser {request, response}
-
-                unless request.headers['x-start'] is '1'
-                  opts = fileId: request.headers['x-fileid']
-                  if request.headers['x-eof'] is '1'
-                    opts.eof = true
-                  else
-                    if typeof Buffer.from is 'function'
-                      try
-                        opts.binData = Buffer.from body, 'base64'
-                      catch e
-                        opts.binData = new Buffer body, 'base64'
-                    else
+                  if typeof Buffer.from is 'function'
+                    try
+                      opts.binData = Buffer.from body, 'base64'
+                    catch e
                       opts.binData = new Buffer body, 'base64'
-                    opts.chunkId = parseInt request.headers['x-chunkid']
-
-                  _continueUpload = self._continueUpload opts.fileId
-                  unless _continueUpload
-                    throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
-
-                  {result, opts}  = self._prepareUpload _.extend(opts, _continueUpload), user.userId, 'HTTP'
-
-                  if opts.eof
-                    self._handleUpload result, opts, ->
-                      if !response.headersSent
-                        response.writeHead 200
-                      result.file.meta = fixJSONStringify result.file.meta if result?.file?.meta
-                      if !response.finished
-                        response.end JSON.stringify result
-                      return
-                    return
                   else
-                    self.emit '_handleUpload', result, opts, NOOP
+                    opts.binData = new Buffer body, 'base64'
+                  opts.chunkId = parseInt request.headers['x-chunkid']
 
+                _continueUpload = self._continueUpload opts.fileId
+                unless _continueUpload
+                  throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
+
+                {result, opts}  = self._prepareUpload _.extend(opts, _continueUpload), user.userId, 'HTTP'
+
+                if opts.eof
+                  self._handleUpload result, opts, ->
+                    if !response.headersSent
+                      response.writeHead 200
+                    result.file.meta = fixJSONStringify result.file.meta if result?.file?.meta
+                    if !response.finished
+                      response.end JSON.stringify result
+                    return
+                  return
+                else
+                  self.emit '_handleUpload', result, opts, NOOP
+
+                if !response.headersSent
+                  response.writeHead 204
+                if !response.finished
+                  response.end()
+
+              else
+                try
+                  opts         = JSON.parse body
+                catch e
+                  console.error 'Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!'
+                  console.error e
+                  opts         = file: {}
+
+                opts.___s      = true
+                console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
+                opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
+                {result}       = self._prepareUpload _.clone(opts), user.userId, 'HTTP Start Method'
+                if self.collection.findOne result._id
+                  throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
+                opts._id       = opts.fileId
+                opts.createdAt = new Date()
+                self._preCollection.insert _.omit(opts, '___s')
+                self._createStream result._id, result.path, _.omit(opts, '___s')
+
+                if opts.returnMeta
+                  if !response.headersSent
+                    response.writeHead 200
+                  if !response.finished
+                    response.end JSON.stringify {
+                      uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
+                      file: result
+                    }
+                else
                   if !response.headersSent
                     response.writeHead 204
                   if !response.finished
                     response.end()
+            catch error
+              handleError error
+            return
+        else
+          next()
+        return
 
-                else
-                  try
-                    opts         = JSON.parse body
-                  catch e
-                    console.error 'Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!'
-                    console.error e
-                    opts         = file: {}
+      unless self.public
+        if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}"
+          uri = request._parsedUrl.path.replace "#{self.downloadRoute}/#{self.collectionName}", ''
+          if uri.indexOf('/') is 0
+            uri = uri.substring 1
 
-                  opts.___s      = true
-                  console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
-                  opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
-                  {result}       = self._prepareUpload _.clone(opts), user.userId, 'HTTP Start Method'
-                  if self.collection.findOne result._id
-                    throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
-                  opts._id       = opts.fileId
-                  opts.createdAt = new Date()
-                  self._preCollection.insert _.omit(opts, '___s')
-                  self._createStream result._id, result.path, _.omit(opts, '___s')
-
-                  if opts.returnMeta
-                    if !response.headersSent
-                      response.writeHead 200
-                    if !response.finished
-                      response.end JSON.stringify {
-                        uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
-                        file: result
-                      }
-                  else
-                    if !response.headersSent
-                      response.writeHead 204
-                    if !response.finished
-                      response.end()
-              catch error
-                handleError error
-              return
-          else
-            next()
-          return
-
-        unless self.public
-          if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}/#{self.collectionName}"
-            uri = request._parsedUrl.path.replace "#{self.downloadRoute}/#{self.collectionName}", ''
-            if uri.indexOf('/') is 0
-              uri = uri.substring 1
-
-            uris = uri.split '/'
-            if uris.length is 3
-              params =
-                query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
-                _id: uris[0]
-                version: uris[1]
-                name: uris[2]
-              http = {request, response, params}
-              self.download http, uris[1], self.collection.findOne(uris[0]) if self._checkAccess http
-            else
-              next()
+          uris = uri.split '/'
+          if uris.length is 3
+            params =
+              query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+              _id: uris[0]
+              version: uris[1]
+              name: uris[2]
+            http = {request, response, params}
+            self.download http, uris[1], self.collection.findOne(uris[0]) if self._checkAccess http
           else
             next()
         else
-          if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}"
-            uri = request._parsedUrl.path.replace "#{self.downloadRoute}", ''
-            if uri.indexOf('/') is 0
-              uri = uri.substring 1
+          next()
+      else
+        if !!~request._parsedUrl.path.indexOf "#{self.downloadRoute}"
+          uri = request._parsedUrl.path.replace "#{self.downloadRoute}", ''
+          if uri.indexOf('/') is 0
+            uri = uri.substring 1
 
-            uris  = uri.split '/'
-            _file = uris[uris.length - 1]
-            if _file
-              if !!~_file.indexOf '-'
-                version = _file.split('-')[0]
-                _file   = _file.split('-')[1].split('?')[0]
-              else
-                version = 'original'
-                _file   = _file.split('?')[0]
-
-              params =
-                query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
-                file: _file
-                _id: _file.split('.')[0]
-                version: version
-                name: _file
-              http = {request, response, params}
-              self.download http, version, self.collection.findOne params._id
+          uris  = uri.split '/'
+          _file = uris[uris.length - 1]
+          if _file
+            if !!~_file.indexOf '-'
+              version = _file.split('-')[0]
+              _file   = _file.split('-')[1].split('?')[0]
             else
-              next()
+              version = 'original'
+              _file   = _file.split('?')[0]
+
+            params =
+              query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+              file: _file
+              _id: _file.split('.')[0]
+              version: version
+              name: _file
+            http = {request, response, params}
+            self.download http, version, self.collection.findOne params._id
           else
             next()
-        return
-
-      _methods = {}
-
-
-      # Method used to remove file
-      # from Client side
-      _methods[self._methodNames._Remove] = (selector) ->
-        check selector, Match.OneOf String, Object
-        console.info "[FilesCollection] [Unlink Method] [.remove(#{selector})]" if self.debug
-
-        if self.allowClientCode
-          if self.onBeforeRemove and _.isFunction self.onBeforeRemove
-            user = false
-            userFuncs = {
-              userId: @userId
-              user: -> if Meteor.users then Meteor.users.findOne(@userId) else null
-            }
-
-            unless self.onBeforeRemove.call userFuncs, (self.find(selector) or null)
-              throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
-
-          cursor = self.find selector
-          if cursor.count() > 0
-            self.remove selector
-            return true
-          else
-            throw new Meteor.Error 404, 'Cursor is empty, no files is removed'
         else
-          throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-        return
+          next()
+      return
+
+    _methods = {}
 
 
-      # Method used to receive "first byte" of upload
-      # and all file's meta-data, so
-      # it won't be transferred with every chunk
-      # Basically it prepares everything
-      # So user can pause/disconnect and
-      # continue upload later, during `continueUploadTTL`
-      _methods[self._methodNames._Start] = (opts, returnMeta) ->
-        check opts, {
-          file:       Object
-          fileId:     String
-          FSName:     Match.Optional String
-          chunkSize:  Number
-          fileLength: Number
-        }
+    # Method used to remove file
+    # from Client side
+    _methods[self._methodNames._Remove] = (selector) ->
+      check selector, Match.OneOf String, Object
+      console.info "[FilesCollection] [Unlink Method] [.remove(#{selector})]" if self.debug
 
-        check returnMeta, Match.Optional Boolean
-
-        console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
-        opts.___s      = true
-        {result}       = self._prepareUpload _.clone(opts), @userId, 'DDP Start Method'
-        if self.collection.findOne result._id
-          throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
-        opts._id       = opts.fileId
-        opts.createdAt = new Date()
-        self._preCollection.insert _.omit(opts, '___s')
-        self._createStream result._id, result.path, _.omit(opts, '___s')
-
-        if returnMeta
-          return {
-            uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
-            file: result
+      if self.allowClientCode
+        if self.onBeforeRemove and _.isFunction self.onBeforeRemove
+          user = false
+          userFuncs = {
+            userId: @userId
+            user: -> if Meteor.users then Meteor.users.findOne(@userId) else null
           }
-        else
+
+          unless self.onBeforeRemove.call userFuncs, (self.find(selector) or null)
+            throw new Meteor.Error 403, '[FilesCollection] [remove] Not permitted!'
+
+        cursor = self.find selector
+        if cursor.count() > 0
+          self.remove selector
           return true
-
-
-      # Method used to write file chunks
-      # it receives very limited amount of meta-data
-      # This method also responsible for EOF
-      _methods[self._methodNames._Write] = (opts) ->
-        check opts, {
-          eof:     Match.Optional Boolean
-          fileId:  String
-          binData: Match.Optional String
-          chunkId: Match.Optional Number
-        }
-
-        if opts.binData
-          if typeof Buffer.from is 'function'
-            try
-              opts.binData = Buffer.from opts.binData, 'base64'
-            catch e
-              opts.binData = new Buffer opts.binData, 'base64'
-          else
-            opts.binData = new Buffer opts.binData, 'base64'
-
-        _continueUpload = self._continueUpload opts.fileId
-        unless _continueUpload
-          throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
-
-        @unblock()
-        {result, opts} = self._prepareUpload _.extend(opts, _continueUpload), @userId, 'DDP'
-
-        if opts.eof
-          try
-            return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
-          catch e
-            console.warn "[FilesCollection] [Write Method] [DDP] Exception:", e if self.debug
-            throw e
         else
-          self.emit '_handleUpload', result, opts, NOOP
+          throw new Meteor.Error 404, 'Cursor is empty, no files is removed'
+      else
+        throw new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
+      return
+
+
+    # Method used to receive "first byte" of upload
+    # and all file's meta-data, so
+    # it won't be transferred with every chunk
+    # Basically it prepares everything
+    # So user can pause/disconnect and
+    # continue upload later, during `continueUploadTTL`
+    _methods[self._methodNames._Start] = (opts, returnMeta) ->
+      check opts, {
+        file:       Object
+        fileId:     String
+        FSName:     Match.Optional String
+        chunkSize:  Number
+        fileLength: Number
+      }
+
+      check returnMeta, Match.Optional Boolean
+
+      console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
+      opts.___s      = true
+      {result}       = self._prepareUpload _.clone(opts), @userId, 'DDP Start Method'
+      if self.collection.findOne result._id
+        throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
+      opts._id       = opts.fileId
+      opts.createdAt = new Date()
+      self._preCollection.insert _.omit(opts, '___s')
+      self._createStream result._id, result.path, _.omit(opts, '___s')
+
+      if returnMeta
+        return {
+          uploadRoute: "#{self.downloadRoute}/#{self.collectionName}/__upload"
+          file: result
+        }
+      else
         return true
 
-      # Method used to Abort upload
-      # - Feeing memory by .end()ing writableStreams
-      # - Removing temporary record from @_preCollection
-      # - Removing record from @collection
-      # - .unlink()ing chunks from FS
-      _methods[self._methodNames._Abort] = (_id) ->
-        check _id, String
 
-        _continueUpload = self._continueUpload _id
-        console.info "[FilesCollection] [Abort Method]: #{_id} - #{_continueUpload?.file?.path}" if self.debug
+    # Method used to write file chunks
+    # it receives very limited amount of meta-data
+    # This method also responsible for EOF
+    _methods[self._methodNames._Write] = (opts) ->
+      check opts, {
+        eof:     Match.Optional Boolean
+        fileId:  String
+        binData: Match.Optional String
+        chunkId: Match.Optional Number
+      }
 
-        if self._currentUploads?[_id]
-          self._currentUploads[_id].stop()
-          self._currentUploads[_id].abort()
+      if opts.binData
+        if typeof Buffer.from is 'function'
+          try
+            opts.binData = Buffer.from opts.binData, 'base64'
+          catch e
+            opts.binData = new Buffer opts.binData, 'base64'
+        else
+          opts.binData = new Buffer opts.binData, 'base64'
 
-        if _continueUpload
-          self._preCollection.remove {_id}
-          self.remove {_id}
-          self.unlink {_id, path: _continueUpload.file.path} if _continueUpload?.file?.path
-        return true
+      _continueUpload = self._continueUpload opts.fileId
+      unless _continueUpload
+        throw new Meteor.Error 408, 'Can\'t continue upload, session expired. Start upload again.'
 
-      Meteor.methods _methods
+      @unblock()
+      {result, opts} = self._prepareUpload _.extend(opts, _continueUpload), @userId, 'DDP'
+
+      if opts.eof
+        try
+          return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
+        catch e
+          console.warn "[FilesCollection] [Write Method] [DDP] Exception:", e if self.debug
+          throw e
+      else
+        self.emit '_handleUpload', result, opts, NOOP
+      return true
+
+    # Method used to Abort upload
+    # - Feeing memory by .end()ing writableStreams
+    # - Removing temporary record from @_preCollection
+    # - Removing record from @collection
+    # - .unlink()ing chunks from FS
+    _methods[self._methodNames._Abort] = (_id) ->
+      check _id, String
+
+      _continueUpload = self._continueUpload _id
+      console.info "[FilesCollection] [Abort Method]: #{_id} - #{_continueUpload?.file?.path}" if self.debug
+
+      if self._currentUploads?[_id]
+        self._currentUploads[_id].stop()
+        self._currentUploads[_id].abort()
+
+      if _continueUpload
+        self._preCollection.remove {_id}
+        self.remove {_id}
+        self.unlink {_id, path: _continueUpload.file.path} if _continueUpload?.file?.path
+      return true
+
+    Meteor.methods _methods
 
   ###
   @locus Server
@@ -1061,7 +999,7 @@ class FilesCollection
   @summary Internal method. Used to optimize received data and check upload permission
   @returns {Object}
   ###
-  _prepareUpload: if Meteor.isServer then (opts, userId, transport) ->
+  _prepareUpload: (opts, userId, transport) ->
     opts.eof       ?= false
     opts.binData   ?= 'EOF'
     opts.chunkId   ?= -1
@@ -1112,7 +1050,6 @@ class FilesCollection
       @onInitiateUpload.call ctx, result
 
     return {result, opts}
-  else undefined
 
   ###
   @locus Server
@@ -1121,7 +1058,7 @@ class FilesCollection
   @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
   @returns {undefined}
   ###
-  _finishUpload: if Meteor.isServer then (result, opts, cb) ->
+  _finishUpload: (result, opts, cb) ->
     console.info "[FilesCollection] [Upload] [finish(ing)Upload] -> #{result.path}" if @debug
     fs.chmod result.path, @permissions, NOOP
     self          = @
@@ -1142,7 +1079,6 @@ class FilesCollection
         cb and cb null, result
       return
     return
-  else undefined
 
   ###
   @locus Server
@@ -1151,7 +1087,7 @@ class FilesCollection
   @summary Internal method to handle upload process, pipe incoming data to Writable stream
   @returns {undefined}
   ###
-  _handleUpload: if Meteor.isServer then (result, opts, cb) ->
+  _handleUpload: (result, opts, cb) ->
     try
       if opts.eof
         self = @
@@ -1164,7 +1100,6 @@ class FilesCollection
       console.warn "[_handleUpload] [EXCEPTION:]", e if @debug
       cb and cb e
     return
-  else undefined
 
   ###
   @locus Anywhere
@@ -1177,7 +1112,7 @@ class FilesCollection
   _getMimeType: (fileData) ->
     check fileData, Object
     mime = fileData.type if fileData?.type
-    if Meteor.isServer and fileData.path and (not mime or not _.isString mime)
+    if fileData.path and (not mime or not _.isString mime)
       try
         buf = new Buffer 262
         fd  = fs.openSync fileData.path, 'r'
@@ -1217,25 +1152,20 @@ class FilesCollection
       user: -> return null
       userId: null
 
-    if Meteor.isServer
-      if http
-        mtok = null
-        if http.request.headers['x-mtok']
-          mtok = http.request.headers['x-mtok']
-        else
-          cookie = http.request.Cookies
-          if cookie.has 'x_mtok'
-            mtok = cookie.get 'x_mtok'
+    if http
+      mtok = null
+      if http.request.headers['x-mtok']
+        mtok = http.request.headers['x-mtok']
+      else
+        cookie = http.request.Cookies
+        if cookie.has 'x_mtok'
+          mtok = cookie.get 'x_mtok'
 
-        if mtok
-          userId = Meteor.server.sessions?[mtok]?.userId
-          if userId
-            result.user   = -> Meteor.users.findOne userId
-            result.userId = userId
-    else
-      if Meteor.userId?()
-        result.user = -> return Meteor.user()
-        result.userId = Meteor.userId()
+      if mtok
+        userId = Meteor.server.sessions?[mtok]?.userId
+        if userId
+          result.user   = -> Meteor.users.findOne userId
+          result.userId = userId
 
     return result
 
@@ -1320,7 +1250,7 @@ class FilesCollection
   @summary Write buffer to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
-  write: if Meteor.isServer then (buffer, opts = {}, callback, proceedAfterUpload) ->
+  write: (buffer, opts = {}, callback, proceedAfterUpload) ->
     console.info '[FilesCollection] [write()]' if @debug
 
     if _.isFunction opts
@@ -1379,8 +1309,6 @@ class FilesCollection
           return
       return
     return @
-  else
-    undefined
 
   ###
   @locus Server
@@ -1398,7 +1326,7 @@ class FilesCollection
   @summary Download file, write stream to FS and add to FilesCollection Collection
   @returns {FilesCollection} Instance
   ###
-  load: if Meteor.isServer then (url, opts, callback, proceedAfterUpload) ->
+  load: (url, opts, callback, proceedAfterUpload) ->
     console.info "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
 
     if _.isFunction opts
@@ -1474,8 +1402,6 @@ class FilesCollection
     ).pipe fs.createWriteStream(opts.path, {flags: 'w', mode: @permissions})
 
     return @
-  else
-    undefined
 
   ###
   @locus Server
@@ -1492,7 +1418,7 @@ class FilesCollection
   @summary Add file from FS to FilesCollection
   @returns {FilesCollection} Instance
   ###
-  addFile: if Meteor.isServer then (path, opts, callback, proceedAfterUpload) ->
+  addFile: (path, opts, callback, proceedAfterUpload) ->
     console.info "[FilesCollection] [addFile(#{path})]" if @debug
 
     if _.isFunction opts
@@ -1557,8 +1483,6 @@ class FilesCollection
       return
 
     return @
-  else
-    undefined
 
   ###
   @locus Anywhere
@@ -1596,553 +1520,6 @@ class FilesCollection
     return new FilesCursor selector, options, @
 
   ###
-  @locus Client
-  @memberOf FilesCollection
-  @name insert
-  @see https://developer.mozilla.org/en-US/docs/Web/API/FileReader
-  @param {Object} config - Configuration object with next properties:
-    {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
-    {Object}      meta           - Additional data as object, use later for search
-    {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
-    {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
-    {Number|dynamic} chunkSize   - Chunk size for upload
-    {String}      transport      - Upload transport `http` or `ddp`
-    {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
-    {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-    {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileRef`
-    {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
-    {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
-    {Function}    onBeforeUpload - Callback triggered right before upload is started:
-        return true to continue
-        return false to abort upload
-  @param {Boolean} autoStart     - Start upload immediately. If set to false, you need manually call .start() method on returned class. Useful to set EventListeners.
-  @summary Upload file to server over DDP or HTTP
-  @returns {UploadInstance} Instance. UploadInstance has next properties:
-    {ReactiveVar} onPause  - Is upload process on the pause?
-    {ReactiveVar} state    - active|paused|aborted|completed
-    {ReactiveVar} progress - Current progress in percentage
-    {Function}    pause    - Pause upload process
-    {Function}    continue - Continue paused upload process
-    {Function}    toggle   - Toggle continue/pause if upload process
-    {Function}    abort    - Abort upload
-    {Function}    readAsDataURL - Current file as data URL, use to create image preview and etc. Be aware of big files, may lead to browser crash
-  ###
-  insert: if Meteor.isClient then (config, autoStart = true) ->
-    return (new @_UploadInstance(config, @))[if autoStart then 'start' else 'manual']()
-  else undefined
-
-  ###
-  @locus Client
-  @memberOf FilesCollection
-  @name _UploadInstance
-  @class UploadInstance
-  @summary Internal Class, used in upload
-  ###
-  _UploadInstance: if Meteor.isClient then class UploadInstance
-    __proto__: EventEmitter.prototype
-    constructor: (@config, @collection) ->
-      EventEmitter.call @
-      console.info '[FilesCollection] [insert()]' if @collection.debug
-      self                     = @
-      @config.ddp             ?= @collection.ddp
-      @config.meta            ?= {}
-      @config.streams         ?= 2
-      @config.streams          = 2 if @config.streams < 1
-      @config.transport       ?= 'ddp'
-      @config.chunkSize       ?= @collection.chunkSize
-      @config.allowWebWorkers ?= true
-      @config.transport        = @config.transport.toLowerCase()
-
-      check @config, {
-        file:            Match.Any
-        fileName:        Match.Optional String
-        meta:            Match.Optional Object
-        type:            Match.Optional String
-        onError:         Match.Optional Function
-        onAbort:         Match.Optional Function
-        streams:         Match.OneOf 'dynamic', Number
-        onStart:         Match.Optional Function
-        isBase64:        Match.Optional Boolean
-        transport:       Match.OneOf 'http', 'ddp'
-        chunkSize:       Match.OneOf 'dynamic', Number
-        onUploaded:      Match.Optional Function
-        onProgress:      Match.Optional Function
-        onBeforeUpload:  Match.Optional Function
-        allowWebWorkers: Boolean
-        ddp:             Match.Any
-      }
-
-      if not @config.fileName and not @config.file.name
-        throw new Meteor.Error 400, '"fileName" must me specified for base64 upload!'
-
-      if @config.isBase64 is true
-        check @config.file, String
-        if !!~@config.file.indexOf('data:')
-          @config.file = @config.file.replace 'data:', ''
-        if !!~@config.file.indexOf(',')
-          _file = @config.file.split ','
-          @fileData =
-            size: Math.floor (_file[1].replace(/\=/g, '')).length / 4 * 3
-            type: _file[0].split(';')[0]
-            name: @config.fileName
-            meta: @config.meta
-          @config.file = _file[1]
-        else if not @config.type
-          throw new Meteor.Error 400, '"type" must me specified for base64 upload! And represent mime-type of the file'
-        else
-          @fileData =
-            size: Math.floor (@config.file.replace(/\=/g, '')).length / 4 * 3
-            type: @config.type
-            name: @config.fileName
-            meta: @config.meta
-
-      if @config.file
-        unless @config.isBase64
-          @fileData =
-            size: @config.file.size
-            type: @config.type or @config.file.type
-            name: @config.fileName or @config.file.name
-            meta: @config.meta
-
-        if @collection.debug
-          console.time('insert ' + @fileData.name)
-          console.time('loadFile ' + @fileData.name)
-
-        if @collection._supportWebWorker and @config.allowWebWorkers
-          try
-            @worker = new Worker @collection._webWorkerUrl
-          catch wwError
-            @worker = false
-            console.warn '[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError if @collection.debug
-        else
-          @worker = null
-
-        @startTime    = {}
-        @config.debug = @collection.debug
-        @currentChunk = 0
-        @transferTime = 0
-        @trackerComp  = null
-        @sentChunks   = 0
-        @fileLength   = 1
-        @EOFsent      = false
-        @fileId       = Random.id()
-        @FSName       = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
-        @pipes        = []
-
-        @fileData = _.extend @fileData, @collection._getExt(self.fileData.name), {mime: @collection._getMimeType(@fileData)}
-        @fileData['mime-type'] = @fileData.mime
-
-        @result = new @collection._FileUpload _.extend self.config, {@fileData, @fileId, _Abort: @collection._methodNames._Abort}
-
-        @beforeunload = (e) ->
-          message = if _.isFunction(self.collection.onbeforeunloadMessage) then self.collection.onbeforeunloadMessage.call(self.result, self.fileData) else self.collection.onbeforeunloadMessage
-          e.returnValue = message if e
-          return message
-        @result.config.beforeunload = @beforeunload
-        window.addEventListener 'beforeunload', @beforeunload, false
-
-        @result.config._onEnd = -> self.emitEvent '_onEnd'
-
-        @addListener 'end', @end
-        @addListener 'start', @start
-        @addListener 'upload', @upload
-        @addListener 'sendEOF', @sendEOF
-        @addListener 'prepare', @prepare
-        @addListener 'sendChunk', @sendChunk
-        @addListener 'proceedChunk', @proceedChunk
-        @addListener 'createStreams', @createStreams
-
-        @addListener 'calculateStats', _.throttle ->
-          _t = (self.transferTime / self.sentChunks) / self.config.streams
-          self.result.estimateTime.set (_t * (self.fileLength - self.sentChunks))
-          self.result.estimateSpeed.set (self.config.chunkSize / (_t / 1000))
-          progress = Math.round((self.sentChunks / self.fileLength) * 100)
-          self.result.progress.set progress
-          self.config.onProgress and self.config.onProgress.call self.result, progress, self.fileData
-          self.result.emitEvent 'progress', [progress, self.fileData]
-          return
-        , 250
-
-        @addListener '_onEnd', ->
-          Meteor.clearInterval(self.result.estimateTimer) if self.result.estimateTimer
-          self.worker.terminate() if self.worker
-          self.trackerComp.stop() if self.trackerComp
-          window.removeEventListener('beforeunload', self.beforeunload, false) if self.beforeunload
-          self.result.progress.set(0) if self.result
-      else
-        throw new Meteor.Error 500, '[FilesCollection] [insert] Have you forget to pass a File itself?'
-
-    end: (error, data) ->
-      console.timeEnd('insert ' + @fileData.name) if @collection.debug
-      @emitEvent '_onEnd'
-      @result.emitEvent 'uploaded', [error, data]
-      @config.onUploaded and @config.onUploaded.call @result, error, data
-      if error
-        console.error '[FilesCollection] [insert] [end] Error:', error if @collection.debug
-        @result.abort()
-        @result.state.set 'aborted'
-        @result.emitEvent 'error', [error, @fileData]
-        @config.onError and @config.onError.call @result, error, @fileData
-      else
-        @result.state.set 'completed'
-        @collection.emitEvent 'afterUpload', [data]
-      @result.emitEvent 'end', [error, (data or @fileData)]
-      return @result
-
-    sendChunk: (evt) ->
-      self = @
-      opts =
-        fileId:  @fileId
-        binData: evt.data.bin
-        chunkId: evt.data.chunkId
-
-      if @config.isBase64
-        pad = opts.binData.length % 4
-        if pad
-          p = 0
-          while p < pad
-            opts.binData += '='
-            p++
-
-      @emitEvent 'data', [evt.data.bin]
-      if @pipes.length
-        for pipeFunc in @pipes
-          opts.binData = pipeFunc opts.binData
-
-      if @fileLength is evt.data.chunkId
-        console.timeEnd('loadFile ' + @fileData.name) if @collection.debug
-        @emitEvent 'readEnd'
-
-      if opts.binData
-        if @config.transport is 'ddp'
-          @config.ddp.call @collection._methodNames._Write, opts, (error) ->
-            self.transferTime += (+new Date) - self.startTime[opts.chunkId]
-            if error
-              if self.result.state.get() isnt 'aborted'
-                self.emitEvent 'end', [error]
-            else
-              ++self.sentChunks
-              if self.sentChunks >= self.fileLength
-                self.emitEvent 'sendEOF'
-              else if self.currentChunk < self.fileLength
-                self.emitEvent 'upload'
-              self.emitEvent 'calculateStats'
-            return
-        else
-          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
-            content: opts.binData
-            headers:
-              'x-mtok':       Meteor.connection?._lastSessionId or null
-              'x-fileid':     opts.fileId
-              'x-chunkid':    opts.chunkId
-              'content-type': 'text/plain'
-          }, (error) ->
-            self.transferTime += (+new Date) - self.startTime[opts.chunkId]
-            if error
-              if "#{error}" is "Error: network"
-                self.result.pause()
-              else
-                if self.result.state.get() isnt 'aborted'
-                  self.emitEvent 'end', [error]
-            else
-              ++self.sentChunks
-              if self.sentChunks >= self.fileLength
-                self.emitEvent 'sendEOF'
-              else if self.currentChunk < self.fileLength
-                self.emitEvent 'upload'
-              self.emitEvent 'calculateStats'
-            return
-      return
-
-    sendEOF: ->
-      unless @EOFsent
-        @EOFsent = true
-        self = @
-        opts =
-          eof:    true
-          fileId: @fileId
-
-        if @config.transport is 'ddp'
-          @config.ddp.call @collection._methodNames._Write, opts, ->
-            self.emitEvent 'end', arguments
-            return
-        else
-          HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
-            content: ''
-            headers:
-              'x-mtok':       Meteor.connection?._lastSessionId or null
-              'x-eof':        '1'
-              'x-fileId':     opts.fileId
-              'content-type': 'text/plain'
-          }, (error, result) ->
-            try
-              result    = JSON.parse result?.content or {}
-            catch e
-              console.warn 'Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.'
-              result    = {}
-            result.meta = fixJSONParse result.meta if result?.meta
-            self.emitEvent 'end', [error, result]
-            return
-      return
-
-    proceedChunk: (chunkId) ->
-      self  = @
-      chunk = @config.file.slice (@config.chunkSize * (chunkId - 1)), (@config.chunkSize * chunkId)
-
-      if @config.isBase64
-        self.emitEvent 'sendChunk', [{
-          data: {
-            bin: chunk
-            chunkId: chunkId
-          }
-        }]
-      else
-        if FileReader
-          fileReader = new FileReader
-
-          fileReader.onloadend = (evt) ->
-            self.emitEvent 'sendChunk', [{
-              data: {
-                bin: (fileReader?.result or evt.srcElement?.result or evt.target?.result).split(',')[1]
-                chunkId: chunkId
-              }
-            }]
-            return
-
-          fileReader.onerror = (e) ->
-            self.emitEvent 'end', [(e.target or e.srcElement).error]
-            return
-
-          fileReader.readAsDataURL chunk
-
-        else if FileReaderSync
-          fileReader = new FileReaderSync
-
-          self.emitEvent 'sendChunk', [{
-            data: {
-              bin: fileReader.readAsDataURL(chunk).split(',')[1]
-              chunkId: chunkId
-            }
-          }]
-        else
-          self.emitEvent 'end', ['File API is not supported in this Browser!']
-      return
-
-    upload: ->
-      if @result.onPause.get()
-        return
-
-      if @result.state.get() is 'aborted'
-        return @
-
-      if @currentChunk <= @fileLength
-        ++@currentChunk
-        if @worker
-          @worker.postMessage({sc: @sentChunks, cc: @currentChunk, cs: @config.chunkSize, f: @config.file, ib: @config.isBase64})
-        else
-          @emitEvent 'proceedChunk', [@currentChunk]
-      @startTime[@currentChunk] = +new Date
-      return
-
-    createStreams: ->
-      i    = 1
-      self = @
-      while i <= @config.streams
-        self.emitEvent 'upload'
-        i++
-      return
-
-    prepare: ->
-      self = @
-
-      @config.onStart and @config.onStart.call @result, null, @fileData
-      @result.emitEvent 'start', [null, @fileData]
-
-      if @config.chunkSize is 'dynamic'
-        @config.chunkSize = @fileData.size / 1000
-        if @config.chunkSize < 327680
-          @config.chunkSize = 327680
-        else if @config.chunkSize > 1048576
-          @config.chunkSize = 1048576
-
-        if @config.transport is 'http'
-          @config.chunkSize = Math.round @config.chunkSize / 2
-
-      if @config.isBase64
-        @config.chunkSize = Math.floor(@config.chunkSize / 4) * 4
-        _len = Math.ceil(@config.file.length / @config.chunkSize)
-      else
-        @config.chunkSize = Math.floor(@config.chunkSize / 8) * 8
-        _len = Math.ceil(@fileData.size / @config.chunkSize)
-
-      if @config.streams is 'dynamic'
-        @config.streams = _.clone _len
-        @config.streams = 24 if @config.streams > 24
-
-        if @config.transport is 'http'
-          @config.streams = Math.round @config.streams / 2
-
-      @fileLength               = if _len <= 0 then 1 else _len
-      @config.streams           = @fileLength if @config.streams > @fileLength
-      @result.config.fileLength = @fileLength
-
-      opts =
-        file:       @fileData
-        fileId:     @fileId
-        chunkSize:  if @config.isBase64 then ((@config.chunkSize  / 4) * 3) else @config.chunkSize
-        fileLength: @fileLength
-      opts.FSName = @FSName if @FSName isnt @fileId
-
-      handleStart = (error) ->
-        if error
-          console.error '[FilesCollection] [_Start] Error:', error if self.collection.debug
-          self.emitEvent 'end', [error]
-        else
-          self.result.continueFunc = ->
-            console.info '[FilesCollection] [insert] [continueFunc]' if self.collection.debug
-            self.emitEvent 'createStreams'
-            return
-          self.emitEvent 'createStreams'
-        return
-
-      if @config.transport is 'ddp'
-        @config.ddp.call @collection._methodNames._Start, opts, handleStart
-      else
-        opts.file.meta = fixJSONStringify opts.file.meta if opts.file?.meta
-        HTTP.call 'POST', "#{@collection.downloadRoute}/#{@collection.collectionName}/__upload", {
-          data: opts
-          headers:
-            'x-start': '1'
-            'x-mtok': Meteor.connection?._lastSessionId or null
-        }, handleStart
-      return
-
-    pipe: (func) ->
-      @pipes.push func
-      return @
-
-    start: ->
-      self = @
-      if @fileData.size <= 0
-        @end new Meteor.Error 400, 'Can\'t upload empty file'
-        return @result
-
-      if @config.onBeforeUpload and _.isFunction @config.onBeforeUpload
-        isUploadAllowed = @config.onBeforeUpload.call _.extend(@result, @collection._getUser()), @fileData
-        if isUploadAllowed isnt true
-          return @end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else 'config.onBeforeUpload() returned false')
-
-      if @collection.onBeforeUpload and _.isFunction @collection.onBeforeUpload
-        isUploadAllowed = @collection.onBeforeUpload.call _.extend(@result, @collection._getUser()), @fileData
-        if isUploadAllowed isnt true
-          return @end new Meteor.Error(403, if _.isString(isUploadAllowed) then isUploadAllowed else 'collection.onBeforeUpload() returned false')
-
-      Tracker.autorun (computation) ->
-        self.trackerComp = computation
-        unless self.result.onPause.get()
-          if Meteor.status().connected
-            console.info '[FilesCollection] [insert] [Tracker] [continue]' if self.collection.debug
-            self.result.continue()
-          else
-            console.info '[FilesCollection] [insert] [Tracker] [pause]' if self.collection.debug
-            self.result.pause()
-        return
-
-      if @worker
-        @worker.onmessage = (evt) ->
-          if evt.data.error
-            console.warn '[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error if self.collection.debug
-            self.emitEvent 'proceedChunk', [evt.data.chunkId]
-          else
-            self.emitEvent 'sendChunk', [evt]
-          return
-        @worker.onerror   = (e) ->
-          console.error '[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e if self.collection.debug
-          self.emitEvent 'end', [e.message]
-          return
-
-      if @collection.debug
-        if @worker
-          console.info '[FilesCollection] [insert] using WebWorkers'
-        else
-          console.info '[FilesCollection] [insert] using MainThread'
-
-      self.emitEvent 'prepare'
-      return @result
-
-    manual: ->
-      self = @
-      @result.start = ->
-        self.emitEvent 'start'
-        return
-      @result.pipe = (func) ->
-        self.pipe func
-        return @
-      return @result
-  else undefined
-
-  ###
-  @locus Client
-  @memberOf FilesCollection
-  @name _FileUpload
-  @class FileUpload
-  @summary Internal Class, instance of this class is returned from `insert()` method
-  ###
-  _FileUpload: if Meteor.isClient then class FileUpload
-    __proto__: EventEmitter.prototype
-    constructor: (@config) ->
-      EventEmitter.call @
-      self           = @
-      unless @config.isBase64
-        @file        = _.extend @config.file, @config.fileData
-      else
-        @file        = @config.fileData
-      @state         = new ReactiveVar 'active'
-      @onPause       = new ReactiveVar false
-      @progress      = new ReactiveVar 0
-      @estimateTime  = new ReactiveVar 1000
-      @estimateSpeed = new ReactiveVar 0
-      @estimateTimer = Meteor.setInterval ->
-        if self.state.get() is 'active'
-          _currentTime = self.estimateTime.get()
-          if _currentTime > 1000
-            self.estimateTime.set _currentTime - 1000
-        return
-      , 1000
-    continueFunc:  -> return
-    pause: ->
-      console.info '[FilesCollection] [insert] [.pause()]' if @config.debug
-      unless @onPause.get()
-        @onPause.set true
-        @state.set 'paused'
-        @emitEvent 'pause', [@file]
-      return
-    continue: ->
-      console.info '[FilesCollection] [insert] [.continue()]' if @config.debug
-      if @onPause.get()
-        @onPause.set false
-        @state.set 'active'
-        @emitEvent 'continue', [@file]
-        @continueFunc()
-      return
-    toggle: ->
-      console.info '[FilesCollection] [insert] [.toggle()]' if @config.debug
-      if @onPause.get() then @continue() else @pause()
-      return
-    abort: ->
-      console.info '[FilesCollection] [insert] [.abort()]' if @config.debug
-      window.removeEventListener 'beforeunload', @config.beforeunload, false
-      @config.onAbort and @config.onAbort.call @, @file
-      @emitEvent 'abort', [@file]
-      @pause()
-      @config._onEnd()
-      @state.set 'aborted'
-      console.timeEnd('insert ' + @config.fileData.name) if @config.debug
-      @config.ddp.call @config._Abort, @config.fileId
-      return
-  else undefined
-
-  ###
   @locus Anywhere
   @memberOf FilesCollection
   @name remove
@@ -2156,33 +1533,26 @@ class FilesCollection
     check selector, Match.OneOf Object, String
     check callback, Match.Optional Function
 
-    if Meteor.isClient
-      if @allowClientCode
-        @ddp.call @_methodNames._Remove, selector, (callback or NOOP)
-      else
-        callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-        console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug
+    files = @collection.find selector
+    if files.count() > 0
+      self = @
+      files.forEach (file) ->
+        self.unlink file
+        return
     else
-      files = @collection.find selector
-      if files.count() > 0
-        self = @
-        files.forEach (file) ->
-          self.unlink file
-          return
-      else
-        callback and callback new Meteor.Error 404, 'Cursor is empty, no files is removed'
-        return @
+      callback and callback new Meteor.Error 404, 'Cursor is empty, no files is removed'
+      return @
 
-      if @onAfterRemove
-        self = @
-        docs = files.fetch()
+    if @onAfterRemove
+      self = @
+      docs = files.fetch()
 
-        @collection.remove selector, ->
-          callback and callback.apply @, arguments
-          self.onAfterRemove docs
-          return
-      else
-        @collection.remove selector, (callback or NOOP)
+      @collection.remove selector, ->
+        callback and callback.apply @, arguments
+        self.onAfterRemove docs
+        return
+    else
+      @collection.remove selector, (callback or NOOP)
     return @
 
   ###
@@ -2206,10 +1576,9 @@ class FilesCollection
   @summary link Mongo.Collection deny methods
   @returns {Mongo.Collection} Instance
   ###
-  deny: if Meteor.isServer then (rules) ->
+  deny: (rules) ->
     @collection.deny rules
     return @collection
-  else undefined
 
   ###
   @locus Server
@@ -2220,10 +1589,9 @@ class FilesCollection
   @summary link Mongo.Collection allow methods
   @returns {Mongo.Collection} Instance
   ###
-  allow: if Meteor.isServer then (rules) ->
+  allow: (rules) ->
     @collection.allow rules
     return @collection
-  else undefined
 
   ###
   @locus Server
@@ -2233,13 +1601,12 @@ class FilesCollection
   @summary Shorthands for Mongo.Collection deny method
   @returns {Mongo.Collection} Instance
   ###
-  denyClient: if Meteor.isServer then ->
+  denyClient: ->
     @collection.deny
       insert: -> true
       update: -> true
       remove: -> true
     return @collection
-  else undefined
 
   ###
   @locus Server
@@ -2249,13 +1616,12 @@ class FilesCollection
   @summary Shorthands for Mongo.Collection allow method
   @returns {Mongo.Collection} Instance
   ###
-  allowClient: if Meteor.isServer then ->
+  allowClient: ->
     @collection.allow
       insert: -> true
       update: -> true
       remove: -> true
     return @collection
-  else undefined
 
 
   ###
@@ -2268,7 +1634,7 @@ class FilesCollection
   @summary Unlink files and it's versions from FS
   @returns {FilesCollection} Instance
   ###
-  unlink: if Meteor.isServer then (fileRef, version, callback) ->
+  unlink: (fileRef, version, callback) ->
     console.info "[FilesCollection] [unlink(#{fileRef._id}, #{version})]" if @debug
     if version
       if fileRef.versions?[version] and fileRef.versions[version]?.path
@@ -2281,7 +1647,6 @@ class FilesCollection
       else
         fs.unlink fileRef.path, (callback or NOOP)
     return @
-  else undefined
 
   ###
   @locus Server
@@ -2290,7 +1655,7 @@ class FilesCollection
   @summary Internal method, used to return 404 error
   @returns {undefined}
   ###
-  _404: if Meteor.isServer then (http) ->
+  _404: (http) ->
     console.warn "[FilesCollection] [download(#{http.request.originalUrl})] [_404] File not found" if @debug
     text = 'File Not Found :('
 
@@ -2301,7 +1666,6 @@ class FilesCollection
     if !http.response.finished
       http.response.end text
     return
-  else undefined
 
   ###
   @locus Server
@@ -2313,7 +1677,7 @@ class FilesCollection
   @summary Initiates the HTTP response
   @returns {undefined}
   ###
-  download: if Meteor.isServer then (http, version = 'original', fileRef) ->
+  download: (http, version = 'original', fileRef) ->
     console.info "[FilesCollection] [download(#{http.request.originalUrl}, #{version})]" if @debug
     if fileRef
       if _.has(fileRef, 'versions') and _.has fileRef.versions, version
@@ -2347,7 +1711,6 @@ class FilesCollection
       return
     else
       return @_404 http
-  else undefined
 
   ###
   @locus Server
@@ -2363,7 +1726,7 @@ class FilesCollection
   @summary Handle and reply to incoming request
   @returns {undefined}
   ###
-  serve: if Meteor.isServer then (http, fileRef, vRef, version = 'original', readableStream = null, responseType = '200', force200 = false) ->
+  serve: (http, fileRef, vRef, version = 'original', readableStream = null, responseType = '200', force200 = false) ->
     self     = @
     partiral = false
     reqRange = false
@@ -2518,7 +1881,6 @@ class FilesCollection
         stream.pipe http.response
         break
     return
-  else undefined
 
   ###
   @locus Anywhere
@@ -2560,28 +1922,6 @@ formatFleURL = (fileRef, version = 'original') ->
     return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
   else
     return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
-
-if Meteor.isClient
-  ###
-  @locus Client
-  @TemplateHelper
-  @name fileURL
-  @param {Object} fileRef - File reference object
-  @param {String} version - [Optional] Version of file you would like to request
-  @summary Get download URL for file by fileRef, even without subscription
-  @example {{fileURL fileRef}}
-  @returns {String}
-  ###
-  Meteor.startup ->
-    if Template?
-      Template.registerHelper 'fileURL', (fileRef, version) ->
-        return undefined if not fileRef or not _.isObject fileRef
-        version = if not version or not _.isString(version) then 'original' else version
-        if fileRef._id
-          return formatFleURL fileRef, version
-        else
-          return ''
-    return
 
 ###
 Export the FilesCollection class
