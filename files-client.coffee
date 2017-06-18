@@ -430,14 +430,18 @@ class FilesCollection
 
     check @onbeforeunloadMessage, Match.OneOf String, Function
 
-    _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false
-    if window?.Worker and window?.Blob and _URL
-      @_supportWebWorker = true
-      @_webWorkerUrl     = _URL.createObjectURL(new Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}))
-    else if window?.Worker
-      @_supportWebWorker = true
-      @_webWorkerUrl     = Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
-    else
+    try
+      _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false
+      if window?.Worker and window?.Blob and _URL
+        @_supportWebWorker = true
+        @_webWorkerUrl     = _URL.createObjectURL(new Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}))
+      else if window?.Worker
+        @_supportWebWorker = true
+        @_webWorkerUrl     = Meteor.absoluteUrl 'packages/ostrio_files/worker.min.js'
+      else
+        @_supportWebWorker = false
+    catch e
+      console.warn('[FilesCollection] [Check WebWorker Availability] Error:', e) if self.debug
       @_supportWebWorker = false
 
     if not @schema
