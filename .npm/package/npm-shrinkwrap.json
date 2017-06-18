@@ -40,11 +40,6 @@
       "resolved": "https://registry.npmjs.org/boom/-/boom-2.10.1.tgz",
       "from": "boom@>=2.0.0 <3.0.0"
     },
-    "buffer-shims": {
-      "version": "1.0.0",
-      "resolved": "https://registry.npmjs.org/buffer-shims/-/buffer-shims-1.0.0.tgz",
-      "from": "buffer-shims@>=1.0.0 <1.1.0"
-    },
     "caseless": {
       "version": "0.12.0",
       "resolved": "https://registry.npmjs.org/caseless/-/caseless-0.12.0.tgz",
@@ -108,9 +103,9 @@
       "from": "extsprintf@1.0.2"
     },
     "file-type": {
-      "version": "4.3.0",
-      "resolved": "https://registry.npmjs.org/file-type/-/file-type-4.3.0.tgz",
-      "from": "file-type@4.3.0"
+      "version": "5.2.0",
+      "resolved": "https://registry.npmjs.org/file-type/-/file-type-5.2.0.tgz",
+      "from": "file-type@5.2.0"
     },
     "forever-agent": {
       "version": "0.6.1",
@@ -188,11 +183,6 @@
       "version": "0.1.2",
       "resolved": "https://registry.npmjs.org/isstream/-/isstream-0.1.2.tgz",
       "from": "isstream@>=0.1.2 <0.2.0"
-    },
-    "jodid25519": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/jodid25519/-/jodid25519-1.0.2.tgz",
-      "from": "jodid25519@>=1.0.0 <2.0.0"
     },
     "jsbn": {
       "version": "0.1.1",
@@ -277,9 +267,16 @@
       "from": "qs@>=6.4.0 <6.5.0"
     },
     "readable-stream": {
-      "version": "2.2.9",
-      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.9.tgz",
-      "from": "readable-stream@>=0.3.0"
+      "version": "2.2.11",
+      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.11.tgz",
+      "from": "readable-stream@>=0.3.0",
+      "dependencies": {
+        "safe-buffer": {
+          "version": "5.0.1",
+          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz",
+          "from": "safe-buffer@>=5.0.1 <5.1.0"
+        }
+      }
     },
     "request": {
       "version": "2.81.0",
@@ -287,8 +284,8 @@
       "from": "request@2.81.0"
     },
     "safe-buffer": {
-      "version": "5.0.1",
-      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz",
+      "version": "5.1.0",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.0.tgz",
       "from": "safe-buffer@>=5.0.1 <6.0.0"
     },
     "sntp": {
@@ -297,8 +294,8 @@
       "from": "sntp@>=1.0.0 <2.0.0"
     },
     "sshpk": {
-      "version": "1.13.0",
-      "resolved": "https://registry.npmjs.org/sshpk/-/sshpk-1.13.0.tgz",
+      "version": "1.13.1",
+      "resolved": "https://registry.npmjs.org/sshpk/-/sshpk-1.13.1.tgz",
       "from": "sshpk@>=1.7.0 <2.0.0",
       "dependencies": {
         "assert-plus": {
@@ -314,9 +311,16 @@
       "from": "stream-parser@>=0.0.2"
     },
     "string_decoder": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.1.tgz",
-      "from": "string_decoder@>=1.0.0 <1.1.0"
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.2.tgz",
+      "from": "string_decoder@>=1.0.0 <1.1.0",
+      "dependencies": {
+        "safe-buffer": {
+          "version": "5.0.1",
+          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz",
+          "from": "safe-buffer@~5.0.1"
+        }
+      }
     },
     "stringstream": {
       "version": "0.0.5",
@@ -354,8 +358,8 @@
       "from": "util-deprecate@>=1.0.1 <1.1.0"
     },
     "uuid": {
-      "version": "3.0.1",
-      "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.0.1.tgz",
+      "version": "3.1.0",
+      "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.1.0.tgz",
       "from": "uuid@>=3.0.0 <4.0.0"
     },
     "verror": {
