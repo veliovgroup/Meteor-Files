@@ -1,6 +1,4 @@
-# React example
-
-*This example is for the front-end UI only. The server side methods and publications the same.*
+*This example is for the front-end UI only. The server side [methods](https://github.com/VeliovGroup/Meteor-Files/wiki#api) and [publications](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) are the same.*
 
 ## Brief:
 In this example two components is used. First - to handle the uploads, adds a file input box and progress bar. Second - to show the file details (`FileIndividualFile.jsx`).
@@ -13,11 +11,11 @@ In this example two components is used. First - to handle the uploads, adds a fi
 ## FileUpload.jsx:
 
 ```jsx
-import {ReactMeteorData} from 'meteor/react-meteor-data';
+import { ReactMeteorData } from 'meteor/react-meteor-data';
 import React from 'react';
-import {Meteor} from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import IndividualFile from './FileIndividualFile.jsx';
-import {_} from 'meteor/underscore';
+import { _ } from 'meteor/underscore';
 
 const FileUploadComponent = React.createClass({
   mixins: [ReactMeteorData],
@@ -136,10 +134,8 @@ const FileUploadComponent = React.createClass({
 
       // Run through each file that the user has stored
       // (make sure the subscription only sends files owned by this user)
-
-      let showit = fileCursors.map((aFile, key) => {
+      let display = fileCursors.map((aFile, key) => {
         // console.log('A file: ', aFile.link(), aFile.get('name'));
-
         let link = UserFiles.findOne({_id: aFile._id}).link();  //The "view/download" link
 
         // Send out components that show details of each file
@@ -172,7 +168,7 @@ const FileUploadComponent = React.createClass({
           </div>
         </div>
 
-        {showit}
+        {display}
 
       </div>
     }
@@ -195,7 +191,6 @@ const IndividualFile = React.createClass({
     fileId: React.PropTypes.string.isRequired
   },
 
-
   removeFile(){
     "use strict";
     let conf = confirm('Are you sure you want to delete the file?') || false;
@@ -206,7 +201,6 @@ const IndividualFile = React.createClass({
       });
     }
   },
-
 
   renameFile(){
     "use strict";
@@ -229,7 +223,6 @@ const IndividualFile = React.createClass({
   },
 
   render() {
-
     return <div className="m-t-sm">
       <div className="row">
         <div className="col-md-12">

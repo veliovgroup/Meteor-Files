@@ -94,7 +94,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
  - [`unlink()`](https://github.com/VeliovGroup/Meteor-Files/wiki/unlink) [*Server*] - Unlink file from FS
  - [`link()`](https://github.com/VeliovGroup/Meteor-Files/wiki/link) [*Isomorphic*] - Generate downloadable link
  - [`collection`](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) [*Isomorphic*] - `Meteor.Collection` instance
- - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in template
+ - [Template helper `fileURL`](https://github.com/VeliovGroup/Meteor-Files/wiki/Template-Helper) [*Client*] - Generate downloadable link in a template
 
 ##### Examples:
  - [MUP/Docker Persistent Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage) - Deploy via MeteorUp to Docker container with persistent `storagePath`
