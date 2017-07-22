@@ -71,9 +71,11 @@ Related Packages:
 Why `Meteor-Files`?
 ========
  - Support for `HTTP` and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
- - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*) - *Add it yourself*
- - You need to check file mime-type, size or extension? (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) - *Add it yourself*
- - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js) after upload? (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*, *[file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) - *Add it yourself*
+ - Sustainable and resumable uploads, which will survive connection interruption and server reboot (*if a server has persistent storage*)
+ - Upload files through computing cloud without persistent File System, like Heroku
+ - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*)
+ - You need to check file mime-type, size or extension? Easy! Use (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) hook
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js) after upload? Easy too! Use (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook, and *[manage file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) in single record
 
 Easy-peasy kids, *yeah*?
 
@@ -97,6 +99,7 @@ FAQ:
  2. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
  3. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
  4. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
+ 5. In Safari (Mobile and Desktop) for `DDP` upload streams is hardcoded to `1` and chunk size is reduced by algorithm, due to error hrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
 
 API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 ========
