@@ -1,5 +1,7 @@
 `import { Cookies } from 'meteor/ostrio:cookies'`
-NOOP = -> return
+`import { writeStream } from './write-stream.coffee'`
+`import { FilesCollectionCore } from './core.coffee'`
+`import { fixJSONParse, fixJSONStringify, formatFleURL } from './lib.coffee'`
 
 ###
 @summary Require NPM packages
@@ -15,440 +17,7 @@ NOOP = -> return
 @var {Object} bound - Meteor.bindEnvironment (Fiber wrapper)
 ###
 bound = Meteor.bindEnvironment (callback) -> return callback()
-
-###
-@private
-@locus Server
-@class writeStream
-@param path      {String} - Path to file on FS
-@param maxLength {Number} - Max amount of chunks in stream
-@param file      {Object} - fileRef Object
-@summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
-###
-class writeStream
-  constructor: (@path, @maxLength, @file, @permissions) ->
-    if not @path or not _.isString @path
-      return
-
-    self = @
-    @fd = null
-    fs.open @path, 'w+', @permissions, (error, fd) -> bound ->
-      if error
-        throw new Meteor.Error 500, '[FilesCollection] [writeStream] [Exception:]', error
-      else
-        self.fd = fd
-      return
-    @ended         = false
-    @aborted       = false
-    @writtenChunks = 0
-
-  ###
-  @memberOf writeStream
-  @name write
-  @param {Number} num - Chunk position in stream
-  @param {Buffer} chunk - Chunk binary data
-  @param {Function} callback - Callback
-  @summary Write chunk in given order
-  @returns {Boolean} - True if chunk is sent to stream, false if chunk is set into queue
-  ###
-  write: (num, chunk, callback) ->
-    if not @aborted and not @ended
-      self    = @
-      if @fd
-        _stream = fs.createWriteStream @path, {
-          flags: 'r+'
-          mode: @permissions
-          highWaterMark: 0
-          fd: @fd
-          autoClose: true
-          start: (num - 1) * @file.chunkSize
-        }
-        _stream.on 'error', (error) -> bound ->
-          console.error "[FilesCollection] [writeStream] [ERROR:]", error
-          self.abort()
-          return
-        _stream.write chunk, -> bound ->
-          ++self.writtenChunks
-          callback and callback()
-          return
-      else
-        Meteor.setTimeout ->
-          self.write num, chunk, callback
-          return
-        , 25
-    return false
-
-  ###
-  @memberOf writeStream
-  @name end
-  @param {Function} callback - Callback
-  @summary Finishes writing to writableStream, only after all chunks in queue is written
-  @returns {Boolean} - True if stream is fulfilled, false if queue is in progress
-  ###
-  end: (callback) ->
-    if not @aborted and not @ended
-      if @writtenChunks is @maxLength
-        self = @
-        fs.close @fd, -> bound ->
-          self.ended = true
-          callback and callback(true)
-          return
-        return true
-      else
-        self = @
-        Meteor.setTimeout ->
-          self.end callback
-          return
-        , 25
-    else
-      callback and callback(false)
-    return false
-
-  ###
-  @memberOf writeStream
-  @name abort
-  @param {Function} callback - Callback
-  @summary Aborts writing to writableStream, removes created file
-  @returns {Boolean} - True
-  ###
-  abort: (callback) ->
-    @aborted = true
-    fs.unlink @path, (callback or NOOP)
-    return true
-
-  ###
-  @memberOf writeStream
-  @name stop
-  @summary Stop writing to writableStream
-  @returns {Boolean} - True
-  ###
-  stop: ->
-    @aborted = true
-    @ended   = true
-    return true
-
-###
-@private
-@locus Anywhere
-@class FileCursor
-@param _fileRef    {Object} - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-@param _collection {FilesCollection} - FilesCollection Instance
-@summary Internal class, represents each record in `FilesCursor.each()` or document returned from `.findOne()` method
-###
-class FileCursor
-  constructor: (@_fileRef, @_collection) ->
-    self = @
-    self = _.extend self, @_fileRef
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name remove
-  @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
-  @summary Remove document
-  @returns {FileCursor}
-  ###
-  remove: (callback) ->
-    console.info '[FilesCollection] [FileCursor] [remove()]' if @_collection.debug
-    if @_fileRef
-      @_collection.remove(@_fileRef._id, callback)
-    else
-      callback and callback new Meteor.Error 404, 'No such file'
-    return @
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name link
-  @param version {String} - Name of file's subversion
-  @summary Returns downloadable URL to File
-  @returns {String}
-  ###
-  link: (version) ->
-    console.info "[FilesCollection] [FileCursor] [link(#{version})]" if @_collection.debug
-    return if @_fileRef then @_collection.link(@_fileRef, version) else ''
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name get
-  @param property {String} - Name of sub-object property
-  @summary Returns current document as a plain Object, if `property` is specified - returns value of sub-object property
-  @returns {Object|mix}
-  ###
-  get: (property) ->
-    console.info "[FilesCollection] [FileCursor] [get(#{property})]" if @_collection.debug
-    if property
-      return @_fileRef[property]
-    else
-      return @_fileRef
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name fetch
-  @summary Returns document as plain Object in Array
-  @returns {[Object]}
-  ###
-  fetch: ->
-    console.info '[FilesCollection] [FileCursor] [fetch()]' if @_collection.debug
-    return [@_fileRef]
-
-  ###
-  @locus Anywhere
-  @memberOf FileCursor
-  @name with
-  @summary Returns reactive version of current FileCursor, useful to use with `{{#with}}...{{/with}}` block template helper
-  @returns {[Object]}
-  ###
-  with: ->
-    console.info '[FilesCollection] [FileCursor] [with()]' if @_collection.debug
-    self = @
-    return _.extend self, @_collection.collection.findOne @_fileRef._id
-
-###
-@private
-@locus Anywhere
-@class FilesCursor
-@param _selector   {String|Object}   - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-@param options     {Object}          - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#selectors)
-@param _collection {FilesCollection} - FilesCollection Instance
-@summary Implementation of Cursor for FilesCollection
-###
-class FilesCursor
-  constructor: (@_selector = {}, options, @_collection) ->
-    @_current = -1
-    @cursor   = @_collection.collection.find @_selector, options
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name get
-  @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
-  @returns {[Object]}
-  ###
-  get: ->
-    console.info "[FilesCollection] [FilesCursor] [get()]" if @_collection.debug
-    return @cursor.fetch()
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name hasNext
-  @summary Returns `true` if there is next item available on Cursor
-  @returns {Boolean}
-  ###
-  hasNext: ->
-    console.info '[FilesCollection] [FilesCursor] [hasNext()]' if @_collection.debug
-    return @_current < @cursor.count() - 1
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name next
-  @summary Returns next item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  next: ->
-    console.info '[FilesCollection] [FilesCursor] [next()]' if @_collection.debug
-    if @hasNext()
-      return @cursor.fetch()[++@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name hasPrevious
-  @summary Returns `true` if there is previous item available on Cursor
-  @returns {Boolean}
-  ###
-  hasPrevious: ->
-    console.info '[FilesCollection] [FilesCursor] [hasPrevious()]' if @_collection.debug
-    return @_current isnt -1
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name previous
-  @summary Returns previous item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  previous: ->
-    console.info '[FilesCollection] [FilesCursor] [previous()]' if @_collection.debug
-    if @hasPrevious()
-      return @cursor.fetch()[--@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name fetch
-  @summary Returns all matching document(s) as an Array.
-  @returns {[Object]}
-  ###
-  fetch: ->
-    console.info '[FilesCollection] [FilesCursor] [fetch()]' if @_collection.debug
-    return @cursor.fetch()
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name first
-  @summary Returns first item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  first: ->
-    console.info '[FilesCollection] [FilesCursor] [first()]' if @_collection.debug
-    @_current = 0
-    return @fetch()?[@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name last
-  @summary Returns last item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  last: ->
-    console.info '[FilesCollection] [FilesCursor] [last()]' if @_collection.debug
-    @_current = @count() - 1
-    return @fetch()?[@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name count
-  @summary Returns the number of documents that match a query
-  @returns {Number}
-  ###
-  count: ->
-    console.info '[FilesCollection] [FilesCursor] [count()]' if @_collection.debug
-    return @cursor.count()
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name remove
-  @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
-  @summary Removes all documents that match a query
-  @returns {FilesCursor}
-  ###
-  remove: (callback) ->
-    console.info '[FilesCollection] [FilesCursor] [remove()]' if @_collection.debug
-    @_collection.remove @_selector, callback
-    return @
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name forEach
-  @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-  @param context {Object} - An object which will be the value of `this` inside `callback`
-  @summary Call `callback` once for each matching document, sequentially and synchronously.
-  @returns {undefined}
-  ###
-  forEach: (callback, context = {}) ->
-    console.info '[FilesCollection] [FilesCursor] [forEach()]' if @_collection.debug
-    @cursor.forEach callback, context
-    return
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name each
-  @summary Returns an Array of FileCursor made for each document on current cursor
-           Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
-  @returns {[FileCursor]}
-  ###
-  each: ->
-    self = @
-    return @map (file) ->
-      return new FileCursor file, self._collection
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name map
-  @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-  @param context {Object} - An object which will be the value of `this` inside `callback`
-  @summary Map `callback` over all matching documents. Returns an Array.
-  @returns {Array}
-  ###
-  map: (callback, context = {}) ->
-    console.info '[FilesCollection] [FilesCursor] [map()]' if @_collection.debug
-    return @cursor.map callback, context
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name current
-  @summary Returns current item on Cursor, if available
-  @returns {Object|undefined}
-  ###
-  current: ->
-    console.info '[FilesCollection] [FilesCursor] [current()]' if @_collection.debug
-    @_current = 0 if @_current < 0
-    return @fetch()[@_current]
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name observe
-  @param callbacks {Object} - Functions to call to deliver the result set as it changes
-  @summary Watch a query. Receive callbacks as the result set changes.
-  @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observe
-  @returns {Object} - live query handle
-  ###
-  observe: (callbacks) ->
-    console.info '[FilesCollection] [FilesCursor] [observe()]' if @_collection.debug
-    return @cursor.observe callbacks
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCursor
-  @name observeChanges
-  @param callbacks {Object} - Functions to call to deliver the result set as it changes
-  @summary Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
-  @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges
-  @returns {Object} - live query handle
-  ###
-  observeChanges: (callbacks) ->
-    console.info '[FilesCollection] [FilesCursor] [observeChanges()]' if @_collection.debug
-    return @cursor.observeChanges callbacks
-
-###
-@var {Function} fixJSONParse - Fix issue with Date parse
-###
-fixJSONParse = (obj) ->
-  for key, value of obj
-    if _.isString(value) and !!~value.indexOf '=--JSON-DATE--='
-      value = value.replace '=--JSON-DATE--=', ''
-      obj[key] = new Date parseInt value
-    else if _.isObject value
-      obj[key] = fixJSONParse value
-    else if _.isArray value
-      for v, i in value
-        if _.isObject(v)
-          obj[key][i] = fixJSONParse v
-        else if _.isString(v) and !!~v.indexOf '=--JSON-DATE--='
-          v = v.replace '=--JSON-DATE--=', ''
-          obj[key][i] = new Date parseInt v
-  return obj
-
-###
-@var {Function} fixJSONStringify - Fix issue with Date stringify
-###
-fixJSONStringify = (obj) ->
-  for key, value of obj
-    if _.isDate value
-      obj[key] = '=--JSON-DATE--=' + (+value)
-    else if _.isObject value
-      obj[key] = fixJSONStringify value
-    else if _.isArray value
-      for v, i in value
-        if _.isObject(v)
-          obj[key][i] = fixJSONStringify v
-        else if _.isDate v
-          obj[key][i] = '=--JSON-DATE--=' + (+v)
-  return obj
+NOOP  = -> return
 
 ###
 @locus Anywhere
@@ -489,7 +58,7 @@ return `false` or `String` to abort upload
 @summary Create new instance of FilesCollection
 ###
 class FilesCollection
-  __proto__: do -> events.EventEmitter.prototype
+  __proto__: do -> _.extend events.EventEmitter.prototype, FilesCollectionCore.prototype
   constructor: (config) ->
     events.EventEmitter.call @
     {storagePath, @ddp, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
@@ -497,6 +66,8 @@ class FilesCollection
     self        = @
     cookie      = new Cookies()
     @debug     ?= false
+    @_debug     = ->
+      console.info.apply undefined, arguments if self.debug
     @public    ?= false
     @protected ?= false
     @chunkSize ?= 1024*512
@@ -561,7 +132,7 @@ class FilesCollection
     if @public and not storagePath
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root."
 
-    console.info('[FilesCollection.storagePath] Set to:', @storagePath({})) if @debug
+    @_debug '[FilesCollection.storagePath] Set to:', @storagePath({})
 
     fs.mkdirs @storagePath({}), {mode: @parentDirPermissions}, (error) ->
       if error
@@ -592,19 +163,19 @@ class FilesCollection
     _preCollectionCursor.observe
       changed: (doc) ->
         if doc.isFinished
-          console.info "[FilesCollection] [_preCollectionCursor.observe] [changed]: #{doc._id}" if self.debug
+          self._debug "[FilesCollection] [_preCollectionCursor.observe] [changed]: #{doc._id}"
           self._preCollection.remove {_id: doc._id}, NOOP
         return
       removed: (doc) ->
         # Free memory after upload is done
         # Or if upload is unfinished
-        console.info "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}" if self.debug
+        self._debug "[FilesCollection] [_preCollectionCursor.observe] [removed]: #{doc._id}"
         if self._currentUploads?[doc._id]
           self._currentUploads[doc._id].stop()
           self._currentUploads[doc._id].end()
 
           unless doc.isFinished
-            console.info "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc._id}" if self.debug
+            self._debug "[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: #{doc._id}"
             self._currentUploads[doc._id].abort()
 
           delete self._currentUploads[doc._id]
@@ -615,6 +186,7 @@ class FilesCollection
 
     # This little function allows to continue upload
     # even after server is restarted (*not on dev-stage*)
+    _iwcz = 0
     @_continueUpload = (_id) ->
       if self._currentUploads?[_id]?.file
         if not self._currentUploads[_id].aborted and not self._currentUploads[_id].ended
@@ -625,8 +197,9 @@ class FilesCollection
       else
         contUpld = self._preCollection.findOne {_id}
         if contUpld
-          self._createStream _id, contUpld.file.path, contUpld.file
-        return contUpld
+          self._createStream _id, contUpld.file.path, contUpld
+          return self._currentUploads[_id].file
+        return false
 
     if not @schema
       @schema =
@@ -694,7 +267,7 @@ class FilesCollection
           return true
         else
           rc = if _.isNumber(result) then result else 401
-          console.warn '[FilesCollection._checkAccess] WARN: Access denied!' if self.debug
+          self._debug '[FilesCollection._checkAccess] WARN: Access denied!'
           if http
             text = 'Access denied!'
             if !http.response.headersSent
@@ -786,13 +359,14 @@ class FilesCollection
                   opts         = file: {}
 
                 opts.___s      = true
-                console.info "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}" if self.debug
+                self._debug "[FilesCollection] [File Start HTTP] #{opts.file.name} - #{opts.fileId}"
                 opts.file.meta = fixJSONParse opts.file.meta if opts?.file?.meta
                 {result}       = self._prepareUpload _.clone(opts), user.userId, 'HTTP Start Method'
                 if self.collection.findOne result._id
                   throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
                 opts._id       = opts.fileId
                 opts.createdAt = new Date()
+                opts.maxLength = opts.fileLength
                 self._preCollection.insert _.omit(opts, '___s')
                 self._createStream result._id, result.path, _.omit(opts, '___s')
 
@@ -872,7 +446,7 @@ class FilesCollection
     # from Client side
     _methods[self._methodNames._Remove] = (selector) ->
       check selector, Match.OneOf String, Object
-      console.info "[FilesCollection] [Unlink Method] [.remove(#{selector})]" if self.debug
+      self._debug "[FilesCollection] [Unlink Method] [.remove(#{selector})]"
 
       if self.allowClientCode
         if self.onBeforeRemove and _.isFunction self.onBeforeRemove
@@ -913,13 +487,14 @@ class FilesCollection
 
       check returnMeta, Match.Optional Boolean
 
-      console.info "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}" if self.debug
+      self._debug "[FilesCollection] [File Start Method] #{opts.file.name} - #{opts.fileId}"
       opts.___s      = true
       {result}       = self._prepareUpload _.clone(opts), @userId, 'DDP Start Method'
       if self.collection.findOne result._id
         throw new Meteor.Error 400, 'Can\'t start upload, data substitution detected!'
       opts._id       = opts.fileId
       opts.createdAt = new Date()
+      opts.maxLength = opts.fileLength
       self._preCollection.insert _.omit(opts, '___s')
       self._createStream result._id, result.path, _.omit(opts, '___s')
 
@@ -963,7 +538,7 @@ class FilesCollection
         try
           return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))()
         catch e
-          console.warn "[FilesCollection] [Write Method] [DDP] Exception:", e if self.debug
+          self._debug "[FilesCollection] [Write Method] [DDP] Exception:", e
           throw e
       else
         self.emit '_handleUpload', result, opts, NOOP
@@ -978,7 +553,7 @@ class FilesCollection
       check _id, String
 
       _continueUpload = self._continueUpload _id
-      console.info "[FilesCollection] [Abort Method]: #{_id} - #{_continueUpload?.file?.path}" if self.debug
+      self._debug "[FilesCollection] [Abort Method]: #{_id} - #{_continueUpload?.file?.path}"
 
       if self._currentUploads?[_id]
         self._currentUploads[_id].stop()
@@ -1004,13 +579,13 @@ class FilesCollection
     opts.binData   ?= 'EOF'
     opts.chunkId   ?= -1
     opts.FSName    ?= opts.fileId
-    opts.file.meta ?= {}
 
-    console.info "[FilesCollection] [Upload] [#{transport}] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}" if @debug
+    @_debug "[FilesCollection] [Upload] [#{transport}] Got ##{opts.chunkId}/#{opts.fileLength} chunks, dst: #{opts.file.name or opts.file.fileName}"
 
     fileName = @_getFileName opts.file
     {extension, extensionWithDot} = @_getExt fileName
 
+    opts.file.meta  ?= {}
     result           = opts.file
     result.name      = fileName
     result.meta      = opts.file.meta
@@ -1059,7 +634,7 @@ class FilesCollection
   @returns {undefined}
   ###
   _finishUpload: (result, opts, cb) ->
-    console.info "[FilesCollection] [Upload] [finish(ing)Upload] -> #{result.path}" if @debug
+    @_debug "[FilesCollection] [Upload] [finish(ing)Upload] -> #{result.path}"
     fs.chmod result.path, @permissions, NOOP
     self          = @
     result.type   = @_getMimeType opts.file
@@ -1069,11 +644,11 @@ class FilesCollection
     @collection.insert _.clone(result), (error, _id) ->
       if error
         cb and cb error
-        console.error '[FilesCollection] [Upload] [_finishUpload] Error:', error if self.debug
+        self._debug '[FilesCollection] [Upload] [_finishUpload] Error:', error
       else
         self._preCollection.update {_id: opts.fileId}, {$set: {isFinished: true}}
         result._id = _id
-        console.info "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}" if self.debug
+        self._debug "[FilesCollection] [Upload] [finish(ed)Upload] -> #{result.path}"
         self.onAfterUpload and self.onAfterUpload.call self, result
         self.emit 'afterUpload', result
         cb and cb null, result
@@ -1091,13 +666,13 @@ class FilesCollection
     try
       if opts.eof
         self = @
-        @_currentUploads[result._id].end -> bound ->
+        @_currentUploads[result._id].end ->
           self.emit '_finishUpload', result, opts, cb
           return
       else
         @_currentUploads[result._id].write opts.chunkId, opts.binData, cb
     catch e
-      console.warn "[_handleUpload] [EXCEPTION:]", e if @debug
+      @_debug "[_handleUpload] [EXCEPTION:]", e
       cb and cb e
     return
 
@@ -1124,21 +699,6 @@ class FilesCollection
     if not mime or not _.isString mime
       mime = 'application/octet-stream'
     return mime
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _getFileName
-  @param {Object} fileData - File Object
-  @summary Returns file's name
-  @returns {String}
-  ###
-  _getFileName: (fileData) ->
-    fileName = fileData.name or fileData.fileName
-    if _.isString(fileName) and fileName.length > 0
-      return (fileData.name or fileData.fileName).replace(/\.\./g, '').replace /\//g, ''
-    else
-      return ''
 
   ###
   @locus Anywhere
@@ -1170,71 +730,6 @@ class FilesCollection
     return result
 
   ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _getExt
-  @param {String} FileName - File name
-  @summary Get extension from FileName
-  @returns {Object}
-  ###
-  _getExt: (fileName) ->
-    if !!~fileName.indexOf('.')
-      extension = (fileName.split('.').pop().split('?')[0] or '').toLowerCase()
-      return { ext: extension, extension, extensionWithDot: '.' + extension }
-    else
-      return { ext: '', extension: '', extensionWithDot: '' }
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _updateFileTypes
-  @param {Object} data - File data
-  @summary Internal method. Classify file based on 'type' field
-  ###
-  _updateFileTypes: (data) ->
-    data.isVideo  = /^video\//i.test data.type
-    data.isAudio  = /^audio\//i.test data.type
-    data.isImage  = /^image\//i.test data.type
-    data.isText   = /^text\//i.test data.type
-    data.isJSON   = /^application\/json$/i.test data.type
-    data.isPDF    = /^application\/(x-)?pdf$/i.test data.type
-    return
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _dataToSchema
-  @param {Object} data - File data
-  @summary Internal method. Build object in accordance with default schema from File data
-  @returns {Object}
-  ###
-  _dataToSchema: (data) ->
-    ds =
-      name:       data.name
-      extension:  data.extension
-      path:       data.path
-      meta:       data.meta
-      type:       data.type
-      size:       data.size
-      userId:     data.userId or null
-      versions:
-        original:
-          path: data.path
-          size: data.size
-          type: data.type
-          extension: data.extension
-      _downloadRoute:  data._downloadRoute or @downloadRoute
-      _collectionName: data._collectionName or @collectionName
-    
-    #Optional fileId
-    if data.fileId
-       ds._id = data.fileId;
-    
-    @_updateFileTypes ds
-    ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
-    return ds
-
-  ###
   @locus Server
   @memberOf FilesCollection
   @name write
@@ -1251,7 +746,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   write: (buffer, opts = {}, callback, proceedAfterUpload) ->
-    console.info '[FilesCollection] [write()]' if @debug
+    @_debug '[FilesCollection] [write()]'
 
     if _.isFunction opts
       proceedAfterUpload = callback
@@ -1298,14 +793,14 @@ class FilesCollection
         self.collection.insert result, (error, _id) ->
           if error
             callback and callback error
-            console.warn "[FilesCollection] [write] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
+            self._debug "[FilesCollection] [write] [insert] Error: #{fileName} -> #{self.collectionName}", error
           else
             fileRef = self.collection.findOne _id
             callback and callback null, fileRef
             if proceedAfterUpload is true
               self.onAfterUpload and self.onAfterUpload.call self, fileRef
               self.emit 'afterUpload', fileRef
-            console.info "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}" if self.debug
+            self._debug "[FilesCollection] [write]: #{fileName} -> #{self.collectionName}"
           return
       return
     return @
@@ -1327,7 +822,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   load: (url, opts, callback, proceedAfterUpload) ->
-    console.info "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]" if @debug
+    @_debug "[FilesCollection] [load(#{url}, #{JSON.stringify(opts)}, callback)]"
 
     if _.isFunction opts
       proceedAfterUpload = callback
@@ -1360,23 +855,23 @@ class FilesCollection
       self.collection.insert result, (error, _id) ->
         if error
           callback and callback error
-          console.error "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error if self.debug
+          self._debug "[FilesCollection] [load] [insert] Error: #{fileName} -> #{self.collectionName}", error
         else
           fileRef = self.collection.findOne _id
           callback and callback null, fileRef
           if proceedAfterUpload is true
             self.onAfterUpload and self.onAfterUpload.call self, fileRef
             self.emit 'afterUpload', fileRef
-          console.info "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}" if self.debug
+          self._debug "[FilesCollection] [load] [insert] #{fileName} -> #{self.collectionName}"
         return
       return
 
     request.get(url).on('error', (error)-> bound ->
       callback and callback error
-      console.error "[FilesCollection] [load] [request.get(#{url})] Error:", error if self.debug
+      self._debug "[FilesCollection] [load] [request.get(#{url})] Error:", error
     ).on('response', (response) -> bound ->
       response.on 'end', -> bound ->
-        console.info "[FilesCollection] [load] Received: #{url}" if self.debug
+        self._debug "[FilesCollection] [load] Received: #{url}"
         result = self._dataToSchema
           name:      fileName
           path:      opts.path
@@ -1419,7 +914,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   addFile: (path, opts, callback, proceedAfterUpload) ->
-    console.info "[FilesCollection] [addFile(#{path})]" if @debug
+    @_debug "[FilesCollection] [addFile(#{path})]"
 
     if _.isFunction opts
       proceedAfterUpload = callback
@@ -1469,55 +964,19 @@ class FilesCollection
         self.collection.insert result, (error, _id) ->
           if error
             callback and callback error
-            console.warn "[FilesCollection] [addFile] [insert] Error: #{result.name} -> #{self.collectionName}", error if self.debug
+            self._debug "[FilesCollection] [addFile] [insert] Error: #{result.name} -> #{self.collectionName}", error
           else
             fileRef = self.collection.findOne _id
             callback and callback null, fileRef
             if proceedAfterUpload is true
               self.onAfterUpload and self.onAfterUpload.call self, fileRef
               self.emit 'afterUpload', fileRef
-            console.info "[FilesCollection] [addFile]: #{result.name} -> #{self.collectionName}" if self.debug
+            self._debug "[FilesCollection] [addFile]: #{result.name} -> #{self.collectionName}"
           return
       else
         callback and callback new Meteor.Error 400, "[FilesCollection] [addFile(#{path})]: File does not exist"
       return
-
     return @
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name findOne
-  @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-  @summary Find and return Cursor for matching document Object
-  @returns {FileCursor} Instance
-  ###
-  findOne: (selector, options) ->
-    console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
-    check options, Match.Optional Object
-
-    selector = {} unless arguments.length
-    doc = @collection.findOne selector, options
-    return if doc then new FileCursor(doc, @) else doc
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name find
-  @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-  @summary Find and return Cursor for matching documents
-  @returns {FilesCursor} Instance
-  ###
-  find: (selector, options) ->
-    console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
-    check options, Match.Optional Object
-
-    selector = {} unless arguments.length
-    return new FilesCursor selector, options, @
 
   ###
   @locus Anywhere
@@ -1529,7 +988,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   remove: (selector = {}, callback) ->
-    console.info "[FilesCollection] [remove(#{JSON.stringify(selector)})]" if @debug
+    @_debug "[FilesCollection] [remove(#{JSON.stringify(selector)})]"
     check selector, Match.OneOf Object, String
     check callback, Match.Optional Function
 
@@ -1554,18 +1013,6 @@ class FilesCollection
     else
       @collection.remove selector, (callback or NOOP)
     return @
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name update
-  @see http://docs.meteor.com/#/full/update
-  @summary link Mongo.Collection update method
-  @returns {Mongo.Collection} Instance
-  ###
-  update: ->
-    @collection.update.apply @collection, arguments
-    return @collection
 
   ###
   @locus Server
@@ -1635,7 +1082,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   unlink: (fileRef, version, callback) ->
-    console.info "[FilesCollection] [unlink(#{fileRef._id}, #{version})]" if @debug
+    @_debug "[FilesCollection] [unlink(#{fileRef._id}, #{version})]"
     if version
       if fileRef.versions?[version] and fileRef.versions[version]?.path
         fs.unlink fileRef.versions[version].path, (callback or NOOP)
@@ -1656,7 +1103,7 @@ class FilesCollection
   @returns {undefined}
   ###
   _404: (http) ->
-    console.warn "[FilesCollection] [download(#{http.request.originalUrl})] [_404] File not found" if @debug
+    @_debug "[FilesCollection] [download(#{http.request.originalUrl})] [_404] File not found"
     text = 'File Not Found :('
 
     if !http.response.headersSent
@@ -1678,7 +1125,7 @@ class FilesCollection
   @returns {undefined}
   ###
   download: (http, version = 'original', fileRef) ->
-    console.info "[FilesCollection] [download(#{http.request.originalUrl}, #{version})]" if @debug
+    @_debug "[FilesCollection] [download(#{http.request.originalUrl}, #{version})]"
     if fileRef
       if _.has(fileRef, 'versions') and _.has fileRef.versions, version
         vRef = fileRef.versions[version]
@@ -1773,7 +1220,7 @@ class FilesCollection
       responseType = '200'
 
     streamErrorHandler = (error) ->
-      console.error "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error if self.debug
+      self._debug "[FilesCollection] [serve(#{vRef.path}, #{version})] [500]", error
       if !http.response.finished
         http.response.end error.toString()
       return
@@ -1790,7 +1237,7 @@ class FilesCollection
 
     switch responseType
       when '400'
-        console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [400] Content-Length mismatch!" if self.debug
+        self._debug "[FilesCollection] [serve(#{vRef.path}, #{version})] [400] Content-Length mismatch!"
         text = 'Content-Length mismatch!'
 
         if !http.response.headersSent
@@ -1804,14 +1251,14 @@ class FilesCollection
         return self._404 http
         break
       when '416'
-        console.warn "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!" if self.debug
+        self._debug "[FilesCollection] [serve(#{vRef.path}, #{version})] [416] Content-Range is not specified!"
         if !http.response.headersSent
           http.response.writeHead 416
         if !http.response.finished
           http.response.end()
         break
       when '200'
-        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [200]" if self.debug
+        self._debug "[FilesCollection] [serve(#{vRef.path}, #{version})] [200]"
         stream = readableStream or fs.createReadStream vRef.path
         if !http.response.headersSent
           http.response.writeHead 200 if readableStream
@@ -1845,7 +1292,7 @@ class FilesCollection
         stream.pipe http.response
         break
       when '206'
-        console.info "[FilesCollection] [serve(#{vRef.path}, #{version})] [206]" if self.debug
+        self._debug "[FilesCollection] [serve(#{vRef.path}, #{version})] [206]"
         if !http.response.headersSent
           http.response.setHeader 'Content-Range', "bytes #{reqRange.start}-#{reqRange.end}/#{vRef.size}"
         stream = readableStream or fs.createReadStream vRef.path, {start: reqRange.start, end: reqRange.end}
@@ -1881,47 +1328,6 @@ class FilesCollection
         stream.pipe http.response
         break
     return
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name link
-  @param {Object} fileRef - File reference object
-  @param {String} version - Version of file you would like to request
-  @summary Returns downloadable URL
-  @returns {String} Empty string returned in case if file not found in DB
-  ###
-  link: (fileRef, version = 'original') ->
-    console.info "[FilesCollection] [link(#{fileRef?._id}, #{version})]" if @debug
-    check fileRef, Object
-    check version, String
-    return '' if not fileRef
-    return formatFleURL fileRef, version
-
-###
-@locus Anywhere
-@private
-@name formatFleURL
-@param {Object} fileRef - File reference object
-@param {String} version - [Optional] Version of file you would like build URL for
-@summary Returns formatted URL for file
-@returns {String} Downloadable link
-###
-formatFleURL = (fileRef, version = 'original') ->
-  check fileRef, Object
-  check version, String
-
-  root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '')
-
-  if fileRef.extension?.length
-    ext = '.' + fileRef.extension
-  else
-    ext = ''
-
-  if fileRef.public is true
-    return root + (if version is 'original' then "#{fileRef._downloadRoute}/#{fileRef._id}#{ext}" else "#{fileRef._downloadRoute}/#{version}-#{fileRef._id}#{ext}")
-  else
-    return root + "#{fileRef._downloadRoute}/#{fileRef._collectionName}/#{fileRef._id}/#{version}/#{fileRef._id}#{ext}"
 
 ###
 Export the FilesCollection class
