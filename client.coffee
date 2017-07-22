@@ -1,8 +1,10 @@
 `import { Cookies } from 'meteor/ostrio:cookies'`
-`import { FilesCursor, FileCursor } from './files-cursor.coffee`
-`import { fixJSONParse, fixJSONStringify, formatFleURL } from './files-lib.coffee`
-NOOP = -> return
-EventEmitter = require('./event-emitter.jsx').EventEmitter
+`import { EventEmitter} from './event-emitter.jsx'`
+`import { FilesCollectionCore } from './core.coffee'`
+`import { fixJSONParse, fixJSONStringify, formatFleURL } from './lib.coffee'`
+
+isSafari = /^((?!chrome|android).)*safari/i.test navigator.userAgent
+NOOP     = -> return
 
 ###
 @locus Anywhere
@@ -28,7 +30,7 @@ return `false` or `String` to abort upload
 @summary Create new instance of FilesCollection
 ###
 class FilesCollection
-  __proto__: do -> EventEmitter.prototype
+  __proto__: do -> _.extend EventEmitter.prototype, FilesCollectionCore.prototype
   constructor: (config) ->
     EventEmitter.call @
     {storagePath, @ddp, @collection, @collectionName, @downloadRoute, @schema, @chunkSize, @namingFunction, @debug, @onbeforeunloadMessage, @permissions, @parentDirPermissions, @allowClientCode, @onBeforeUpload, @onInitiateUpload, @integrityCheck, @protected, @public, @strict, @downloadCallback, @cacheControl, @responseHeaders, @throttle, @onAfterUpload, @onAfterRemove, @interceptDownload, @onBeforeRemove, @continueUploadTTL} = config if config
@@ -36,6 +38,8 @@ class FilesCollection
     self        = @
     cookie      = new Cookies()
     @debug     ?= false
+    @_debug     = ->
+      (console.info || console.log).apply undefined, arguments if self.debug
     @public    ?= false
     @protected ?= false
     @chunkSize ?= 1024*512
@@ -120,7 +124,7 @@ class FilesCollection
       else
         @_supportWebWorker = false
     catch e
-      console.warn('[FilesCollection] [Check WebWorker Availability] Error:', e) if self.debug
+      self._debug '[FilesCollection] [Check WebWorker Availability] Error:', e
       @_supportWebWorker = false
 
     if not @schema
@@ -189,7 +193,7 @@ class FilesCollection
           return true
         else
           rc = if _.isNumber(result) then result else 401
-          console.warn '[FilesCollection._checkAccess] WARN: Access denied!' if self.debug
+          self._debug '[FilesCollection._checkAccess] WARN: Access denied!'
           if http
             text = 'Access denied!'
             if !http.response.headersSent
@@ -227,21 +231,6 @@ class FilesCollection
   ###
   @locus Anywhere
   @memberOf FilesCollection
-  @name _getFileName
-  @param {Object} fileData - File Object
-  @summary Returns file's name
-  @returns {String}
-  ###
-  _getFileName: (fileData) ->
-    fileName = fileData.name or fileData.fileName
-    if _.isString(fileName) and fileName.length > 0
-      return (fileData.name or fileData.fileName).replace(/\.\./g, '').replace /\//g, ''
-    else
-      return ''
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
   @name _getUser
   @summary Returns object with `userId` and `user()` method which return user's object
   @returns {Object}
@@ -256,106 +245,6 @@ class FilesCollection
       result.userId = Meteor.userId()
 
     return result
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _getExt
-  @param {String} FileName - File name
-  @summary Get extension from FileName
-  @returns {Object}
-  ###
-  _getExt: (fileName) ->
-    if !!~fileName.indexOf('.')
-      extension = (fileName.split('.').pop().split('?')[0] or '').toLowerCase()
-      return { ext: extension, extension, extensionWithDot: '.' + extension }
-    else
-      return { ext: '', extension: '', extensionWithDot: '' }
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _updateFileTypes
-  @param {Object} data - File data
-  @summary Internal method. Classify file based on 'type' field
-  ###
-  _updateFileTypes: (data) ->
-    data.isVideo  = /^video\//i.test data.type
-    data.isAudio  = /^audio\//i.test data.type
-    data.isImage  = /^image\//i.test data.type
-    data.isText   = /^text\//i.test data.type
-    data.isJSON   = /^application\/json$/i.test data.type
-    data.isPDF    = /^application\/(x-)?pdf$/i.test data.type
-    return
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name _dataToSchema
-  @param {Object} data - File data
-  @summary Internal method. Build object in accordance with default schema from File data
-  @returns {Object}
-  ###
-  _dataToSchema: (data) ->
-    ds =
-      name:       data.name
-      extension:  data.extension
-      path:       data.path
-      meta:       data.meta
-      type:       data.type
-      size:       data.size
-      userId:     data.userId or null
-      versions:
-        original:
-          path: data.path
-          size: data.size
-          type: data.type
-          extension: data.extension
-      _downloadRoute:  data._downloadRoute or @downloadRoute
-      _collectionName: data._collectionName or @collectionName
-    
-    #Optional fileId
-    if data.fileId
-       ds._id = data.fileId;
-    
-    @_updateFileTypes ds
-    ds._storagePath = data._storagePath or @storagePath(_.extend(data, ds))
-    return ds
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name findOne
-  @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-  @summary Find and return Cursor for matching document Object
-  @returns {FileCursor} Instance
-  ###
-  findOne: (selector, options) ->
-    console.info "[FilesCollection] [findOne(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
-    check options, Match.Optional Object
-
-    selector = {} unless arguments.length
-    doc = @collection.findOne selector, options
-    return if doc then new FileCursor(doc, @) else doc
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name find
-  @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-  @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-  @summary Find and return Cursor for matching documents
-  @returns {FilesCursor} Instance
-  ###
-  find: (selector, options) ->
-    console.info "[FilesCollection] [find(#{JSON.stringify(selector)}, #{JSON.stringify(options)})]" if @debug
-    check selector, Match.Optional Match.OneOf Object, String, Boolean, Number, null
-    check options, Match.Optional Object
-
-    selector = {} unless arguments.length
-    return new FilesCursor selector, options, @
 
   ###
   @locus Client
@@ -403,7 +292,7 @@ class FilesCollection
     __proto__: EventEmitter.prototype
     constructor: (@config, @collection) ->
       EventEmitter.call @
-      console.info '[FilesCollection] [insert()]' if @collection.debug
+      @collection._debug '[FilesCollection] [insert()]'
       self                     = @
       @config.ddp             ?= @collection.ddp
       @config.meta            ?= {}
@@ -474,21 +363,22 @@ class FilesCollection
             @worker = new Worker @collection._webWorkerUrl
           catch wwError
             @worker = false
-            console.warn '[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError if @collection.debug
+            @collection._debug '[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError
         else
           @worker = null
 
-        @startTime    = {}
-        @config.debug = @collection.debug
-        @currentChunk = 0
-        @transferTime = 0
-        @trackerComp  = null
-        @sentChunks   = 0
-        @fileLength   = 1
-        @EOFsent      = false
-        @fileId       = Random.id()
-        @FSName       = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
-        @pipes        = []
+        @startTime     = {}
+        @config.debug  = @collection.debug
+        @config._debug = @collection._debug
+        @currentChunk  = 0
+        @transferTime  = 0
+        @trackerComp   = null
+        @sentChunks    = 0
+        @fileLength    = 1
+        @EOFsent       = false
+        @fileId        = Random.id()
+        @FSName        = if @collection.namingFunction then @collection.namingFunction(@fileData) else @fileId
+        @pipes         = []
 
         @fileData = _.extend @fileData, @collection._getExt(self.fileData.name), {mime: @collection._getMimeType(@fileData)}
         @fileData['mime-type'] = @fileData.mime
@@ -534,12 +424,13 @@ class FilesCollection
         throw new Meteor.Error 500, '[FilesCollection] [insert] Have you forget to pass a File itself?'
 
     end: (error, data) ->
+      @collection._debug '[FilesCollection] [UploadInstance] [end]', @fileData.name
       console.timeEnd('insert ' + @fileData.name) if @collection.debug
       @emitEvent '_onEnd'
       @result.emitEvent 'uploaded', [error, data]
       @config.onUploaded and @config.onUploaded.call @result, error, data
       if error
-        console.error '[FilesCollection] [insert] [end] Error:', error if @collection.debug
+        @collection._debug '[FilesCollection] [insert] [end] Error:', error
         @result.abort()
         @result.state.set 'aborted'
         @result.emitEvent 'error', [error, @fileData]
@@ -616,6 +507,7 @@ class FilesCollection
       return
 
     sendEOF: ->
+      @collection._debug '[FilesCollection] [UploadInstance] [sendEOF]', @EOFsent
       unless @EOFsent
         @EOFsent = true
         self = @
@@ -635,9 +527,9 @@ class FilesCollection
               'x-eof':        '1'
               'x-fileId':     opts.fileId
               'content-type': 'text/plain'
-          }, (error, result) ->
+          }, (error, _result) ->
             try
-              result    = JSON.parse result?.content or {}
+              result    = JSON.parse _result?.content or {}
             catch e
               console.warn 'Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.'
               result    = {}
@@ -702,10 +594,13 @@ class FilesCollection
           @worker.postMessage({sc: @sentChunks, cc: @currentChunk, cs: @config.chunkSize, f: @config.file, ib: @config.isBase64})
         else
           @emitEvent 'proceedChunk', [@currentChunk]
+      else
+        @emitEvent 'sendEOF'
       @startTime[@currentChunk] = +new Date
       return
 
     createStreams: ->
+      @collection._debug '[FilesCollection] [UploadInstance] [createStreams]'
       i    = 1
       self = @
       while i <= @config.streams
@@ -728,6 +623,8 @@ class FilesCollection
 
         if @config.transport is 'http'
           @config.chunkSize = Math.round @config.chunkSize / 2
+        else if isSafari
+          @config.chunkSize = Math.ceil @config.chunkSize / 8
 
       if @config.isBase64
         @config.chunkSize = Math.floor(@config.chunkSize / 4) * 4
@@ -742,6 +639,8 @@ class FilesCollection
 
         if @config.transport is 'http'
           @config.streams = Math.round @config.streams / 2
+        else if isSafari
+          @config.streams = 1
 
       @fileLength               = if _len <= 0 then 1 else _len
       @config.streams           = @fileLength if @config.streams > @fileLength
@@ -756,11 +655,11 @@ class FilesCollection
 
       handleStart = (error) ->
         if error
-          console.error '[FilesCollection] [_Start] Error:', error if self.collection.debug
+          self.collection._debug '[FilesCollection] [_Start] Error:', error
           self.emitEvent 'end', [error]
         else
           self.result.continueFunc = ->
-            console.info '[FilesCollection] [insert] [continueFunc]' if self.collection.debug
+            self.collection._debug '[FilesCollection] [insert] [continueFunc]'
             self.emitEvent 'createStreams'
             return
           self.emitEvent 'createStreams'
@@ -800,33 +699,26 @@ class FilesCollection
 
       Tracker.autorun (computation) ->
         self.trackerComp = computation
-        unless self.result.onPause.get()
-          if Meteor.status().connected
-            console.info '[FilesCollection] [insert] [Tracker] [continue]' if self.collection.debug
-            self.result.continue()
-          else
-            console.info '[FilesCollection] [insert] [Tracker] [pause]' if self.collection.debug
-            self.result.pause()
+        if not self.result.onPause.curValue and not Meteor.status().connected
+          self.collection._debug '[FilesCollection] [insert] [Tracker] [pause]'
+          self.result.pause()
         return
 
       if @worker
+        @collection._debug '[FilesCollection] [insert] using WebWorkers'
         @worker.onmessage = (evt) ->
           if evt.data.error
-            console.warn '[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error if self.collection.debug
+            self.collection._debug '[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error
             self.emitEvent 'proceedChunk', [evt.data.chunkId]
           else
             self.emitEvent 'sendChunk', [evt]
           return
         @worker.onerror   = (e) ->
-          console.error '[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e if self.collection.debug
+          self.collection._debug '[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e
           self.emitEvent 'end', [e.message]
           return
-
-      if @collection.debug
-        if @worker
-          console.info '[FilesCollection] [insert] using WebWorkers'
-        else
-          console.info '[FilesCollection] [insert] using MainThread'
+      else
+        @collection._debug '[FilesCollection] [insert] using MainThread'
 
       self.emitEvent 'prepare'
       return @result
@@ -851,6 +743,7 @@ class FilesCollection
   _FileUpload: class FileUpload
     __proto__: EventEmitter.prototype
     constructor: (@config) ->
+      @config._debug '[FilesCollection] [FileUpload] [constructor]'
       EventEmitter.call @
       self           = @
       unless @config.isBase64
@@ -871,14 +764,14 @@ class FilesCollection
       , 1000
     continueFunc:  -> return
     pause: ->
-      console.info '[FilesCollection] [insert] [.pause()]' if @config.debug
+      @config._debug '[FilesCollection] [insert] [.pause()]'
       unless @onPause.get()
         @onPause.set true
         @state.set 'paused'
         @emitEvent 'pause', [@file]
       return
     continue: ->
-      console.info '[FilesCollection] [insert] [.continue()]' if @config.debug
+      @config._debug '[FilesCollection] [insert] [.continue()]'
       if @onPause.get()
         @onPause.set false
         @state.set 'active'
@@ -886,11 +779,11 @@ class FilesCollection
         @continueFunc()
       return
     toggle: ->
-      console.info '[FilesCollection] [insert] [.toggle()]' if @config.debug
+      @config._debug '[FilesCollection] [insert] [.toggle()]'
       if @onPause.get() then @continue() else @pause()
       return
     abort: ->
-      console.info '[FilesCollection] [insert] [.abort()]' if @config.debug
+      @config._debug '[FilesCollection] [insert] [.abort()]'
       window.removeEventListener 'beforeunload', @config.beforeunload, false
       @config.onAbort and @config.onAbort.call @, @file
       @emitEvent 'abort', [@file]
@@ -911,7 +804,7 @@ class FilesCollection
   @returns {FilesCollection} Instance
   ###
   remove: (selector = {}, callback) ->
-    console.info "[FilesCollection] [remove(#{JSON.stringify(selector)})]" if @debug
+    @_debug "[FilesCollection] [remove(#{JSON.stringify(selector)})]"
     check selector, Match.OneOf Object, String
     check callback, Match.Optional Function
 
@@ -919,37 +812,9 @@ class FilesCollection
       @ddp.call @_methodNames._Remove, selector, (callback or NOOP)
     else
       callback and callback new Meteor.Error 401, '[FilesCollection] [remove] Run code from client is not allowed!'
-      console.warn '[FilesCollection] [remove] Run code from client is not allowed!' if @debug
+      @_debug '[FilesCollection] [remove] Run code from client is not allowed!'
     
     return @
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name update
-  @see http://docs.meteor.com/#/full/update
-  @summary link Mongo.Collection update method
-  @returns {Mongo.Collection} Instance
-  ###
-  update: ->
-    @collection.update.apply @collection, arguments
-    return @collection
-
-  ###
-  @locus Anywhere
-  @memberOf FilesCollection
-  @name link
-  @param {Object} fileRef - File reference object
-  @param {String} version - Version of file you would like to request
-  @summary Returns downloadable URL
-  @returns {String} Empty string returned in case if file not found in DB
-  ###
-  link: (fileRef, version = 'original') ->
-    console.info "[FilesCollection] [link(#{fileRef?._id}, #{version})]" if @debug
-    check fileRef, Object
-    check version, String
-    return '' if not fileRef
-    return formatFleURL fileRef, version
 
 ###
 @locus Client
