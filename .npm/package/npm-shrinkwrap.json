@@ -118,9 +118,9 @@
       "from": "form-data@>=2.1.1 <2.2.0"
     },
     "fs-extra": {
-      "version": "3.0.1",
-      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-3.0.1.tgz",
-      "from": "fs-extra@3.0.1"
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-4.0.0.tgz",
+      "from": "fs-extra@4.0.0"
     },
     "getpass": {
       "version": "0.1.7",
@@ -167,7 +167,7 @@
     "inherits": {
       "version": "2.0.3",
       "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.3.tgz",
-      "from": "inherits@>=2.0.1 <2.1.0"
+      "from": "inherits@>=2.0.3 <2.1.0"
     },
     "is-typedarray": {
       "version": "1.0.0",
@@ -205,8 +205,8 @@
       "from": "json-stringify-safe@>=5.0.1 <5.1.0"
     },
     "jsonfile": {
-      "version": "3.0.0",
-      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-3.0.0.tgz",
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-3.0.1.tgz",
       "from": "jsonfile@>=3.0.0 <4.0.0"
     },
     "jsonify": {
@@ -267,16 +267,9 @@
       "from": "qs@>=6.4.0 <6.5.0"
     },
     "readable-stream": {
-      "version": "2.2.11",
-      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.11.tgz",
-      "from": "readable-stream@>=0.3.0",
-      "dependencies": {
-        "safe-buffer": {
-          "version": "5.0.1",
-          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz",
-          "from": "safe-buffer@>=5.0.1 <5.1.0"
-        }
-      }
+      "version": "2.3.3",
+      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.3.3.tgz",
+      "from": "readable-stream@>=0.3.0"
     },
     "request": {
       "version": "2.81.0",
@@ -284,8 +277,8 @@
       "from": "request@2.81.0"
     },
     "safe-buffer": {
-      "version": "5.1.0",
-      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.0.tgz",
+      "version": "5.1.1",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.1.tgz",
       "from": "safe-buffer@>=5.0.1 <6.0.0"
     },
     "sntp": {
@@ -311,16 +304,9 @@
       "from": "stream-parser@>=0.0.2"
     },
     "string_decoder": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.2.tgz",
-      "from": "string_decoder@>=1.0.0 <1.1.0",
-      "dependencies": {
-        "safe-buffer": {
-          "version": "5.0.1",
-          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz",
-          "from": "safe-buffer@~5.0.1"
-        }
-      }
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.3.tgz",
+      "from": "string_decoder@>=1.0.3 <1.1.0"
     },
     "stringstream": {
       "version": "0.0.5",
@@ -348,8 +334,8 @@
       "from": "tweetnacl@>=0.14.0 <0.15.0"
     },
     "universalify": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/universalify/-/universalify-0.1.0.tgz",
+      "version": "0.1.1",
+      "resolved": "https://registry.npmjs.org/universalify/-/universalify-0.1.1.tgz",
       "from": "universalify@>=0.1.0 <0.2.0"
     },
     "util-deprecate": {
