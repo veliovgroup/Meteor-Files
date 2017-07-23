@@ -2,7 +2,7 @@
 
 Example below shows how to store and serve uploaded file via DropBox. This example also covers file removing from both your application and DropBox.
 
-See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/lib/files.collection.coffee)
+See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/files.collection.js#L186)
 
 Prepare: install [dropbox-js](https://github.com/dropbox/dropbox-js):
 ```shell

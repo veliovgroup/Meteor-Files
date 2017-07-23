@@ -5,7 +5,7 @@ At this tutorial we will create thumbnails with GraphicksMagick/ImageMagick (*a.
 Links:
  - [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/)
  - [ImageMagick](https://www.imagemagick.org/script/download.php)
- - See how this example used in [real-life production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js#L8)
+ - See how this example used in [real-life production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19)
  - [gm](https://www.npmjs.com/package/gm) NPM package
  - [im](https://www.npmjs.com/package/im) NPM package
  - [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package

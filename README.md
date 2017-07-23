@@ -73,9 +73,9 @@ Why `Meteor-Files`?
  - Support for `HTTP` and `DDP` transports for upload, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
  - Sustainable and resumable uploads, which will survive connection interruption and server reboot (*if a server has persistent storage*)
  - Upload files through computing cloud without persistent File System, like Heroku
- - You need store to *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*)
- - You need to check file mime-type, size or extension? Easy! Use (*[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*) hook
- - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/server/image-processing.js) after upload? Easy too! Use (*[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook, and *[manage file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)*) in single record
+ - You need store files at *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*)
+ - You need to check file mime-type, size or extension? Easy! Use *[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook
+ - You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook, and *[manage file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)* in a single record
 
 Easy-peasy kids, *yeah*?
 
@@ -199,7 +199,7 @@ Template.uploadForm.events({
   }
 });
 ```
-For multiple file upload see [this demo code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/client/upload/upload-form.js#L60).
+For multiple file upload see [this demo code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/client/upload/upload-form.js#L73).
 
 Upload base64 string (*introduced in v1.7.1*):
 ```js
