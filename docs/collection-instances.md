@@ -1,69 +1,67 @@
-##### `FilesCollection Instances and Mongo Collection Instances`
+## *FilesCollection* Instances and *Mongo.Collection* Instances
 
-While FilesCollection has a direct reference to a [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection),
-the Mongo.Collection has a back-reference to the FilesCollection itself.
- 
+While *FilesCollection* has a direct reference to a [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection),
+the `Mongo.Collection` has a back-reference to the *FilesCollection* itself.
+
 The reference chain is as the following:
 
 ```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+const Images = new FilesCollection({collectionName: 'Images'});
 
 // get the underlying Mongo.Collection
-var collection = Images.collection;
+const collection = Images.collection;
 
-// get the 'parent' FilesCollection 
+// get the 'parent' FilesCollection
 // of this collection instance
-var parent = collection.filesCollection;
+const parent = collection.filesCollection;
 
 // returns true
 console.log(parent === Images);
 ```
 
 
-##### Using dburles:mongo-collection-instances
+### Using dburles:mongo-collection-instances
 
-In Meteor you can use a Mongo.Collection instances management, such as [dburles:mongo-collection-instances](https://github.com/dburles/mongo-collection-instances).
-It allows you to retrieve Mongo.Collection instances by name in any module or file.
+In Meteor for `Mongo.Collection` instances management, we suggest to use [dburles:mongo-collection-instances](https://github.com/dburles/mongo-collection-instances).
+It allows to retrieve `Mongo.Collection` instances by its name in any module or file.
 
-**Note:** This package comes with no dependency to dburles:mongo-collection-instances. 
-If you want to make use of it, you need to install it to your meteor project first.
+__Note:__ This package comes with no dependency to `dburles:mongo-collection-instances`.
+To make use of it, install it to your Meteor project first.
 
 ```bash
 meteor add dburles:mongo-collection-instances
 ```
 
-You can then instantiate your FilesCollection, which itself creates a new Mongo.Collection, that is now automatically added
-to a hidden Mongo.Collection instances list.
+Then initialize *FilesCollection*, which itself will create a new `Mongo.Collection`, that is automatically added to a hidden `Mongo.Collection` instances list.
 
 ```javascript
-var Images = new FilesCollection({collectionName: 'Images'}); 
+const Images = new FilesCollection({collectionName: 'Images'});
 ````
 
-You can retrieve your FilesCollection now anywhere using Mongo.Collection.get 
+To retrieve *FilesCollection* use - `Mongo.Collection.get('collectionName')`:
 
 ```javascript
-var ImagesCollection = Mongo.Collection.get('Images');
-var Images = ImagesCollection.filesCollection;
-```` 
+const ImagesCollection = Mongo.Collection.get('Images');
+const Images = ImagesCollection.filesCollection;
+````
 
-##### Using a custom collection instance management
+### Using a custom collection instance management
 
-This simplified example shows you, how to make use of that technique in your own implementation.
-Assume you have a map of all your Mongo.Collection instances:
- 
- ```javascript
- var collectionsMap = {}; 
- ````
- 
-Since you don't want to store the FilesCollection (because it is no Mongo.Collection),
-you can still reference the underlying Mongo.Collection:
+This simplified example shows, how to make use of that technique in your own implementation.
+Assume having a map of all `Mongo.Collection` instances:
+
+```javascript
+constvar collectionsMap = {};
+````
+
+Since you may not want to store the *FilesCollection* instance (*because it is not a* `Mongo.Collection`), you can still reference the underlying Mongo.Collection:
 
 ```javascript
 var Images = new FilesCollection({collectionName: 'Images'});
 collectionsMap['Images'] = Images.collection;
 ````
 
-Having your collection instances available, you can access the FilesCollection by reference:
+Access the *FilesCollection* by reference:
 
 ```javascript
 var Images = collectionsMap['Images'].filesCollection;

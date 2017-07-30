@@ -105,7 +105,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
  - [File subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions) - Create video file with preview and multiple formats
  - [React - Example](https://github.com/VeliovGroup/Meteor-Files/wiki/React-Example) - React with a progress bar and component with links to view, re-name, and delete the files
  - [Converting from CollectionFS/CFS](https://github.com/VeliovGroup/Meteor-Files/wiki/Converting-from-CollectionFS) - Live conversion from the depreciated CFS to Meteor-Files (*Amazon S3 specifically, but applies to all*)
- - [Get FilesCollection instance](https://github.com/VeliovGroup/Meteor-Files/wiki/collection-instances) - Retrieve the FilesCollection by it's underlying Mongo.Collection instance
+ - [Get FilesCollection instance](https://github.com/VeliovGroup/Meteor-Files/wiki/Collection-Instances) - Retrieve the *FilesCollection* by it's underlying `Mongo.Collection` instance
 
 ##### Related Packages:
  - [pyfiles (meteor-python-files))](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
