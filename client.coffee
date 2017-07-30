@@ -49,6 +49,7 @@ class FilesCollection
       throw new Meteor.Error 500, "[FilesCollection.#{@collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal or be inside of your web/proxy-server (relative) root."
 
     @collection        ?= new Mongo.Collection @collectionName
+    @collection.filesCollection = @
     @collectionName    ?= @collection._name
     check @collectionName, String
     @downloadRoute     ?= '/cdn/storage'
