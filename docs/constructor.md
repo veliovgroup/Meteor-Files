@@ -102,7 +102,7 @@
     </tr>
     <tr>
       <td align="right">
-        <code>config.continueUploadTTL</code> {<em>String</em>}
+        <code>config.continueUploadTTL</code> {<em>Number</em>}
       </td>
       <td>
         Server
