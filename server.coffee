@@ -988,7 +988,7 @@ class FilesCollection
   @summary Remove documents from the collection
   @returns {FilesCollection} Instance
   ###
-  remove: (selector = {}, callback) ->
+  remove: (selector, callback) ->
     @_debug "[FilesCollection] [remove(#{JSON.stringify(selector)})]"
     check selector, Match.OneOf Object, String
     check callback, Match.Optional Function
