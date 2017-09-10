@@ -7,6 +7,7 @@
 @summary Require NPM packages
 ###
 `import fs       from 'fs-extra'`
+`import nodeQs   from 'querystring'`
 `import events   from 'events'`
 `import request  from 'request'`
 `import Throttle from 'throttle'`
@@ -400,10 +401,10 @@ class FilesCollection
           uris = uri.split '/'
           if uris.length is 3
             params =
-              query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+              query: if request._parsedUrl.query then nodeQs.parse(request._parsedUrl.query) else {}
               _id: uris[0]
               version: uris[1]
-              name: uris[2]
+              name: uris[2].split('?')[0]
             http = {request, response, params}
             self.download http, uris[1], self.collection.findOne(uris[0]) if self._checkAccess http
           else
@@ -427,7 +428,7 @@ class FilesCollection
               _file   = _file.split('?')[0]
 
             params =
-              query: if request._parsedUrl.query then JSON.parse('{"' + decodeURI(request._parsedUrl.query).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}') else {}
+              query: if request._parsedUrl.query then nodeQs.parse(request._parsedUrl.query) else {}
               file: _file
               _id: _file.split('.')[0]
               version: version
@@ -1184,7 +1185,7 @@ class FilesCollection
     else
       dispositionType = 'inline; '
 
-    dispositionName     = "filename=\"#{encodeURI(fileRef.name)}\"; filename*=UTF-8''#{encodeURI(fileRef.name)}; "
+    dispositionName     = "filename=\"#{encodeURI(vRef.name or fileRef.name)}\"; filename*=UTF-8''#{encodeURI(vRef.name or fileRef.name)}; "
     dispositionEncoding = 'charset=UTF-8'
 
     if !http.response.headersSent

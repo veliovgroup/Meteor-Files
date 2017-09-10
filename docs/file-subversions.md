@@ -24,6 +24,7 @@ this.Videos = new FilesCollection({
           path: version.path,
           size: version.size,
           type: version.type,
+          name: version.nameWithExtension,
           extension: version.extension
         };
         return Videos.update(fileRef._id, upd);

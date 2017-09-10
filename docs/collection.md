@@ -73,7 +73,8 @@ if (Meteor.isServer) {
       fields: {
         extension: 1,
         _downloadRoute: 1,
-        _collectionName: 1
+        _collectionName: 1,
+        'versions.versionName.extension': 1 // <-- Required only for file's version .link(version), and if extension is different from original file
       }
     });
   });

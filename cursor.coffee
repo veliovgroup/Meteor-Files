@@ -35,7 +35,7 @@ class FileCursor
   @summary Returns downloadable URL to File
   @returns {String}
   ###
-  link: (version) ->
+  link: (version = 'original') ->
     @_collection._debug "[FilesCollection] [FileCursor] [link(#{version})]"
     return if @_fileRef then @_collection.link(@_fileRef, version) else ''
 
