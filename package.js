@@ -1,16 +1,16 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.8.2',
+  version: '1.8.3',
   summary: 'File upload via DDP/HTTP to server FS, AWS, GridFS, DropBox, Google Drive or other 3rd party storage',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  'fs-extra': '4.0.0',
+  'fs-extra': '4.0.1',
   'request': '2.81.0',
   'throttle': '1.0.3',
-  'file-type': '5.2.0'
+  'file-type': '6.1.0'
 });
 
 Package.onUse(function(api) {
