@@ -48,9 +48,10 @@ formatFleURL = (fileRef, version = 'original') ->
   check version, String
 
   root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '')
+  vRef = ((fileRef.versions and fileRef.versions[version]) or fileRef)
 
-  if fileRef.extension?.length
-    ext = '.' + fileRef.extension
+  if vRef.extension?.length
+    ext = '.' + vRef.extension.replace(/^\./, '')
   else
     ext = ''
 

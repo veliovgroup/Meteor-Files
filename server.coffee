@@ -1184,7 +1184,7 @@ class FilesCollection
     else
       dispositionType = 'inline; '
 
-    dispositionName     = "filename=\"#{encodeURI(fileRef.name)}\"; filename*=UTF-8''#{encodeURI(fileRef.name)}; "
+    dispositionName     = "filename=\"#{encodeURI(vRef.name or fileRef.name)}\"; filename*=UTF-8''#{encodeURI(vRef.name or fileRef.name)}; "
     dispositionEncoding = 'charset=UTF-8'
 
     if !http.response.headersSent
