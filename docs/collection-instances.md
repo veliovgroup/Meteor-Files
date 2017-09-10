@@ -51,18 +51,18 @@ This simplified example shows, how to make use of that technique in your own imp
 Assume having a map of all `Mongo.Collection` instances:
 
 ```javascript
-constvar collectionsMap = {};
+const collectionsMap = {};
 ````
 
 Since you may not want to store the *FilesCollection* instance (*because it is not a* `Mongo.Collection`), you can still reference the underlying Mongo.Collection:
 
 ```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+const Images = new FilesCollection({collectionName: 'Images'});
 collectionsMap['Images'] = Images.collection;
 ````
 
 Access the *FilesCollection* by reference:
 
 ```javascript
-var Images = collectionsMap['Images'].filesCollection;
+const Images = collectionsMap['Images'].filesCollection;
 ````

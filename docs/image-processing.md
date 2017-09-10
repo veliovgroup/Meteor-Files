@@ -222,6 +222,7 @@ const createThumbnails = (collection, fileRef, cb) => {
                         size: stat.size,
                         type: fileRef.type,
                         extension: fileRef.extension,
+                        name: fileRef.name, // <-- Name with extension used if file's version is being downloaded
                         meta: {
                           width: imgInfo.width,
                           height: imgInfo.height
