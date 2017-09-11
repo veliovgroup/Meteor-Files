@@ -990,7 +990,8 @@ class FilesCollection
   ###
   remove: (selector, callback) ->
     @_debug "[FilesCollection] [remove(#{JSON.stringify(selector)})]"
-    check selector, Match.OneOf Object, String
+    if !Match.test(selector, Match.OneOf(String, Object))
+      return 0
     check callback, Match.Optional Function
 
     files = @collection.find selector
