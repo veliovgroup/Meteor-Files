@@ -95,7 +95,6 @@ Collections.files = new FilesCollection({
     });
   },
   interceptDownload: function(http, fileRef, version) {
-    var self = this;
     var path, ref, ref1, ref2;
     path = (ref= fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipePath : void 0 : void 0 : void 0;
     var vRef = ref1;
@@ -104,7 +103,7 @@ Collections.files = new FilesCollection({
       // We will pipe request to Google Cloud Storage
       // So, original link will stay always secure
       var remoteReadStream = getReadableStream(http, path, vRef);
-      self.serve(http, fileRef, vRef, version, remoteReadStream);
+      this.serve(http, fileRef, vRef, version, remoteReadStream);
       return true;
     } else {
       // While the file has not been uploaded to Google Cloud Storage, we will serve it from the filesystem
