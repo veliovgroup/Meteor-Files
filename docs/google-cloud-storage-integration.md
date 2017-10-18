@@ -103,7 +103,7 @@ Collections.files = new FilesCollection({
       // We will pipe request to Google Cloud Storage
       // So, original link will stay always secure
       var remoteReadStream = getReadableStream(http, path, vRef);
-      self.serve(http, fileRef, vRef, version, remoteReadStream);
+      this.serve(http, fileRef, vRef, version, remoteReadStream);
       return true;
     } else {
       // While the file has not been uploaded to Google Cloud Storage, we will serve it from the filesystem
