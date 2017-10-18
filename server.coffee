@@ -813,6 +813,7 @@ class FilesCollection
   @name load
   @param {String} url - URL to file
   @param {Object} opts - Object with file-data
+  @param {Object} opts.headers - HTTP headers to use when requesting the file
   @param {String} opts.name - File name, alias: `fileName`
   @param {String} opts.type - File mime-type
   @param {Object} opts.meta - File additional meta-data
@@ -868,7 +869,10 @@ class FilesCollection
         return
       return
 
-    request.get(url).on('error', (error)-> bound ->
+    request.get(
+      url: url
+      headers: opts.headers or {}
+    ).on('error', (error)-> bound ->
       callback and callback error
       self._debug "[FilesCollection] [load] [request.get(#{url})] Error:", error
     ).on('response', (response) -> bound ->
