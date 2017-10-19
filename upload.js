@@ -329,8 +329,8 @@ export class UploadInstance extends EventEmitter {
       };
 
       if (this.config.transport === 'ddp') {
-        this.config.ddp.call(this.collection._methodNames._Write, opts, () => {
-          this.emit('end', ...arguments);
+        this.config.ddp.call(this.collection._methodNames._Write, opts, (error, result) => {
+          this.emit('end', error, result);
         });
       } else {
         HTTP.call('POST', `${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
@@ -353,6 +353,7 @@ export class UploadInstance extends EventEmitter {
           if (result.meta) {
             result.meta = fixJSONParse(result.meta);
           }
+
           this.emit('end', error, result);
         });
       }
