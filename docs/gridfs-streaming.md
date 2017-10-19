@@ -112,14 +112,7 @@ interceptDownload(http, image, versionName) {
           http.response.writeHead(200);
         }).on('error', streamErrorHandler).on('end', function() {
           http.response.end();
-        });
-        if (self.throttle) {
-          stream.pipe(new Throttle({
-            bps: self.throttle,
-            chunksize: self.chunkSize
-          }));
-        }
-        stream.pipe(http.response);
+        }).pipe(http.response);
         break;
       case '206':
         if (self.debug) {
@@ -141,14 +134,7 @@ interceptDownload(http, image, versionName) {
           http.response.writeHead(206);
         }).on('error', streamErrorHandler).on('end', function() {
           http.response.end();
-        });
-        if (self.throttle) {
-          stream.pipe(new Throttle({
-            bps: self.throttle,
-            chunksize: self.chunkSize
-          }));
-        }
-        stream.pipe(http.response);
+        }).pipe(http.response);
         break;
     }
   }

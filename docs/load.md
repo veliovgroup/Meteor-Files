@@ -4,6 +4,7 @@
  - `url` {*String*} - Full address to file, like `scheme://example.com/sample.png`
  - `opts` {*Object*} - Recommended properties:
    - `opts.fileName` {*String*} - File name with extension, like `name.ext`
+   - `opts.headers` {*Object*} - Request HTTP headers, to use when requesting the file
    - `opts.meta` {*Object*} - Object with custom meta-data
    - `opts.type` {*String*} - Mime-type, like `image/png`, if not set - mime-type will be taken from response headers
    - `opts.size` {*Number*} - File size in bytes, if not set - file size will be taken from response headers

@@ -48,7 +48,6 @@ if (Meteor.isServer) {
 
 Collections.files = new FilesCollection({
   debug: false, // Set to true to enable debugging messages
-  throttle: false,
   storagePath: 'assets/app/uploads/uploadedFiles',
   collectionName: 'uploadedFiles',
   allowClientCode: false,
