@@ -12,7 +12,6 @@ import { fixJSONParse, fixJSONStringify } from './lib.js';
 import fs       from 'fs-extra';
 import nodeQs   from 'querystring';
 import request  from 'request';
-import Throttle from 'throttle';
 import fileType from 'file-type';
 import nodePath from 'path';
 
@@ -42,7 +41,7 @@ const NOOP  = () => {  };
  * @param config.storagePath    {String|Function}  - [Server] Storage path on file system
  * @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
  * @param config.responseHeaders {Object|Function} - [Server] Custom response headers, if function is passed, must return Object
- * @param config.throttle       {Number}  - [Server] bps throttle threshold
+ * @param config.throttle       {Number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
  * @param config.collectionName {String}  - [Both]   Collection name
@@ -74,7 +73,6 @@ export class FilesCollection extends FilesCollectionCore {
         schema: this.schema,
         public: this.public,
         strict: this.strict,
-        throttle: this.throttle,
         chunkSize: this.chunkSize,
         protected: this.protected,
         collection: this.collection,
@@ -166,10 +164,6 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (!_.isBoolean(this.strict)) {
       this.strict = true;
-    }
-
-    if (!_.isNumber(this.throttle)) {
-      this.throttle = false;
     }
 
     if (!_.isNumber(this.permissions)) {
@@ -279,7 +273,6 @@ export class FilesCollection extends FilesCollectionCore {
     });
 
     check(this.strict, Boolean);
-    check(this.throttle, Match.OneOf(false, Number));
     check(this.permissions, Number);
     check(this.storagePath, Function);
     check(this.cacheControl, String);
@@ -524,6 +517,7 @@ export class FilesCollection extends FilesCollectionCore {
                   opts = {
                     fileId: httpReq.headers['x-fileid']
                   };
+
                   if (httpReq.headers['x-eof'] === '1') {
                     opts.eof = true;
                   } else {
@@ -575,8 +569,7 @@ export class FilesCollection extends FilesCollectionCore {
                   try {
                     opts = JSON.parse(body);
                   } catch (jsonErr) {
-                    console.error('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!');
-                    console.error(jsonErr);
+                    console.error('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!', jsonErr);
                     opts = {file: {}};
                   }
 
@@ -872,7 +865,7 @@ export class FilesCollection extends FilesCollectionCore {
       opts.binData = 'EOF';
     }
 
-    if (!_.isBoolean(opts.chunkId)) {
+    if (!_.isNumber(opts.chunkId)) {
       opts.chunkId = -1;
     }
 
@@ -1737,12 +1730,7 @@ export class FilesCollection extends FilesCollectionCore {
         if (!http.response.finished) {
           http.response.end();
         }
-      });
-
-      if (this.throttle) {
-        stream.pipe(new Throttle({bps: this.throttle, chunksize: this.chunkSize}));
-      }
-      stream.pipe(http.response);
+      }).pipe(http.response);
       break;
     default:
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
@@ -1785,12 +1773,7 @@ export class FilesCollection extends FilesCollectionCore {
         if (!http.response.finished) {
           http.response.end();
         }
-      });
-
-      if (this.throttle) {
-        stream.pipe(new Throttle({bps: this.throttle, chunksize: this.chunkSize}));
-      }
-      stream.pipe(http.response);
+      }).pipe(http.response);
       break;
     }
   }
