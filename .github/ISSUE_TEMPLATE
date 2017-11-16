@@ -2,6 +2,7 @@
   - Give an expressive description
   - Version of `Meteor-Files` you're experiencing this issue
   - Version of `Meteor` you're experiencing this issue
+  - Where this issue appears? OS (Mac/Win/Linux)? Browser name and its version?
   - Is it *Client* or *Server* issue?
   - Post *Client* and/or *Server* logs with enabled `debug` option, you can enable "debug" mode in [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
 
