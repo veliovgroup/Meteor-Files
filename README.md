@@ -1,4 +1,5 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FVDSXRFW9VGA2)
+[![Mentioned in Awesome](https://raw.githubusercontent.com/sindresorhus/awesome/master/media/mentioned-badge.svg)](https://project-awesome.org/Urigo/awesome-meteor#files)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
 [![GitHub issues](https://img.shields.io/github/issues/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/issues)
 [![GitHub forks](https://img.shields.io/github/forks/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/network)
