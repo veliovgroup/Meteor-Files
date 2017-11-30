@@ -13,7 +13,7 @@ export class FileCursor {
   constructor(_fileRef, _collection) {
     this._fileRef    = _fileRef;
     this._collection = _collection;
-    Object.assign(this, _fileRef);
+    _.extend(this, _fileRef);
   }
 
   /*
