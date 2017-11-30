@@ -751,7 +751,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
-        const {result} = self._prepareUpload(_.clone(opts), this.userId, 'DDP Start Method');
+        const { result } = self._prepareUpload(_.clone(opts), this.userId, 'DDP Start Method');
 
         if (self.collection.findOne(result._id)) {
           throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
@@ -1256,6 +1256,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @param {String} opts          - [Optional] Object with file-data
    * @param {String} opts.type     - [Optional] File mime-type
    * @param {Object} opts.meta     - [Optional] File additional meta-data
+   * @param {String} opts.fileId   - _id, default *null*
    * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
    * @param {String} opts.userId   - [Optional] UserId, default *null*
    * @param {Function} callback    - [Optional] function(error, fileObj){...}
