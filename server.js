@@ -1655,7 +1655,48 @@ export class FilesCollection extends FilesCollectionCore {
       }
     }
 
-    let stream;
+    const respond = (stream, code) => {
+      if (!http.response.headersSent && readableStream) {
+        http.response.writeHead(code);
+      }
+
+      http.response.on('close', () => {
+        if (typeof stream.abort === 'function') {
+          stream.abort();
+        }
+        if (typeof stream.end === 'function') {
+          stream.end();
+        }
+      });
+
+      http.request.on('aborted', () => {
+        http.request.aborted = true;
+        if (typeof stream.abort === 'function') {
+          stream.abort();
+        }
+        if (typeof stream.end === 'function') {
+          stream.end();
+        }
+      });
+
+      stream.on('open', () => {
+        if (!http.response.headersSent) {
+          http.response.writeHead(code);
+        }
+      }).on('abort', () => {
+        if (!http.response.finished) {
+          http.response.end();
+        }
+        if (!http.request.aborted) {
+          http.request.destroy();
+        }
+      }).on('error', streamErrorHandler
+      ).on('end', () => {
+        if (!http.response.finished) {
+          http.response.end();
+        }
+      }).pipe(http.response);
+    };
 
     switch (responseType) {
     case '400':
@@ -1690,91 +1731,11 @@ export class FilesCollection extends FilesCollectionCore {
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
       }
-      stream = readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end});
-      if (!http.response.headersSent) {
-        if (readableStream) {
-          http.response.writeHead(206);
-        }
-      }
-
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      http.request.on('abort', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      stream.on('open', () => {
-        if (!http.response.headersSent) {
-          http.response.writeHead(206);
-        }
-      }).on('abort', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-        if (!http.request.aborted) {
-          http.request.abort();
-        }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-      }).pipe(http.response);
+      respond(readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end}), 206);
       break;
     default:
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
-      stream = readableStream || fs.createReadStream(vRef.path);
-      if (!http.response.headersSent) {
-        if (readableStream) { http.response.writeHead(200); }
-      }
-
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      http.request.on('abort', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      stream.on('open', () => {
-        if (!http.response.headersSent) {
-          http.response.writeHead(200);
-        }
-      }).on('abort', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-        if (!http.request.aborted) {
-          http.request.abort();
-        }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-      }).pipe(http.response);
+      respond(readableStream || fs.createReadStream(vRef.path), 200);
       break;
     }
   }
