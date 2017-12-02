@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "ajv": {
-      "version": "5.3.0",
-      "resolved": "https://registry.npmjs.org/ajv/-/ajv-5.3.0.tgz",
-      "integrity": "sha1-RBT/dKUIecII7l/cgm4ywwNUnto="
+      "version": "5.5.0",
+      "resolved": "https://registry.npmjs.org/ajv/-/ajv-5.5.0.tgz",
+      "integrity": "sha1-6yhAdG6dxIvV4GOjbj/UAMXqtak="
     },
     "asn1": {
       "version": "0.2.3",
@@ -89,9 +89,9 @@
       "integrity": "sha1-D8c6ntXw1Tw4GTOYUj735UN3dQU="
     },
     "eventemitter3": {
-      "version": "2.0.3",
-      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-2.0.3.tgz",
-      "integrity": "sha1-teEHm1n7XhuidxwKmTvgYKWMmbo="
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-3.0.0.tgz",
+      "integrity": "sha512-62TxCtz4m2LRaOERVEvLJJ4A6rsg8lC9Xm+FLg2y/1fB/v4ZZ9JCOn+/Ppl5KkH6sRih6bhix724PVanmXYZJQ=="
     },
     "extend": {
       "version": "3.0.1",
@@ -114,9 +114,9 @@
       "integrity": "sha1-1RQsDK7msRifh9OnYREGT4bIu/I="
     },
     "file-type": {
-      "version": "7.2.0",
-      "resolved": "https://registry.npmjs.org/file-type/-/file-type-7.2.0.tgz",
-      "integrity": "sha1-ETz+1S4daVmrgCSJBuLyWozcy3Q="
+      "version": "7.4.0",
+      "resolved": "https://registry.npmjs.org/file-type/-/file-type-7.4.0.tgz",
+      "integrity": "sha1-KnyU9ioAMBULt9m2xwz6HT51nIY="
     },
     "forever-agent": {
       "version": "0.6.1",
