@@ -76,12 +76,13 @@ export class UploadInstance extends EventEmitter {
       allowWebWorkers: Boolean
     });
 
-    if (!this.config.fileName && !this.config.file.name) {
-      throw new Meteor.Error(400, '"fileName" must me specified for base64 upload!');
-    }
-
     if (this.config.isBase64 === true) {
       check(this.config.file, String);
+
+      if (!this.config.fileName) {
+        throw new Meteor.Error(400, '"fileName" must me specified for base64 upload!');
+      }
+
       if (!!~this.config.file.indexOf('data:')) {
         this.config.file = this.config.file.replace('data:', '');
       }
@@ -109,6 +110,14 @@ export class UploadInstance extends EventEmitter {
 
     if (this.config.file) {
       if (!this.config.isBase64) {
+        try {
+          if (!this.config.file.name || !this.config.file.size) {
+            throw new Meteor.Error(500, 'Not a File!');
+          }
+        } catch (e) {
+          throw new Meteor.Error(500, '[FilesCollection] [insert] Insert method accepts File, not a FileList. You need to provide a real File. File must have `.name` property, and its size must be larger than zero.');
+        }
+
         this.fileData = {
           size: this.config.file.size,
           type: this.config.type || this.config.file.type,

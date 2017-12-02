@@ -751,7 +751,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
-        const {result} = self._prepareUpload(_.clone(opts), this.userId, 'DDP Start Method');
+        const { result } = self._prepareUpload(_.clone(opts), this.userId, 'DDP Start Method');
 
         if (self.collection.findOne(result._id)) {
           throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
@@ -1256,6 +1256,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @param {String} opts          - [Optional] Object with file-data
    * @param {String} opts.type     - [Optional] File mime-type
    * @param {Object} opts.meta     - [Optional] File additional meta-data
+   * @param {String} opts.fileId   - _id, default *null*
    * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
    * @param {String} opts.userId   - [Optional] UserId, default *null*
    * @param {Function} callback    - [Optional] function(error, fileObj){...}
@@ -1654,7 +1655,48 @@ export class FilesCollection extends FilesCollectionCore {
       }
     }
 
-    let stream;
+    const respond = (stream, code) => {
+      if (!http.response.headersSent && readableStream) {
+        http.response.writeHead(code);
+      }
+
+      http.response.on('close', () => {
+        if (typeof stream.abort === 'function') {
+          stream.abort();
+        }
+        if (typeof stream.end === 'function') {
+          stream.end();
+        }
+      });
+
+      http.request.on('aborted', () => {
+        http.request.aborted = true;
+        if (typeof stream.abort === 'function') {
+          stream.abort();
+        }
+        if (typeof stream.end === 'function') {
+          stream.end();
+        }
+      });
+
+      stream.on('open', () => {
+        if (!http.response.headersSent) {
+          http.response.writeHead(code);
+        }
+      }).on('abort', () => {
+        if (!http.response.finished) {
+          http.response.end();
+        }
+        if (!http.request.aborted) {
+          http.request.destroy();
+        }
+      }).on('error', streamErrorHandler
+      ).on('end', () => {
+        if (!http.response.finished) {
+          http.response.end();
+        }
+      }).pipe(http.response);
+    };
 
     switch (responseType) {
     case '400':
@@ -1689,91 +1731,11 @@ export class FilesCollection extends FilesCollectionCore {
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
       }
-      stream = readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end});
-      if (!http.response.headersSent) {
-        if (readableStream) {
-          http.response.writeHead(206);
-        }
-      }
-
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      http.request.on('abort', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      stream.on('open', () => {
-        if (!http.response.headersSent) {
-          http.response.writeHead(206);
-        }
-      }).on('abort', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-        if (!http.request.aborted) {
-          http.request.abort();
-        }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-      }).pipe(http.response);
+      respond(readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end}), 206);
       break;
     default:
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
-      stream = readableStream || fs.createReadStream(vRef.path);
-      if (!http.response.headersSent) {
-        if (readableStream) { http.response.writeHead(200); }
-      }
-
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      http.request.on('abort', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
-      stream.on('open', () => {
-        if (!http.response.headersSent) {
-          http.response.writeHead(200);
-        }
-      }).on('abort', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-        if (!http.request.aborted) {
-          http.request.abort();
-        }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
-        if (!http.response.finished) {
-          http.response.end();
-        }
-      }).pipe(http.response);
+      respond(readableStream || fs.createReadStream(vRef.path), 200);
       break;
     }
   }
