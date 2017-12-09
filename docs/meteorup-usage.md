@@ -56,8 +56,8 @@ module.exports = {
 Images = new FilesCollection({
   debug: true,
   storagePath: '/images',
-  permissions: 0774,
-  parentDirPermissions: 0774,
+  permissions: 0o774,
+  parentDirPermissions: 0o774,
   collectionName: 'Images',
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload: function(file) {

@@ -17,11 +17,9 @@
         };
 
         fileReader.readAsDataURL(_chunk);
-
       } else if (root.FileReaderSync) {
         fileReader = new FileReaderSync();
         postMessage({bin: fileReader.readAsDataURL(_chunk).split(',')[1], chunkId: e.data.cc});
-
       } else {
         postMessage({bin: null, chunkId: e.data.cc, error: 'File API is not supported in WebWorker!'});
       }

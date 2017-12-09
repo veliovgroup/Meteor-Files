@@ -821,14 +821,29 @@ export default Images;
 ### Add extra security:
 
 #### Attach schema [*Isomorphic*]:
-*Default schema is stored under* `FilesCollection.schema` *object.*
 
 *To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
-*You're free to modify/overwrite* `FilesCollection.schema` *object.*
 ```jsx
 const Images = new FilesCollection({/* ... */});
 Images.collection.attachSchema(new SimpleSchema(Images.schema));
+```
+
+*You're free to extend the schema to include your own properties. The default schema is stored under* `FilesCollection.schema` *object.*
+
+```jsx
+const mySchema = {
+  ...FilesCollection.schema,
+  myProp: String,
+  myOtherProp: {
+    type: Array
+  }
+};
+const Images = new FilesCollection({
+  /* ... */
+  schema: mySchema
+});
+Images.collection.attachSchema(new SimpleSchema(mySchema));
 ```
 
 #### Deny collection interaction on client [*Server*]:

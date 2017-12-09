@@ -68,7 +68,7 @@ const formatFleURL = (fileRef, version = 'original') => {
   const _root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '');
   const vRef = ((fileRef.versions && fileRef.versions[version]) || fileRef);
 
-  if (_.has(vRef, 'extension')) {
+  if (vRef.extension && _.isString(vRef, 'extension')) {
     ext = `.${vRef.extension.replace(/^\./, '')}`;
   } else {
     ext = '';
