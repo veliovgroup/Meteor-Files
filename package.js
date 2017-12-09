@@ -1,7 +1,7 @@
 Package.describe({
   name: 'ostrio:files',
   version: '1.9.3',
-  summary: 'File upload via DDP/HTTP to server FS. With 3rd party storage support, like: AWS, GridFS, DropBox, Google Drive or other',
+  summary: 'File upload via DDP/HTTP to server, 3rd party storage support: AWS S3, GridFS, DropBox and others',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
