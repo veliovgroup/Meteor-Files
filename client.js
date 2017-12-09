@@ -158,72 +158,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     if (!this.schema) {
-      this.schema = {
-        size: {
-          type: Number
-        },
-        name: {
-          type: String
-        },
-        type: {
-          type: String
-        },
-        path: {
-          type: String
-        },
-        isVideo: {
-          type: Boolean
-        },
-        isAudio: {
-          type: Boolean
-        },
-        isImage: {
-          type: Boolean
-        },
-        isText: {
-          type: Boolean
-        },
-        isJSON: {
-          type: Boolean
-        },
-        isPDF: {
-          type: Boolean
-        },
-        extension: {
-          type: String,
-          optional: true
-        },
-        _storagePath: {
-          type: String
-        },
-        _downloadRoute: {
-          type: String
-        },
-        _collectionName: {
-          type: String
-        },
-        public: {
-          type: Boolean,
-          optional: true
-        },
-        meta: {
-          type: Object,
-          blackbox: true,
-          optional: true
-        },
-        userId: {
-          type: String,
-          optional: true
-        },
-        updatedAt: {
-          type: Date,
-          optional: true
-        },
-        versions: {
-          type: Object,
-          blackbox: true
-        }
-      };
+      this.schema = FilesCollectionCore.schema;
     }
 
     check(this.debug, Boolean);
