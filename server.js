@@ -419,13 +419,25 @@ export class FilesCollection extends FilesCollectionCore {
       WebApp.connectHandlers.use((httpReq, httpResp, next) => {
         if (!this.disableUpload && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
           if (httpReq.method === 'POST') {
-            const handleError = (error) => {
+            const handleError = (_error) => {
+              let error = _error;
               console.warn('[FilesCollection] [Upload] [HTTP] Exception:', error);
+              console.trace();
+
               if (!httpResp.headersSent) {
                 httpResp.writeHead(500);
               }
+
               if (!httpResp.finished) {
-                httpResp.end(JSON.stringify({error}));
+                if (_.isObject(error) && _.isFunction(error.toString)) {
+                  error = error.toString();
+                }
+
+                if (!_.isString(error)) {
+                  error = 'Unexpected error!';
+                }
+
+                httpResp.end(JSON.stringify({ error }));
               }
             };
 
@@ -508,8 +520,12 @@ export class FilesCollection extends FilesCollectionCore {
                     opts = {file: {}};
                   }
 
+                  if (!_.isObject(opts.file)) {
+                    opts.file = {};
+                  }
+
                   opts.___s = true;
-                  this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name} - ${opts.fileId}`);
+                  this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
                   if (_.isObject(opts.file) && opts.file.meta) {
                     opts.file.meta = fixJSONParse(opts.file.meta);
                   }
@@ -530,6 +546,7 @@ export class FilesCollection extends FilesCollectionCore {
                     if (!httpResp.headersSent) {
                       httpResp.writeHead(200);
                     }
+
                     if (!httpResp.finished) {
                       httpResp.end(JSON.stringify({
                         uploadRoute: `${this.downloadRoute}/${this.collectionName}/__upload`,
@@ -540,6 +557,7 @@ export class FilesCollection extends FilesCollectionCore {
                     if (!httpResp.headersSent) {
                       httpResp.writeHead(204);
                     }
+
                     if (!httpResp.finished) {
                       httpResp.end();
                     }
