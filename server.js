@@ -1543,7 +1543,7 @@ export class FilesCollection extends FilesCollectionCore {
       dispositionType = 'inline; ';
     }
 
-    const dispositionName     = `filename=\"${encodeURI(vRef.name || fileRef.name)}\"; filename*=UTF-8''${encodeURI(vRef.name || fileRef.name)}; `;
+    const dispositionName     = `filename=\"${encodeURI(vRef.name || fileRef.name).replace(/\,/g, '%2C')}\"; filename*=UTF-8''${encodeURIComponent(vRef.name || fileRef.name)}; `;
     const dispositionEncoding = 'charset=UTF-8';
 
     if (!http.response.headersSent) {
