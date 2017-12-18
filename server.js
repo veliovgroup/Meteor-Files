@@ -289,7 +289,7 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (!this.disableUpload) {
       this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`);
-      this._preCollection._ensureIndex({createdAt: 1}, {expireAfterSeconds: this.continueUploadTTL, background: true});
+      this._preCollection._ensureIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
           _id: 1,
