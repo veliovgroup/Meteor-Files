@@ -10,6 +10,9 @@ export default class FilesCollectionCore extends EventEmitter {
   }
 
   static schema = {
+    _id: {
+      type: String
+    },
     size: {
       type: Number
     },
@@ -43,6 +46,20 @@ export default class FilesCollectionCore extends EventEmitter {
     extension: {
       type: String,
       optional: true
+    },
+    ext: {
+      type: String,
+      optional: true
+    },
+    extensionWithDot: {
+      type: String,
+      optional: true
+    },
+    mime: {
+      type: String,
+    },
+    'mime-type': {
+      type: String,
     },
     _storagePath: {
       type: String

@@ -6,6 +6,9 @@ For more info see [Collection2](https://github.com/aldeed/meteor-collection2) an
 
 ```javascript
 var defaultSchema = {
+  _id: {
+    type: String
+  },
   size: {
     type: Number
   },
@@ -39,6 +42,20 @@ var defaultSchema = {
   extension: {
     type: String,
     optional: true
+  },
+  ext: {
+    type: String,
+    optional: true
+  },
+  extensionWithDot: {
+    type: String,
+    optional: true
+  },
+  mime: {
+    type: String,
+  },
+  'mime-type': {
+    type: String,
   },
   _storagePath: {
     type: String
