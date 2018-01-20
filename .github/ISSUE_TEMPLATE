@@ -6,9 +6,10 @@
   - Is it *Client* or *Server* issue?
   - Post *Client* and/or *Server* logs with enabled `debug` option, you can enable "debug" mode in [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
   
-### I had an issue and I solved it on my own:
-  - Give a description on steps that you followed to solve the problem
-  - Give links to websites pages with the information that helped you (if there are any)
+### I had an issue and I've solved it on my own:
+  - Provide a description of steps that you've followed to solve the problem.
+  - Provide links to websites and/or pages with the information that helped you (*if there are any*).
+
 
 ### I have a suggestion:
   - Describe your feature / request
