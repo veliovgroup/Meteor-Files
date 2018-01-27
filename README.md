@@ -51,7 +51,7 @@ Support Meteor-Files project:
 
 Contribution:
 ========
-All PRs is always welcome on [`dev` branch](https://github.com/VeliovGroup/Meteor-Files/tree/dev). Please, always give expressive description to your changes and additions.
+All PRs are always welcome on [`dev` branch](https://github.com/VeliovGroup/Meteor-Files/tree/dev). Please, always give expressive description to your changes and additions.
 
 Awards:
 ========
