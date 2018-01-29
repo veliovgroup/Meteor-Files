@@ -151,7 +151,7 @@ export class UploadInstance extends EventEmitter {
       this.sentChunks    = 0;
       this.fileLength    = 1;
       this.EOFsent       = false;
-      this.fileId        = Random.id();
+      this.fileId        = Match.Optional(String) || Random.id();
       this.FSName        = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
       this.pipes         = [];
 
