@@ -231,6 +231,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/FileReader
    * @param {Object} config - Configuration object with next properties:
    *   {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+   *   {String}      fileId         - Optionnal `fileId` used at insert
    *   {Object}      meta           - Additional data as object, use later for search
    *   {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
    *   {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
