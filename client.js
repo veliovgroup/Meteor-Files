@@ -80,7 +80,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.collectionName, String);
 
     if (this.public && !this.downloadRoute) {
-      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal or be inside of your web/proxy-server (relative) root.`);
+      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
 
     if (!_.isBoolean(this.disableUpload)) {

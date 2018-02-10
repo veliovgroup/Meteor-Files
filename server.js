@@ -133,7 +133,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.collectionName, String);
 
     if (this.public && !this.downloadRoute) {
-      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: \"downloadRoute\" must be precisely provided on \"public\" collections! Note: \"downloadRoute\" must be equal or be inside of your web/proxy-server (relative) root.`);
+      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
 
     if (!_.isString(this.downloadRoute)) {
@@ -242,7 +242,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     if (this.public && !storagePath) {
-      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}] \"storagePath\" must be set on \"public\" collections! Note: \"storagePath\" must be equal on be inside of your web/proxy-server (absolute) root.`);
+      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}] "storagePath" must be set on "public" collections! Note: "storagePath" must be equal on be inside of your web/proxy-server (absolute) root.`);
     }
 
     if (!storagePath) {
@@ -257,7 +257,7 @@ export class FilesCollection extends FilesCollectionCore {
       this.storagePath = function () {
         let sp = storagePath.apply(self, arguments);
         if (!_.isString(sp)) {
-          throw new Meteor.Error(400, `[FilesCollection.${self.collectionName}] \"storagePath\" function must return a String!`);
+          throw new Meteor.Error(400, `[FilesCollection.${self.collectionName}] "storagePath" function must return a String!`);
         }
         sp = sp.replace(/\/$/, '');
         return nodePath.normalize(sp);
@@ -268,7 +268,7 @@ export class FilesCollection extends FilesCollectionCore {
 
     fs.mkdirs(this.storagePath({}), { mode: this.parentDirPermissions }, (error) => {
       if (error) {
-        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path \"${this.storagePath({})}\" is not writable!`, error);
+        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable! ${error}`);
       }
     });
 
