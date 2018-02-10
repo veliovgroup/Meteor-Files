@@ -42,6 +42,17 @@
     </tr>
     <tr>
       <td align="right">
+        <code>settings.fileId</code> {<em>String</em>}
+      </td>
+      <td>
+        Explicitly set the fileId for the file
+      </td>
+      <td>
+        This is an optionnal parameters <code>Random.id()</code> will be used otherwise
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>settings.fileName</code> {<em>String</em>}
       </td>
       <td>

@@ -89,9 +89,9 @@
       "integrity": "sha1-D8c6ntXw1Tw4GTOYUj735UN3dQU="
     },
     "eventemitter3": {
-      "version": "3.0.0",
-      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-3.0.0.tgz",
-      "integrity": "sha512-62TxCtz4m2LRaOERVEvLJJ4A6rsg8lC9Xm+FLg2y/1fB/v4ZZ9JCOn+/Ppl5KkH6sRih6bhix724PVanmXYZJQ=="
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-3.0.1.tgz",
+      "integrity": "sha512-QOCPu979MMWX9XNlfRZoin+Wm+bK1SP7vv3NGUniYwuSJK/+cPA10blMaeRgzg31RvoSFk6FsCDVa4vNryBTGA=="
     },
     "extend": {
       "version": "3.0.1",
@@ -114,9 +114,9 @@
       "integrity": "sha1-1RQsDK7msRifh9OnYREGT4bIu/I="
     },
     "file-type": {
-      "version": "7.4.0",
-      "resolved": "https://registry.npmjs.org/file-type/-/file-type-7.4.0.tgz",
-      "integrity": "sha1-KnyU9ioAMBULt9m2xwz6HT51nIY="
+      "version": "7.5.0",
+      "resolved": "https://registry.npmjs.org/file-type/-/file-type-7.5.0.tgz",
+      "integrity": "sha512-siGSLPCL9mJM10TaTswSF2Ry60stJaemPbAf2StSGOcjlfVIA2V/wX3Qg8IiTHmGLMch0ZaM9DhszSo5rfIulg=="
     },
     "forever-agent": {
       "version": "0.6.1",
@@ -284,9 +284,9 @@
       "integrity": "sha1-+nG63UQ3r0wUiEHjs7Fl+enlkLc="
     },
     "uuid": {
-      "version": "3.1.0",
-      "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.1.0.tgz",
-      "integrity": "sha512-DIWtzUkw04M4k3bf1IcpS2tngXEL26YUD2M0tMDUpnUrz2hgzUBlD55a4FjdLGPvfHxS6uluGWvaVEqgBcVa+g=="
+      "version": "3.2.1",
+      "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.2.1.tgz",
+      "integrity": "sha512-jZnMwlb9Iku/O3smGWvZhauCf6cvvpKi4BKRiliS3cxnI+Gz9j5MEpTz2UFuXiKPJocb7gnsLHwiS05ige5BEA=="
     },
     "verror": {
       "version": "1.10.0",
