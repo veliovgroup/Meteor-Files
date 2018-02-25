@@ -8,6 +8,7 @@ import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
 import { fixJSONParse, fixJSONStringify } from './lib.js';
 
+const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 /*
@@ -297,7 +298,7 @@ export class UploadInstance extends EventEmitter {
           }
         });
       } else {
-        HTTP.call('POST', `${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+        HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           content: opts.binData,
           headers: {
             'x-mtok': (_.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
@@ -343,7 +344,7 @@ export class UploadInstance extends EventEmitter {
           this.emit('end', error, result);
         });
       } else {
-        HTTP.call('POST', `${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+        HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           content: '',
           headers: {
             'x-eof': '1',
@@ -529,7 +530,7 @@ export class UploadInstance extends EventEmitter {
         opts.file.meta = fixJSONStringify(opts.file.meta);
       }
 
-      HTTP.call('POST', `${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+      HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
         data: opts,
         headers: {
           'x-start': '1',
