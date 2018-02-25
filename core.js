@@ -119,7 +119,7 @@ export default class FilesCollectionCore extends EventEmitter {
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
     if (_.isString(fileName) && (fileName.length > 0)) {
-      return (fileData.name || fileData.fileName).replace(/\.\./g, '').replace(/\//g, '');
+      return (fileData.name || fileData.fileName).replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
     }
     return '';
   }
