@@ -1,6 +1,6 @@
 ### I'm having an issue:
  1. Search [issues](https://github.com/VeliovGroup/Meteor-Files/issues), maybe your issue is already solved
- 2. We have useful threads makred as [`In a case of the fire - Read This`](https://github.com/VeliovGroup/Meteor-Files/issues?utf8=✓&q=label%3A%22In%20a%20case%20of%20the%20fire%20-%20Read%20This%22), read them too
+ 2. We have useful threads marked as [`In a case of the fire - Read This`](https://github.com/VeliovGroup/Meteor-Files/issues?utf8=✓&q=label%3A%22In%20a%20case%20of%20the%20fire%20-%20Read%20This%22), read them too
  3. Before submitting an issue make sure it's only related to `Meteor-Files` package
  4. If your issue is not solved:
      - Give an expressive description of what is went wrong
