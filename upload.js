@@ -383,8 +383,8 @@ export class UploadInstance extends EventEmitter {
       });
     } else {
       let fileReader;
-      if (FileReader) {
-        fileReader = new FileReader;
+      if (window.FileReader) {
+        fileReader = new window.FileReader;
 
         fileReader.onloadend = (evt) => {
           this.emit('sendChunk', {
@@ -400,8 +400,8 @@ export class UploadInstance extends EventEmitter {
         };
 
         fileReader.readAsDataURL(chunk);
-      } else if (FileReaderSync) {
-        fileReader = new FileReaderSync;
+      } else if (window.FileReaderSync) {
+        fileReader = new window.FileReaderSync;
 
         this.emit('sendChunk', {
           data: {
