@@ -53,9 +53,11 @@ var defaultSchema = {
   },
   mime: {
     type: String,
+    optional: true
   },
   'mime-type': {
     type: String,
+    optional: true
   },
   _storagePath: {
     type: String

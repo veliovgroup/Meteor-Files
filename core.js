@@ -57,9 +57,11 @@ export default class FilesCollectionCore extends EventEmitter {
     },
     mime: {
       type: String,
+      optional: true
     },
     'mime-type': {
       type: String,
+      optional: true
     },
     _storagePath: {
       type: String
@@ -117,7 +119,7 @@ export default class FilesCollectionCore extends EventEmitter {
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
     if (_.isString(fileName) && (fileName.length > 0)) {
-      return (fileData.name || fileData.fileName).replace(/\.\./g, '').replace(/\//g, '');
+      return (fileData.name || fileData.fileName).replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
     }
     return '';
   }
@@ -166,9 +168,13 @@ export default class FilesCollectionCore extends EventEmitter {
     const ds = {
       name: data.name,
       extension: data.extension,
+      ext: data.extension,
+      extensionWithDot: '.' + data.extension,
       path: data.path,
       meta: data.meta,
       type: data.type,
+      mime: data.type,
+      'mime-type': data.type,
       size: data.size,
       userId: data.userId || null,
       versions: {
