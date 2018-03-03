@@ -6,8 +6,13 @@
      - Give an expressive description of what is went wrong
      - Version of `Meteor-Files` you're experiencing this issue
      - Version of `Meteor` you're experiencing this issue
+     - Where this issue appears? OS (Mac/Win/Linux)? Browser name and its version?
      - Is it *Client* or *Server* issue?
      - Post *Client* and/or *Server* logs with enabled `debug` option, you can enable "debug" mode in [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
+
+### I had an issue and I've solved it on my own:
+ - Provide a description of steps that you've followed to solve the problem
+ - Provide links to websites and/or pages with the information that helped you (*if there are any*)
 
 ### I have a suggestion:
  1. PRs are always welcome - [send a PR](https://github.com/VeliovGroup/Meteor-Files/compare)
