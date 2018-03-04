@@ -60,7 +60,6 @@ const NOOP  = () => {  };
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config._preCollectionOptions     {Object} - [Both] preCollection Instance Options
  * @summary Create new instance of FilesCollection
  */
 export class FilesCollection extends FilesCollectionCore {
@@ -95,8 +94,7 @@ export class FilesCollection extends FilesCollectionCore {
         onInitiateUpload: this.onInitiateUpload,
         interceptDownload: this.interceptDownload,
         continueUploadTTL: this.continueUploadTTL,
-        parentDirPermissions: this.parentDirPermissions,
-		_preCollectionOptions : this._preCollectionOptions,
+        parentDirPermissions: this.parentDirPermissions
       } = config);
     }
 
@@ -133,11 +131,7 @@ export class FilesCollection extends FilesCollectionCore {
 
     this.collection.filesCollection = this;
     check(this.collectionName, String);
-	
-	if(!this._preCollectionOptions){
-	  this._preCollectionOptions = {};
-	}
-	
+
     if (this.public && !this.downloadRoute) {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
@@ -163,7 +157,7 @@ export class FilesCollection extends FilesCollectionCore {
     if (!_.isFunction(this.onInitiateUpload)) {
       this.onInitiateUpload = false;
     }
-	
+
     if (!_.isFunction(this.interceptDownload)) {
       this.interceptDownload = false;
     }
@@ -294,7 +288,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.responseHeaders, Match.OneOf(Object, Function));
 
     if (!this.disableUpload) {
-      this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`, this._preCollectionOptions );
+      this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`);
       this._preCollection._ensureIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
