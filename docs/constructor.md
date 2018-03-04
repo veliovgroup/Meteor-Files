@@ -730,7 +730,7 @@
         <code>config._preCollectionOptions</code> {<em>Object</em>}
       </td>
       <td>
-        Both
+        Server
       </td>
       <td>
         Pass options to _preCollection Mongo Instance

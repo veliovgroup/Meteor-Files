@@ -60,7 +60,7 @@ const NOOP  = () => {  };
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config._preCollectionOptions     {Object} - [Both] preCollection Instance Options
+ * @param config._preCollectionOptions     {Object} - [Server] preCollection Instance Options
  * @summary Create new instance of FilesCollection
  */
 export class FilesCollection extends FilesCollectionCore {
