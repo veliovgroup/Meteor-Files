@@ -725,6 +725,23 @@
         Use for security reasons when only upload from <em>Client</em> to <em>Server</em> usage is needed, and files shouldn't be downloaded by any user.
       </td>
     </tr>
+	<tr>
+      <td align="right">
+        <code>config._preCollectionOptions</code> {<em>Object</em>}
+      </td>
+      <td>
+        Both
+      </td>
+      <td>
+        Pass options to _preCollection Mongo Instance
+      </td>
+      <td>
+        <code>{}</code>
+      </td>
+      <td>
+       
+      </td>
+    </tr>
   </tbody>
 </table>
 
