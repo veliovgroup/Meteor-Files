@@ -98,7 +98,7 @@ export class FilesCollection extends FilesCollectionCore {
         continueUploadTTL: this.continueUploadTTL,
         parentDirPermissions: this.parentDirPermissions,
         _preCollection: this._preCollection,
-		_preCollectionName: this._preCollectionName,
+        _preCollectionName: this._preCollectionName,
       } = config);
     }
 
@@ -299,7 +299,6 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.responseHeaders, Match.OneOf(Object, Function));
 
     if (!this.disableUpload) {
-//      this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`, this._preCollectionOptions );
       this._preCollection._ensureIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
