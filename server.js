@@ -60,7 +60,8 @@ const NOOP  = () => {  };
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config._preCollectionOptions     {Object} - [Server] preCollection Instance Options
+ * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
+ * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
  */
 export class FilesCollection extends FilesCollectionCore {
@@ -96,7 +97,8 @@ export class FilesCollection extends FilesCollectionCore {
         interceptDownload: this.interceptDownload,
         continueUploadTTL: this.continueUploadTTL,
         parentDirPermissions: this.parentDirPermissions,
-        preCollectionOptions: this.preCollectionOptions,
+        _preCollection: this._preCollection,
+		_preCollectionName: this._preCollectionName,
       } = config);
     }
 
@@ -134,8 +136,11 @@ export class FilesCollection extends FilesCollectionCore {
     this.collection.filesCollection = this;
     check(this.collectionName, String);
 	
-    if (!this._preCollectionOptions) {
-      this._preCollectionOptions = {};
+    if (!_.isString(this._preCollectionName) && !this._preCollection) {
+      this._preCollectionName = `__pre_${this.collectionName}`;
+    }
+	if (!this._preCollection) {
+      this._preCollection = new Mongo.Collection(this._preCollectionName);
     } 
 	
     if (this.public && !this.downloadRoute) {
@@ -294,7 +299,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.responseHeaders, Match.OneOf(Object, Function));
 
     if (!this.disableUpload) {
-      this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`, this._preCollectionOptions );
+//      this._preCollection = new Mongo.Collection(`__pre_${this.collectionName}`, this._preCollectionOptions );
       this._preCollection._ensureIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
