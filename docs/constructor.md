@@ -725,6 +725,37 @@
         Use for security reasons when only upload from <em>Client</em> to <em>Server</em> usage is needed, and files shouldn't be downloaded by any user.
       </td>
     </tr>
+	 <tr>
+      <td align="right">
+        <code>config._preCollection</code> {<em>Mongo.Collection</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Mongo.Collection Instance
+      </td>
+      <td>
+      </td>
+      <td>
+        You can pass your own Mongo Collection instance <code>{_preCollection: new Mongo.Collection('__pre_myFiles')}</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config._preCollectionName</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        preCollection name
+      </td>
+      <td>
+        <code>__pre_MeteorUploadFiles</code>
+      </td>
+      <td></td>
+    </tr>
   </tbody>
 </table>
 
