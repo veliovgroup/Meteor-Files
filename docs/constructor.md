@@ -1,4 +1,5 @@
 ##### `new FilesCollection([config])` [*Isomorphic*]
+
 *Initialize FilesCollection collection.*
 
 <table>
@@ -66,7 +67,7 @@
         Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
         To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
         The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
-	<br /><br />If using <a href="https://github.com/kadirahq/meteor-up">MeteorUp</a>, Docker volumes has to be created in <code>mup.json</code>, see <a href="https://github.com/bryanlimy/Meteor-Files/blob/master/docs/constructor.md#example-on-using-meteorup">Usage on MeteorUp</a>
+        <br /><br />If using <a href="https://github.com/kadirahq/meteor-up">MeteorUp</a>, Docker volumes has to be created in <code>mup.json</code>, see <a href="https://github.com/bryanlimy/Meteor-Files/blob/master/docs/constructor.md#example-on-using-meteorup">Usage on MeteorUp</a>
       </td>
     </tr>
     <tr>
@@ -725,11 +726,42 @@
         Use for security reasons when only upload from <em>Client</em> to <em>Server</em> usage is needed, and files shouldn't be downloaded by any user.
       </td>
     </tr>
+  <tr>
+      <td align="right">
+        <code>config._preCollection</code> {<em>Mongo.Collection</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Mongo.Collection Instance
+      </td>
+      <td>
+      </td>
+      <td>
+        You can pass your own Mongo Collection instance <code>{_preCollection: new Mongo.Collection('__pre_myFiles')}</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config._preCollectionName</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        preCollection name
+      </td>
+      <td>
+        <code>__pre_MeteorUploadFiles</code>
+      </td>
+      <td></td>
+    </tr>
   </tbody>
 </table>
 
-
 ### Event map:
+
 <table>
   <thead>
     <tr>
@@ -769,14 +801,15 @@
   </tbody>
 </table>
 
-
 ### Examples:
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({
   storagePath: 'assets/app/uploads/Images',
-  downloadRoute: '/files/images'
+  downloadRoute: '/files/images',
   collectionName: 'Images',
-  permissions: 0755,
+  permissions: 0o755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
   // Read more about cacheControl: https://devcenter.heroku.com/articles/increasing-application-performance-with-http-cache-headers
@@ -792,9 +825,8 @@ const Images = new FilesCollection({
     // and on server at `onAfterUpload` hook (trusted side)
     if (file.size <= 10485760 && /png|jpe?g/i.test(file.ext)) {
       return true;
-    } else {
-      return 'Please upload image, with size equal or less than 10MB';
     }
+    return 'Please upload image, with size equal or less than 10MB';
   },
   downloadCallback(fileObj) {
     if (this.params.query.download == 'true') {
@@ -808,9 +840,8 @@ const Images = new FilesCollection({
     // Check if current user is owner of the file
     if (fileObj.meta.owner === this.userId) {
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 });
 
@@ -824,14 +855,16 @@ export default Images;
 
 *To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
-```jsx
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({/* ... */});
 Images.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 *You're free to extend the schema to include your own properties. The default schema is stored under* `FilesCollection.schema` *object.*
 
-```jsx
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const mySchema = {
   ...FilesCollection.schema,
   myProp: String,
@@ -847,8 +880,11 @@ Images.collection.attachSchema(new SimpleSchema(mySchema));
 ```
 
 #### Deny collection interaction on client [*Server*]:
+
 *Deny insert/update/remove from client*
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 if (Meteor.isServer) {
   const Images = new FilesCollection({/* ... */});
   Images.deny({
@@ -869,8 +905,11 @@ if (Meteor.isServer) {
 ```
 
 #### Allow collection interaction on client [*Server*]:
+
 *Allow insert/update/remove from client*
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 if (Meteor.isServer) {
   const Images = new FilesCollection({/* ... */});
   Images.allow({
@@ -891,7 +930,9 @@ if (Meteor.isServer) {
 ```
 
 #### Events listeners:
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({/* ... */});
 // Alias addListener
 Images.on('afterUpload', function (fileRef) {
@@ -900,7 +941,9 @@ Images.on('afterUpload', function (fileRef) {
 ```
 
 #### Use onBeforeUpload to avoid unauthorized upload:
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
@@ -921,8 +964,11 @@ const Images = new FilesCollection({
 ```
 
 #### Use onBeforeRemove to avoid unauthorized remove:
+
 *For more info see [remove method](https://github.com/VeliovGroup/Meteor-Files/wiki/remove).*
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,
@@ -942,14 +988,15 @@ const Images = new FilesCollection({
 });
 ```
 
-
 #### Use onAfterUpload to avoid mime-type and/or extension substitution:
+
 For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use [`mmmagic` package](https://github.com/mscdex/mmmagic) for this:
-```jsx
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({
   collectionName: 'Images',
   onAfterUpload(file) {
-    const self = this;
     if (Meteor.isServer) {
       // check real mimetype
       const { Magic, MAGIC_MIME_TYPE } = require('mmmagic');
@@ -959,10 +1006,10 @@ const Images = new FilesCollection({
           // is not a real image --> delete
           console.log('onAfterUpload, not an image: ', file.path);
           console.log('deleted', file.path);
-          self.remove(file._id);
+          this.remove(file._id);
         }
       }));
     }
   }
-};
+});
 ```

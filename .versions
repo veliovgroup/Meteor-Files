@@ -31,7 +31,7 @@ mongo-id@1.0.6
 npm-mongo@2.2.33
 ordered-dict@1.1.0
 ostrio:cookies@2.2.4
-ostrio:files@1.9.8
+ostrio:files@1.9.9
 promise@0.10.1
 random@1.1.0
 reactive-var@1.0.11
