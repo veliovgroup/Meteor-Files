@@ -14,47 +14,47 @@ In this example two components is used. First - to handle the uploads, adds a fi
  which is a FilesCollection, declared something like this:
 
 ```js
-import { FilesCollection } from 'meteor/ostrio:files'
+import { FilesCollection } from 'meteor/ostrio:files';
 
-export const ReportImages = new FilesCollection({collectionName: 'reportimages'});
+export const UserFiles = new FilesCollection({collectionName: 'userfiles'});
 // optionally attach a schema
-ReportImages.attachSchema(FilesCollection.schema);
+UserFiles.attachSchema(FilesCollection.schema);
 ```
 
 ## FileUpload.js:
 
 ```jsx
-import { withTracker } from 'meteor/react-meteor-data'
-import { Meteor } from 'meteor/meteor'
-import React, { Component } from 'react'
-import PropTypes from 'prop-types'
+import { withTracker } from 'meteor/react-meteor-data';
+import { Meteor } from 'meteor/meteor';
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
-import IndividualFile from './FileIndividualFile.js'
+import IndividualFile from './FileIndividualFile.js';
 
-const debug = require('debug')('demo:file')
+const debug = require('debug')('demo:file');
 
 class FileUploadComponent extends Component {
   constructor(props) {
-    super(props)
+    super(props);
 
     this.state = {
       uploading: [],
       progress: 0,
       inProgress: false
-    }
+    };
 
-    this.uploadIt = this.uploadIt.bind(this)
+    this.uploadIt = this.uploadIt.bind(this);
   }
 
   uploadIt(e) {
-    e.preventDefault()
+    e.preventDefault();
 
-    let self = this
+    let self = this;
 
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // there was multiple files selected
-      var file = e.currentTarget.files[0]
+      var file = e.currentTarget.files[0];
 
       if (file) {
         let uploadInstance = UserFiles.insert({
@@ -71,44 +71,44 @@ class FileUploadComponent extends Component {
         self.setState({
           uploading: uploadInstance, // Keep track of this instance to use below
           inProgress: true // Show the progress bar now
-        })
+        });
 
         // These are the event functions, don't need most of them, it shows where we are in the process
         uploadInstance.on('start', function () {
-          console.log('Starting')
+          console.log('Starting');
         })
 
         uploadInstance.on('end', function (error, fileObj) {
-          console.log('On end File Object: ', fileObj)
+          console.log('On end File Object: ', fileObj);
         })
 
         uploadInstance.on('uploaded', function (error, fileObj) {
-          console.log('uploaded: ', fileObj)
+          console.log('uploaded: ', fileObj);
 
           // Remove the filename from the upload box
-          self.refs['fileinput'].value = ''
+          self.refs['fileinput'].value = '';
 
           // Reset our state for the next file
           self.setState({
             uploading: [],
             progress: 0,
             inProgress: false
-          })
+          });
         })
 
         uploadInstance.on('error', function (error, fileObj) {
           console.log('Error during upload: ' + error)
-        })
+        });
 
         uploadInstance.on('progress', function (progress, fileObj) {
           console.log('Upload Percentage: ' + progress)
           // Update our progress bar
           self.setState({
             progress: progress
-          })
-        })
+          });
+        });
 
-        uploadInstance.start() // Must manually start the upload
+        uploadInstance.start(); // Must manually start the upload
       }
     }
   }
@@ -116,7 +116,7 @@ class FileUploadComponent extends Component {
   // This is our progress bar, bootstrap styled
   // Remove this function if not needed
   showUploads() {
-    console.log('**********************************', this.state.uploading)
+    console.log('**********************************', this.state.uploading);
 
     if (!_.isEmpty(this.state.uploading)) {
       return <div>
@@ -136,18 +136,18 @@ class FileUploadComponent extends Component {
   }
 
   render() {
-    debug("Rendering FileUpload",this.props.docsReadyYet)
+    debug("Rendering FileUpload",this.props.docsReadyYet);
     if (this.props.files && this.props.docsReadyYet) {
 
-      let fileCursors = this.props.files
+      let fileCursors = this.props.files;
 
       // Run through each file that the user has stored
       // (make sure the subscription only sends files owned by this user)
       let display = fileCursors.map((aFile, key) => {
         // console.log('A file: ', aFile.link(), aFile.get('name'))
-        let link = UserFiles.findOne({_id: aFile._id}).link()  //The "view/download" link
+        let link = UserFiles.findOne({_id: aFile._id}).link();  //The "view/download" link
 
-        // Send out components that show details of each fil e
+        // Send out components that show details of each file
         return <div key={'file' + key}>
           <IndividualFile
             fileName={aFile.name}
@@ -181,7 +181,7 @@ class FileUploadComponent extends Component {
 
       </div>
     }
-    else return <div>Loading file list</div>
+    else return <div>Loading file list</div>;
   }
 }
 
@@ -190,32 +190,32 @@ class FileUploadComponent extends Component {
 // in a separate file to provide separation of concerns.
 //
 export default withTracker( ( props ) => {
-  const filesHandle = Meteor.subscribe('files.all')
-  const docsReadyYet = filesHandle.ready()
-  const files = UserFiles.find({}, {sort: {name: 1}}).fetch()
+  const filesHandle = Meteor.subscribe('files.all');
+  const docsReadyYet = filesHandle.ready();
+  const files = UserFiles.find({}, {sort: {name: 1}}).fetch();
 
   return {
     docsReadyYet,
     files,
-  }
-})(FileUploadComponent)
+  };
+})(FileUploadComponent);
 ```
 
 ## Second Component: FileIndividualFile.js
 
 ```jsx
-import React, { Component } from 'react'
-import PropTypes from 'prop-types'
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
 class IndividualFile extends Component {
   constructor(props) {
-    super(props)
+    super(props);
 
     this.state = {
-    }
+    };
     
-    this.removeFile = this.removeFile.bind(this)
-    this.renameFile = this.renameFile.bind(this)
+    this.removeFile = this.removeFile.bind(this);
+    this.renameFile = this.renameFile.bind(this);
 
   }
 
@@ -227,30 +227,30 @@ class IndividualFile extends Component {
   }
 
   removeFile(){
-    let conf = confirm('Are you sure you want to delete the file?') || false
+    let conf = confirm('Are you sure you want to delete the file?') || false;
     if (conf == true) {
       Meteor.call('RemoveFile', this.props.fileId, function (err, res) {
         if (err)
-          console.log(err)
+          console.log(err);
       })
     }
   }
 
   renameFile(){
 
-    let validName = /[^a-zA-Z0-9 \.:\+()\-_%!&]/gi
-    let prompt    = window.prompt('New file name?', this.props.fileName)
+    let validName = /[^a-zA-Z0-9 \.:\+()\-_%!&]/gi;
+    let prompt    = window.prompt('New file name?', this.props.fileName);
 
     // Replace any non valid characters, also do this on the server
     if (prompt) {
-      prompt = prompt.replace(validName, '-')
-      prompt.trim()
+      prompt = prompt.replace(validName, '-');
+      prompt.trim();
     }
 
     if (!_.isEmpty(prompt)) {
       Meteor.call('RenameFile', this.props.fileId, prompt, function (err, res) {
         if (err)
-          console.log(err)
+          console.log(err);
       })
     }
   }
@@ -291,5 +291,5 @@ class IndividualFile extends Component {
     </div>
   }
 }
-export default IndividualFile
+export default IndividualFile;
 ```
