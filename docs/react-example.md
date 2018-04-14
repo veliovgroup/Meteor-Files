@@ -1,51 +1,60 @@
 *This example is for the front-end UI only. The server side [methods](https://github.com/VeliovGroup/Meteor-Files/wiki#api) and [publications](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) are the same.*
 
 ## Brief:
-In this example two components is used. First - to handle the uploads, adds a file input box and progress bar. Second - to show the file details (`FileIndividualFile.jsx`).
+In this example two components is used. First - to handle the uploads, adds a file input box and progress bar. Second - to show the file details (`FileIndividualFile.js`).
 
  - The individual file component allows to delete, rename, and view the files. Twitter Bootstrap is used for styling;
- - Tested with `Meteor@1.4.1.1`;
- - Currently uses mixins to access the meteor data.
+ - Tested with `Meteor@1.6.1` and `React16`;
+ - Uses the latest `withTracker` access the meteor data.
+ - Uses React Component (rather than deprecated createClass)
 
+## Assumptions
+ - You have Meteor methods for `RemoveFile` and `RemoveFile`
+ - You have a publication called `files.all` 
+ which is a FilesCollection, declared something like this:
 
-## FileUpload.jsx:
+```js
+import { FilesCollection } from 'meteor/ostrio:files'
+
+export const ReportImages = new FilesCollection({collectionName: 'reportimages'});
+// optionally attach a schema
+ReportImages.attachSchema(FilesCollection.schema);
+```
+
+## FileUpload.js:
 
 ```jsx
-import { ReactMeteorData } from 'meteor/react-meteor-data';
-import React from 'react';
-import { Meteor } from 'meteor/meteor';
-import IndividualFile from './FileIndividualFile.jsx';
-import { _ } from 'meteor/underscore';
+import { withTracker } from 'meteor/react-meteor-data'
+import { Meteor } from 'meteor/meteor'
+import React, { Component } from 'react'
+import PropTypes from 'prop-types'
 
-const FileUploadComponent = React.createClass({
-  mixins: [ReactMeteorData],
+import IndividualFile from './FileIndividualFile.js'
 
-  getInitialState(){
-    return {
+const debug = require('debug')('demo:file')
+
+class FileUploadComponent extends Component {
+  constructor(props) {
+    super(props)
+
+    this.state = {
       uploading: [],
       progress: 0,
       inProgress: false
     }
-  },
 
-  getMeteorData() {
-    var handle = Meteor.subscribe('files.all');
-    return {
-      docsReadyYet: handle.ready(),
-      docs: UserFiles.find().fetch() // Collection is UserFiles
-    };
-  },
+    this.uploadIt = this.uploadIt.bind(this)
+  }
 
-  uploadIt(e){
-    "use strict";
-    e.preventDefault();
+  uploadIt(e) {
+    e.preventDefault()
 
-    let self = this;
+    let self = this
 
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // there was multiple files selected
-      var file = e.currentTarget.files[0];
+      var file = e.currentTarget.files[0]
 
       if (file) {
         let uploadInstance = UserFiles.insert({
@@ -57,57 +66,57 @@ const FileUploadComponent = React.createClass({
           streams: 'dynamic',
           chunkSize: 'dynamic',
           allowWebWorkers: true // If you see issues with uploads, change this to false
-        }, false);
+        }, false)
 
         self.setState({
           uploading: uploadInstance, // Keep track of this instance to use below
           inProgress: true // Show the progress bar now
-        });
+        })
 
         // These are the event functions, don't need most of them, it shows where we are in the process
         uploadInstance.on('start', function () {
-          console.log('Starting');
-        });
+          console.log('Starting')
+        })
 
         uploadInstance.on('end', function (error, fileObj) {
-          console.log('On end File Object: ', fileObj);
-        });
+          console.log('On end File Object: ', fileObj)
+        })
 
         uploadInstance.on('uploaded', function (error, fileObj) {
-          console.log('uploaded: ', fileObj);
+          console.log('uploaded: ', fileObj)
 
           // Remove the filename from the upload box
-          self.refs['fileinput'].value = '';
+          self.refs['fileinput'].value = ''
 
           // Reset our state for the next file
           self.setState({
             uploading: [],
             progress: 0,
             inProgress: false
-          });
-        });
+          })
+        })
 
         uploadInstance.on('error', function (error, fileObj) {
-          console.log('Error during upload: ' + error);
-        });
+          console.log('Error during upload: ' + error)
+        })
 
         uploadInstance.on('progress', function (progress, fileObj) {
-          console.log('Upload Percentage: ' + progress);
+          console.log('Upload Percentage: ' + progress)
           // Update our progress bar
           self.setState({
             progress: progress
           })
-        });
+        })
 
-        uploadInstance.start(); // Must manually start the upload
+        uploadInstance.start() // Must manually start the upload
       }
     }
-  },
+  }
 
   // This is our progress bar, bootstrap styled
   // Remove this function if not needed
   showUploads() {
-    console.log('**********************************', this.state.uploading);
+    console.log('**********************************', this.state.uploading)
 
     if (!_.isEmpty(this.state.uploading)) {
       return <div>
@@ -124,21 +133,21 @@ const FileUploadComponent = React.createClass({
         </div>
       </div>
     }
-  },
+  }
 
   render() {
-    if (this.data.docsReadyYet) {
-      'use strict';
+    debug("Rendering FileUpload",this.props.docsReadyYet)
+    if (this.props.files && this.props.docsReadyYet) {
 
-      let fileCursors = this.data.docs;
+      let fileCursors = this.props.files
 
       // Run through each file that the user has stored
       // (make sure the subscription only sends files owned by this user)
       let display = fileCursors.map((aFile, key) => {
-        // console.log('A file: ', aFile.link(), aFile.get('name'));
-        let link = UserFiles.findOne({_id: aFile._id}).link();  //The "view/download" link
+        // console.log('A file: ', aFile.link(), aFile.get('name'))
+        let link = UserFiles.findOne({_id: aFile._id}).link()  //The "view/download" link
 
-        // Send out components that show details of each file
+        // Send out components that show details of each fil e
         return <div key={'file' + key}>
           <IndividualFile
             fileName={aFile.name}
@@ -147,7 +156,7 @@ const FileUploadComponent = React.createClass({
             fileSize={aFile.size}
           />
         </div>
-      });
+      })
 
       return <div>
         <div className="row">
@@ -172,55 +181,79 @@ const FileUploadComponent = React.createClass({
 
       </div>
     }
-    else return <div></div>
+    else return <div>Loading file list</div>
   }
-});
+}
 
-export default FileUploadComponent;
+//
+// This is the HOC - included in this file just for convenience, but usually kept
+// in a separate file to provide separation of concerns.
+//
+export default withTracker( ( props ) => {
+  const filesHandle = Meteor.subscribe('files.all')
+  const docsReadyYet = filesHandle.ready()
+  const files = UserFiles.find({}, {sort: {name: 1}}).fetch()
+
+  return {
+    docsReadyYet,
+    files,
+  }
+})(FileUploadComponent)
 ```
 
-## Second Component: FileIndividualFile.jsx
+## Second Component: FileIndividualFile.js
+
 ```jsx
-import React from 'react';
-const IndividualFile = React.createClass({
+import React, { Component } from 'react'
+import PropTypes from 'prop-types'
+
+class IndividualFile extends Component {
+  constructor(props) {
+    super(props)
+
+    this.state = {
+    }
+    
+    this.removeFile = this.removeFile.bind(this)
+    this.renameFile = this.renameFile.bind(this)
+
+  }
 
   propTypes: {
-    fileName: React.PropTypes.string.isRequired,
-    fileSize: React.PropTypes.number.isRequired,
-    fileUrl: React.PropTypes.string,
-    fileId: React.PropTypes.string.isRequired
-  },
+    fileName: PropTypes.string.isRequired,
+    fileSize: PropTypes.number.isRequired,
+    fileUrl: PropTypes.string,
+    fileId: PropTypes.string.isRequired
+  }
 
   removeFile(){
-    "use strict";
-    let conf = confirm('Are you sure you want to delete the file?') || false;
+    let conf = confirm('Are you sure you want to delete the file?') || false
     if (conf == true) {
       Meteor.call('RemoveFile', this.props.fileId, function (err, res) {
         if (err)
-          console.log(err);
-      });
+          console.log(err)
+      })
     }
-  },
+  }
 
   renameFile(){
-    "use strict";
 
-    let validName = /[^a-zA-Z0-9 \.:\+()\-_%!&]/gi;
-    let prompt    = window.prompt('New file name?', this.props.fileName);
+    let validName = /[^a-zA-Z0-9 \.:\+()\-_%!&]/gi
+    let prompt    = window.prompt('New file name?', this.props.fileName)
 
     // Replace any non valid characters, also do this on the server
     if (prompt) {
-      prompt = prompt.replace(validName, '-');
-      prompt.trim();
+      prompt = prompt.replace(validName, '-')
+      prompt.trim()
     }
 
     if (!_.isEmpty(prompt)) {
       Meteor.call('RenameFile', this.props.fileId, prompt, function (err, res) {
         if (err)
-          console.log(err);
-      });
+          console.log(err)
+      })
     }
-  },
+  }
 
   render() {
     return <div className="m-t-sm">
@@ -257,6 +290,6 @@ const IndividualFile = React.createClass({
       </div>
     </div>
   }
-});
-export default IndividualFile;
+}
+export default IndividualFile
 ```
