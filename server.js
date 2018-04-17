@@ -918,17 +918,23 @@ export class FilesCollection extends FilesCollectionCore {
     result.public = this.public;
     this._updateFileTypes(result);
 
-    this.collection.insert(_.clone(result), (error, _id) => {
-      if (error) {
-        cb && cb(error);
-        this._debug('[FilesCollection] [Upload] [_finishUpload] Error:', error);
+    this.collection.insert(_.clone(result), (colInsert, _id) => {
+      if (colInsert) {
+        cb && cb(colInsert);
+        this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
       } else {
-        this._preCollection.update({_id: opts.fileId}, {$set: {isFinished: true}});
-        result._id = _id;
-        this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
-        this.onAfterUpload && this.onAfterUpload.call(this, result);
-        this.emit('afterUpload', result);
-        cb && cb(null, result);
+        this._preCollection.update({_id: opts.fileId}, {$set: {isFinished: true}}, (preUpdateError) => {
+          if (preUpdateError) {
+            cb && cb(preUpdateError);
+            this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', preUpdateError);
+          } else {
+            result._id = _id;
+            this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
+            this.onAfterUpload && this.onAfterUpload.call(this, result);
+            this.emit('afterUpload', result);
+            cb && cb(null, result);
+          }
+        });
       }
     });
   }
