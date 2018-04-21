@@ -602,6 +602,7 @@ export class UploadInstance extends EventEmitter {
       this.emit('start');
     };
 
+    const self = this;
     this.result.pipe = function (func) {
       self.pipe(func);
       return this;
