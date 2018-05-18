@@ -244,20 +244,20 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
 
 ### Further image (JPEG, PNG) processing with AWS Lambda
 
-The basic concept: you already have a storage folder that you use for storage above. We are going to set a Lambda "listener"
+The basic concept: you already have a S3 folder that you use for storage above. We are going to set a Lambda trigger
  on that folder and for each file saved into (plus any other condition you wish), we will save a thumb into another folder.
 
 First, sign in to your AWS console and select your region from the top bar. Go to your Lambda dashboard and create a new function.
 
 Add a trigger for every new file created under your prefered folder. Then add the "Function Code". The code will be your xxx.js file zipped together with the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler. Upload your ZIP file.
 
-## Your resized JS file
+## Your resizer JS file
 
-We will be using two differents methods so please free to chose the one you prefer.
+We will be using two differents methods so please feel free to chose the one you prefer.
 
 1. Official Lambda resizer by AWS: full documentation here: https://aws.amazon.com/blogs/compute/resize-images-on-the-fly-with-amazon-s3-aws-lambda-and-amazon-api-gateway/.
 This is based on sharp.js, claimed to be 4-5 times faster than ImageMagic (http://sharp.pixelplumbing.com/en/stable/)
-Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
+Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install to latest versions in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
 
 2. Resizer based on ImageMagic (example shows a resize to output JPG, 420px width, 85% quality, with a meta attached for CachControl set to 10 days).
 
@@ -284,7 +284,7 @@ Just download the ZIP from the Amazon documentation and follow the steps above. 
   ]
 }
 ```
-### index.js
+### index.js   // (change to something like ImageResizer.js and make sure this has the same name as your Lambda function / handler)
 ```JSX
 // dependencies
 const async = require('async')
@@ -372,6 +372,6 @@ exports.handler = (event, context, callback) => {
 }
 ```
 
-
+AWS Lambda offers monitoring of these functions as well as debugging (ideally you would keep all console.logs in place in order to see what is going on in case something is not working).
 
 
