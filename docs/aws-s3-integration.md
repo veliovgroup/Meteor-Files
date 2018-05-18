@@ -267,7 +267,7 @@ Just download the ZIP from the Amazon documentation and follow the steps above. 
 {
   "name": "amazon-lambda-resizer",
   "version": "0.0.1",
-  "description": "Resizer for lambda images in a S3 bucket from a folter_name to folter_name-half",
+  "description": "Resizer for lambda images in a S3 bucket from a source_folder to target_folder",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
