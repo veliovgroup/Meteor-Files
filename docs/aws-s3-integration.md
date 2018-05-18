@@ -257,9 +257,120 @@ We will be using two differents methods so please free to chose the one you pref
 
 1. Official Lambda resizer by AWS: full documentation here: https://aws.amazon.com/blogs/compute/resize-images-on-the-fly-with-amazon-s3-aws-lambda-and-amazon-api-gateway/.
 This is based on sharp.js, claimed to be 4-5 times faster than ImageMagic (http://sharp.pixelplumbing.com/en/stable/)
-Just download the ZIP from there and follow the steps above. You might just want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
+Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
 
-2. Resizer based on ImageMagic.
+2. Resizer based on ImageMagic (example shows a resize to output JPG, 420px width, 85% quality, with a meta attached for CachControl set to 10 days).
+
+### package.json
+```jsx
+{
+  "name": "amazon-lambda-resizer",
+  "version": "0.0.1",
+  "description": "Resizer for lambda images in a S3 bucket from a folter_name to folter_name-half",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "async": "^2.6.0",
+    "aws-sdk": "^2.240.1",
+    "gm": "^1.23.1",
+    "path": "^0.12.7"
+  },
+  "keywords": [
+    "node",
+    "lambda",
+    "aws"
+  ]
+}
+```
+### index.js
+```JSX
+// dependencies
+const async = require('async')
+const AWS = require('aws-sdk')
+const gm = require('gm')
+const util = require('util')
+const imageMagick = gm.subClass({ imageMagick: true })
+const path = require('path')
+
+const WEB_WIDTH_MAX = 420
+const WEB_Q_MAX = 85
+const FOLDER_DEST = 'thumb/'
+
+AWS.config.update({accessKeyId: 'xxxxxxxxxxx', secretAccessKey: 'xxxxxxxxxxxxxxxxxxxx'})
+const s3 = new AWS.S3()
+
+exports.handler = (event, context, callback) => {
+  // Read options from the event.
+  console.log('Reading options from event:\n', util.inspect(event, {depth: 5}))
+  const srcBucket = event.Records[0].s3.bucket.name
+  // Object key may have spaces or unicode non-ASCII characters.
+  const srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '))
+  const dstBucket = srcBucket
+  const imageName = path.basename(srcKey)
+  // var dstBucket = srcBucket
+  // Infer the image type.
+  const typeMatch = srcKey.match(/\.([^.]*)$/)
+  if (!typeMatch) {
+    callback(console.log('Could not determine the image type.'))
+    return
+  }
+  const imageType = typeMatch[1]
+  if (imageType.toUpperCase() !== 'jpg'.toUpperCase() && imageType.toUpperCase() !== 'png'.toUpperCase() && imageType.toUpperCase() !== 'jpeg'.toUpperCase()) {
+    callback(console.log(`Unsupported image type: ${imageType}`))
+    return
+  }
+  console.log('****************before async******************')
+  // Download the image from S3, transform, and upload to a different S3 bucket.
+  async.waterfall([
+    function download (next) {
+      // Download the image from S3 into a buffer.
+      s3.getObject({
+        Bucket: srcBucket,
+        Key: srcKey
+      }, next)
+    },
+    function transformWebMax (response, next) {
+      imageMagick(response.Body)
+        .resize(WEB_WIDTH_MAX)
+        .quality(WEB_Q_MAX)
+        // .gravity('Center')
+        .strip()
+        // .crop(WEB_WIDTH_MAX, WEB_HEIGHT_MAX)
+        .toBuffer('jpg', (err, buffer) => {
+          if (err) return handle(err)
+          next(null, response, buffer)
+        })
+    },
+    function uploadWebMax (response, buffer, next) {
+      // Stream the transformed image to a different S3 bucket.
+      const dstKeyResized = FOLDER_DEST + imageName
+      s3.putObject({
+        Bucket: dstBucket,
+        Key: dstKeyResized,
+        Body: buffer,
+        ContentType: response.ContentType,
+        CacheControl: 'max-age=864000'
+      }, (err, data) => {
+        if (err) {
+          console.log(err, err.stack)
+        } else {
+          console.log('uploaded to web-max Successfully !!')
+          next(null, response, buffer)
+        }
+      })
+    }
+  ], err => {
+    if (err) {
+      console.log('Unable to resize image')
+    } else {
+      console.log('Successfully resized image')
+    }
+    callback(null, 'message')
+  })
+}
+```
 
 
 
