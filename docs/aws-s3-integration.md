@@ -241,3 +241,10 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
   throw new Meteor.Error(401, 'Missing Meteor file settings');
 }
 ```
+
+### Further image (JPEG, PNG) processing with AWS Lambda
+
+The basic concept: you already have a storage folder that you use for storage above. We are going to set a Lambda "listener"
+ on that folder and for each file saved into (plus any other condition you wish), we will save a thumb into another folder.
+
+
