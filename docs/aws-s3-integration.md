@@ -247,4 +247,10 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
 The basic concept: you already have a storage folder that you use for storage above. We are going to set a Lambda "listener"
  on that folder and for each file saved into (plus any other condition you wish), we will save a thumb into another folder.
 
+First, sign in to your AWS console and select your region from the top bar. Go to your Lambda dashboard and create a new function.
+
+Add a trigger for every new file created under your prefered folder. Then add the "Function Code". The code will be your xxx.js file together witht the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler.
+
+
+
 
