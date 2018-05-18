@@ -16,6 +16,7 @@ Typical regions are these, see full list at AWS S3 console. *Every region is sup
  * US West (Oregon): `us-west-2`
  * US West (Northern California): `us-west-1`
  * EU (Ireland): `eu-west-1`
+ * EU (Frankfurt): `eu-central-1`
  * Asia Pacific (Singapore): `ap-southeast-1`
  * Asia Pacific (Tokyo): `ap-northeast-1`
  * South America (Sao Paulo): `sa-east-1`
