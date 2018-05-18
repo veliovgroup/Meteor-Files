@@ -249,7 +249,7 @@ The basic concept: you already have a S3 folder that you use for storage above. 
 
 First, sign in to your AWS console and select your region from the top bar. Go to your Lambda dashboard and create a new function.
 
-Add a trigger for every new file created under your prefered folder. Then add the "Function Code". The code will be your xxx.js file zipped together with the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler. Upload your ZIP file.
+Add a trigger for S3, select your bucket, select "Object Created(All)", check Enable trigger and save (Add). Then add the "Function Code". The code will be your xxx.js file zipped together with the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler. Upload your ZIP file.
 
 ## Your resizer JS file
 
