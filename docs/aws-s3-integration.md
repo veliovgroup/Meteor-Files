@@ -284,7 +284,7 @@ Just download the ZIP from the Amazon documentation and follow the steps above. 
   ]
 }
 ```
-### index.js   // (change to something like ImageResizer.js and make sure this has the same name as your Lambda function / handler)
+### index.js   (change to something like ImageResizer.js and make sure this has the same name as your Lambda function / handler)
 ```JSX
 // dependencies
 const async = require('async')
