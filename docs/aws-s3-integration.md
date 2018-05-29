@@ -1,38 +1,44 @@
-### Use AWS:S3 As Storage
+# Use AWS:S3 As Storage
 
 The example below shows how to store and serve uploaded file via S3. This also covers removing the files from S3 when removed from *FilesCollection*.
 
 First, install aws-sdk [Official AWS SDK Docs](http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html)
+
 ```shell
 npm install --save aws-sdk
 ```
+
 Or:
+
 ```shell
 meteor npm install --save aws-sdk
 ```
 
 Typical regions are these, see full list at AWS S3 console. *Every region is supported.*
- * US Standard (default): `us-standard`
- * US West (Oregon): `us-west-2`
- * US West (Northern California): `us-west-1`
- * EU (Ireland): `eu-west-1`
- * EU (Frankfurt): `eu-central-1`
- * Asia Pacific (Singapore): `ap-southeast-1`
- * Asia Pacific (Tokyo): `ap-northeast-1`
- * South America (Sao Paulo): `sa-east-1`
 
+  * US Standard (default): `us-standard`
+  * US West (Oregon): `us-west-2`
+  * US West (Northern California): `us-west-1`
+  * EU (Ireland): `eu-west-1`
+  * EU (Frankfurt): `eu-central-1`
+  * Asia Pacific (Singapore): `ap-southeast-1`
+  * Asia Pacific (Tokyo): `ap-northeast-1`
+  * South America (Sao Paulo): `sa-east-1`
 
 Prepare: Get access to AWS S3:
- - Go to http://aws.amazon.com/s3/ (*Sign(in|up) if required*)
- - Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
+
+  * Go to [aws.amazon.com/s3](http://aws.amazon.com/s3/) (*Sign(in|up) if required*)
+  * Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
     * Create an S3 bucket in preferred region
     * Get an "Access Key Id" and "Secret Key"
 
-### Settings.json
+## Settings.json
+
 First, create the `settings.json` file and add AWS:S3 credentials to it:
 
 Use it with: `meteor --settings settings.json`
-```jsx
+
+```json
 {
   "s3": {
     "key": "AWSKEY",
@@ -44,29 +50,35 @@ Use it with: `meteor --settings settings.json`
 ```
 
 ### Use environment variable to set settings
+
 Instead of using `settings.json`, - environment variable can be used:
+
 ```js
-// env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}'
+import { Meteor } from 'meteor/meteor';
+/** env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' **/
 if (process.env.S3) {
   Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
 }
 ```
 
-### Server-side-file-store.js
-Use this at Meteor's `imports/server` directory, __NOT__ the client
-```jsx
+## Move a file to AWS:S3 after upload
+
+File: `Server-side-file-store.js`.
+Use this at Meteor's `imports/server` directory, __NOT__ on the client
+
+```js
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
 import { Random } from 'meteor/random';
 import { FilesCollection } from 'meteor/ostrio:files';
 import stream from 'stream';
 
-import S3 from 'aws-sdk/clients/s3'; // http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
-// See fs-extra and graceful-fs NPM packages
-// For better i/o performance
+import S3 from 'aws-sdk/clients/s3'; /* http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html */
+/* See fs-extra and graceful-fs NPM packages */
+/* For better i/o performance */
 import fs from 'fs';
 
-// Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' meteor
+/* Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' meteor */
 if (process.env.S3) {
   Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
 }
@@ -76,8 +88,8 @@ const bound  = Meteor.bindEnvironment((callback) => {
   return callback();
 });
 
-// Check settings existence in `Meteor.settings`
-// This is the best practice for app security
+/* Check settings existence in `Meteor.settings` */
+/* This is the best practice for app security */
 if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
   // Create a new S3 object
   const s3 = new S3({
@@ -243,7 +255,7 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
 }
 ```
 
-### Further image (JPEG, PNG) processing with AWS Lambda
+## Further image (JPEG, PNG) processing with AWS Lambda
 
 The basic concept: you already have a S3 folder that you use for storage above. We are going to set a Lambda trigger
  on that folder and for each file saved into (plus any other condition you wish), we will save a thumb into another folder.
@@ -252,18 +264,16 @@ First, sign in to your AWS console and select your region from the top bar. Go t
 
 Add a trigger for S3, select your bucket, select "Object Created(All)", check Enable trigger and save (Add). Then add the "Function Code". The code will be your xxx.js file zipped together with the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler. Upload your ZIP file.
 
-## Your resizer JS file
+### Your resizer JS file
 
 We will be using two differents methods so please feel free to chose the one you prefer.
 
-1. Official Lambda resizer by AWS: full documentation here: https://aws.amazon.com/blogs/compute/resize-images-on-the-fly-with-amazon-s3-aws-lambda-and-amazon-api-gateway/.
-This is based on sharp.js, claimed to be 4-5 times faster than ImageMagic (http://sharp.pixelplumbing.com/en/stable/)
-Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install to latest versions in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
+  1. Official Lambda resizer by AWS: [full documentation here](https://aws.amazon.com/blogs/compute/resize-images-on-the-fly-with-amazon-s3-aws-lambda-and-amazon-api-gateway/). This is based on sharp.js, claimed to be 4-5 times faster than [ImageMagick](http://sharp.pixelplumbing.com/en/stable/). Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install to latest versions in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
+  2. Resizer based on ImageMagic (example shows a resize to output JPG, 420px width, 85% quality, with a meta attached for CachControl set to 10 days).
 
-2. Resizer based on ImageMagic (example shows a resize to output JPG, 420px width, 85% quality, with a meta attached for CachControl set to 10 days).
+#### `package.json`
 
-### package.json
-```jsx
+```json
 {
   "name": "amazon-lambda-resizer",
   "version": "0.0.1",
@@ -285,44 +295,54 @@ Just download the ZIP from the Amazon documentation and follow the steps above. 
   ]
 }
 ```
-### index.js   (change to something like ImageResizer.js and make sure this has the same name as your Lambda function / handler)
-```JSX
-// dependencies
-const async = require('async')
-const AWS = require('aws-sdk')
-const gm = require('gm')
-const util = require('util')
-const imageMagick = gm.subClass({ imageMagick: true })
-const path = require('path')
 
-const WEB_WIDTH_MAX = 420
-const WEB_Q_MAX = 85
-const FOLDER_DEST = 'thumb/'
+#### `index.js`
 
-AWS.config.update({accessKeyId: 'xxxxxxxxxxx', secretAccessKey: 'xxxxxxxxxxxxxxxxxxxx'})
-const s3 = new AWS.S3()
+*Change to something like* `ImageResizer.js` *and make sure this has the same name as your Lambda function / handler*
+
+```js
+/* Dependencies: */
+const async = require('async');
+const AWS   = require('aws-sdk');
+const gm    = require('gm');
+const util  = require('util');
+const path  = require('path');
+const imageMagick = gm.subClass({ imageMagick: true });
+
+const WEB_WIDTH_MAX = 420;
+const WEB_Q_MAX = 85;
+const FOLDER_DEST = 'thumb/';
+
+AWS.config.update({
+  accessKeyId: 'xxxxxxxxxxx',
+  secretAccessKey: 'xxxxxxxxxxxxxxxxxxxx'
+});
+
+const s3 = new AWS.S3();
 
 exports.handler = (event, context, callback) => {
   // Read options from the event.
-  console.log('Reading options from event:\n', util.inspect(event, {depth: 5}))
-  const srcBucket = event.Records[0].s3.bucket.name
+  // console.log('Reading options from event:\n', util.inspect(event, {depth: 5}));
+  const srcBucket = event.Records[0].s3.bucket.name;
+
   // Object key may have spaces or unicode non-ASCII characters.
-  const srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '))
-  const dstBucket = srcBucket
-  const imageName = path.basename(srcKey)
-  // var dstBucket = srcBucket
+  const srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+  const dstBucket = srcBucket;
+  const imageName = path.basename(srcKey);
+
   // Infer the image type.
-  const typeMatch = srcKey.match(/\.([^.]*)$/)
+  const typeMatch = srcKey.match(/\.([^.]*)$/);
   if (!typeMatch) {
-    callback(console.log('Could not determine the image type.'))
-    return
+    callback('Could not determine the image type.');
+    return;
   }
-  const imageType = typeMatch[1]
+  const imageType = typeMatch[1];
   if (imageType.toUpperCase() !== 'jpg'.toUpperCase() && imageType.toUpperCase() !== 'png'.toUpperCase() && imageType.toUpperCase() !== 'jpeg'.toUpperCase()) {
-    callback(console.log(`Unsupported image type: ${imageType}`))
-    return
+    callback(`Unsupported image type: ${imageType}`);
+    return;
   }
-  console.log('****************before async******************')
+
+  // ****************before async******************
   // Download the image from S3, transform, and upload to a different S3 bucket.
   async.waterfall([
     function download (next) {
@@ -330,7 +350,7 @@ exports.handler = (event, context, callback) => {
       s3.getObject({
         Bucket: srcBucket,
         Key: srcKey
-      }, next)
+      }, next);
     },
     function transformWebMax (response, next) {
       imageMagick(response.Body)
@@ -340,13 +360,15 @@ exports.handler = (event, context, callback) => {
         .strip()
         // .crop(WEB_WIDTH_MAX, WEB_HEIGHT_MAX)
         .toBuffer('jpg', (err, buffer) => {
-          if (err) return handle(err)
-          next(null, response, buffer)
-        })
+          if (err) {
+            throw new Error(err);
+          }
+          next(null, response, buffer);
+        });
     },
     function uploadWebMax (response, buffer, next) {
       // Stream the transformed image to a different S3 bucket.
-      const dstKeyResized = FOLDER_DEST + imageName
+      const dstKeyResized = FOLDER_DEST + imageName;
       s3.putObject({
         Bucket: dstBucket,
         Key: dstKeyResized,
@@ -355,24 +377,22 @@ exports.handler = (event, context, callback) => {
         CacheControl: 'max-age=864000'
       }, (err, data) => {
         if (err) {
-          console.log(err, err.stack)
+          console.error(err, err.stack);
         } else {
-          console.log('uploaded to web-max Successfully !!')
-          next(null, response, buffer)
+          console.log('uploaded to web-max Successfully !!');
+          next(null, response, buffer);
         }
-      })
+      });
     }
   ], err => {
     if (err) {
-      console.log('Unable to resize image')
+      console.error('Unable to resize image');
     } else {
-      console.log('Successfully resized image')
+      console.log('Successfully resized image');
     }
-    callback(null, 'message')
-  })
-}
+    callback(null, 'message');
+  });
+};
 ```
 
 AWS Lambda offers monitoring of these functions as well as debugging (ideally you would keep all console.logs in place in order to see what is going on in case something is not working).
-
-
