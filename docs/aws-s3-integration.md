@@ -16,6 +16,7 @@ Typical regions are these, see full list at AWS S3 console. *Every region is sup
  * US West (Oregon): `us-west-2`
  * US West (Northern California): `us-west-1`
  * EU (Ireland): `eu-west-1`
+ * EU (Frankfurt): `eu-central-1`
  * Asia Pacific (Singapore): `ap-southeast-1`
  * Asia Pacific (Tokyo): `ap-northeast-1`
  * South America (Sao Paulo): `sa-east-1`
@@ -241,3 +242,137 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
   throw new Meteor.Error(401, 'Missing Meteor file settings');
 }
 ```
+
+### Further image (JPEG, PNG) processing with AWS Lambda
+
+The basic concept: you already have a S3 folder that you use for storage above. We are going to set a Lambda trigger
+ on that folder and for each file saved into (plus any other condition you wish), we will save a thumb into another folder.
+
+First, sign in to your AWS console and select your region from the top bar. Go to your Lambda dashboard and create a new function.
+
+Add a trigger for S3, select your bucket, select "Object Created(All)", check Enable trigger and save (Add). Then add the "Function Code". The code will be your xxx.js file zipped together with the node_modules folder used by your xxx.js file. Please note that your Lambda function will need to have the same name as your xxx.js file (e.g.  JS file name: ImageResizer.js will require the Lambda function name/handler ImageResizer.handler. Upload your ZIP file.
+
+## Your resizer JS file
+
+We will be using two differents methods so please feel free to chose the one you prefer.
+
+1. Official Lambda resizer by AWS: full documentation here: https://aws.amazon.com/blogs/compute/resize-images-on-the-fly-with-amazon-s3-aws-lambda-and-amazon-api-gateway/.
+This is based on sharp.js, claimed to be 4-5 times faster than ImageMagic (http://sharp.pixelplumbing.com/en/stable/)
+Just download the ZIP from the Amazon documentation and follow the steps above. You might want to make sure that the packages in the package.json file are at the toppes version. If not, please run an npm install to latest versions in order to generate the updated node_modules before you zip your index.js and node_modules folder together.
+
+2. Resizer based on ImageMagic (example shows a resize to output JPG, 420px width, 85% quality, with a meta attached for CachControl set to 10 days).
+
+### package.json
+```jsx
+{
+  "name": "amazon-lambda-resizer",
+  "version": "0.0.1",
+  "description": "Resizer for lambda images in a S3 bucket from a source_folder to target_folder",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "async": "^2.6.0",
+    "aws-sdk": "^2.240.1",
+    "gm": "^1.23.1",
+    "path": "^0.12.7"
+  },
+  "keywords": [
+    "node",
+    "lambda",
+    "aws"
+  ]
+}
+```
+### index.js   (change to something like ImageResizer.js and make sure this has the same name as your Lambda function / handler)
+```JSX
+// dependencies
+const async = require('async')
+const AWS = require('aws-sdk')
+const gm = require('gm')
+const util = require('util')
+const imageMagick = gm.subClass({ imageMagick: true })
+const path = require('path')
+
+const WEB_WIDTH_MAX = 420
+const WEB_Q_MAX = 85
+const FOLDER_DEST = 'thumb/'
+
+AWS.config.update({accessKeyId: 'xxxxxxxxxxx', secretAccessKey: 'xxxxxxxxxxxxxxxxxxxx'})
+const s3 = new AWS.S3()
+
+exports.handler = (event, context, callback) => {
+  // Read options from the event.
+  console.log('Reading options from event:\n', util.inspect(event, {depth: 5}))
+  const srcBucket = event.Records[0].s3.bucket.name
+  // Object key may have spaces or unicode non-ASCII characters.
+  const srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '))
+  const dstBucket = srcBucket
+  const imageName = path.basename(srcKey)
+  // var dstBucket = srcBucket
+  // Infer the image type.
+  const typeMatch = srcKey.match(/\.([^.]*)$/)
+  if (!typeMatch) {
+    callback(console.log('Could not determine the image type.'))
+    return
+  }
+  const imageType = typeMatch[1]
+  if (imageType.toUpperCase() !== 'jpg'.toUpperCase() && imageType.toUpperCase() !== 'png'.toUpperCase() && imageType.toUpperCase() !== 'jpeg'.toUpperCase()) {
+    callback(console.log(`Unsupported image type: ${imageType}`))
+    return
+  }
+  console.log('****************before async******************')
+  // Download the image from S3, transform, and upload to a different S3 bucket.
+  async.waterfall([
+    function download (next) {
+      // Download the image from S3 into a buffer.
+      s3.getObject({
+        Bucket: srcBucket,
+        Key: srcKey
+      }, next)
+    },
+    function transformWebMax (response, next) {
+      imageMagick(response.Body)
+        .resize(WEB_WIDTH_MAX)
+        .quality(WEB_Q_MAX)
+        // .gravity('Center')
+        .strip()
+        // .crop(WEB_WIDTH_MAX, WEB_HEIGHT_MAX)
+        .toBuffer('jpg', (err, buffer) => {
+          if (err) return handle(err)
+          next(null, response, buffer)
+        })
+    },
+    function uploadWebMax (response, buffer, next) {
+      // Stream the transformed image to a different S3 bucket.
+      const dstKeyResized = FOLDER_DEST + imageName
+      s3.putObject({
+        Bucket: dstBucket,
+        Key: dstKeyResized,
+        Body: buffer,
+        ContentType: response.ContentType,
+        CacheControl: 'max-age=864000'
+      }, (err, data) => {
+        if (err) {
+          console.log(err, err.stack)
+        } else {
+          console.log('uploaded to web-max Successfully !!')
+          next(null, response, buffer)
+        }
+      })
+    }
+  ], err => {
+    if (err) {
+      console.log('Unable to resize image')
+    } else {
+      console.log('Successfully resized image')
+    }
+    callback(null, 'message')
+  })
+}
+```
+
+AWS Lambda offers monitoring of these functions as well as debugging (ideally you would keep all console.logs in place in order to see what is going on in case something is not working).
+
+
