@@ -340,8 +340,12 @@ exports.handler = (event, context, callback) => {
         .strip()
         // .crop(WEB_WIDTH_MAX, WEB_HEIGHT_MAX)
         .toBuffer('jpg', (err, buffer) => {
-          if (err) return handle(err)
-          next(null, response, buffer)
+          if (err) {
+            console.log('An error occurred while saving IM to buffer: ', err)
+            return false /* stop the remaining sequence and prevent sending an empty or invalid buffer to AWS */
+          } else {
+            next(null, response, buffer)
+          }
         })
     },
     function uploadWebMax (response, buffer, next) {
