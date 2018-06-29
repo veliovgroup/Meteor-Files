@@ -103,7 +103,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const self   = this;
-    const cookie = new Cookies();
+    new Cookies();
 
     if (!_.isBoolean(this.debug)) {
       this.debug = false;
@@ -504,7 +504,7 @@ export class FilesCollection extends FilesCollectionCore {
                 ({result, opts}  = this._prepareUpload(_.extend(opts, _continueUpload), user.userId, 'HTTP'));
 
                 if (opts.eof) {
-                  this._handleUpload(result, opts, () => {
+                  this._handleUpload(result, opts, (_error) => {
                     if (!httpResp.headersSent) {
                       httpResp.writeHead(200);
                     }
@@ -744,7 +744,8 @@ export class FilesCollection extends FilesCollectionCore {
       // Method used to write file chunks
       // it receives very limited amount of meta-data
       // This method also responsible for EOF
-      _methods[this._methodNames._Write] = function (opts) {
+      _methods[this._methodNames._Write] = function (_opts) {
+        let opts = _opts;
         let result;
         check(opts, {
           eof: Match.Optional(Boolean),
@@ -1050,8 +1051,11 @@ export class FilesCollection extends FilesCollectionCore {
    * @summary Write buffer to FS and add to FilesCollection Collection
    * @returns {FilesCollection} Instance
    */
-  write(buffer, opts = {}, callback, proceedAfterUpload) {
+  write(buffer, _opts = {}, _callback, _proceedAfterUpload) {
     this._debug('[FilesCollection] [write()]');
+    let opts = _opts;
+    let callback = _callback;
+    let proceedAfterUpload = _proceedAfterUpload;
 
     if (_.isFunction(opts)) {
       proceedAfterUpload = callback;
@@ -1136,8 +1140,11 @@ export class FilesCollection extends FilesCollectionCore {
    * @summary Download file, write stream to FS and add to FilesCollection Collection
    * @returns {FilesCollection} Instance
    */
-  load(url, opts = {}, callback, proceedAfterUpload) {
-    this._debug(`[FilesCollection] [load(${url}, ${JSON.stringify(opts)}, callback)]`);
+  load(url, _opts = {}, _callback, _proceedAfterUpload) {
+    this._debug(`[FilesCollection] [load(${url}, ${JSON.stringify(_opts)}, callback)]`);
+    let opts = _opts;
+    let callback = _callback;
+    let proceedAfterUpload = _proceedAfterUpload;
 
     if (_.isFunction(opts)) {
       proceedAfterUpload = callback;
@@ -1238,8 +1245,11 @@ export class FilesCollection extends FilesCollectionCore {
    * @summary Add file from FS to FilesCollection
    * @returns {FilesCollection} Instance
    */
-  addFile(path, opts = {}, callback, proceedAfterUpload) {
+  addFile(path, _opts = {}, _callback, _proceedAfterUpload) {
     this._debug(`[FilesCollection] [addFile(${path})]`);
+    let opts = _opts;
+    let callback = _callback;
+    let proceedAfterUpload = _proceedAfterUpload;
 
     if (_.isFunction(opts)) {
       proceedAfterUpload = callback;
@@ -1550,13 +1560,14 @@ export class FilesCollection extends FilesCollectionCore {
    * @summary Handle and reply to incoming request
    * @returns {undefined}
    */
-  serve(http, fileRef, vRef, version = 'original', readableStream = null, responseType = '200', force200 = false) {
+  serve(http, fileRef, vRef, version = 'original', readableStream = null, _responseType = '200', force200 = false) {
     let partiral = false;
     let reqRange = false;
     let dispositionType = '';
     let start;
     let end;
     let take;
+    let responseType = _responseType;
 
     if (http.params.query.download && (http.params.query.download === 'true')) {
       dispositionType = 'attachment; ';
