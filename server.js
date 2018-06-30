@@ -748,8 +748,13 @@ export class FilesCollection extends FilesCollectionCore {
         opts._id       = opts.fileId;
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
-        self._preCollection.insert(_.omit(opts, '___s'));
-        self._createStream(result._id, result.path, _.omit(opts, '___s'));
+        try {
+          self._preCollection.insert(_.omit(opts, '___s'));
+          self._createStream(result._id, result.path, _.omit(opts, '___s'));
+        } catch (e) {
+          self._debug(`[FilesCollection] [File Start Method] [EXCEPTION:] ${opts.file.name} - ${opts.fileId}`, e);
+          throw new Meteor.Error(500, 'Can\'t start');
+        }
 
         if (returnMeta) {
           return {
