@@ -428,6 +428,7 @@ export class FilesCollection extends FilesCollectionCore {
 
     this.on('_handleUpload', this._handleUpload);
     this.on('_finishUpload', this._finishUpload);
+    this._handleUploadSync = Meteor.wrapAsync(this._handleUpload.bind(this));
 
     if (this.disableUpload && this.disableDownload) {
       return;
@@ -505,6 +506,25 @@ export class FilesCollection extends FilesCollectionCore {
 
                 if (opts.eof) {
                   this._handleUpload(result, opts, (_error) => {
+                    let error = _error;
+                    if (error) {
+                      if (!httpResp.headersSent) {
+                        httpResp.writeHead(500);
+                      }
+
+                      if (!httpResp.finished) {
+                        if (_.isObject(error) && _.isFunction(error.toString)) {
+                          error = error.toString();
+                        }
+
+                        if (!_.isString(error)) {
+                          error = 'Unexpected error!';
+                        }
+
+                        httpResp.end(JSON.stringify({ error }));
+                      }
+                    }
+
                     if (!httpResp.headersSent) {
                       httpResp.writeHead(200);
                     }
@@ -776,7 +796,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         if (opts.eof) {
           try {
-            return Meteor.wrapAsync(self._handleUpload.bind(self, result, opts))();
+            return self._handleUploadSync(result, opts);
           } catch (handleUploadErr) {
             self._debug('[FilesCollection] [Write Method] [DDP] Exception:', handleUploadErr);
             throw handleUploadErr;
