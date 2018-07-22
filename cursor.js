@@ -1,4 +1,3 @@
-import { _ }      from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
 
 /*
@@ -13,7 +12,7 @@ export class FileCursor {
   constructor(_fileRef, _collection) {
     this._fileRef    = _fileRef;
     this._collection = _collection;
-    _.extend(this, _fileRef);
+    Object.assign(this, _fileRef);
   }
 
   /*
@@ -87,7 +86,7 @@ export class FileCursor {
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
-    return _.extend(this, this._collection.collection.findOne(this._fileRef._id));
+    return Object.assign(this, this._collection.collection.findOne(this._fileRef._id));
   }
 }
 

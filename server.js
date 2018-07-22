@@ -1,13 +1,12 @@
-import { _ }                              from 'meteor/underscore';
-import { Mongo }                          from 'meteor/mongo';
-import { WebApp }                         from 'meteor/webapp';
-import { Meteor }                         from 'meteor/meteor';
-import { Random }                         from 'meteor/random';
-import { Cookies }                        from 'meteor/ostrio:cookies';
-import WriteStream                        from './write-stream.js';
-import { check, Match }                   from 'meteor/check';
-import FilesCollectionCore                from './core.js';
-import { fixJSONParse, fixJSONStringify } from './lib.js';
+import { Mongo }           from 'meteor/mongo';
+import { WebApp }          from 'meteor/webapp';
+import { Meteor }          from 'meteor/meteor';
+import { Random }          from 'meteor/random';
+import { Cookies }         from 'meteor/ostrio:cookies';
+import WriteStream         from './write-stream.js';
+import { check, Match }    from 'meteor/check';
+import FilesCollectionCore from './core.js';
+import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 import fs       from 'fs-extra';
 import nodeQs   from 'querystring';
@@ -105,11 +104,11 @@ export class FilesCollection extends FilesCollectionCore {
     const self   = this;
     new Cookies();
 
-    if (!_.isBoolean(this.debug)) {
+    if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
     }
 
-    if (!_.isBoolean(this.public)) {
+    if (!helpers.isBoolean(this.public)) {
       this.public = false;
     }
 
@@ -123,7 +122,7 @@ export class FilesCollection extends FilesCollectionCore {
 
     this.chunkSize = Math.floor(this.chunkSize / 8) * 8;
 
-    if (!_.isString(this.collectionName) && !this.collection) {
+    if (!helpers.isString(this.collectionName) && !this.collection) {
       this.collectionName = 'MeteorUploadFiles';
     }
 
@@ -140,85 +139,85 @@ export class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
 
-    if (!_.isString(this.downloadRoute)) {
+    if (!helpers.isString(this.downloadRoute)) {
       this.downloadRoute = '/cdn/storage';
     }
 
     this.downloadRoute = this.downloadRoute.replace(/\/$/, '');
 
-    if (!_.isFunction(this.namingFunction)) {
+    if (!helpers.isFunction(this.namingFunction)) {
       this.namingFunction = false;
     }
 
-    if (!_.isFunction(this.onBeforeUpload)) {
+    if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
     }
 
-    if (!_.isBoolean(this.allowClientCode)) {
+    if (!helpers.isBoolean(this.allowClientCode)) {
       this.allowClientCode = true;
     }
 
-    if (!_.isFunction(this.onInitiateUpload)) {
+    if (!helpers.isFunction(this.onInitiateUpload)) {
       this.onInitiateUpload = false;
     }
 
-    if (!_.isFunction(this.interceptDownload)) {
+    if (!helpers.isFunction(this.interceptDownload)) {
       this.interceptDownload = false;
     }
 
-    if (!_.isBoolean(this.strict)) {
+    if (!helpers.isBoolean(this.strict)) {
       this.strict = true;
     }
 
-    if (!_.isNumber(this.permissions)) {
+    if (!helpers.isNumber(this.permissions)) {
       this.permissions = parseInt('644', 8);
     }
 
-    if (!_.isNumber(this.parentDirPermissions)) {
+    if (!helpers.isNumber(this.parentDirPermissions)) {
       this.parentDirPermissions = parseInt('755', 8);
     }
 
-    if (!_.isString(this.cacheControl)) {
+    if (!helpers.isString(this.cacheControl)) {
       this.cacheControl = 'public, max-age=31536000, s-maxage=31536000';
     }
 
-    if (!_.isFunction(this.onAfterUpload)) {
+    if (!helpers.isFunction(this.onAfterUpload)) {
       this.onAfterUpload = false;
     }
 
-    if (!_.isBoolean(this.disableUpload)) {
+    if (!helpers.isBoolean(this.disableUpload)) {
       this.disableUpload = false;
     }
 
-    if (!_.isFunction(this.onAfterRemove)) {
+    if (!helpers.isFunction(this.onAfterRemove)) {
       this.onAfterRemove = false;
     }
 
-    if (!_.isFunction(this.onBeforeRemove)) {
+    if (!helpers.isFunction(this.onBeforeRemove)) {
       this.onBeforeRemove = false;
     }
 
-    if (!_.isBoolean(this.integrityCheck)) {
+    if (!helpers.isBoolean(this.integrityCheck)) {
       this.integrityCheck = true;
     }
 
-    if (!_.isBoolean(this.disableDownload)) {
+    if (!helpers.isBoolean(this.disableDownload)) {
       this.disableDownload = false;
     }
 
-    if (!_.isObject(this._currentUploads)) {
+    if (!helpers.isObject(this._currentUploads)) {
       this._currentUploads = {};
     }
 
-    if (!_.isFunction(this.downloadCallback)) {
+    if (!helpers.isFunction(this.downloadCallback)) {
       this.downloadCallback = false;
     }
 
-    if (!_.isNumber(this.continueUploadTTL)) {
+    if (!helpers.isNumber(this.continueUploadTTL)) {
       this.continueUploadTTL = 10800;
     }
 
-    if (!_.isFunction(this.responseHeaders)) {
+    if (!helpers.isFunction(this.responseHeaders)) {
       this.responseHeaders = (responseCode, fileRef, versionRef) => {
         const headers = {};
 
@@ -255,12 +254,12 @@ export class FilesCollection extends FilesCollectionCore {
       };
     }
 
-    if (_.isString(storagePath)) {
+    if (helpers.isString(storagePath)) {
       this.storagePath = () => storagePath;
     } else {
       this.storagePath = function () {
         let sp = storagePath.apply(self, arguments);
-        if (!_.isString(sp)) {
+        if (!helpers.isString(sp)) {
           throw new Meteor.Error(400, `[FilesCollection.${self.collectionName}] "storagePath" function must return a String!`);
         }
         sp = sp.replace(/\/$/, '');
@@ -292,7 +291,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.responseHeaders, Match.OneOf(Object, Function));
 
     if (!this.disableUpload) {
-      if (!_.isString(this._preCollectionName) && !this._preCollection) {
+      if (!helpers.isString(this._preCollectionName) && !this._preCollection) {
         this._preCollectionName = `__pre_${this.collectionName}`;
       }
 
@@ -322,7 +321,7 @@ export class FilesCollection extends FilesCollectionCore {
           // Free memory after upload is done
           // Or if upload is unfinished
           self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removed]: ${doc._id}`);
-          if (_.isObject(self._currentUploads[doc._id])) {
+          if (helpers.isObject(self._currentUploads[doc._id])) {
             self._currentUploads[doc._id].stop();
             self._currentUploads[doc._id].end();
 
@@ -383,13 +382,13 @@ export class FilesCollection extends FilesCollectionCore {
         let result;
         const {user, userId} = this._getUser(http);
 
-        if (_.isFunction(this.protected)) {
+        if (helpers.isFunction(this.protected)) {
           let fileRef;
-          if (_.isObject(http.params) &&  http.params._id) {
+          if (helpers.isObject(http.params) &&  http.params._id) {
             fileRef = this.collection.findOne(http.params._id);
           }
 
-          result = http ? this.protected.call(_.extend(http, {user, userId}), (fileRef || null)) : this.protected.call({user, userId}, (fileRef || null));
+          result = http ? this.protected.call(Object.assign(http, {user, userId}), (fileRef || null)) : this.protected.call({user, userId}, (fileRef || null));
         } else {
           result = !!userId;
         }
@@ -398,7 +397,7 @@ export class FilesCollection extends FilesCollectionCore {
           return true;
         }
 
-        const rc = _.isNumber(result) ? result : 401;
+        const rc = helpers.isNumber(result) ? result : 401;
         this._debug('[FilesCollection._checkAccess] WARN: Access denied!');
         if (http) {
           const text = 'Access denied!';
@@ -446,11 +445,11 @@ export class FilesCollection extends FilesCollectionCore {
             }
 
             if (!httpResp.finished) {
-              if (_.isObject(error) && _.isFunction(error.toString)) {
+              if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
                 error = error.toString();
               }
 
-              if (!_.isString(error)) {
+              if (!helpers.isString(error)) {
                 error = 'Unexpected error!';
               }
 
@@ -469,7 +468,7 @@ export class FilesCollection extends FilesCollectionCore {
               let result;
               let user;
 
-              if (httpReq.headers['x-mtok'] && _.isObject(Meteor.server.sessions) && _.has(Meteor.server.sessions[httpReq.headers['x-mtok']], 'userId')) {
+              if (httpReq.headers['x-mtok'] && helpers.isObject(Meteor.server.sessions) && helpers.has(Meteor.server.sessions[httpReq.headers['x-mtok']], 'userId')) {
                 user = {
                   userId: Meteor.server.sessions[httpReq.headers['x-mtok']].userId
                 };
@@ -502,7 +501,7 @@ export class FilesCollection extends FilesCollectionCore {
                   throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
                 }
 
-                ({result, opts}  = this._prepareUpload(_.extend(opts, _continueUpload), user.userId, 'HTTP'));
+                ({result, opts}  = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
 
                 if (opts.eof) {
                   this._handleUpload(result, opts, (_error) => {
@@ -513,11 +512,11 @@ export class FilesCollection extends FilesCollectionCore {
                       }
 
                       if (!httpResp.finished) {
-                        if (_.isObject(error) && _.isFunction(error.toString)) {
+                        if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
                           error = error.toString();
                         }
 
-                        if (!_.isString(error)) {
+                        if (!helpers.isString(error)) {
                           error = 'Unexpected error!';
                         }
 
@@ -529,7 +528,7 @@ export class FilesCollection extends FilesCollectionCore {
                       httpResp.writeHead(200);
                     }
 
-                    if (_.isObject(result.file) && result.file.meta) {
+                    if (helpers.isObject(result.file) && result.file.meta) {
                       result.file.meta = fixJSONStringify(result.file.meta);
                     }
 
@@ -556,17 +555,17 @@ export class FilesCollection extends FilesCollectionCore {
                   opts = {file: {}};
                 }
 
-                if (!_.isObject(opts.file)) {
+                if (!helpers.isObject(opts.file)) {
                   opts.file = {};
                 }
 
                 opts.___s = true;
                 this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
-                if (_.isObject(opts.file) && opts.file.meta) {
+                if (helpers.isObject(opts.file) && opts.file.meta) {
                   opts.file.meta = fixJSONParse(opts.file.meta);
                 }
 
-                ({result} = this._prepareUpload(_.clone(opts), user.userId, 'HTTP Start Method'));
+                ({result} = this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
 
                 if (this.collection.findOne(result._id)) {
                   throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
@@ -575,8 +574,8 @@ export class FilesCollection extends FilesCollectionCore {
                 opts._id       = opts.fileId;
                 opts.createdAt = new Date();
                 opts.maxLength = opts.fileLength;
-                this._preCollection.insert(_.omit(opts, '___s'));
-                this._createStream(result._id, result.path, _.omit(opts, '___s'));
+                this._preCollection.insert(helpers.omit(opts, '___s'));
+                this._createStream(result._id, result.path, helpers.omit(opts, '___s'));
 
                 if (opts.returnMeta) {
                   if (!httpResp.headersSent) {
@@ -691,7 +690,7 @@ export class FilesCollection extends FilesCollectionCore {
         self._debug(`[FilesCollection] [Unlink Method] [.remove(${selector})]`);
 
         if (self.allowClientCode) {
-          if (self.onBeforeRemove && _.isFunction(self.onBeforeRemove)) {
+          if (self.onBeforeRemove && helpers.isFunction(self.onBeforeRemove)) {
             const userId = this.userId;
             const userFuncs = {
               userId: this.userId,
@@ -739,7 +738,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
-        const { result } = self._prepareUpload(_.clone(opts), this.userId, 'DDP Start Method');
+        const { result } = self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
 
         if (self.collection.findOne(result._id)) {
           throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
@@ -749,8 +748,8 @@ export class FilesCollection extends FilesCollectionCore {
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
         try {
-          self._preCollection.insert(_.omit(opts, '___s'));
-          self._createStream(result._id, result.path, _.omit(opts, '___s'));
+          self._preCollection.insert(helpers.omit(opts, '___s'));
+          self._createStream(result._id, result.path, helpers.omit(opts, '___s'));
         } catch (e) {
           self._debug(`[FilesCollection] [File Start Method] [EXCEPTION:] ${opts.file.name} - ${opts.fileId}`, e);
           throw new Meteor.Error(500, 'Can\'t start');
@@ -797,7 +796,7 @@ export class FilesCollection extends FilesCollectionCore {
         }
 
         this.unblock();
-        ({result, opts} = self._prepareUpload(_.extend(opts, _continueUpload), this.userId, 'DDP'));
+        ({result, opts} = self._prepareUpload(Object.assign(opts, _continueUpload), this.userId, 'DDP'));
 
         if (opts.eof) {
           try {
@@ -821,7 +820,7 @@ export class FilesCollection extends FilesCollectionCore {
         check(_id, String);
 
         const _continueUpload = self._continueUpload(_id);
-        self._debug(`[FilesCollection] [Abort Method]: ${_id} - ${(_.isObject(_continueUpload.file) ? _continueUpload.file.path : '')}`);
+        self._debug(`[FilesCollection] [Abort Method]: ${_id} - ${(helpers.isObject(_continueUpload.file) ? _continueUpload.file.path : '')}`);
 
         if (self._currentUploads && self._currentUploads[_id]) {
           self._currentUploads[_id].stop();
@@ -831,7 +830,7 @@ export class FilesCollection extends FilesCollectionCore {
         if (_continueUpload) {
           self._preCollection.remove({_id});
           self.remove({_id});
-          if (_.isObject(_continueUpload.file) && _continueUpload.file.path) {
+          if (helpers.isObject(_continueUpload.file) && _continueUpload.file.path) {
             self.unlink({_id, path: _continueUpload.file.path});
           }
         }
@@ -851,7 +850,7 @@ export class FilesCollection extends FilesCollectionCore {
    */
   _prepareUpload(opts = {}, userId, transport) {
     let ctx;
-    if (!_.isBoolean(opts.eof)) {
+    if (!helpers.isBoolean(opts.eof)) {
       opts.eof = false;
     }
 
@@ -859,11 +858,11 @@ export class FilesCollection extends FilesCollectionCore {
       opts.binData = 'EOF';
     }
 
-    if (!_.isNumber(opts.chunkId)) {
+    if (!helpers.isNumber(opts.chunkId)) {
       opts.chunkId = -1;
     }
 
-    if (!_.isString(opts.FSName)) {
+    if (!helpers.isString(opts.FSName)) {
       opts.FSName = opts.fileId;
     }
 
@@ -872,7 +871,7 @@ export class FilesCollection extends FilesCollectionCore {
     const fileName = this._getFileName(opts.file);
     const {extension, extensionWithDot} = this._getExt(fileName);
 
-    if (!_.isObject(opts.file.meta)) {
+    if (!helpers.isObject(opts.file.meta)) {
       opts.file.meta = {};
     }
 
@@ -885,10 +884,10 @@ export class FilesCollection extends FilesCollectionCore {
     result.userId    = userId || null;
     opts.FSName      = opts.FSName.replace(/([^a-z0-9\-\_]+)/gi, '-');
     result.path      = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
-    result           = _.extend(result, this._dataToSchema(result));
+    result           = Object.assign(result, this._dataToSchema(result));
 
-    if (this.onBeforeUpload && _.isFunction(this.onBeforeUpload)) {
-      ctx = _.extend({
+    if (this.onBeforeUpload && helpers.isFunction(this.onBeforeUpload)) {
+      ctx = Object.assign({
         file: opts.file
       }, {
         chunkId: opts.chunkId,
@@ -904,14 +903,14 @@ export class FilesCollection extends FilesCollectionCore {
       const isUploadAllowed = this.onBeforeUpload.call(ctx, result);
 
       if (isUploadAllowed !== true) {
-        throw new Meteor.Error(403, _.isString(isUploadAllowed) ? isUploadAllowed : '@onBeforeUpload() returned false');
+        throw new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : '@onBeforeUpload() returned false');
       } else {
-        if ((opts.___s === true) && this.onInitiateUpload && _.isFunction(this.onInitiateUpload)) {
+        if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
           this.onInitiateUpload.call(ctx, result);
         }
       }
-    } else if ((opts.___s === true) && this.onInitiateUpload && _.isFunction(this.onInitiateUpload)) {
-      ctx = _.extend({
+    } else if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
+      ctx = Object.assign({
         file: opts.file
       }, {
         chunkId: opts.chunkId,
@@ -944,7 +943,7 @@ export class FilesCollection extends FilesCollectionCore {
     result.public = this.public;
     this._updateFileTypes(result);
 
-    this.collection.insert(_.clone(result), (colInsert, _id) => {
+    this.collection.insert(helpers.clone(result), (colInsert, _id) => {
       if (colInsert) {
         cb && cb(colInsert);
         this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
@@ -998,11 +997,11 @@ export class FilesCollection extends FilesCollectionCore {
   _getMimeType(fileData) {
     let mime;
     check(fileData, Object);
-    if (_.isObject(fileData) && fileData.type) {
+    if (helpers.isObject(fileData) && fileData.type) {
       mime = fileData.type;
     }
 
-    if (fileData.path && (!mime || !_.isString(mime))) {
+    if (fileData.path && (!mime || !helpers.isString(mime))) {
       try {
         let buf   = new Buffer(262);
         const fd  = fs.openSync(fileData.path, 'r');
@@ -1017,7 +1016,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
     }
 
-    if (!mime || !_.isString(mime)) {
+    if (!mime || !helpers.isString(mime)) {
       mime = 'application/octet-stream';
     }
     return mime;
@@ -1048,7 +1047,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
 
       if (mtok) {
-        const userId = (_.isObject(Meteor.server.sessions) && _.isObject(Meteor.server.sessions[mtok])) ? Meteor.server.sessions[mtok].userId : void 0;
+        const userId = (helpers.isObject(Meteor.server.sessions) && helpers.isObject(Meteor.server.sessions[mtok])) ? Meteor.server.sessions[mtok].userId : void 0;
 
         if (userId) {
           result.user   = () => Meteor.users.findOne(userId);
@@ -1082,13 +1081,13 @@ export class FilesCollection extends FilesCollectionCore {
     let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
 
-    if (_.isFunction(opts)) {
+    if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
       opts     = {};
-    } else if (_.isBoolean(callback)) {
+    } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
-    } else if (_.isBoolean(opts)) {
+    } else if (helpers.isBoolean(opts)) {
       proceedAfterUpload = opts;
     }
 
@@ -1104,11 +1103,11 @@ export class FilesCollection extends FilesCollectionCore {
 
     opts.path = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
     opts.type = this._getMimeType(opts);
-    if (!_.isObject(opts.meta)) {
+    if (!helpers.isObject(opts.meta)) {
       opts.meta = {};
     }
 
-    if (!_.isNumber(opts.size)) {
+    if (!helpers.isNumber(opts.size)) {
       opts.size = buffer.length;
     }
 
@@ -1171,13 +1170,13 @@ export class FilesCollection extends FilesCollectionCore {
     let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
 
-    if (_.isFunction(opts)) {
+    if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
       opts     = {};
-    } else if (_.isBoolean(callback)) {
+    } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
-    } else if (_.isBoolean(opts)) {
+    } else if (helpers.isBoolean(opts)) {
       proceedAfterUpload = opts;
     }
 
@@ -1186,7 +1185,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
-    if (!_.isObject(opts)) {
+    if (!helpers.isObject(opts)) {
       opts = {};
     }
 
@@ -1276,13 +1275,13 @@ export class FilesCollection extends FilesCollectionCore {
     let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
 
-    if (_.isFunction(opts)) {
+    if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
       opts     = {};
-    } else if (_.isBoolean(callback)) {
+    } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
-    } else if (_.isBoolean(opts)) {
+    } else if (helpers.isBoolean(opts)) {
       proceedAfterUpload = opts;
     }
 
@@ -1299,7 +1298,7 @@ export class FilesCollection extends FilesCollectionCore {
       if (statErr) {
         callback && callback(statErr);
       } else if (stats.isFile()) {
-        if (!_.isObject(opts)) {
+        if (!helpers.isObject(opts)) {
           opts = {};
         }
         opts.path  = path;
@@ -1311,15 +1310,15 @@ export class FilesCollection extends FilesCollectionCore {
 
         const {extension} = this._getExt(opts.fileName);
 
-        if (!_.isString(opts.type)) {
+        if (!helpers.isString(opts.type)) {
           opts.type = this._getMimeType(opts);
         }
 
-        if (!_.isObject(opts.meta)) {
+        if (!helpers.isObject(opts.meta)) {
           opts.meta = {};
         }
 
-        if (!_.isNumber(opts.size)) {
+        if (!helpers.isNumber(opts.size)) {
           opts.size = stats.size;
         }
 
@@ -1472,14 +1471,16 @@ export class FilesCollection extends FilesCollectionCore {
   unlink(fileRef, version, callback) {
     this._debug(`[FilesCollection] [unlink(${fileRef._id}, ${version})]`);
     if (version) {
-      if (_.isObject(fileRef.versions) && _.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
+      if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
         fs.unlink(fileRef.versions[version].path, (callback || NOOP));
       }
     } else {
-      if (_.isObject(fileRef.versions)) {
-        _.each(fileRef.versions, (vRef) => bound(() => {
-          fs.unlink(vRef.path, (callback || NOOP));
-        }));
+      if (helpers.isObject(fileRef.versions)) {
+        for(let vKey in fileRef.versions) {
+          if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
+            fs.unlink(fileRef.versions[vKey].path, (callback || NOOP));
+          }
+        }
       } else {
         fs.unlink(fileRef.path, (callback || NOOP));
       }
@@ -1525,7 +1526,7 @@ export class FilesCollection extends FilesCollectionCore {
     this._debug(`[FilesCollection] [download(${http.request.originalUrl}, ${version})]`);
 
     if (fileRef) {
-      if (_.has(fileRef, 'versions') && _.has(fileRef.versions, version)) {
+      if (helpers.has(fileRef, 'versions') && helpers.has(fileRef.versions, version)) {
         vRef = fileRef.versions[version];
         vRef._id = fileRef._id;
       } else {
@@ -1535,16 +1536,16 @@ export class FilesCollection extends FilesCollectionCore {
       vRef = false;
     }
 
-    if (!vRef || !_.isObject(vRef)) {
+    if (!vRef || !helpers.isObject(vRef)) {
       return this._404(http);
     } else if (fileRef) {
       if (this.downloadCallback) {
-        if (!this.downloadCallback.call(_.extend(http, this._getUser(http)), fileRef)) {
+        if (!this.downloadCallback.call(Object.assign(http, this._getUser(http)), fileRef)) {
           return this._404(http);
         }
       }
 
-      if (this.interceptDownload && _.isFunction(this.interceptDownload)) {
+      if (this.interceptDownload && helpers.isFunction(this.interceptDownload)) {
         if (this.interceptDownload(http, fileRef, version) === true) {
           return void 0;
         }
@@ -1651,7 +1652,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
     };
 
-    const headers = _.isFunction(this.responseHeaders) ? this.responseHeaders(responseType, fileRef, vRef, version) : this.responseHeaders;
+    const headers = helpers.isFunction(this.responseHeaders) ? this.responseHeaders(responseType, fileRef, vRef, version) : this.responseHeaders;
 
     if (!headers['Cache-Control']) {
       if (!http.response.headersSent) {

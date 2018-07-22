@@ -1,11 +1,10 @@
-import { _ }               from 'meteor/underscore';
 import { Mongo }           from 'meteor/mongo';
 import { Meteor }          from 'meteor/meteor';
 import { Cookies }         from 'meteor/ostrio:cookies';
-import { formatFleURL }    from './lib.js';
 import { check, Match }    from 'meteor/check';
 import { UploadInstance }  from './upload.js';
 import FilesCollectionCore from './core.js';
+import { formatFleURL, helpers } from './lib.js';
 
 const NOOP = () => { };
 
@@ -53,11 +52,11 @@ export class FilesCollection extends FilesCollectionCore {
 
     const self = this;
     const cookie = new Cookies();
-    if (!_.isBoolean(this.debug)) {
+    if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
     }
 
-    if (!_.isBoolean(this.public)) {
+    if (!helpers.isBoolean(this.public)) {
       this.public = false;
     }
 
@@ -66,7 +65,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
     this.chunkSize = Math.floor(this.chunkSize / 8) * 8;
 
-    if (!_.isString(this.collectionName) && !this.collection) {
+    if (!helpers.isString(this.collectionName) && !this.collection) {
       this.collectionName = 'MeteorUploadFiles';
     }
 
@@ -83,25 +82,25 @@ export class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
 
-    if (!_.isBoolean(this.disableUpload)) {
+    if (!helpers.isBoolean(this.disableUpload)) {
       this.disableUpload = false;
     }
 
-    if (!_.isString(this.downloadRoute)) {
+    if (!helpers.isString(this.downloadRoute)) {
       this.downloadRoute = '/cdn/storage';
     }
 
     this.downloadRoute = this.downloadRoute.replace(/\/$/, '');
 
-    if (!_.isFunction(this.namingFunction)) {
+    if (!helpers.isFunction(this.namingFunction)) {
       this.namingFunction = false;
     }
 
-    if (!_.isFunction(this.onBeforeUpload)) {
+    if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
     }
 
-    if (!_.isBoolean(this.allowClientCode)) {
+    if (!helpers.isBoolean(this.allowClientCode)) {
       this.allowClientCode = true;
     }
 
@@ -191,11 +190,11 @@ export class FilesCollection extends FilesCollectionCore {
   _getMimeType(fileData) {
     let mime;
     check(fileData, Object);
-    if (_.isObject(fileData)) {
+    if (helpers.isObject(fileData)) {
       mime = fileData.type;
     }
 
-    if (!mime || !_.isString(mime)) {
+    if (!mime || !helpers.isString(mime)) {
       mime = 'application/octet-stream';
     }
     return mime;
@@ -216,7 +215,7 @@ export class FilesCollection extends FilesCollectionCore {
       userId: null
     };
 
-    if (_.isFunction(Meteor.userId)) {
+    if (helpers.isFunction(Meteor.userId)) {
       result.user = () => Meteor.user();
       result.userId = Meteor.userId();
     }
@@ -302,12 +301,12 @@ export class FilesCollection extends FilesCollectionCore {
  */
 Meteor.startup(() => {
   if (typeof Template !== 'undefined' && Template !== null) {
-    Template.registerHelper('fileURL', (fileRef, version = 'original') => {
-      if (!_.isObject(fileRef)) {
+    Template.registerHelper('fileURL', (fileRef, _version = 'original') => {
+      if (!helpers.isObject(fileRef)) {
         return '';
       }
 
-      version = (!_.isString(version)) ? 'original' : version;
+      const version = (!helpers.isString(_version)) ? 'original' : _version;
       return formatFleURL(fileRef, version);
     });
   }

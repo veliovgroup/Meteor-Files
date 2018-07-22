@@ -1,13 +1,14 @@
-import { _ }                       from 'meteor/underscore';
 import { EventEmitter }            from 'eventemitter3';
-import { formatFleURL }            from './lib.js';
 import { check, Match }            from 'meteor/check';
+import { formatFleURL, helpers }   from './lib.js';
 import { FilesCursor, FileCursor } from './cursor.js';
 
 export default class FilesCollectionCore extends EventEmitter {
   constructor() {
     super();
   }
+
+  static __helpers = helpers;
 
   static schema = {
     _id: {
@@ -118,7 +119,7 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
-    if (_.isString(fileName) && (fileName.length > 0)) {
+    if (helpers.isString(fileName) && (fileName.length > 0)) {
       return (fileData.name || fileData.fileName).replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
     }
     return '';
@@ -195,7 +196,7 @@ export default class FilesCollectionCore extends EventEmitter {
     }
 
     this._updateFileTypes(ds);
-    ds._storagePath = data._storagePath || this.storagePath(_.extend(data, ds));
+    ds._storagePath = data._storagePath || this.storagePath(Object.assign({}, data, ds));
     return ds;
   }
 
@@ -260,7 +261,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {String} Empty string returned in case if file not found in DB
    */
   link(fileRef, version = 'original') {
-    this._debug(`[FilesCollection] [link(${(_.isObject(fileRef) ? fileRef._id : undefined)}, ${version})]`);
+    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : undefined)}, ${version})]`);
     check(fileRef, Object);
     check(version, String);
 

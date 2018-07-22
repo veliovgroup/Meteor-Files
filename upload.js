@@ -1,4 +1,3 @@
-import { _ }            from 'meteor/underscore';
 import { HTTP }         from 'meteor/http';
 import { Meteor }       from 'meteor/meteor';
 import { Random }       from 'meteor/random';
@@ -6,10 +5,83 @@ import { Tracker }      from 'meteor/tracker';
 import { ReactiveVar }  from 'meteor/reactive-var';
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { fixJSONParse, fixJSONStringify } from './lib.js';
+import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+/*
+ * @locus Client
+ * @name FileUpload
+ * @class FileUpload
+ * @summary Internal Class, instance of this class is returned from `.insert()` method
+ */
+export class FileUpload extends EventEmitter {
+  constructor(config) {
+    super();
+    this.config = config;
+    this.config._debug('[FilesCollection] [FileUpload] [constructor]');
+
+    if (!this.config.isBase64) {
+      this.file        = Object.assign({}, helpers.clone(this.config.file), this.config.fileData);
+    } else {
+      this.file        = this.config.fileData;
+    }
+    this.state         = new ReactiveVar('active');
+    this.onPause       = new ReactiveVar(false);
+    this.progress      = new ReactiveVar(0);
+    this.continueFunc  = () => { };
+    this.estimateTime  = new ReactiveVar(1000);
+    this.estimateSpeed = new ReactiveVar(0);
+    this.estimateTimer = Meteor.setInterval(() => {
+      if (this.state.get() === 'active') {
+        const _currentTime = this.estimateTime.get();
+        if (_currentTime > 1000) {
+          this.estimateTime.set(_currentTime - 1000);
+        }
+      }
+    }, 1000);
+  }
+  pause() {
+    this.config._debug('[FilesCollection] [insert] [.pause()]');
+    if (!this.onPause.get()) {
+      this.onPause.set(true);
+      this.state.set('paused');
+      this.emit('pause', this.file);
+    }
+  }
+  continue() {
+    this.config._debug('[FilesCollection] [insert] [.continue()]');
+    if (this.onPause.get()) {
+      this.onPause.set(false);
+      this.state.set('active');
+      this.emit('continue', this.file);
+      this.continueFunc();
+    }
+  }
+  toggle() {
+    this.config._debug('[FilesCollection] [insert] [.toggle()]');
+    if (this.onPause.get()) {
+      this.continue();
+    } else {
+      this.pause();
+    }
+  }
+  abort() {
+    this.config._debug('[FilesCollection] [insert] [.abort()]');
+    window.removeEventListener('beforeunload', this.config.beforeunload, false);
+    this.config.onAbort && this.config.onAbort.call(this, this.file);
+    this.emit('abort', this.file);
+    this.pause();
+    this.config._onEnd();
+    this.state.set('aborted');
+    if (this.config.debug) {
+      console.timeEnd(`insert ${this.config.fileData.name}`);
+    }
+
+    this.config.ddp.call(this.config._Abort, this.config.fileId);
+  }
+}
 
 /*
  * @locus Client
@@ -40,7 +112,7 @@ export class UploadInstance extends EventEmitter {
       this.config.streams = 2;
     }
 
-    if (!_.isString(this.config.transport)) {
+    if (!helpers.isString(this.config.transport)) {
       this.config.transport = 'ddp';
     }
 
@@ -54,7 +126,7 @@ export class UploadInstance extends EventEmitter {
       this.config.chunkSize = this.collection.chunkSize;
     }
 
-    if (!_.isBoolean(this.config.allowWebWorkers)) {
+    if (!helpers.isBoolean(this.config.allowWebWorkers)) {
       this.config.allowWebWorkers = true;
     }
 
@@ -157,17 +229,17 @@ export class UploadInstance extends EventEmitter {
       this.FSName        = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
       this.pipes         = [];
 
-      this.fileData = _.extend(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
+      this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
       this.fileData['mime-type'] = this.fileData.mime;
 
-      this.result = new FileUpload(_.extend(this.config, {
+      this.result = new FileUpload(Object.assign({}, this.config, {
         fileData: this.fileData,
         fileId: this.fileId,
         _Abort: this.collection._methodNames._Abort
       }));
 
       this.beforeunload = (e) => {
-        const message = _.isFunction(this.collection.onbeforeunloadMessage) ? this.collection.onbeforeunloadMessage.call(this.result, this.fileData) : this.collection.onbeforeunloadMessage;
+        const message = helpers.isFunction(this.collection.onbeforeunloadMessage) ? this.collection.onbeforeunloadMessage.call(this.result, this.fileData) : this.collection.onbeforeunloadMessage;
 
         if (e) {
           e.returnValue = message;
@@ -189,7 +261,7 @@ export class UploadInstance extends EventEmitter {
       this.addListener('proceedChunk', this.proceedChunk);
       this.addListener('createStreams', this.createStreams);
 
-      this.addListener('calculateStats', _.throttle(() => {
+      this.addListener('calculateStats', helpers.throttle(() => {
         const _t = (this.transferTime / this.sentChunks) / this.config.streams;
         this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
         this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
@@ -301,7 +373,7 @@ export class UploadInstance extends EventEmitter {
         HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           content: opts.binData,
           headers: {
-            'x-mtok': (_.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
+            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
             'x-fileid': opts.fileId,
             'x-chunkid': opts.chunkId,
             'content-type': 'text/plain'
@@ -348,14 +420,14 @@ export class UploadInstance extends EventEmitter {
           content: '',
           headers: {
             'x-eof': '1',
-            'x-mtok': (_.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
+            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
             'x-fileId': opts.fileId,
             'content-type': 'text/plain'
           }
         }, (error, _result) => {
           let result;
           try {
-            result = JSON.parse((_.isObject(_result) ? _result.content : undefined) || {});
+            result = JSON.parse((helpers.isObject(_result) ? _result.content : undefined) || {});
           } catch (e) {
             console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
             result = {};
@@ -389,7 +461,7 @@ export class UploadInstance extends EventEmitter {
         fileReader.onloadend = (evt) => {
           this.emit('sendChunk', {
             data: {
-              bin: ((_.isObject(fileReader) ? fileReader.result : undefined) || (evt.srcElement ? evt.srcElement.result : undefined) || (evt.target ? evt.target.result : undefined)).split(',')[1],
+              bin: ((helpers.isObject(fileReader) ? fileReader.result : undefined) || (evt.srcElement ? evt.srcElement.result : undefined) || (evt.target ? evt.target.result : undefined)).split(',')[1],
               chunkId
             }
           });
@@ -483,7 +555,7 @@ export class UploadInstance extends EventEmitter {
     }
 
     if (this.config.streams === 'dynamic') {
-      this.config.streams = _.clone(_len);
+      this.config.streams = helpers.clone(_len);
       if (this.config.streams > 24) { this.config.streams = 24; }
 
       if (this.config.transport === 'http') {
@@ -526,7 +598,7 @@ export class UploadInstance extends EventEmitter {
     if (this.config.transport === 'ddp') {
       this.config.ddp.call(this.collection._methodNames._Start, opts, handleStart);
     } else {
-      if (_.isObject(opts.file) ? opts.file.meta : undefined) {
+      if (helpers.isObject(opts.file) ? opts.file.meta : undefined) {
         opts.file.meta = fixJSONStringify(opts.file.meta);
       }
 
@@ -534,7 +606,7 @@ export class UploadInstance extends EventEmitter {
         data: opts,
         headers: {
           'x-start': '1',
-          'x-mtok': (_.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null
+          'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null
         }
       }, handleStart);
     }
@@ -552,17 +624,17 @@ export class UploadInstance extends EventEmitter {
       return this.result;
     }
 
-    if (this.config.onBeforeUpload && _.isFunction(this.config.onBeforeUpload)) {
-      isUploadAllowed = this.config.onBeforeUpload.call(_.extend(this.result, this.collection._getUser()), this.fileData);
+    if (this.config.onBeforeUpload && helpers.isFunction(this.config.onBeforeUpload)) {
+      isUploadAllowed = this.config.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData);
       if (isUploadAllowed !== true) {
-        return this.end(new Meteor.Error(403, _.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
+        return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
       }
     }
 
-    if (this.collection.onBeforeUpload && _.isFunction(this.collection.onBeforeUpload)) {
-      isUploadAllowed = this.collection.onBeforeUpload.call(_.extend(this.result, this.collection._getUser()), this.fileData);
+    if (this.collection.onBeforeUpload && helpers.isFunction(this.collection.onBeforeUpload)) {
+      isUploadAllowed = this.collection.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData);
       if (isUploadAllowed !== true) {
-        return this.end(new Meteor.Error(403, _.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
+        return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
       }
     }
 
@@ -608,78 +680,5 @@ export class UploadInstance extends EventEmitter {
       return this;
     };
     return this.result;
-  }
-}
-
-/*
- * @locus Client
- * @name FileUpload
- * @class FileUpload
- * @summary Internal Class, instance of this class is returned from `.insert()` method
- */
-export class FileUpload extends EventEmitter {
-  constructor(config) {
-    super();
-    this.config = config;
-    this.config._debug('[FilesCollection] [FileUpload] [constructor]');
-
-    if (!this.config.isBase64) {
-      this.file        = _.extend(this.config.file, this.config.fileData);
-    } else {
-      this.file        = this.config.fileData;
-    }
-    this.state         = new ReactiveVar('active');
-    this.onPause       = new ReactiveVar(false);
-    this.progress      = new ReactiveVar(0);
-    this.continueFunc  = () => { };
-    this.estimateTime  = new ReactiveVar(1000);
-    this.estimateSpeed = new ReactiveVar(0);
-    this.estimateTimer = Meteor.setInterval(() => {
-      if (this.state.get() === 'active') {
-        const _currentTime = this.estimateTime.get();
-        if (_currentTime > 1000) {
-          this.estimateTime.set(_currentTime - 1000);
-        }
-      }
-    }, 1000);
-  }
-  pause() {
-    this.config._debug('[FilesCollection] [insert] [.pause()]');
-    if (!this.onPause.get()) {
-      this.onPause.set(true);
-      this.state.set('paused');
-      this.emit('pause', this.file);
-    }
-  }
-  continue() {
-    this.config._debug('[FilesCollection] [insert] [.continue()]');
-    if (this.onPause.get()) {
-      this.onPause.set(false);
-      this.state.set('active');
-      this.emit('continue', this.file);
-      this.continueFunc();
-    }
-  }
-  toggle() {
-    this.config._debug('[FilesCollection] [insert] [.toggle()]');
-    if (this.onPause.get()) {
-      this.continue();
-    } else {
-      this.pause();
-    }
-  }
-  abort() {
-    this.config._debug('[FilesCollection] [insert] [.abort()]');
-    window.removeEventListener('beforeunload', this.config.beforeunload, false);
-    this.config.onAbort && this.config.onAbort.call(this, this.file);
-    this.emit('abort', this.file);
-    this.pause();
-    this.config._onEnd();
-    this.state.set('aborted');
-    if (this.config.debug) {
-      console.timeEnd(`insert ${this.config.fileData.name}`);
-    }
-
-    this.config.ddp.call(this.config._Abort, this.config.fileId);
   }
 }
