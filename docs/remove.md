@@ -8,6 +8,7 @@ Remove records from FilesCollection and files from FS.
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
+
 const Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
@@ -37,6 +38,7 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
+
 const Images = new FilesCollection({
   collectionName: 'Images',
   allowClientCode: true,

@@ -2,8 +2,11 @@
 
 *Direct reference to [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection).*
 
-```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+```js
+import { Meteor }          from 'meteor/meteor';
+import { FilesCollection } from 'meteor/ostrio:files';
+
+const Images = new FilesCollection({collectionName: 'Images'});
 
 if (Meteor.isServer) {
   /* Set deny/allow rules:
