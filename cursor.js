@@ -1,4 +1,3 @@
-import { _ }      from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
 
 /*
@@ -13,7 +12,7 @@ export class FileCursor {
   constructor(_fileRef, _collection) {
     this._fileRef    = _fileRef;
     this._collection = _collection;
-    _.extend(this, _fileRef);
+    Object.assign(this, _fileRef);
   }
 
   /*
@@ -39,13 +38,14 @@ export class FileCursor {
    * @memberOf FileCursor
    * @name link
    * @param version {String} - Name of file's subversion
+   * @param URIBase {String} - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL to File
    * @returns {String}
    */
-  link(version = 'original') {
+  link(version = 'original', URIBase) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef) {
-      return this._collection.link(this._fileRef, version);
+      return this._collection.link(this._fileRef, version, URIBase);
     }
     return '';
   }
@@ -87,7 +87,7 @@ export class FileCursor {
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
-    return _.extend(this, this._collection.collection.findOne(this._fileRef._id));
+    return Object.assign(this, this._collection.collection.findOne(this._fileRef._id));
   }
 }
 

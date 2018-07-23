@@ -5,7 +5,7 @@ the `Mongo.Collection` has a back-reference to the *FilesCollection* itself.
 
 The reference chain is as the following:
 
-```javascript
+```js
 const Images = new FilesCollection({collectionName: 'Images'});
 
 // get the underlying Mongo.Collection
@@ -18,7 +18,6 @@ const parent = collection.filesCollection;
 // returns true
 console.log(parent === Images);
 ```
-
 
 ### Using dburles:mongo-collection-instances
 
@@ -34,35 +33,35 @@ meteor add dburles:mongo-collection-instances
 
 Then initialize *FilesCollection*, which itself will create a new `Mongo.Collection`, that is automatically added to a hidden `Mongo.Collection` instances list.
 
-```javascript
+```js
 const Images = new FilesCollection({collectionName: 'Images'});
-````
+```
 
 To retrieve *FilesCollection* use - `Mongo.Collection.get('collectionName')`:
 
-```javascript
+```js
 const ImagesCollection = Mongo.Collection.get('Images');
 const Images = ImagesCollection.filesCollection;
-````
+```
 
 ### Using a custom collection instance management
 
 This simplified example shows, how to make use of that technique in your own implementation.
 Assume having a map of all `Mongo.Collection` instances:
 
-```javascript
+```js
 const collectionsMap = {};
-````
+```
 
 Since you may not want to store the *FilesCollection* instance (*because it is not a* `Mongo.Collection`), you can still reference the underlying Mongo.Collection:
 
-```javascript
+```js
 const Images = new FilesCollection({collectionName: 'Images'});
-collectionsMap['Images'] = Images.collection;
-````
+collectionsMap.Images = Images.collection;
+```
 
 Access the *FilesCollection* by reference:
 
-```javascript
-const Images = collectionsMap['Images'].filesCollection;
-````
+```js
+const Images = collectionsMap.Images.filesCollection;
+```

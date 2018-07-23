@@ -2,16 +2,19 @@
 
 Find and return Cursor for matching documents.
 
- - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
- - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
- - Returns {*[FilesCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor)*}
+  - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
+  - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
+  - Returns {*[FilesCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor)*}
 
-```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+```js
+import { Meteor }          from 'meteor/meteor';
+import { FilesCollection } from 'meteor/ostrio:files';
+
+const Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Set cursor:
-var filesCursor = Images.find();
+const filesCursor = Images.find();
 
 // Get Mongo cursor:
 Meteor.publish('images', function() {

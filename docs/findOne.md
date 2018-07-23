@@ -2,16 +2,18 @@
 
 Finds the first document that matches the selector, as ordered by sort and skip options.
 
- - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
- - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
- - Returns {*[FileCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FileCursor)*}
+  - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
+  - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
+  - Returns {*[FileCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FileCursor)*}
 
-```javascript
-var Images = new FilesCollection({collectionName: 'Images'});
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
+
+const Images = new FilesCollection({collectionName: 'Images'});
 
 // Usage:
 // Set cursor:
-var file = Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
+const file = Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
 // Generate downloadable link:
 file.link();
 // Get cursor's data as plain Object:

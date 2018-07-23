@@ -884,7 +884,9 @@ Images.collection.attachSchema(new SimpleSchema(mySchema));
 *Deny insert/update/remove from client*
 
 ```js
+import { Meteor }          from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
+
 if (Meteor.isServer) {
   const Images = new FilesCollection({/* ... */});
   Images.deny({
@@ -909,7 +911,9 @@ if (Meteor.isServer) {
 *Allow insert/update/remove from client*
 
 ```js
+import { Meteor }          from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
+
 if (Meteor.isServer) {
   const Images = new FilesCollection({/* ... */});
   Images.allow({
@@ -993,7 +997,9 @@ const Images = new FilesCollection({
 For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use [`mmmagic` package](https://github.com/mscdex/mmmagic) for this:
 
 ```js
+import { Meteor }          from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
+
 const Images = new FilesCollection({
   collectionName: 'Images',
   onAfterUpload(file) {

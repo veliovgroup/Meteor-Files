@@ -1,11 +1,14 @@
 #### `FilesCollection` `config.responseHeaders` option (*passed into [Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
+
 Allows to change default response headers.
 
 ##### Default function:
+
 We recommend to keep original function structure, with your modifications
-```javascript
+
+```js
 function responseHeaders (responseCode, fileRef, versionRef) {
-  var headers = {};
+  const headers = {};
   switch (responseCode) {
     case '206':
       headers['Pragma'] = 'private';
@@ -16,22 +19,24 @@ function responseHeaders (responseCode, fileRef, versionRef) {
       headers['Cache-Control'] = 'no-cache';
       break;
     case '416':
-      headers['Content-Range'] = "bytes */" + versionRef.size;
+      headers['Content-Range'] = 'bytes */' + versionRef.size;
   }
   headers['Connection'] = 'keep-alive';
   headers['Content-Type'] = versionRef.type || 'application/octet-stream';
   headers['Accept-Ranges'] = 'bytes';
   return headers;
-};
+}
 ```
 
 ##### Adding custom header example:
+
 We recommend to pass `responseHeaders` as a <em>Function</em>, response headers __should be conditional__
-```javascript
+
+```js
 // As function (keep original function with additions):
-var Uploads = new FilesCollection({
+const Uploads = new FilesCollection({
   responseHeaders: function(responseCode, fileRef, versionRef, version) {
-    var headers = {};
+    const headers = {};
     switch (responseCode) {
       case '206':
         headers['Pragma'] = 'private';
@@ -42,7 +47,7 @@ var Uploads = new FilesCollection({
         headers['Cache-Control'] = 'no-cache';
         break;
       case '416':
-        headers['Content-Range'] = "bytes */" + versionRef.size;
+        headers['Content-Range'] = 'bytes */' + versionRef.size;
     }
     headers['Connection'] = 'keep-alive';
     headers['Content-Type'] = versionRef.type || 'application/octet-stream';
@@ -53,7 +58,7 @@ var Uploads = new FilesCollection({
 });
 
 // As object (not recommended):
-var Uploads = new FilesCollection({
+const Uploads = new FilesCollection({
   responseHeaders: {
     Connection: 'keep-alive',
     'Access-Control-Allow-Origin': '*'

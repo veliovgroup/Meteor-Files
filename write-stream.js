@@ -1,6 +1,6 @@
-import fs         from 'fs-extra';
-import { _ }      from 'meteor/underscore';
-import { Meteor } from 'meteor/meteor';
+import fs          from 'fs-extra';
+import { Meteor }  from 'meteor/meteor';
+import { helpers } from './lib.js';
 const NOOP = () => {};
 
 /*
@@ -25,7 +25,7 @@ export default class WriteStream {
     this.maxLength = maxLength;
     this.file = file;
     this.permissions = permissions;
-    if (!this.path || !_.isString(this.path)) {
+    if (!this.path || !helpers.isString(this.path)) {
       return;
     }
 

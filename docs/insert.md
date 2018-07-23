@@ -1,4 +1,5 @@
 ##### `insert(settings[, autoStart])` [*Client*]
+
 *Upload file to Server via DDP, [RTC/DC](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or HTTP.*
 
 <table>
@@ -89,7 +90,7 @@
         <code>settings.transport</code> {<em>String</em>}
       </td>
       <td>
-        Must be set to 
+        Must be set to
         <code>http</code> or <code>ddp</code>
       </td>
       <td>
@@ -247,6 +248,7 @@
 <code>insert()</code> method returns <code>FileUpload</code> class instance. <strong>Note</strong>: same instance is used as <em><strong>context</strong></em> in all callback functions (<em>see above</em>)
 
 #### <code>FileUpload</code> methods and properties:
+
 <table>
   <thead>
     <tr>
@@ -356,8 +358,7 @@
         Current upload speed in <strong>bytes/second</strong>
       </td>
       <td>
-        To convert into speed, take a look on <a href="https://github.com/avoidwork/filesize.js">filesize package</a>, usage: 
-        <code>filesize(estimateSpeed, {bits: true}) + '/s';</code>
+        To convert into speed, take a look on <a href="https://github.com/avoidwork/filesize.js">filesize package</a>, usage: <code>filesize(estimateSpeed, {bits: true}) + '/s';</code>
       </td>
     </tr>
     <tr>
@@ -380,6 +381,7 @@
 </table>
 
 ### Events map:
+
 <table>
   <thead>
     <tr>
@@ -539,14 +541,16 @@
 <em>When</em> <code>autoStart</code> <em>is</em> <code>false</code> <em>before calling</em> <code>.start()</code> <em>you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. <strong>Do not forget to change file name, extension and mime-type if required</strong></em>.
 
 The <code>fileData</code> object (<em>see above</em>):
- - <code>size</code> {<em>Number</em>} - File size in bytes
- - <code>type</code> {<em>String</em>}
- - <code>mime</code>, <code>mime-type</code> {<em>String</em>}
- - <code>ext</code>, <code>extension</code> {<em>String</em>}
- - <code>name</code> {<em>String</em>} - File name
+
+  - <code>size</code> {<em>Number</em>} - File size in bytes
+  - <code>type</code> {<em>String</em>}
+  - <code>mime</code>, <code>mime-type</code> {<em>String</em>}
+  - <code>ext</code>, <code>extension</code> {<em>String</em>}
+  - <code>name</code> {<em>String</em>} - File name
 
 #### Upload form:
-```html
+
+```handlebars
 <template name="uploadForm">
   {{#if currentFile}}
     {{#with currentFile}
@@ -559,35 +563,46 @@ The <code>fileData</code> object (<em>see above</em>):
 ```
 
 Shared code:
-```javascript
-this.Images = new FilesCollection({collectionName: 'Images'});
+
+```js
+// /imports/collections/images.js
+import { FilesCollection } from 'meteor/ostrio:files';
+
+const Images = new FilesCollection({collectionName: 'Images'});
+// Export created instance of the FilesCollection
+export { Images };
 ```
 
 Client's code:
-```javascript
+
+```js
+import { ReactiveVar } from 'meteor/reactive-var';
+import { Template }    from 'meteor/templating';
+import { Images }      from '/imports/collections/images.js';
+
 Template.uploadForm.onCreated(function () {
   this.currentFile = new ReactiveVar(false);
 });
 
 Template.uploadForm.helpers({
-  currentFile: function () {
+  currentFile() {
     Template.instance().currentFile.get();
   }
 });
 
 Template.uploadForm.events({
-  'change #fileInput': function (e, template) {
+  'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // there was multiple files selected
-      var file = e.currentTarget.files[0];
+      const file = e.currentTarget.files[0];
 
       Images.insert({
         file: file,
-        onStart: function () {
+        onStart() {
           template.currentFile.set(this);
         },
-        onUploaded: function (error, fileObj) {
+        onUploaded(error, fileObj) {
           if (error) {
             alert('Error during upload: ' + error);
           } else {
@@ -604,9 +619,13 @@ Template.uploadForm.events({
 ```
 
 ##### Alternative, using events:
-```javascript
+
+```js
+import { Template } from 'meteor/templating';
+import { Images }   from '/imports/collections/images.js';
+
 Template.uploadForm.events({
-  'change #fileInput': function (e, template) {
+  'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
@@ -614,10 +633,8 @@ Template.uploadForm.events({
         file: e.currentTarget.files[0],
         streams: 'dynamic',
         chunkSize: 'dynamic'
-
       }, false).on('start', function () {
         template.currentFile.set(this);
-
       }).on('end', function (error, fileObj) {
         if (error) {
           alert('Error during upload: ' + error);
@@ -625,7 +642,6 @@ Template.uploadForm.events({
           alert('File "' + fileObj.name + '" successfully uploaded');
         }
         template.currentFile.set(false);
-
       }).start();
     }
   }
@@ -633,11 +649,15 @@ Template.uploadForm.events({
 ```
 
 ##### Events based example:
-```javascript
+
+```js
+import { Template } from 'meteor/templating';
+import { Images }   from '/imports/collections/images.js';
+
 Template.uploadForm.events({
-  'change #fileInput': function (e, template) {
+  'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      var uploader = Images.insert({
+      const uploader = Images.insert({
         file: e.currentTarget.files[0],
         streams: 'dynamic',
         chunkSize: 'dynamic'
@@ -668,7 +688,10 @@ Template.uploadForm.events({
 ```
 
 ##### Upload base64 string:
-```javascript
+
+```js
+import { Images } from '/imports/collections/images.js';
+
 // As dataURI
 Images.insert({
   file: 'data:image/png,base64str…',
@@ -693,19 +716,23 @@ Images.insert({
 ```
 
 ##### Piping:
+
 Note: data flow in `webrtc` transport uses ArrayBuffer, while `ddp` and `http` uses dataURI (*Base64*). `webrtc` is available only on [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch.
 
-```javascript
-var encrypt = function encrypt(data) {
+```js
+import { Template } from 'meteor/templating';
+import { Images }   from '/imports/collections/images.js';
+
+const encrypt = function encrypt(data) {
   return someHowEncryptAndReturnAsBase64(data);
 };
 
-var zip = function zip(data) {
+const zip = function zip(data) {
   return someHowZipAndReturnAsBase64(data);
 };
 
 Template.uploadForm.events({
-  'change #fileInput': function (e, template) {
+  'change #fileInput'(e) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
