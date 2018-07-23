@@ -47,6 +47,14 @@ For `compare` helper see [ostrio:templatehelpers](https://atmospherejs.com/ostri
 
 -----
 
+#### Change base URI, pass third argument `URIBase`:
+
+```handlebars
+<img src="{{fileURL fileRef 'original' 'https://other-domain.com/'}}">
+```
+
+-----
+
 #### Display thumbnail:
 
 __Note:__ If thumbnail (*subversion of the file*) is not available the original file will be returned.

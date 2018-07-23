@@ -295,19 +295,21 @@ export class FilesCollection extends FilesCollectionCore {
  * @name fileURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like to request
+ * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
  * @summary Get download URL for file by fileRef, even without subscription
  * @example {{fileURL fileRef}}
  * @returns {String}
  */
 Meteor.startup(() => {
   if (typeof Template !== 'undefined' && Template !== null) {
-    Template.registerHelper('fileURL', (fileRef, _version = 'original') => {
+    Template.registerHelper('fileURL', (fileRef, _version = 'original', _URIBase) => {
       if (!helpers.isObject(fileRef)) {
         return '';
       }
 
       const version = (!helpers.isString(_version)) ? 'original' : _version;
-      return formatFleURL(fileRef, version);
+      const URIBase = (!helpers.isString(_URIBase)) ? void 0 : _URIBase;
+      return formatFleURL(fileRef, version, URIBase);
     });
   }
 });

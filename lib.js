@@ -174,17 +174,23 @@ const fixJSONStringify = function(obj) {
  * @name formatFleURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like build URL for
+ * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
  * @summary Returns formatted URL for file
  * @returns {String} Downloadable link
  */
-const formatFleURL = (fileRef, version = 'original') => {
-  let ext;
+const formatFleURL = (fileRef, version = 'original', _URIBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
   check(fileRef, Object);
   check(version, String);
+  let URIBase = _URIBase;
 
-  const _root = __meteor_runtime_config__.ROOT_URL.replace(/\/+$/, '');
+  if (!helpers.isString(URIBase)) {
+    URIBase = (__meteor_runtime_config__ || {}).ROOT_URL || '/';
+  }
+
+  const _root = URIBase.replace(/\/+$/, '');
   const vRef = (fileRef.versions && fileRef.versions[version]) || fileRef || {};
 
+  let ext;
   if (helpers.isString(vRef.extension)) {
     ext = `.${vRef.extension.replace(/^\./, '')}`;
   } else {

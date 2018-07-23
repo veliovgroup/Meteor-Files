@@ -38,13 +38,14 @@ export class FileCursor {
    * @memberOf FileCursor
    * @name link
    * @param version {String} - Name of file's subversion
+   * @param URIBase {String} - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL to File
    * @returns {String}
    */
-  link(version = 'original') {
+  link(version = 'original', URIBase) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef) {
-      return this._collection.link(this._fileRef, version);
+      return this._collection.link(this._fileRef, version, URIBase);
     }
     return '';
   }

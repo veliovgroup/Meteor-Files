@@ -257,17 +257,17 @@ export default class FilesCollectionCore extends EventEmitter {
    * @name link
    * @param {Object} fileRef - File reference object
    * @param {String} version - Version of file you would like to request
+   * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL
    * @returns {String} Empty string returned in case if file not found in DB
    */
-  link(fileRef, version = 'original') {
+  link(fileRef, version = 'original', URIBase) {
     this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : undefined)}, ${version})]`);
     check(fileRef, Object);
-    check(version, String);
 
     if (!fileRef) {
       return '';
     }
-    return formatFleURL(fileRef, version);
+    return formatFleURL(fileRef, version, URIBase);
   }
 }
