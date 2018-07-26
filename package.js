@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.10.0',
+  version: '1.10.1',
   summary: 'File upload via DDP/HTTP to server, 3rd party storage support: AWS S3, GridFS, DropBox and others',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -17,7 +17,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.6.1');
   api.use('webapp', 'server');
   api.use(['reactive-var', 'tracker', 'http'], 'client');
-  api.use(['mongo', 'check', 'random', 'ecmascript', 'ostrio:cookies@2.2.7'], ['client', 'server']);
+  api.use(['mongo', 'check', 'random', 'ecmascript', 'ostrio:cookies@2.3.0'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');
