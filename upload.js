@@ -373,7 +373,7 @@ export class UploadInstance extends EventEmitter {
         HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           content: opts.binData,
           headers: {
-            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
+            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null,
             'x-fileid': opts.fileId,
             'x-chunkid': opts.chunkId,
             'content-type': 'text/plain'
@@ -420,14 +420,14 @@ export class UploadInstance extends EventEmitter {
           content: '',
           headers: {
             'x-eof': '1',
-            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null,
+            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null,
             'x-fileId': opts.fileId,
             'content-type': 'text/plain'
           }
         }, (error, _result) => {
           let result;
           try {
-            result = JSON.parse((helpers.isObject(_result) ? _result.content : undefined) || {});
+            result = JSON.parse((helpers.isObject(_result) ? _result.content : void 0) || {});
           } catch (e) {
             console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
             result = {};
@@ -461,7 +461,7 @@ export class UploadInstance extends EventEmitter {
         fileReader.onloadend = (evt) => {
           this.emit('sendChunk', {
             data: {
-              bin: ((helpers.isObject(fileReader) ? fileReader.result : undefined) || (evt.srcElement ? evt.srcElement.result : undefined) || (evt.target ? evt.target.result : undefined)).split(',')[1],
+              bin: ((helpers.isObject(fileReader) ? fileReader.result : void 0) || (evt.srcElement ? evt.srcElement.result : void 0) || (evt.target ? evt.target.result : void 0)).split(',')[1],
               chunkId
             }
           });
@@ -598,7 +598,7 @@ export class UploadInstance extends EventEmitter {
     if (this.config.transport === 'ddp') {
       this.config.ddp.call(this.collection._methodNames._Start, opts, handleStart);
     } else {
-      if (helpers.isObject(opts.file) ? opts.file.meta : undefined) {
+      if (helpers.isObject(opts.file) ? opts.file.meta : void 0) {
         opts.file.meta = fixJSONStringify(opts.file.meta);
       }
 
@@ -606,7 +606,7 @@ export class UploadInstance extends EventEmitter {
         data: opts,
         headers: {
           'x-start': '1',
-          'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : undefined) || null
+          'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
         }
       }, handleStart);
     }
