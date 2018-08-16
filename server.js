@@ -1367,7 +1367,7 @@ export class FilesCollection extends FilesCollectionCore {
    */
   remove(selector, callback) {
     this._debug(`[FilesCollection] [remove(${JSON.stringify(selector)})]`);
-    if (selector === undefined) {
+    if (selector === void 0) {
       return 0;
     }
     check(callback, Match.Optional(Function));

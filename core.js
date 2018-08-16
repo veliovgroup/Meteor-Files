@@ -105,7 +105,7 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _debug() {
     if (this.debug) {
-      (console.info || console.log || function () { }).apply(undefined, arguments);
+      (console.info || console.log || function () { }).apply(void 0, arguments);
     }
   }
 
@@ -262,7 +262,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {String} Empty string returned in case if file not found in DB
    */
   link(fileRef, version = 'original', URIBase) {
-    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : undefined)}, ${version})]`);
+    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
     check(fileRef, Object);
 
     if (!fileRef) {
