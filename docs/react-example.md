@@ -9,7 +9,7 @@ In this example two components is used. First - to handle the uploads, adds a fi
  - Uses React Component (rather than deprecated createClass)
 
 ## Assumptions
- - You have Meteor methods for `RemoveFile` and `RemoveFile`
+ - You have Meteor methods for `RemoveFile` and `RenameFile`
  - You have a publication called `files.all` 
  which is a FilesCollection, declared something like this:
 
