@@ -435,6 +435,18 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
+      if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
+        httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
+
+        if (httpReq.method === 'OPTIONS') {
+          httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
+          httpResp.writeHead(200);
+          httpResp.end();
+          return;
+        }
+      }
+
       if (!this.disableUpload && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
         if (httpReq.method === 'POST') {
           const handleError = (_error) => {
