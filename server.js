@@ -433,10 +433,22 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
-      if (!this.disableCookie && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__cookie`)) {
+      if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
+        httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
+
+        if (httpReq.method === 'OPTIONS') {
+          httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
+          httpResp.writeHead(200);
+          httpResp.end();
+          return;
+        }
+      }
+
+      if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__cookie`)) {
         httpReq.on('data', () => null);
         httpReq.on('end', () => {
-          const match = httpReq._parsedUrl.path.match('__cookie\/([a-zA-Z0-9]+)');
+          const match = httpReq._parsedUrl.path.match('__cookie/([a-zA-Z0-9]+)');
           if (!match || !match[1]) {
             httpResp.writeHead(400);
             httpResp.end();
