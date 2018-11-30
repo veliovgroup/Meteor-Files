@@ -1,5 +1,6 @@
 import { Mongo }           from 'meteor/mongo';
 import { Meteor }          from 'meteor/meteor';
+import { DDP }             from 'meteor/ddp-client';
 import { Cookies }         from 'meteor/ostrio:cookies';
 import { check, Match }    from 'meteor/check';
 import { UploadInstance }  from './upload.js';
@@ -113,30 +114,24 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const setTokenCookie = () => {
-      if ((!cookie.has('x_mtok') && Meteor.connection._lastSessionId) || (cookie.has('x_mtok') && (cookie.get('x_mtok') !== Meteor.connection._lastSessionId))) {
-        cookie.set('x_mtok', Meteor.connection._lastSessionId, {
-          path: '/'
-        });
+      const id = Meteor.connection._lastSessionId;
+      if (!id) return;
+
+      if (Meteor.isCordova) {
+        const cookieRequest = new XMLHttpRequest();
+        cookieRequest.withCredentials = true;
+        cookieRequest.open('GET', Meteor.absoluteUrl(`${this.downloadRoute}/${this.collectionName}/__cookie/${id}`));
+        cookieRequest.send(null);
+      } else {
+        cookie.set('x_mtok', id, { path: '/' });
       }
     };
 
-    const unsetTokenCookie = () => {
-      if (cookie.has('x_mtok')) {
-        cookie.remove('x_mtok', '/');
-      }
-    };
-
-    if (typeof Accounts !== 'undefined' && Accounts !== null) {
-      Meteor.startup(() => {
-        setTokenCookie();
-      });
-      Accounts.onLogin(() => {
-        setTokenCookie();
-      });
-      Accounts.onLogout(() => {
-        unsetTokenCookie();
-      });
-    }
+    DDP.onReconnect((conn) => {
+      conn.onReconnect = setTokenCookie;
+    });
+    Meteor.startup(setTokenCookie);
+    Accounts.onLogin(setTokenCookie);
 
     check(this.onbeforeunloadMessage, Match.OneOf(String, Function));
 

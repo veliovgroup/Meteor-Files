@@ -433,6 +433,23 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
+      if (!this.disableCookie && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__cookie`)) {
+        httpReq.on('data', () => null);
+        httpReq.on('end', () => {
+          const match = httpReq._parsedUrl.path.match('__cookie\/([a-zA-Z0-9]+)');
+          if (!match || !match[1]) {
+            httpResp.writeHead(400);
+            httpResp.end();
+          }
+          httpResp.writeHead(200, {
+            'Set-Cookie': `x_mtok=${match[1]}; Path=/`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          });
+          httpResp.end();
+        });
+        return;
+      }
+
       if (!this.disableUpload && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
         if (httpReq.method === 'POST') {
           const handleError = (_error) => {
