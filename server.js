@@ -325,7 +325,9 @@ export class FilesCollection extends FilesCollectionCore {
             self._currentUploads[doc._id].stop();
             self._currentUploads[doc._id].end();
 
-            if (!doc.isFinished) {
+            // We can be unlucky to run into a race condition where another server removed this document before the change of `isFinished` is registered on this server.
+            // Therefore it's better to double-check with the main collection if the file is referenced there. Issue: https://github.com/VeliovGroup/Meteor-Files/issues/672
+            if (!doc.isFinished && self.collection.find({ _id: doc._id }).count() === 0) {
               self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: ${doc._id}`);
               self._currentUploads[doc._id].abort();
             }
