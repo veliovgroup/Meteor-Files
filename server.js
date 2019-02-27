@@ -437,6 +437,7 @@ export class FilesCollection extends FilesCollectionCore {
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
       if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
         httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
+        httpResp.setHeader('Access-Control-Allow-Origin', 'http://localhost:12008');
 
         if (httpReq.method === 'OPTIONS') {
           httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

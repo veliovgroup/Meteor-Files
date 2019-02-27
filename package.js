@@ -16,7 +16,7 @@ Npm.depends({
 Package.onUse(function(api) {
   api.versionsFrom('1.6.1');
   api.use('webapp', 'server');
-  api.use(['reactive-var', 'tracker', 'http'], 'client');
+  api.use(['reactive-var', 'tracker', 'http', 'ddp-client'], 'client');
   api.use(['mongo', 'check', 'random', 'ecmascript', 'ostrio:cookies@2.3.0'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('server.js', 'server');
