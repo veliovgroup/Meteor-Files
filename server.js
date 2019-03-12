@@ -61,6 +61,7 @@ const originRE = /^http:\/\/localhost:12\d\d\d$/;
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
+ * @param config.disableCORS  {Boolean}  - [Server]   Disable Cordova CORS access
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -92,6 +93,7 @@ export class FilesCollection extends FilesCollectionCore {
         namingFunction: this.namingFunction,
         responseHeaders: this.responseHeaders,
         disableDownload: this.disableDownload,
+        disableCORS: this.disableCORS,
         allowClientCode: this.allowClientCode,
         downloadCallback: this.downloadCallback,
         onInitiateUpload: this.onInitiateUpload,
@@ -207,6 +209,10 @@ export class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
+    if (!helpers.isBoolean(this.disableCORS)) {
+      this.disableCORS = false;
+    }
+
     if (!helpers.isObject(this._currentUploads)) {
       this._currentUploads = {};
     }
@@ -242,7 +248,6 @@ export class FilesCollection extends FilesCollectionCore {
         headers.Connection       = 'keep-alive';
         headers['Content-Type']  = versionRef.type || 'application/octet-stream';
         headers['Accept-Ranges'] = 'bytes';
-        headers['Access-Control-Expose-Headers'] = 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range';
         return headers;
       };
     }
@@ -438,7 +443,7 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
-      if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
+      if (!this.disableCORS && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
         if (originRE.test(httpReq.headers.origin)) {
           httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
           httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
@@ -447,6 +452,7 @@ export class FilesCollection extends FilesCollectionCore {
         if (httpReq.method === 'OPTIONS') {
           httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
           httpResp.setHeader('Access-Control-Allow-Headers', 'Range');
+          httpResp.setHeader('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range');
           httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
           httpResp.writeHead(200);
           httpResp.end();
