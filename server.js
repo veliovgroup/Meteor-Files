@@ -21,6 +21,8 @@ import nodePath from 'path';
 const bound = Meteor.bindEnvironment(callback => callback());
 const NOOP  = () => {  };
 
+const originRE = /^http:\/\/localhost:12\d\d\d$/;
+
 /*
  * @locus Anywhere
  * @class FilesCollection
@@ -240,6 +242,7 @@ export class FilesCollection extends FilesCollectionCore {
         headers.Connection       = 'keep-alive';
         headers['Content-Type']  = versionRef.type || 'application/octet-stream';
         headers['Accept-Ranges'] = 'bytes';
+        headers['Access-Control-Expose-Headers'] = 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range';
         return headers;
       };
     }
@@ -436,11 +439,14 @@ export class FilesCollection extends FilesCollectionCore {
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
       if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
-        httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
-        httpResp.setHeader('Access-Control-Allow-Origin', 'http://localhost:12008');
+        if (originRE.test(httpReq.headers.origin)) {
+          httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
+          httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
+        }
 
         if (httpReq.method === 'OPTIONS') {
           httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          httpResp.setHeader('Access-Control-Allow-Headers', 'Range');
           httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
           httpResp.writeHead(200);
           httpResp.end();
