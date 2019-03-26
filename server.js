@@ -451,7 +451,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         if (httpReq.method === 'OPTIONS') {
           httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-          httpResp.setHeader('Access-Control-Allow-Headers', 'Range');
+          httpResp.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, x-mtok, x-start, x-chunkid, x-fileid, x-eof');
           httpResp.setHeader('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range');
           httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
           httpResp.writeHead(200);
