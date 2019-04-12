@@ -468,9 +468,9 @@ export class FilesCollection extends FilesCollectionCore {
               let result;
               let user;
 
-              if (httpReq.headers['x-mtok'] && helpers.isObject(Meteor.server.sessions) && helpers.has(Meteor.server.sessions[httpReq.headers['x-mtok']], 'userId')) {
+              if (httpReq.headers['x-mtok'] && this._getUserId(httpReq.headers['x-mtok'])) {
                 user = {
-                  userId: Meteor.server.sessions[httpReq.headers['x-mtok']].userId
+                  userId: this._getUserId(httpReq.headers['x-mtok'])
                 };
               } else {
                 user = this._getUser({request: httpReq, response: httpResp});
@@ -1025,6 +1025,29 @@ export class FilesCollection extends FilesCollectionCore {
   /*
    * @locus Anywhere
    * @memberOf FilesCollection
+   * @name _getUserId
+   * @summary Returns `userId` matching the xmtok token derived from Meteor.server.sessions
+   * @returns {String}
+   */
+  _getUserId(xmtok) {
+    if (!xmtok || !helpers.isObject(Meteor.server.sessions)) return null;
+
+    if (Meteor.server.sessions instanceof Map
+      && Meteor.server.sessions.has(xmtok)
+      && helpers.isObject(Meteor.server.sessions.get(xmtok))
+    ) {
+      return Meteor.server.sessions.get(xmtok).userId
+    } else if (helpers.isObject(Meteor.server.sessions)
+      && xmtok in Meteor.server.sessions
+      && helpers.isObject(Meteor.server.sessions[xmtok])
+    ) {
+      return Meteor.server.sessions[xmtok].userId
+    }
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCollection
    * @name _getUser
    * @summary Returns object with `userId` and `user()` method which return user's object
    * @returns {Object}
@@ -1047,7 +1070,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
 
       if (mtok) {
-        const userId = (helpers.isObject(Meteor.server.sessions) && helpers.isObject(Meteor.server.sessions[mtok])) ? Meteor.server.sessions[mtok].userId : void 0;
+        const userId = this._getUserId(mtok);
 
         if (userId) {
           result.user   = () => Meteor.users.findOne(userId);
