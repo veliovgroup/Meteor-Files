@@ -375,7 +375,6 @@ We would like to thank everyone who support this project. *Because of those guys
   - [@themeteorchef](https://github.com/themeteorchef)
   - [@MeDBejoHok](https://github.com/medbejohok)
   - [@martunta](https://github.com/martunta)
-  - [@mgscreativa](https://github.com/mgscreativa), check out his React Native upload [demo repository](https://github.com/mgscreativa/React-Native-Upload-Files-to-Meteor-Server)
 
 ----
 
