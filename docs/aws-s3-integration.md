@@ -31,6 +31,7 @@ Prepare: Get access to AWS S3:
   * Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
     * Create an S3 bucket in preferred region
     * Get an "Access Key Id" and "Secret Key"
+    * Note that in order to delete files from S3 you will additionally have to add the action "s3:DeleteObject" to the created policy.
 
 ## Settings.json
 
