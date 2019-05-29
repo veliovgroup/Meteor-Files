@@ -1030,18 +1030,25 @@ export class FilesCollection extends FilesCollectionCore {
    * @returns {String}
    */
   _getUserId(xmtok) {
-    if (!xmtok || !helpers.isObject(Meteor.server.sessions)) return null;
+    if (!xmtok) return null;
+
+    // throw an error upon an unexpected type of Meteor.server.sessions in order to identify breaking changes
+    if (!Meteor.server.sessions instanceof Map || !helpers.isObject(Meteor.server.sessions)) {
+      throw new Error('Received incompatible type of Meteor.server.sessions')
+    }
 
     if (Meteor.server.sessions instanceof Map
       && Meteor.server.sessions.has(xmtok)
       && helpers.isObject(Meteor.server.sessions.get(xmtok))
     ) {
-      return Meteor.server.sessions.get(xmtok).userId
+      // to be used with >= Meteor 1.8.1 where Meteor.server.sessions is a Map
+      return Meteor.server.sessions.get(xmtok).userId;
     } else if (helpers.isObject(Meteor.server.sessions)
       && xmtok in Meteor.server.sessions
       && helpers.isObject(Meteor.server.sessions[xmtok])
     ) {
-      return Meteor.server.sessions[xmtok].userId
+      // to be used with < Meteor 1.8.1 where Meteor.server.sessions is an Object
+      return Meteor.server.sessions[xmtok].userId;
     }
   }
 
