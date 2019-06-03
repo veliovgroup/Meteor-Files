@@ -1,5 +1,8 @@
 {
   "parser": "babel-eslint",
+  "parserOptions": {
+    "sourceType": "module"
+  },
   "env": {
     "node": true,
     "browser": false
@@ -14,23 +17,7 @@
     "Worker": true,
     "navigator": true
   },
-  "ecmaFeatures": {
-    "arrowFunctions": true,
-    "blockBindings": true,
-    "classes": true,
-    "defaultParams": true,
-    "destructuring": true,
-    "forOf": true,
-    "generators": false,
-    "modules": true,
-    "objectLiteralComputedProperties": true,
-    "objectLiteralDuplicateProperties": false,
-    "objectLiteralShorthandMethods": true,
-    "objectLiteralShorthandProperties": true,
-    "spread": true,
-    "superInFunctions": true,
-    "templateStrings": true
-  },
+  "ecmaFeatures": {},
   "rules": {
     "strict": [2, "never"],
     "no-shadow": 2,
@@ -62,7 +49,6 @@
     "block-scoped-var": 0,
     "no-undef": "error",
     "consistent-return": 2,
-    "consistent-this": ["error", "self"],
     "curly": [2, "multi-line"],
     "default-case": 2,
     "dot-notation": [2, {
@@ -119,6 +105,9 @@
     "key-spacing": [2, {
         "beforeColon": false,
         "afterColon": true
+    }],
+    "new-cap": [2, {
+      "newIsCap": true
     }],
     "no-multiple-empty-lines": [2, {
       "max": 2
