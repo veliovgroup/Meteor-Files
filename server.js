@@ -486,15 +486,7 @@ export class FilesCollection extends FilesCollectionCore {
                 if (httpReq.headers['x-eof'] === '1') {
                   opts.eof = true;
                 } else {
-                  if (typeof Buffer.from === 'function') {
-                    try {
-                      opts.binData = Buffer.from(body, 'base64');
-                    } catch (buffErr) {
-                      opts.binData = new Buffer(body, 'base64');
-                    }
-                  } else {
-                    opts.binData = new Buffer(body, 'base64');
-                  }
+                  opts.binData = Buffer.from(body, 'base64');
                   opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
                 }
 
@@ -781,15 +773,7 @@ export class FilesCollection extends FilesCollectionCore {
         });
 
         if (opts.binData) {
-          if (typeof Buffer.from === 'function') {
-            try {
-              opts.binData = Buffer.from(opts.binData, 'base64');
-            } catch (buffErr) {
-              opts.binData = new Buffer(opts.binData, 'base64');
-            }
-          } else {
-            opts.binData = new Buffer(opts.binData, 'base64');
-          }
+          opts.binData = Buffer.from(opts.binData, 'base64');
         }
 
         const _continueUpload = self._continueUpload(opts.fileId);
@@ -1005,9 +989,9 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (fileData.path && (!mime || !helpers.isString(mime))) {
       try {
-        let buf   = new Buffer(262);
-        const fd  = fs.openSync(fileData.path, 'r');
-        const br  = fs.readSync(fd, buf, 0, 262, 0);
+        let buf  = Buffer.alloc(262);
+        const fd = fs.openSync(fileData.path, 'r');
+        const br = fs.readSync(fd, buf, 0, 262, 0);
         fs.close(fd, NOOP);
         if (br < 262) {
           buf = buf.slice(0, br);
