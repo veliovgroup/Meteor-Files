@@ -325,7 +325,9 @@ export class FilesCollection extends FilesCollectionCore {
             self._currentUploads[doc._id].stop();
             self._currentUploads[doc._id].end();
 
-            if (!doc.isFinished) {
+            // We can be unlucky to run into a race condition where another server removed this document before the change of `isFinished` is registered on this server.
+            // Therefore it's better to double-check with the main collection if the file is referenced there. Issue: https://github.com/VeliovGroup/Meteor-Files/issues/672
+            if (!doc.isFinished && self.collection.find({ _id: doc._id }).count() === 0) {
               self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: ${doc._id}`);
               self._currentUploads[doc._id].abort();
             }
@@ -468,9 +470,9 @@ export class FilesCollection extends FilesCollectionCore {
               let result;
               let user;
 
-              if (httpReq.headers['x-mtok'] && helpers.isObject(Meteor.server.sessions) && helpers.has(Meteor.server.sessions[httpReq.headers['x-mtok']], 'userId')) {
+              if (httpReq.headers['x-mtok'] && this._getUserId(httpReq.headers['x-mtok'])) {
                 user = {
-                  userId: Meteor.server.sessions[httpReq.headers['x-mtok']].userId
+                  userId: this._getUserId(httpReq.headers['x-mtok'])
                 };
               } else {
                 user = this._getUser({request: httpReq, response: httpResp});
@@ -484,15 +486,7 @@ export class FilesCollection extends FilesCollectionCore {
                 if (httpReq.headers['x-eof'] === '1') {
                   opts.eof = true;
                 } else {
-                  if (typeof Buffer.from === 'function') {
-                    try {
-                      opts.binData = Buffer.from(body, 'base64');
-                    } catch (buffErr) {
-                      opts.binData = new Buffer(body, 'base64');
-                    }
-                  } else {
-                    opts.binData = new Buffer(body, 'base64');
-                  }
+                  opts.binData = Buffer.from(body, 'base64');
                   opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
                 }
 
@@ -779,15 +773,7 @@ export class FilesCollection extends FilesCollectionCore {
         });
 
         if (opts.binData) {
-          if (typeof Buffer.from === 'function') {
-            try {
-              opts.binData = Buffer.from(opts.binData, 'base64');
-            } catch (buffErr) {
-              opts.binData = new Buffer(opts.binData, 'base64');
-            }
-          } else {
-            opts.binData = new Buffer(opts.binData, 'base64');
-          }
+          opts.binData = Buffer.from(opts.binData, 'base64');
         }
 
         const _continueUpload = self._continueUpload(opts.fileId);
@@ -1003,9 +989,9 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (fileData.path && (!mime || !helpers.isString(mime))) {
       try {
-        let buf   = new Buffer(262);
-        const fd  = fs.openSync(fileData.path, 'r');
-        const br  = fs.readSync(fd, buf, 0, 262, 0);
+        let buf  = Buffer.alloc(262);
+        const fd = fs.openSync(fileData.path, 'r');
+        const br = fs.readSync(fd, buf, 0, 262, 0);
         fs.close(fd, NOOP);
         if (br < 262) {
           buf = buf.slice(0, br);
@@ -1020,6 +1006,32 @@ export class FilesCollection extends FilesCollectionCore {
       mime = 'application/octet-stream';
     }
     return mime;
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCollection
+   * @name _getUserId
+   * @summary Returns `userId` matching the xmtok token derived from Meteor.server.sessions
+   * @returns {String}
+   */
+  _getUserId(xmtok) {
+    if (!xmtok) return null;
+
+    // throw an error upon an unexpected type of Meteor.server.sessions in order to identify breaking changes
+    if (!Meteor.server.sessions instanceof Map || !helpers.isObject(Meteor.server.sessions)) {
+      throw new Error('Received incompatible type of Meteor.server.sessions');
+    }
+
+    if (Meteor.server.sessions instanceof Map && Meteor.server.sessions.has(xmtok) && helpers.isObject(Meteor.server.sessions.get(xmtok))) {
+      // to be used with >= Meteor 1.8.1 where Meteor.server.sessions is a Map
+      return Meteor.server.sessions.get(xmtok).userId;
+    } else if (helpers.isObject(Meteor.server.sessions) && xmtok in Meteor.server.sessions && helpers.isObject(Meteor.server.sessions[xmtok])) {
+      // to be used with < Meteor 1.8.1 where Meteor.server.sessions is an Object
+      return Meteor.server.sessions[xmtok].userId;
+    }
+
+    return null;
   }
 
   /*
@@ -1047,7 +1059,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
 
       if (mtok) {
-        const userId = (helpers.isObject(Meteor.server.sessions) && helpers.isObject(Meteor.server.sessions[mtok])) ? Meteor.server.sessions[mtok].userId : void 0;
+        const userId = this._getUserId(mtok);
 
         if (userId) {
           result.user   = () => Meteor.users.findOne(userId);

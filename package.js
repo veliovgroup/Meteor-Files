@@ -1,16 +1,16 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.10.2',
-  summary: 'File upload via DDP/HTTP to server, 3rd party storage support: AWS S3, GridFS, DropBox and others',
+  version: '1.11.0',
+  summary: 'Upload files to Meteor application, with 3rd party storage support: AWS:S3, GridFS and other',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  'fs-extra': '7.0.0',
-  'request': '2.88.0',
-  'file-type': '9.0.0',
-  'eventemitter3': '3.1.0'
+  'fs-extra': '8.0.1',
+  request: '2.88.0',
+  'file-type': '11.1.0',
+  eventemitter3: '3.1.2'
 });
 
 Package.onUse(function(api) {

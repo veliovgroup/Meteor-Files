@@ -111,6 +111,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
   - `tutorial` [React.js usage](https://github.com/VeliovGroup/Meteor-Files/wiki/React-Example) - React with a progress bar and component with links to view, re-name, and delete the files
   - `tutorial` [Migrating from CollectionFS/CFS](https://github.com/VeliovGroup/Meteor-Files/wiki/Converting-from-CollectionFS) - Live conversion from the depreciated CFS to Meteor-Files (*Amazon S3 specifically, but applies to all*)
   - `tutorial` [Geting `FilesCollection` instance](https://github.com/VeliovGroup/Meteor-Files/wiki/Collection-Instances) - Retrieve the *FilesCollection* by it's underlying `Mongo.Collection` instance
+  - `tutorial` [Migrating / moving GridFS stored files](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFs-Migration) - Three step way of moving/copying/syncing GridFS-stored files between multiple Meteor applications
 
 ### Related Packages:
 
