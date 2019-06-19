@@ -7,6 +7,7 @@ import FilesCollectionCore from './core.js';
 import { formatFleURL, helpers } from './lib.js';
 
 const NOOP = () => { };
+const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload'];
 
 /*
  * @locus Anywhere
@@ -33,21 +34,11 @@ export class FilesCollection extends FilesCollectionCore {
   constructor(config) {
     super();
     if (config) {
-      ({
-        ddp: this.ddp,
-        debug: this.debug,
-        schema: this.schema,
-        public: this.public,
-        chunkSize: this.chunkSize,
-        collection: this.collection,
-        downloadRoute: this.downloadRoute,
-        disableUpload: this.disableUpload,
-        namingFunction: this.namingFunction,
-        collectionName: this.collectionName,
-        onBeforeUpload: this.onBeforeUpload,
-        allowClientCode: this.allowClientCode,
-        onbeforeunloadMessage: this.onbeforeunloadMessage,
-      } = config);
+      Object.keys(config).forEach((param) => {
+        if (allowedParams.includes(param)) {
+          this[param] = config[param];
+        }
+      });
     }
 
     const self = this;
