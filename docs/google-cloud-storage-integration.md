@@ -4,14 +4,19 @@ Additionally, this example will also show you how to list uploaded files and rem
 
 *See production-ready code below.*
 
-##### Step 1: install [google-cloud-node](https://github.com/GoogleCloudPlatform/google-cloud-node)
+#### Prerequisite
+*Request*
+*Random*
+*Underscore*
+
+meteor add underscore
+meteor add random
+meteor npm install request
+
+##### Step 1: install [google-cloud-storage](https://github.com/googleapis/nodejs-storage)
 
 ```shell
-npm install --save google-cloud
-```
-Or
-```shell
-meteor npm install google-cloud
+npm install @google-cloud/storage"
 ```
 
 ##### Step 2: Setup your Google Cloud Storage
@@ -26,14 +31,15 @@ meteor npm install google-cloud
   * Also, __GUARD THIS JSON FILE AS YOUR LIFE__. IF ANYONE GETS AHOLD OF IT, THEY WILL HAVE FULL ACCESS TO YOUR ACCOUNT!
 
 ```javascript
+import { Random } from 'meteor/random'
 var gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {};
 
 if (Meteor.isServer) {
-  gcloud = Npm.require('google-cloud')({
+  import { Storage } from '@google-cloud/storage';
+  gcs = new Storage('google-cloud')({
     projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
     keyFilename: 'YOUR_KEY_JSON'  // <-- Replace this with the path to your key.json
   });
-  gcs = gcloud.storage();
   bucket = gcs.bucket('YOUR_BUCKET_NAME'); // <-- Replace this with your bucket name
   bucket.getMetadata(function(error, metadata, apiResponse){
     if (error) {
