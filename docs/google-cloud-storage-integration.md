@@ -31,10 +31,10 @@ npm install @google-cloud/storage"
   * Also, __GUARD THIS JSON FILE AS YOUR LIFE__. IF ANYONE GETS AHOLD OF IT, THEY WILL HAVE FULL ACCESS TO YOUR ACCOUNT!
 
 ```javascript
-import { Random } from 'meteor/random'
 var gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {};
 
 if (Meteor.isServer) {
+  import { Random } from 'meteor/random'
   import { Storage } from '@google-cloud/storage';
   gcs = new Storage('google-cloud')({
     projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
