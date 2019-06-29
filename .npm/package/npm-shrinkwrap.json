@@ -67,9 +67,9 @@
       "integrity": "sha1-OoOpBOVDUyh4dMVkt1SThoSamMk="
     },
     "eventemitter3": {
-      "version": "3.1.2",
-      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-3.1.2.tgz",
-      "integrity": "sha512-tvtQIeLVHjDkJYnzf2dgVMxfuSGJeM/7UCG17TT4EumTfNtF+0nebF/4zWOIkCreAbtNqhGEboB6BWrwqNaw4Q=="
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-4.0.0.tgz",
+      "integrity": "sha512-qerSRB0p+UDEssxTtm6EDKcE7W4OaoisfIMl4CngyEhjpYglocpNg6UEqCvemdGhosAsg4sO2dXJOdyBifPGCg=="
     },
     "extend": {
       "version": "3.0.2",
@@ -92,9 +92,9 @@
       "integrity": "sha1-1RQsDK7msRifh9OnYREGT4bIu/I="
     },
     "file-type": {
-      "version": "11.1.0",
-      "resolved": "https://registry.npmjs.org/file-type/-/file-type-11.1.0.tgz",
-      "integrity": "sha512-rM0UO7Qm9K7TWTtA6AShI/t7H5BPjDeGVDaNyg9BjHAj3PysKy7+8C8D137R88jnR3rFJZQB/tFgydl5sN5m7g=="
+      "version": "12.0.0",
+      "resolved": "https://registry.npmjs.org/file-type/-/file-type-12.0.0.tgz",
+      "integrity": "sha512-VV3aQAyoV/fHl0I9uU3/DGjItgh5nylAoJPHOXkZXHW4nFFrxJnHR2xdVqsqyw/9fqYy80m+tS+Rf77w0FTKqg=="
     },
     "forever-agent": {
       "version": "0.6.1",
@@ -107,9 +107,9 @@
       "integrity": "sha512-1lLKB2Mu3aGP1Q/2eCOx0fNbRMe7XdwktwOruhfqqd0rIJWwN4Dh+E3hrPSlDCXnSR7UtZ1N38rVXm+6+MEhJQ=="
     },
     "fs-extra": {
-      "version": "8.0.1",
-      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-8.0.1.tgz",
-      "integrity": "sha512-W+XLrggcDzlle47X/XnS7FXrXu9sDo+Ze9zpndeBxdgv88FHLm1HtmkhEwavruS6koanBjp098rUpHs65EmG7A=="
+      "version": "8.1.0",
+      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-8.1.0.tgz",
+      "integrity": "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="
     },
     "getpass": {
       "version": "0.1.7",
@@ -117,9 +117,9 @@
       "integrity": "sha1-Xv+OPmhNVprkyysSgmBOi6YhSfo="
     },
     "graceful-fs": {
-      "version": "4.1.15",
-      "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.1.15.tgz",
-      "integrity": "sha512-6uHUhOPEBgQ24HM+r6b/QwWfZq+yiFcipKFrOFiBEnWdy5sdzYoi+pJeQaPI5qOLRFqWmAXUPQNsielzdLoecA=="
+      "version": "4.2.0",
+      "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.0.tgz",
+      "integrity": "sha512-jpSvDPV4Cq/bgtpndIWbI5hmYxhQGHPC4d4cqBPb4DLniCfhJokdXhwhaDuLBGLQdvvRum/UiX6ECVIPvDXqdg=="
     },
     "har-schema": {
       "version": "2.0.0",
@@ -197,9 +197,9 @@
       "integrity": "sha1-Ywn04OX6kT7BxpMHrjZLSzd8nns="
     },
     "psl": {
-      "version": "1.1.32",
-      "resolved": "https://registry.npmjs.org/psl/-/psl-1.1.32.tgz",
-      "integrity": "sha512-MHACAkHpihU/REGGPLj4sEfc/XKW2bheigvHO1dUqjaKigMp1C8+WLQYRGgeKFMsw5PMfegZcaN8IDXK/cD0+g=="
+      "version": "1.1.33",
+      "resolved": "https://registry.npmjs.org/psl/-/psl-1.1.33.tgz",
+      "integrity": "sha512-LTDP2uSrsc7XCb5lO7A8BI1qYxRe/8EqlRvMeEl6rsnYAqDOl8xHR+8lSAIVfrNaSAlTPTNOCgNjWcoUL3AZsw=="
     },
     "punycode": {
       "version": "2.1.1",
