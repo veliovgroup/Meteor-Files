@@ -21,8 +21,6 @@ import nodePath from 'path';
 const bound = Meteor.bindEnvironment(callback => callback());
 const NOOP  = () => {  };
 
-const originRE = /^http:\/\/localhost:12\d\d\d$/;
-
 /*
  * @locus Anywhere
  * @class FilesCollection
@@ -60,8 +58,8 @@ const originRE = /^http:\/\/localhost:12\d\d\d$/;
  * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
- * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config.disableCORS  {Boolean}  - [Server]   Disable Cordova CORS access
+ * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions 
+ * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -93,7 +91,7 @@ export class FilesCollection extends FilesCollectionCore {
         namingFunction: this.namingFunction,
         responseHeaders: this.responseHeaders,
         disableDownload: this.disableDownload,
-        disableCORS: this.disableCORS,
+      	allowedOrigins: this.allowedOrigins,
         allowClientCode: this.allowClientCode,
         downloadCallback: this.downloadCallback,
         onInitiateUpload: this.onInitiateUpload,
@@ -209,8 +207,8 @@ export class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
-    if (!helpers.isBoolean(this.disableCORS)) {
-      this.disableCORS = false;
+    if (!this.allowedOrigins) {
+      this.allowedOrigins = /^http:\/\/localhost:12\d\d\d$/;
     }
 
     if (!helpers.isObject(this._currentUploads)) {
@@ -443,8 +441,8 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
-      if (!this.disableCORS && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
-        if (originRE.test(httpReq.headers.origin)) {
+      if (this.allowedOrigins && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/`) && !httpResp.headersSent) {
+        if (this.allowedOrigins.test(httpReq.headers.origin)) {
           httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
           httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
         }
