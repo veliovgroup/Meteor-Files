@@ -1,8 +1,8 @@
-#### `FilesCollection` `config.responseHeaders` option (*passed into [Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
+## `FilesCollection` `config.responseHeaders` option (*passed into [Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
 
 Allows to change default response headers.
 
-##### Default function:
+### Default function:
 
 We recommend to keep original function structure, with your modifications
 
@@ -28,7 +28,7 @@ function responseHeaders (responseCode, fileRef, versionRef) {
 }
 ```
 
-##### Adding custom header example:
+### Adding custom header example:
 
 We recommend to pass `responseHeaders` as a <em>Function</em>, response headers __should be conditional__
 
