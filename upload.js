@@ -269,7 +269,7 @@ export class UploadInstance extends EventEmitter {
         const progress = Math.round((this.sentChunks / this.fileLength) * 100);
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
-        this.result.emit('progress', progress, this.fileData);
+        this.result.emit('progress', progress, this.fileData, { sentChunks: this.sentChunks, fileLength: this.fileLength });
       }, 250));
 
       this.addListener('_onEnd', () => {
