@@ -30,6 +30,7 @@ export class FileUpload extends EventEmitter {
     this.state         = new ReactiveVar('active');
     this.onPause       = new ReactiveVar(false);
     this.progress      = new ReactiveVar(0);
+    this.sentChunks    = new ReactiveVar(0);
     this.continueFunc  = () => { };
     this.estimateTime  = new ReactiveVar(1000);
     this.estimateSpeed = new ReactiveVar(0);
@@ -70,11 +71,11 @@ export class FileUpload extends EventEmitter {
   abort() {
     this.config._debug('[FilesCollection] [insert] [.abort()]');
     window.removeEventListener('beforeunload', this.config.beforeunload, false);
-    this.config.onAbort && this.config.onAbort.call(this, this.file);
-    this.emit('abort', this.file);
     this.pause();
     this.config._onEnd();
     this.state.set('aborted');
+    this.config.onAbort && this.config.onAbort.call(this, this.file);
+    this.emit('abort', this.file);
     if (this.config.debug) {
       console.timeEnd(`insert ${this.config.fileData.name}`);
     }
@@ -268,8 +269,9 @@ export class UploadInstance extends EventEmitter {
 
         const progress = Math.round((this.sentChunks / this.fileLength) * 100);
         this.result.progress.set(progress);
+        this.result.sentChunks.set(this.sentChunks);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
-        this.result.emit('progress', progress, this.fileData);
+        this.result.emit('progress', progress, this.fileData, { sentChunks: this.sentChunks, maxChunks: this.fileLength });
       }, 250));
 
       this.addListener('_onEnd', () => {
