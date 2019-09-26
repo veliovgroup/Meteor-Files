@@ -1690,6 +1690,9 @@ export class FilesCollection extends FilesCollectionCore {
         if (typeof stream.end === 'function') {
           stream.end();
         }
+        if (typeof stream.close === 'function') {
+          stream.close();
+        }
       });
 
       http.request.on('aborted', () => {
