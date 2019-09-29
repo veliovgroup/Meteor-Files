@@ -69,12 +69,12 @@ export class FileUpload extends EventEmitter {
   }
   abort() {
     this.config._debug('[FilesCollection] [insert] [.abort()]');
+    this.pause();
     window.removeEventListener('beforeunload', this.config.beforeunload, false);
+    this.state.set('aborted');
+    this.config._onEnd();
     this.config.onAbort && this.config.onAbort.call(this, this.file);
     this.emit('abort', this.file);
-    this.pause();
-    this.config._onEnd();
-    this.state.set('aborted');
     if (this.config.debug) {
       console.timeEnd(`insert ${this.config.fileData.name}`);
     }
