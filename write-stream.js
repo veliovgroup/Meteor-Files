@@ -14,9 +14,10 @@ const fdCache = {};
  * @private
  * @locus Server
  * @class WriteStream
- * @param path      {String} - Path to file on FS
- * @param maxLength {Number} - Max amount of chunks in stream
- * @param file      {Object} - fileRef Object
+ * @param path        {String} - Path to file on FS
+ * @param maxLength   {Number} - Max amount of chunks in stream
+ * @param file        {Object} - fileRef Object
+ * @param permissions {String} - Permissions which will be set to open descriptor (octal), like: `611` or `0o777`. Default: 0755
  * @summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
  */
 export default class WriteStream {

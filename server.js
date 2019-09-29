@@ -58,7 +58,7 @@ const NOOP  = () => {  };
  * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
- * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions 
+ * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
  * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
@@ -91,7 +91,7 @@ export class FilesCollection extends FilesCollectionCore {
         namingFunction: this.namingFunction,
         responseHeaders: this.responseHeaders,
         disableDownload: this.disableDownload,
-      	allowedOrigins: this.allowedOrigins,
+        allowedOrigins: this.allowedOrigins,
         allowClientCode: this.allowClientCode,
         downloadCallback: this.downloadCallback,
         onInitiateUpload: this.onInitiateUpload,
@@ -1702,27 +1702,33 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const respond = (stream, code) => {
+      stream._isEnded = false;
+      const closeStreamCb = (closeError) => {
+        if (!closeError) {
+          stream._isEnded = true;
+        } else {
+          this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [respond] [closeStreamCb] Error:`, closeError);
+        }
+      };
+
+      const closeStream = () => {
+        if (!stream._isEnded) {
+          if (typeof stream.close === 'function') {
+            stream.close(closeStreamCb);
+          } else if (typeof stream.destroy === 'function') {
+            stream.destroy('Got to close this stream', closeStreamCb);
+          }
+        }
+      };
+
       if (!http.response.headersSent && readableStream) {
         http.response.writeHead(code);
       }
 
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
+      http.response.on('close', closeStream);
       http.request.on('aborted', () => {
         http.request.aborted = true;
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
+        closeStream();
       });
 
       stream.on('open', () => {
@@ -1730,14 +1736,18 @@ export class FilesCollection extends FilesCollectionCore {
           http.response.writeHead(code);
         }
       }).on('abort', () => {
+        closeStream();
         if (!http.response.finished) {
           http.response.end();
         }
         if (!http.request.aborted) {
           http.request.destroy();
         }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
+      }).on('error', (err) => {
+        closeStream();
+        streamErrorHandler(err);
+      }).on('end', () => {
+        closeStream();
         if (!http.response.finished) {
           http.response.end();
         }
