@@ -726,7 +726,24 @@
         Use for security reasons when only upload from <em>Client</em> to <em>Server</em> usage is needed, and files shouldn't be downloaded by any user.
       </td>
     </tr>
-  <tr>
+    <tr>
+      <td align="right">
+        <code>config.allowedOrigins</code> {<em>Regex</em>|<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Regex of Origins that are allowed CORS access or `false` to disable completely.
+      </td>
+      <td>
+        <code>/^http:\/\/localhost:12\d\d\d$/</code>
+      </td>
+      <td>
+        Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
+      </td>
+    </tr>
+    <tr>
       <td align="right">
         <code>config._preCollection</code> {<em>Mongo.Collection</em>}
       </td>
