@@ -1,6 +1,6 @@
-## `FilesCollection` `config.responseHeaders` option (*passed into [Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
+- `config.responseHeaders` option (*passed into [`FilesCollection `Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
 
-Allows to change default response headers.
+*Allows to change default response headers.*
 
 ### Default function:
 
@@ -35,7 +35,7 @@ We recommend to pass `responseHeaders` as a <em>Function</em>, response headers 
 ```js
 // As function (keep original function with additions):
 const Uploads = new FilesCollection({
-  responseHeaders: function(responseCode, fileRef, versionRef, version) {
+  responseHeaders(responseCode, fileRef, versionRef, version) {
     const headers = {};
     switch (responseCode) {
       case '206':
