@@ -56,9 +56,11 @@ const NOOP  = () => {  };
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
  * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
+  * @param config.interceptRequest {Function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
+ * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -90,9 +92,11 @@ export class FilesCollection extends FilesCollectionCore {
         namingFunction: this.namingFunction,
         responseHeaders: this.responseHeaders,
         disableDownload: this.disableDownload,
+        allowedOrigins: this.allowedOrigins,
         allowClientCode: this.allowClientCode,
         downloadCallback: this.downloadCallback,
         onInitiateUpload: this.onInitiateUpload,
+        interceptRequest: this.interceptRequest,
         interceptDownload: this.interceptDownload,
         continueUploadTTL: this.continueUploadTTL,
         parentDirPermissions: this.parentDirPermissions,
@@ -161,6 +165,10 @@ export class FilesCollection extends FilesCollectionCore {
       this.onInitiateUpload = false;
     }
 
+    if (!helpers.isFunction(this.interceptRequest)) {
+      this.interceptRequest = false;
+    }
+
     if (!helpers.isFunction(this.interceptDownload)) {
       this.interceptDownload = false;
     }
@@ -203,6 +211,10 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isBoolean(this.disableDownload)) {
       this.disableDownload = false;
+    }
+
+    if (!this.allowedOrigins) {
+      this.allowedOrigins = /^http:\/\/localhost:12\d\d\d$/;
     }
 
     if (!helpers.isObject(this._currentUploads)) {
@@ -286,6 +298,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.onBeforeRemove, Match.OneOf(false, Function));
     check(this.disableDownload, Boolean);
     check(this.downloadCallback, Match.OneOf(false, Function));
+    check(this.interceptRequest, Match.OneOf(false, Function));
     check(this.interceptDownload, Match.OneOf(false, Function));
     check(this.continueUploadTTL, Number);
     check(this.responseHeaders, Match.OneOf(Object, Function));
@@ -435,6 +448,23 @@ export class FilesCollection extends FilesCollectionCore {
       return;
     }
     WebApp.connectHandlers.use((httpReq, httpResp, next) => {
+      if (this.allowedOrigins && httpReq._parsedUrl.path.includes(`${this.downloadRoute}/`) && !httpResp.headersSent) {
+        if (this.allowedOrigins.test(httpReq.headers.origin)) {
+          httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
+          httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
+        }
+
+        if (httpReq.method === 'OPTIONS') {
+          httpResp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          httpResp.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, x-mtok, x-start, x-chunkid, x-fileid, x-eof');
+          httpResp.setHeader('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range');
+          httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
+          httpResp.writeHead(200);
+          httpResp.end();
+          return;
+        }
+      }
+
       if (!this.disableUpload && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
         if (httpReq.method === 'POST') {
           const handleError = (_error) => {
@@ -603,10 +633,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
 
       if (!this.disableDownload) {
-        let http;
-        let params;
         let uri;
-        let uris;
 
         if (!this.public) {
           if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}`)) {
@@ -615,16 +642,20 @@ export class FilesCollection extends FilesCollectionCore {
               uri = uri.substring(1);
             }
 
-            uris = uri.split('/');
+            const uris = uri.split('/');
             if (uris.length === 3) {
-              params = {
+              const params = {
                 _id: uris[0],
                 query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
                 name: uris[2].split('?')[0],
                 version: uris[1]
               };
 
-              http = {request: httpReq, response: httpResp, params};
+              const http = {request: httpReq, response: httpResp, params};
+              if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && this.interceptRequest(http) === true) {
+                return;
+              }
+
               if (this._checkAccess(http)) {
                 this.download(http, uris[1], this.collection.findOne(uris[0]));
               }
@@ -641,7 +672,7 @@ export class FilesCollection extends FilesCollectionCore {
               uri = uri.substring(1);
             }
 
-            uris  = uri.split('/');
+            const uris = uri.split('/');
             let _file = uris[uris.length - 1];
             if (_file) {
               let version;
@@ -653,14 +684,17 @@ export class FilesCollection extends FilesCollectionCore {
                 _file   = _file.split('?')[0];
               }
 
-              params = {
+              const params = {
                 query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
                 file: _file,
                 _id: _file.split('.')[0],
                 version,
                 name: _file
               };
-              http = {request: httpReq, response: httpResp, params};
+              const http = {request: httpReq, response: httpResp, params};
+              if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && this.interceptRequest(http) === true) {
+                return;
+              }
               this.download(http, version, this.collection.findOne(params._id));
             } else {
               next();
@@ -1557,10 +1591,8 @@ export class FilesCollection extends FilesCollectionCore {
         }
       }
 
-      if (this.interceptDownload && helpers.isFunction(this.interceptDownload)) {
-        if (this.interceptDownload(http, fileRef, version) === true) {
-          return void 0;
-        }
+      if (this.interceptDownload && helpers.isFunction(this.interceptDownload) && this.interceptDownload(http, fileRef, version) === true) {
+        return void 0;
       }
 
       fs.stat(vRef.path, (statErr, stats) => bound(() => {
@@ -1570,7 +1602,7 @@ export class FilesCollection extends FilesCollectionCore {
         }
 
         if ((stats.size !== vRef.size) && !this.integrityCheck) {
-          vRef.size    = stats.size;
+          vRef.size = stats.size;
         }
 
         if ((stats.size !== vRef.size) && this.integrityCheck) {
@@ -1679,27 +1711,33 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const respond = (stream, code) => {
+      stream._isEnded = false;
+      const closeStreamCb = (closeError) => {
+        if (!closeError) {
+          stream._isEnded = true;
+        } else {
+          this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [respond] [closeStreamCb] Error:`, closeError);
+        }
+      };
+
+      const closeStream = () => {
+        if (!stream._isEnded) {
+          if (typeof stream.close === 'function') {
+            stream.close(closeStreamCb);
+          } else if (typeof stream.destroy === 'function') {
+            stream.destroy('Got to close this stream', closeStreamCb);
+          }
+        }
+      };
+
       if (!http.response.headersSent && readableStream) {
         http.response.writeHead(code);
       }
 
-      http.response.on('close', () => {
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
-      });
-
+      http.response.on('close', closeStream);
       http.request.on('aborted', () => {
         http.request.aborted = true;
-        if (typeof stream.abort === 'function') {
-          stream.abort();
-        }
-        if (typeof stream.end === 'function') {
-          stream.end();
-        }
+        closeStream();
       });
 
       stream.on('open', () => {
@@ -1707,14 +1745,18 @@ export class FilesCollection extends FilesCollectionCore {
           http.response.writeHead(code);
         }
       }).on('abort', () => {
+        closeStream();
         if (!http.response.finished) {
           http.response.end();
         }
         if (!http.request.aborted) {
           http.request.destroy();
         }
-      }).on('error', streamErrorHandler
-      ).on('end', () => {
+      }).on('error', (err) => {
+        closeStream();
+        streamErrorHandler(err);
+      }).on('end', () => {
+        closeStream();
         if (!http.response.finished) {
           http.response.end();
         }
