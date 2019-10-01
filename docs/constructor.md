@@ -651,6 +651,58 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.interceptRequest</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Intercept download request.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>http</code> {<em>Object</em>} - Middleware request instance
+          </li>
+          <li>
+            <code>http.request</code> {<em>Object</em>} - example: <code>http.request.headers</code>
+          </li>
+          <li>
+            <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+          <li>
+            <code>http.params</code> {<em>Object</em>} - Data extracted from URI
+          </li>
+          <li>
+            <code>http.params._id</code> {<em>String</em>} - File's `_id`
+          </li>
+          <li>
+            <code>http.params.query</code> {<em>String</em>} - Request get query
+          </li>
+          <li>
+            <code>http.params.name</code> {<em>String</em>} - Request file name from URI
+          </li>
+          <li>
+            <code>http.params.version</code> {<em>String</em>} - File's version name from URI
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Usage example: <em>Serve file from third-party resource</em>.<br>
+        <ul>
+          <li>
+            <strong>return</strong> <code>false</code> from this function to continue standard behavior
+          </li>
+          <li>
+            <strong>return</strong> <code>true</code> to intercept incoming request
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.interceptDownload</code> {<em>Function</em>}
       </td>
       <td>
@@ -668,6 +720,21 @@
           </li>
           <li>
             <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+          <li>
+            <code>http.params</code> {<em>Object</em>} - Data extracted from URI
+          </li>
+          <li>
+            <code>http.params._id</code> {<em>String</em>} - File's `_id`
+          </li>
+          <li>
+            <code>http.params.query</code> {<em>String</em>} - Request get query
+          </li>
+          <li>
+            <code>http.params.name</code> {<em>String</em>} - Request file name from URI
+          </li>
+          <li>
+            <code>http.params.version</code> {<em>String</em>} - File's version name from URI
           </li>
           <li>
             <code>fileRef</code> {<em>Object</em>} - Current file record from MongoDB
