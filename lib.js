@@ -123,7 +123,7 @@ for (let i = 0; i < _helpers.length; i++) {
  */
 const fixJSONParse = function(obj) {
   for (let key in obj) {
-    if (helpers.isString(obj[key]) && !!~obj[key].indexOf('=--JSON-DATE--=')) {
+    if (helpers.isString(obj[key]) && obj[key].includes('=--JSON-DATE--=')) {
       obj[key] = obj[key].replace('=--JSON-DATE--=', '');
       obj[key] = new Date(parseInt(obj[key]));
     } else if (helpers.isObject(obj[key])) {
@@ -134,7 +134,7 @@ const fixJSONParse = function(obj) {
         v = obj[key][i];
         if (helpers.isObject(v)) {
           obj[key][i] = fixJSONParse(v);
-        } else if (helpers.isString(v) && !!~v.indexOf('=--JSON-DATE--=')) {
+        } else if (helpers.isString(v) && v.includes('=--JSON-DATE--=')) {
           v = v.replace('=--JSON-DATE--=', '');
           obj[key][i] = new Date(parseInt(v));
         }

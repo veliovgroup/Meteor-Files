@@ -465,169 +465,180 @@ export class FilesCollection extends FilesCollectionCore {
         }
       }
 
-      if (!this.disableUpload && !!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
-        if (httpReq.method === 'POST') {
-          const handleError = (_error) => {
-            let error = _error;
-            console.warn('[FilesCollection] [Upload] [HTTP] Exception:', error);
-            console.trace();
+      if (!this.disableUpload && httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
+        if (httpReq.method !== 'POST') {
+          next();
+          return;
+        }
 
-            if (!httpResp.headersSent) {
-              httpResp.writeHead(500);
+        const handleError = (_error) => {
+          let error = _error;
+          console.warn('[FilesCollection] [Upload] [HTTP] Exception:', error);
+          console.trace();
+
+          if (!httpResp.headersSent) {
+            httpResp.writeHead(500);
+          }
+
+          if (!httpResp.finished) {
+            if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
+              error = error.toString();
             }
 
-            if (!httpResp.finished) {
-              if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
-                error = error.toString();
-              }
-
-              if (!helpers.isString(error)) {
-                error = 'Unexpected error!';
-              }
-
-              httpResp.end(JSON.stringify({ error }));
+            if (!helpers.isString(error)) {
+              error = 'Unexpected error!';
             }
-          };
 
-          let body = '';
+            httpResp.end(JSON.stringify({ error }));
+          }
+        };
+
+        let body = '';
+        const handleData = () => {
+          try {
+            let opts;
+            let result;
+            let user;
+
+            if (httpReq.headers['x-mtok'] && this._getUserId(httpReq.headers['x-mtok'])) {
+              user = {
+                userId: this._getUserId(httpReq.headers['x-mtok'])
+              };
+            } else {
+              user = this._getUser({request: httpReq, response: httpResp});
+            }
+
+            if (httpReq.headers['x-start'] !== '1') {
+              opts = {
+                fileId: httpReq.headers['x-fileid']
+              };
+
+              if (httpReq.headers['x-eof'] === '1') {
+                opts.eof = true;
+              } else {
+                opts.binData = Buffer.from(body, 'base64');
+                opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
+              }
+
+              const _continueUpload = this._continueUpload(opts.fileId);
+              if (!_continueUpload) {
+                throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
+              }
+
+              ({result, opts}  = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
+
+              if (opts.eof) {
+                this._handleUpload(result, opts, (_error) => {
+                  let error = _error;
+                  if (error) {
+                    if (!httpResp.headersSent) {
+                      httpResp.writeHead(500);
+                    }
+
+                    if (!httpResp.finished) {
+                      if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
+                        error = error.toString();
+                      }
+
+                      if (!helpers.isString(error)) {
+                        error = 'Unexpected error!';
+                      }
+
+                      httpResp.end(JSON.stringify({ error }));
+                    }
+                  }
+
+                  if (!httpResp.headersSent) {
+                    httpResp.writeHead(200);
+                  }
+
+                  if (helpers.isObject(result.file) && result.file.meta) {
+                    result.file.meta = fixJSONStringify(result.file.meta);
+                  }
+
+                  if (!httpResp.finished) {
+                    httpResp.end(JSON.stringify(result));
+                  }
+                });
+                return;
+              }
+
+              this.emit('_handleUpload', result, opts, NOOP);
+
+              if (!httpResp.headersSent) {
+                httpResp.writeHead(204);
+              }
+              if (!httpResp.finished) {
+                httpResp.end();
+              }
+            } else {
+              try {
+                opts = JSON.parse(body);
+              } catch (jsonErr) {
+                console.error('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!', jsonErr);
+                opts = {file: {}};
+              }
+
+              if (!helpers.isObject(opts.file)) {
+                opts.file = {};
+              }
+
+              opts.___s = true;
+              this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
+              if (helpers.isObject(opts.file) && opts.file.meta) {
+                opts.file.meta = fixJSONParse(opts.file.meta);
+              }
+
+              ({result} = this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
+
+              if (this.collection.findOne(result._id)) {
+                throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
+              }
+
+              opts._id       = opts.fileId;
+              opts.createdAt = new Date();
+              opts.maxLength = opts.fileLength;
+              this._preCollection.insert(helpers.omit(opts, '___s'));
+              this._createStream(result._id, result.path, helpers.omit(opts, '___s'));
+
+              if (opts.returnMeta) {
+                if (!httpResp.headersSent) {
+                  httpResp.writeHead(200);
+                }
+
+                if (!httpResp.finished) {
+                  httpResp.end(JSON.stringify({
+                    uploadRoute: `${this.downloadRoute}/${this.collectionName}/__upload`,
+                    file: result
+                  }));
+                }
+              } else {
+                if (!httpResp.headersSent) {
+                  httpResp.writeHead(204);
+                }
+
+                if (!httpResp.finished) {
+                  httpResp.end();
+                }
+              }
+            }
+          } catch (httpRespErr) {
+            handleError(httpRespErr);
+          }
+        };
+
+        httpReq.setTimeout(20000, handleError);
+        if (typeof httpReq.body === 'object' && Object.keys(httpReq.body).length !== 0) {
+          body = JSON.stringify(httpReq.body);
+          handleData();
+        } else {
           httpReq.on('data', (data) => bound(() => {
             body += data;
           }));
 
           httpReq.on('end', () => bound(() => {
-            try {
-              let opts;
-              let result;
-              let user;
-
-              if (httpReq.headers['x-mtok'] && this._getUserId(httpReq.headers['x-mtok'])) {
-                user = {
-                  userId: this._getUserId(httpReq.headers['x-mtok'])
-                };
-              } else {
-                user = this._getUser({request: httpReq, response: httpResp});
-              }
-
-              if (httpReq.headers['x-start'] !== '1') {
-                opts = {
-                  fileId: httpReq.headers['x-fileid']
-                };
-
-                if (httpReq.headers['x-eof'] === '1') {
-                  opts.eof = true;
-                } else {
-                  opts.binData = Buffer.from(body, 'base64');
-                  opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
-                }
-
-                const _continueUpload = this._continueUpload(opts.fileId);
-                if (!_continueUpload) {
-                  throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
-                }
-
-                ({result, opts}  = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
-
-                if (opts.eof) {
-                  this._handleUpload(result, opts, (_error) => {
-                    let error = _error;
-                    if (error) {
-                      if (!httpResp.headersSent) {
-                        httpResp.writeHead(500);
-                      }
-
-                      if (!httpResp.finished) {
-                        if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
-                          error = error.toString();
-                        }
-
-                        if (!helpers.isString(error)) {
-                          error = 'Unexpected error!';
-                        }
-
-                        httpResp.end(JSON.stringify({ error }));
-                      }
-                    }
-
-                    if (!httpResp.headersSent) {
-                      httpResp.writeHead(200);
-                    }
-
-                    if (helpers.isObject(result.file) && result.file.meta) {
-                      result.file.meta = fixJSONStringify(result.file.meta);
-                    }
-
-                    if (!httpResp.finished) {
-                      httpResp.end(JSON.stringify(result));
-                    }
-                  });
-                  return;
-                }
-
-                this.emit('_handleUpload', result, opts, NOOP);
-
-                if (!httpResp.headersSent) {
-                  httpResp.writeHead(204);
-                }
-                if (!httpResp.finished) {
-                  httpResp.end();
-                }
-              } else {
-                try {
-                  opts = JSON.parse(body);
-                } catch (jsonErr) {
-                  console.error('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!', jsonErr);
-                  opts = {file: {}};
-                }
-
-                if (!helpers.isObject(opts.file)) {
-                  opts.file = {};
-                }
-
-                opts.___s = true;
-                this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
-                if (helpers.isObject(opts.file) && opts.file.meta) {
-                  opts.file.meta = fixJSONParse(opts.file.meta);
-                }
-
-                ({result} = this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
-
-                if (this.collection.findOne(result._id)) {
-                  throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
-                }
-
-                opts._id       = opts.fileId;
-                opts.createdAt = new Date();
-                opts.maxLength = opts.fileLength;
-                this._preCollection.insert(helpers.omit(opts, '___s'));
-                this._createStream(result._id, result.path, helpers.omit(opts, '___s'));
-
-                if (opts.returnMeta) {
-                  if (!httpResp.headersSent) {
-                    httpResp.writeHead(200);
-                  }
-
-                  if (!httpResp.finished) {
-                    httpResp.end(JSON.stringify({
-                      uploadRoute: `${this.downloadRoute}/${this.collectionName}/__upload`,
-                      file: result
-                    }));
-                  }
-                } else {
-                  if (!httpResp.headersSent) {
-                    httpResp.writeHead(204);
-                  }
-
-                  if (!httpResp.finished) {
-                    httpResp.end();
-                  }
-                }
-              }
-            } catch (httpRespErr) {
-              handleError(httpRespErr);
-            }
+            handleData();
           }));
-        } else {
-          next();
         }
         return;
       }
@@ -636,7 +647,7 @@ export class FilesCollection extends FilesCollectionCore {
         let uri;
 
         if (!this.public) {
-          if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}/${this.collectionName}`)) {
+          if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}`)) {
             uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}/${this.collectionName}`, '');
             if (uri.indexOf('/') === 0) {
               uri = uri.substring(1);
@@ -666,7 +677,7 @@ export class FilesCollection extends FilesCollectionCore {
             next();
           }
         } else {
-          if (!!~httpReq._parsedUrl.path.indexOf(`${this.downloadRoute}`)) {
+          if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}`)) {
             uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}`, '');
             if (uri.indexOf('/') === 0) {
               uri = uri.substring(1);
@@ -676,7 +687,7 @@ export class FilesCollection extends FilesCollectionCore {
             let _file = uris[uris.length - 1];
             if (_file) {
               let version;
-              if (!!~_file.indexOf('-')) {
+              if (_file.includes('-')) {
                 version = _file.split('-')[0];
                 _file   = _file.split('-')[1].split('?')[0];
               } else {
