@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.12.1',
+  version: '1.12.2',
   summary: 'Upload files to Meteor application, with 3rd party storage support: AWS:S3, GridFS and other',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
