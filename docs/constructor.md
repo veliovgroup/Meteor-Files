@@ -1092,7 +1092,7 @@ const Images = new FilesCollection({
       const { Magic, MAGIC_MIME_TYPE } = require('mmmagic');
       const magic = new Magic(MAGIC_MIME_TYPE);
       magic.detectFile(file.path, Meteor.bindEnvironment((err, mimeType) => {
-        if (err || !~mimeType.indexOf('image')) {
+        if (err || !mimeType.includes('image')) {
           // is not a real image --> delete
           console.log('onAfterUpload, not an image: ', file.path);
           console.log('deleted', file.path);
