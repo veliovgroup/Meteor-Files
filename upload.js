@@ -267,7 +267,13 @@ export class UploadInstance extends EventEmitter {
         this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
 
         const progress = Math.round((this.sentChunks / this.fileLength) * 100);
-        const sentBytes = this.config.chunkSize * this.sentChunks;
+        let sentBytes = this.config.chunkSize * this.sentChunks;
+        if (sentBytes > this.fileData.size) {
+          // this case often occurs, when the last chunk
+          // is smaller than chunkSize, so we limit to fileSize
+          sentBytes = this.fileData.size;
+        }
+        
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
         this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
