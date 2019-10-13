@@ -30,7 +30,6 @@ export class FileUpload extends EventEmitter {
     this.state         = new ReactiveVar('active');
     this.onPause       = new ReactiveVar(false);
     this.progress      = new ReactiveVar(0);
-    this.sentChunks    = new ReactiveVar(0);
     this.continueFunc  = () => { };
     this.estimateTime  = new ReactiveVar(1000);
     this.estimateSpeed = new ReactiveVar(0);
@@ -268,10 +267,10 @@ export class UploadInstance extends EventEmitter {
         this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
 
         const progress = Math.round((this.sentChunks / this.fileLength) * 100);
+        const sentBytes = this.config.chunkSize * this.sentChunks;
         this.result.progress.set(progress);
-        this.result.sentChunks.set(this.sentChunks);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
-        this.result.emit('progress', progress, this.fileData, { sentChunks: this.sentChunks, maxChunks: this.fileLength });
+        this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
       }, 250));
 
       this.addListener('_onEnd', () => {
