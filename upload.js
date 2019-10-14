@@ -69,10 +69,10 @@ export class FileUpload extends EventEmitter {
   }
   abort() {
     this.config._debug('[FilesCollection] [insert] [.abort()]');
-    this.pause();
     window.removeEventListener('beforeunload', this.config.beforeunload, false);
-    this.state.set('aborted');
+    this.pause();
     this.config._onEnd();
+    this.state.set('aborted');
     this.config.onAbort && this.config.onAbort.call(this, this.file);
     this.emit('abort', this.file);
     if (this.config.debug) {
@@ -267,9 +267,16 @@ export class UploadInstance extends EventEmitter {
         this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
 
         const progress = Math.round((this.sentChunks / this.fileLength) * 100);
+        let sentBytes = this.config.chunkSize * this.sentChunks;
+        if (sentBytes > this.fileData.size) {
+          // this case often occurs, when the last chunk
+          // is smaller than chunkSize, so we limit to fileSize
+          sentBytes = this.fileData.size;
+        }
+        
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
-        this.result.emit('progress', progress, this.fileData);
+        this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
       }, 250));
 
       this.addListener('_onEnd', () => {
