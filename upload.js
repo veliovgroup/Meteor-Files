@@ -157,11 +157,11 @@ export class UploadInstance extends EventEmitter {
         throw new Meteor.Error(400, '"fileName" must me specified for base64 upload!');
       }
 
-      if (!!~this.config.file.indexOf('data:')) {
+      if (this.config.file.includes('data:')) {
         this.config.file = this.config.file.replace('data:', '');
       }
 
-      if (!!~this.config.file.indexOf(',')) {
+      if (this.config.file.includes(',')) {
         const _file = this.config.file.split(',');
         this.fileData = {
           size: Math.floor(((_file[1].replace(/\=/g, '')).length / 4) * 3),
@@ -384,6 +384,10 @@ export class UploadInstance extends EventEmitter {
             'x-fileid': opts.fileId,
             'x-chunkid': opts.chunkId,
             'content-type': 'text/plain'
+          },
+          beforeSend(xhr) {
+            xhr.withCredentials = true;
+            return true;
           }
         }, (error) => {
           this.transferTime += +new Date() - this.startTime[opts.chunkId];
@@ -430,6 +434,10 @@ export class UploadInstance extends EventEmitter {
             'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null,
             'x-fileId': opts.fileId,
             'content-type': 'text/plain'
+          },
+          beforeSend(xhr) {
+            xhr.withCredentials = true;
+            return true;
           }
         }, (error, _result) => {
           let result;
@@ -614,6 +622,10 @@ export class UploadInstance extends EventEmitter {
         headers: {
           'x-start': '1',
           'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
+        },
+        beforeSend(xhr) {
+          xhr.withCredentials = true;
+          return true;
         }
       }, handleStart);
     }

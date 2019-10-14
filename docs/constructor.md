@@ -651,6 +651,58 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.interceptRequest</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Intercept download request.<br>
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>http</code> {<em>Object</em>} - Middleware request instance
+          </li>
+          <li>
+            <code>http.request</code> {<em>Object</em>} - example: <code>http.request.headers</code>
+          </li>
+          <li>
+            <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+          <li>
+            <code>http.params</code> {<em>Object</em>} - Data extracted from URI
+          </li>
+          <li>
+            <code>http.params._id</code> {<em>String</em>} - File's `_id`
+          </li>
+          <li>
+            <code>http.params.query</code> {<em>String</em>} - Request get query
+          </li>
+          <li>
+            <code>http.params.name</code> {<em>String</em>} - Request file name from URI
+          </li>
+          <li>
+            <code>http.params.version</code> {<em>String</em>} - File's version name from URI
+          </li>
+        </ul>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Usage example: <em>Serve file from third-party resource</em>.<br>
+        <ul>
+          <li>
+            <strong>return</strong> <code>false</code> from this function to continue standard behavior
+          </li>
+          <li>
+            <strong>return</strong> <code>true</code> to intercept incoming request
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.interceptDownload</code> {<em>Function</em>}
       </td>
       <td>
@@ -668,6 +720,21 @@
           </li>
           <li>
             <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+          <li>
+            <code>http.params</code> {<em>Object</em>} - Data extracted from URI
+          </li>
+          <li>
+            <code>http.params._id</code> {<em>String</em>} - File's `_id`
+          </li>
+          <li>
+            <code>http.params.query</code> {<em>String</em>} - Request get query
+          </li>
+          <li>
+            <code>http.params.name</code> {<em>String</em>} - Request file name from URI
+          </li>
+          <li>
+            <code>http.params.version</code> {<em>String</em>} - File's version name from URI
           </li>
           <li>
             <code>fileRef</code> {<em>Object</em>} - Current file record from MongoDB
@@ -726,7 +793,24 @@
         Use for security reasons when only upload from <em>Client</em> to <em>Server</em> usage is needed, and files shouldn't be downloaded by any user.
       </td>
     </tr>
-  <tr>
+    <tr>
+      <td align="right">
+        <code>config.allowedOrigins</code> {<em>Regex</em>|<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Regex of Origins that are allowed CORS access or `false` to disable completely.
+      </td>
+      <td>
+        <code>/^http:\/\/localhost:12\d\d\d$/</code>
+      </td>
+      <td>
+        Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
+      </td>
+    </tr>
+    <tr>
       <td align="right">
         <code>config._preCollection</code> {<em>Mongo.Collection</em>}
       </td>
@@ -1008,7 +1092,7 @@ const Images = new FilesCollection({
       const { Magic, MAGIC_MIME_TYPE } = require('mmmagic');
       const magic = new Magic(MAGIC_MIME_TYPE);
       magic.detectFile(file.path, Meteor.bindEnvironment((err, mimeType) => {
-        if (err || !~mimeType.indexOf('image')) {
+        if (err || !mimeType.includes('image')) {
           // is not a real image --> delete
           console.log('onAfterUpload, not an image: ', file.path);
           console.log('deleted', file.path);
