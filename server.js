@@ -60,7 +60,8 @@ const NOOP  = () => {  };
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
+ * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^https?:\/\/localhost:12[0-9]{0,3}$/` for allowing Meteor-Cordova builds access
+ * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -100,13 +101,13 @@ export class FilesCollection extends FilesCollectionCore {
         interceptDownload: this.interceptDownload,
         continueUploadTTL: this.continueUploadTTL,
         parentDirPermissions: this.parentDirPermissions,
+        allowQueryStringCookies: this.allowQueryStringCookies,
         _preCollection: this._preCollection,
         _preCollectionName: this._preCollectionName,
       } = config);
     }
 
-    const self   = this;
-    new Cookies();
+    const self = this;
 
     if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
@@ -177,6 +178,10 @@ export class FilesCollection extends FilesCollectionCore {
       this.strict = true;
     }
 
+    if (!helpers.isBoolean(this.allowQueryStringCookies)) {
+      this.allowQueryStringCookies = false;
+    }
+
     if (!helpers.isNumber(this.permissions)) {
       this.permissions = parseInt('644', 8);
     }
@@ -214,7 +219,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     if (!this.allowedOrigins) {
-      this.allowedOrigins = /^http:\/\/localhost:12\d\d\d$/;
+      this.allowedOrigins = /^https?:\/\/localhost:12[0-9]{0,3}$/;
     }
 
     if (!helpers.isObject(this._currentUploads)) {
@@ -302,6 +307,12 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.interceptDownload, Match.OneOf(false, Function));
     check(this.continueUploadTTL, Number);
     check(this.responseHeaders, Match.OneOf(Object, Function));
+    check(this.allowQueryStringCookies, Boolean);
+
+    new Cookies({
+      allowQueryStringCookies: this.allowQueryStringCookies,
+      allowedCordovaOrigins: this.allowedOrigins
+    });
 
     if (!this.disableUpload) {
       if (!helpers.isString(this._preCollectionName) && !this._preCollection) {

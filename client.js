@@ -29,6 +29,7 @@ const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloa
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
  * @param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
+ * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
  * @summary Create new instance of FilesCollection
  */
 export class FilesCollection extends FilesCollectionCore {
@@ -43,7 +44,9 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const self = this;
-    const cookie = new Cookies();
+    const cookie = new Cookies({
+      allowQueryStringCookies: this.allowQueryStringCookies
+    });
     if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
     }
