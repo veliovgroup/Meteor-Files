@@ -2,7 +2,7 @@
 
 *Initialize FilesCollection collection.*
 
-<table>
+<table valign="top">
   <thead>
     <tr>
       <th align="right">
@@ -115,7 +115,7 @@
         <code>10800</code> (3 hours)
       </td>
       <td>
-        If upload is not continued during this time, memory used for this upload will be freed. And uploaded chunks is removed. Server will no longer wait for upload, and if upload will be tied to be continued - Server will return <code>408</code> Error (<code>Can't continue upload, session expired. Start upload again.</code>)
+        If upload is not continued during this time, memory used for this upload will be freed. And uploaded chunks is removed. Server will no longer wait for upload, all further upload attempts will result <code>408</code> Error (<code>Can't continue upload, session expired. Start upload again.</code>)
       </td>
     </tr>
     <tr>
@@ -804,10 +804,27 @@
         Regex of Origins that are allowed CORS access or `false` to disable completely.
       </td>
       <td>
-        <code>/^http:\/\/localhost:12\d\d\d$/</code>
+        <code>/^https?:\/\/localhost:12[0-9]{0,3}$/</code>
       </td>
       <td>
-        Defaults to `localhost:12000`-`localhost:13000` for allowing Meteor-Cordova builds access.
+        Defaults to `/^https?:\/\/localhost:12[0-9]{0,3}$/` for allowing Meteor-Cordova builds access.
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.allowQueryStringCookies</code> {<em>Regex</em>|<em>Boolean</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Directly passed to `ostrio:cookies` package
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        <strong>Highly recommended to use with Cordova</strong>
       </td>
     </tr>
     <tr>
