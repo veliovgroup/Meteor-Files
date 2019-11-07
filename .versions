@@ -22,7 +22,7 @@ geojson-utils@1.0.10
 http@1.4.2
 id-map@1.1.0
 inter-process-messaging@0.1.0
-local-test:ostrio:files@1.12.2
+local-test:ostrio:files@1.13.0
 logging@1.1.20
 meteor@1.9.3
 minimongo@1.4.5
@@ -35,8 +35,8 @@ mongo-dev-server@1.1.0
 mongo-id@1.0.7
 npm-mongo@3.1.2
 ordered-dict@1.1.0
-ostrio:cookies@2.4.1
-ostrio:files@1.12.2
+ostrio:cookies@2.5.0
+ostrio:files@1.13.0
 promise@0.11.2
 random@1.1.0
 reactive-var@1.0.11
