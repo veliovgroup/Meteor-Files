@@ -804,10 +804,10 @@
         Regex of Origins that are allowed CORS access or `false` to disable completely.
       </td>
       <td>
-        <code>/^https?:\/\/localhost:12[0-9]{0,3}$/</code>
+        <code>/^http:\/\/localhost:12[0-9]{3}$/</code>
       </td>
       <td>
-        Defaults to `/^https?:\/\/localhost:12[0-9]{0,3}$/` for allowing Meteor-Cordova builds access.
+        Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access.
       </td>
     </tr>
     <tr>

@@ -60,7 +60,7 @@ const NOOP  = () => {  };
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^https?:\/\/localhost:12[0-9]{0,3}$/` for allowing Meteor-Cordova builds access
+ * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
  * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
@@ -218,8 +218,8 @@ export class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
-    if (!this.allowedOrigins) {
-      this.allowedOrigins = /^https?:\/\/localhost:12[0-9]{0,3}$/;
+    if (!helpers.isBoolean(this.allowedOrigins) || this.allowedOrigins === true) {
+      this.allowedOrigins = /^http:\/\/localhost:12[0-9]{3}$/;
     }
 
     if (!helpers.isObject(this._currentUploads)) {
