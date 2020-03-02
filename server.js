@@ -1191,27 +1191,38 @@ export class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
-    stream.end(buffer, (streamErr) => bound(() => {
-      if (streamErr) {
-        callback && callback(streamErr);
-      } else {
-        this.collection.insert(result, (insertErr, _id) => {
-          if (insertErr) {
-            callback && callback(insertErr);
-            this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
-          } else {
-            const fileRef = this.collection.findOne(_id);
-            callback && callback(null, fileRef);
-            if (proceedAfterUpload === true) {
-              this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-              this.emit('afterUpload', fileRef);
-            }
-            this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
-          }
-        });
-      }
-    }));
+    fs.ensureFile(opts.path, (efError) => {
+      bound(() => {
+        if (efError) {
+          callback && callback(efError);
+          this._debug(`[FilesCollection] [write] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
+        } else {
+          const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
+          stream.end(buffer, (streamErr) => {
+            bound(() => {
+              if (streamErr) {
+                callback && callback(streamErr);
+              } else {
+                this.collection.insert(result, (insertErr, _id) => {
+                  if (insertErr) {
+                    callback && callback(insertErr);
+                    this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+                  } else {
+                    const fileRef = this.collection.findOne(_id);
+                    callback && callback(null, fileRef);
+                    if (proceedAfterUpload === true) {
+                      this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
+                      this.emit('afterUpload', fileRef);
+                    }
+                    this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
+                  }
+                });
+              }
+            });
+          });
+        }
+      });
+    });
     return this;
   }
 
@@ -1287,8 +1298,8 @@ export class FilesCollection extends FilesCollectionCore {
     fs.ensureFile(opts.path, (efError) => {
       bound(() => {
         if (efError) {
-          this.abort();
-          throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [Error:] ' + efError);
+          callback && callback(efError);
+          this._debug(`[FilesCollection] [load] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
         } else {
           request.get({
             url,
