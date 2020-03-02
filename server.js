@@ -1191,27 +1191,38 @@ export class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
-    stream.end(buffer, (streamErr) => bound(() => {
-      if (streamErr) {
-        callback && callback(streamErr);
-      } else {
-        this.collection.insert(result, (insertErr, _id) => {
-          if (insertErr) {
-            callback && callback(insertErr);
-            this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
-          } else {
-            const fileRef = this.collection.findOne(_id);
-            callback && callback(null, fileRef);
-            if (proceedAfterUpload === true) {
-              this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-              this.emit('afterUpload', fileRef);
-            }
-            this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
-          }
-        });
-      }
-    }));
+    fs.ensureFile(opts.path, (efError) => {
+      bound(() => {
+        if (efError) {
+          callback && callback(efError);
+          this._debug(`[FilesCollection] [write] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
+        } else {
+          const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
+          stream.end(buffer, (streamErr) => {
+            bound(() => {
+              if (streamErr) {
+                callback && callback(streamErr);
+              } else {
+                this.collection.insert(result, (insertErr, _id) => {
+                  if (insertErr) {
+                    callback && callback(insertErr);
+                    this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+                  } else {
+                    const fileRef = this.collection.findOne(_id);
+                    callback && callback(null, fileRef);
+                    if (proceedAfterUpload === true) {
+                      this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
+                      this.emit('afterUpload', fileRef);
+                    }
+                    this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
+                  }
+                });
+              }
+            });
+          });
+        }
+      });
+    });
     return this;
   }
 
@@ -1284,39 +1295,49 @@ export class FilesCollection extends FilesCollectionCore {
       });
     };
 
-    request.get({
-      url,
-      headers: opts.headers || {}
-    }).on('error', (error) => bound(() => {
-      callback && callback(error);
-      this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, error);
-    })).on('response', (response) => bound(() => {
-      response.on('end', () => bound(() => {
-        this._debug(`[FilesCollection] [load] Received: ${url}`);
-        const result = this._dataToSchema({
-          name: fileName,
-          path: opts.path,
-          meta: opts.meta,
-          type: opts.type || response.headers['content-type'] || this._getMimeType({path: opts.path}),
-          size: opts.size || parseInt(response.headers['content-length'] || 0),
-          userId: opts.userId,
-          extension
-        });
-
-        if (!result.size) {
-          fs.stat(opts.path, (error, stats) => bound(() => {
-            if (error) {
-              callback && callback(error);
-            } else {
-              result.versions.original.size = (result.size = stats.size);
-              storeResult(result, callback);
-            }
-          }));
+    fs.ensureFile(opts.path, (efError) => {
+      bound(() => {
+        if (efError) {
+          callback && callback(efError);
+          this._debug(`[FilesCollection] [load] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
         } else {
-          storeResult(result, callback);
+          request.get({
+            url,
+            headers: opts.headers || {}
+          }).on('error', (error) => bound(() => {
+            callback && callback(error);
+            this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, error);
+          })).on('response', (response) => bound(() => {
+            response.on('end', () => bound(() => {
+              this._debug(`[FilesCollection] [load] Received: ${url}`);
+              const result = this._dataToSchema({
+                name: fileName,
+                path: opts.path,
+                meta: opts.meta,
+                type: opts.type || response.headers['content-type'] || this._getMimeType({path: opts.path}),
+                size: opts.size || parseInt(response.headers['content-length'] || 0),
+                userId: opts.userId,
+                extension
+              });
+
+              if (!result.size) {
+                fs.stat(opts.path, (error, stats) => bound(() => {
+                  if (error) {
+                    callback && callback(error);
+                  } else {
+                    result.versions.original.size = (result.size = stats.size);
+                    storeResult(result, callback);
+                  }
+                }));
+              } else {
+                storeResult(result, callback);
+              }
+            }));
+          })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions}));
         }
-      }));
-    })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions}));
+      });
+    });
+
 
     return this;
   }
