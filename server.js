@@ -1284,39 +1284,49 @@ export class FilesCollection extends FilesCollectionCore {
       });
     };
 
-    request.get({
-      url,
-      headers: opts.headers || {}
-    }).on('error', (error) => bound(() => {
-      callback && callback(error);
-      this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, error);
-    })).on('response', (response) => bound(() => {
-      response.on('end', () => bound(() => {
-        this._debug(`[FilesCollection] [load] Received: ${url}`);
-        const result = this._dataToSchema({
-          name: fileName,
-          path: opts.path,
-          meta: opts.meta,
-          type: opts.type || response.headers['content-type'] || this._getMimeType({path: opts.path}),
-          size: opts.size || parseInt(response.headers['content-length'] || 0),
-          userId: opts.userId,
-          extension
-        });
-
-        if (!result.size) {
-          fs.stat(opts.path, (error, stats) => bound(() => {
-            if (error) {
-              callback && callback(error);
-            } else {
-              result.versions.original.size = (result.size = stats.size);
-              storeResult(result, callback);
-            }
-          }));
+    fs.ensureFile(opts.path, (efError) => {
+      bound(() => {
+        if (efError) {
+          this.abort();
+          throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [Error:] ' + efError);
         } else {
-          storeResult(result, callback);
+          request.get({
+            url,
+            headers: opts.headers || {}
+          }).on('error', (error) => bound(() => {
+            callback && callback(error);
+            this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, error);
+          })).on('response', (response) => bound(() => {
+            response.on('end', () => bound(() => {
+              this._debug(`[FilesCollection] [load] Received: ${url}`);
+              const result = this._dataToSchema({
+                name: fileName,
+                path: opts.path,
+                meta: opts.meta,
+                type: opts.type || response.headers['content-type'] || this._getMimeType({path: opts.path}),
+                size: opts.size || parseInt(response.headers['content-length'] || 0),
+                userId: opts.userId,
+                extension
+              });
+
+              if (!result.size) {
+                fs.stat(opts.path, (error, stats) => bound(() => {
+                  if (error) {
+                    callback && callback(error);
+                  } else {
+                    result.versions.original.size = (result.size = stats.size);
+                    storeResult(result, callback);
+                  }
+                }));
+              } else {
+                storeResult(result, callback);
+              }
+            }));
+          })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions}));
         }
-      }));
-    })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions}));
+      });
+    });
+
 
     return this;
   }
