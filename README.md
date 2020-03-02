@@ -101,13 +101,15 @@ import { FilesCollection } from 'meteor/ostrio:files';
 ## FAQ:
 
 1. __Where are files stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) it's equals to `assets/app/uploads` and relative to running script:
-  a. On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
-  b. On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage)
+
+  - __a.__ On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
+  - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage)
+
 2. __Cordova usage and development__: With support of community we do regular testing on virtual and real devices. To make sure `Meteor-Files` library runs smoothly in Cordova environment — enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedOrigins: true}` on both `Client` and `Server`. For more details read [Cookie's repository FAQ](https://github.com/VeliovGroup/Meteor-Cookies#faq)
 3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
 4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-6. In Safari (Mobile and Desktop) for `DDP` upload streams is hardcoded to `1` and chunk size is reduced by algorithm, due to error hrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
+6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
 
 ## API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 
@@ -359,15 +361,15 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 
 We would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
 
-  - [@vanshady](https://github.com/vanshady)
-  - [@Neophen](https://github.com/Neophen)
-  - [@rikyperdana](https://github.com/rikyperdana)
-  - [@derwok](https://github.com/derwok), check out his project - [4minitz](https://www.4minitz.com/)
-  - [@FinnFrotscher](https://github.com/FinnFrotscher)
-  - [@Neobii](https://github.com/Neobii)
-  - [@themeteorchef](https://github.com/themeteorchef)
-  - [@MeDBejoHok](https://github.com/medbejohok)
-  - [@martunta](https://github.com/martunta)
+- [@vanshady](https://github.com/vanshady)
+- [@Neophen](https://github.com/Neophen)
+- [@rikyperdana](https://github.com/rikyperdana)
+- [@derwok](https://github.com/derwok), check out his project - [4minitz](https://www.4minitz.com/)
+- [@FinnFrotscher](https://github.com/FinnFrotscher)
+- [@Neobii](https://github.com/Neobii)
+- [@themeteorchef](https://github.com/themeteorchef)
+- [@MeDBejoHok](https://github.com/medbejohok)
+- [@martunta](https://github.com/martunta)
 
 ----
 
