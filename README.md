@@ -6,7 +6,11 @@
 # Files for Meteor.js
 
 <a href="https://www.patreon.com/bePatron?u=20396046">
-  <img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" width="160">
+  <img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" height="38">
+</a>
+
+<a href="https://ostr.io/info/built-by-developers-for-developers">
+  <img src="https://ostr.io/apple-touch-icon-60x60.png" height="38">
 </a>
 
 ## ToC:
@@ -37,10 +41,10 @@ Upload, Download, Serve and Stream files within your Meteor application. Without
 
 ## Support:
 
-  - [Ask a question via Gitter chat](https://gitter.im/VeliovGroup/Meteor-Files)
-  - [Ask a question or submit an issue](https://github.com/VeliovGroup/Meteor-Files/issues)
-  - [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
-  - For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
+- [Ask a question via Gitter chat](https://gitter.im/VeliovGroup/Meteor-Files)
+- [Ask a question or submit an issue](https://github.com/VeliovGroup/Meteor-Files/issues)
+- [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
+- For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
 
 ## Support Meteor-Files project:
 
@@ -49,6 +53,7 @@ Upload, Download, Serve and Stream files within your Meteor application. Without
 - Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
 - Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
 - Share via [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
+- Use [ostr.io](https://ostr.io) — [Monitoring](https://snmp-monitoring.com), [Analytics](https://ostr.io/info/web-analytics), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [Pre-rendering](https://prerendering.com) for a website
 
 ## Contribution:
 
@@ -56,7 +61,9 @@ All PRs are always welcome on [`dev` branch](https://github.com/VeliovGroup/Mete
 
 ## Awards:
 
-<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show"><img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png"></a>
+<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show">
+  <img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png" width="160">
+</a>
 
 ## Demo application:
 
