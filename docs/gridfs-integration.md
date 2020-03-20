@@ -1,4 +1,8 @@
-### Use GridFS as a storage
+### Use GridFS with `gridfs-stream` as a storage
+
+**Deprecation warning:** The `gridfs-stream` [has not been updated in a long time](https://github.com/aheckmann/gridfs-stream) and is therefore
+considered deprecated. An alternative is to use the Mongo driver's native `GridFSBucket`, which is also [described in
+this wiki](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Bucket-Integration).
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
