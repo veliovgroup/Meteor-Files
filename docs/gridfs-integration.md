@@ -1,4 +1,8 @@
-### Use GridFS as a storage
+### Use GridFS with `gridfs-stream` as a storage
+
+**Deprecation warning:** The `gridfs-stream` [has not been updated in a long time](https://github.com/aheckmann/gridfs-stream) and is therefore
+considered deprecated. An alternative is to use the Mongo driver's native `GridFSBucket`, which is also [described in
+this wiki](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Bucket-Integration).
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
@@ -160,7 +164,13 @@ export const Images = new FilesCollection({
     const _id = (image.versions[versionName].meta || {}).gridFsFileId;
     if (_id) {
       const readStream = gfs.createReadStream({ _id });
-      readStream.on('error', err => { throw err; });
+      readStream.on('error', err => {
+        // File not found Error handling without Server Crash 
+        http.response.statusCode = 404;
+        http.response.end('file not found');
+        console.log(`chunk of file ${file._id}/${file.name} was not found`);
+      });
+      http.response.setHeader('Cache-Control', this.cacheControl);
       readStream.pipe(http.response);
     }
     return Boolean(_id); // Serve file from either GridFS or FS if it wasn't uploaded yet

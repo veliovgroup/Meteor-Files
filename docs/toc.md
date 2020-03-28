@@ -18,6 +18,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
 ## About:
 
   - Event-driven API
+  - [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/wiki/TypeScript-definitions)
   - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
   - Upload via *HTTP*, [*RTC/DC*](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or *DDP*, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
   - File upload:
@@ -28,7 +29,8 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
   - [Use third-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage):
     - [AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
     - [DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
-    - [GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
+    - [GridFS using `GridFSBucket`](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Bucket-Integration)
+    - [GridFS using `gridfs-stream` (legacy)](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
     - Google Drive
     - [Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)
     - any other with JS/REST API
