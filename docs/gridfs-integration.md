@@ -160,7 +160,13 @@ export const Images = new FilesCollection({
     const _id = (image.versions[versionName].meta || {}).gridFsFileId;
     if (_id) {
       const readStream = gfs.createReadStream({ _id });
-      readStream.on('error', err => { throw err; });
+      readStream.on('error', err => {
+        // File not found Error handling without Server Crash 
+        http.response.statusCode = 404;
+        http.response.end('file not found');
+        console.log(`chunk of file ${file._id}/${file.name} was not found`);
+      });
+      http.response.setHeader('Cache-Control', this.cacheControl);
       readStream.pipe(http.response);
     }
     return Boolean(_id); // Serve file from either GridFS or FS if it wasn't uploaded yet
