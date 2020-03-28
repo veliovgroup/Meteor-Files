@@ -18,6 +18,7 @@ Please see our experimental [webrtc-data-channel](https://github.com/VeliovGroup
 ## About:
 
   - Event-driven API
+  - [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/wiki/TypeScript-definitions)
   - Upload / Read files in Cordova app: __Cordva support__ (Any with support of `FileReader`)
   - Upload via *HTTP*, [*RTC/DC*](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or *DDP*, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
   - File upload:

@@ -19,7 +19,7 @@
 - [About this package](https://github.com/VeliovGroup/Meteor-Files#files-for-meteor)
 - [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) examples - AWS S3, DropBox, GridFS and Google Storage
 - [Help / Support](https://github.com/VeliovGroup/Meteor-Files#support)
-- [Support the *MF* project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
+- [Support this project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
 - [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
 - [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
 - [Demo apps and examples](https://github.com/VeliovGroup/Meteor-Files#demo-application)
@@ -27,6 +27,7 @@
 - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
 - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
 - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
+- [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/wiki/TypeScript-definitions)
 - [FAQ](https://github.com/VeliovGroup/Meteor-Files#faq)
 - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
   - [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
