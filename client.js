@@ -110,6 +110,9 @@ export class FilesCollection extends FilesCollectionCore {
     const setTokenCookie = () => {
       if (Meteor.connection._lastSessionId) {
         cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/' });
+        if (Meteor.isCordova) {
+          cookie.send();
+        }
       }
     };
 
