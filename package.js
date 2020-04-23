@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '1.14.0',
+  version: '1.14.1',
   summary: 'Upload files to Meteor application, with 3rd party storage support: AWS:S3, GridFS and other',
   git: 'https://github.com/VeliovGroup/Meteor-Files',
   documentation: 'README.md'
@@ -9,7 +9,7 @@ Package.describe({
 Npm.depends({
   'fs-extra': '8.1.0',
   request: '2.88.2',
-  'file-type': '14.1.3',
+  'file-type': '14.2.0',
   eventemitter3: '4.0.0'
 });
 

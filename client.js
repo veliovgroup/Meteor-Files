@@ -8,7 +8,7 @@ import FilesCollectionCore from './core.js';
 import { formatFleURL, helpers } from './lib.js';
 
 const NOOP = () => { };
-const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload'];
+const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload', 'allowQueryStringCookies'];
 
 /*
  * @locus Anywhere
@@ -110,6 +110,9 @@ export class FilesCollection extends FilesCollectionCore {
     const setTokenCookie = () => {
       if (Meteor.connection._lastSessionId) {
         cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/' });
+        if (Meteor.isCordova && this.allowQueryStringCookies) {
+          cookie.send();
+        }
       }
     };
 
