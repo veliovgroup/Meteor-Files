@@ -109,6 +109,7 @@ import { FilesCollection } from 'meteor/ostrio:files';
 4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
 6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
+7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/VeliovGroup/Meteor-Files/issues/737) for details
 
 ## API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
 
