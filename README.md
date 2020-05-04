@@ -27,7 +27,7 @@
 - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
 - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
 - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
-- [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/wiki/TypeScript-definitions)
+- [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
 - [FAQ](https://github.com/VeliovGroup/Meteor-Files#faq)
 - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
   - [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
