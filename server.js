@@ -237,11 +237,9 @@ export class FilesCollection extends FilesCollectionCore {
     if (!helpers.isFunction(this.responseHeaders)) {
       this.responseHeaders = (responseCode, fileRef, versionRef) => {
         const headers = {};
-
         switch (responseCode) {
         case '206':
           headers.Pragma               = 'private';
-          headers.Trailer              = 'expires';
           headers['Transfer-Encoding'] = 'chunked';
           break;
         case '400':
@@ -1740,7 +1738,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
     };
 
-    const headers = helpers.isFunction(this.responseHeaders) ? this.responseHeaders(responseType, fileRef, vRef, version) : this.responseHeaders;
+    const headers = helpers.isFunction(this.responseHeaders) ? this.responseHeaders(responseType, fileRef, vRef, version, http) : this.responseHeaders;
 
     if (!headers['Cache-Control']) {
       if (!http.response.headersSent) {

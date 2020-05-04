@@ -1,8 +1,10 @@
-- `config.responseHeaders` option (*passed into [`FilesCollection `Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
+# Custom Response Headers
+
+- `config.responseHeaders` option (*passed into [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
 
 *Allows to change default response headers.*
 
-### Default function:
+## Default function:
 
 We recommend to keep original function structure, with your modifications
 
@@ -12,7 +14,6 @@ function responseHeaders (responseCode, fileRef, versionRef) {
   switch (responseCode) {
     case '206':
       headers['Pragma'] = 'private';
-      headers['Trailer'] = 'expires';
       headers['Transfer-Encoding'] = 'chunked';
       break;
     case '400':
@@ -28,19 +29,18 @@ function responseHeaders (responseCode, fileRef, versionRef) {
 }
 ```
 
-### Adding custom header example:
+## Adding custom header example:
 
-We recommend to pass `responseHeaders` as a <em>Function</em>, response headers __should be conditional__
+We recommend to pass `responseHeaders` as a <em>Function</em>, response headers __should be conditional__.
 
 ```js
 // As function (keep original function with additions):
 const Uploads = new FilesCollection({
-  responseHeaders(responseCode, fileRef, versionRef, version) {
+  responseHeaders(responseCode, fileRef, versionRef, version, http) {
     const headers = {};
     switch (responseCode) {
       case '206':
         headers['Pragma'] = 'private';
-        headers['Trailer'] = 'expires';
         headers['Transfer-Encoding'] = 'chunked';
         break;
       case '400':
