@@ -10,7 +10,7 @@ import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 import fs       from 'fs-extra';
 import nodeQs   from 'querystring';
-import request  from 'request';
+import request  from 'request-libcurl';
 import fileType from 'file-type';
 import nodePath from 'path';
 
@@ -1301,14 +1301,15 @@ export class FilesCollection extends FilesCollectionCore {
           callback && callback(efError);
           this._debug(`[FilesCollection] [load] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
         } else {
-          request.get({
+          request({
             url,
-            headers: opts.headers || {}
-          }).on('error', (error) => bound(() => {
-            callback && callback(error);
-            this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, error);
-          })).on('response', (response) => bound(() => {
-            response.on('end', () => bound(() => {
+            headers: opts.headers || {},
+            wait: true
+          }, (reqError, response) => bound(() => {
+            if (reqError) {
+              callback && callback(reqError);
+              this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, reqError);
+            } else {
               this._debug(`[FilesCollection] [load] Received: ${url}`);
               const result = this._dataToSchema({
                 name: fileName,
@@ -1332,8 +1333,8 @@ export class FilesCollection extends FilesCollectionCore {
               } else {
                 storeResult(result, callback);
               }
-            }));
-          })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions}));
+            }
+          })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions})).send();
         }
       });
     });
