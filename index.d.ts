@@ -1,6 +1,3 @@
-# TypeScript Definitions
-
-```ts
 declare module "meteor/ostrio:files" {
   import { Mongo } from 'meteor/mongo';
   import { ReactiveVar } from 'meteor/reactive-var';
@@ -213,4 +210,3 @@ declare module "meteor/ostrio:files" {
     write(buffer: Buffer, opts: LoadOptions<MetadataType>, callback: (err: Object, fileRef: FileRef<MetadataType>) => any, proceedAfterUpload: boolean): FilesCollection<MetadataType>;
   }
 }
-```
