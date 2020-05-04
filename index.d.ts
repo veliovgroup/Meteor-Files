@@ -43,7 +43,7 @@ declare module "meteor/ostrio:files" {
   }
 
 
-  type FileRef<MetadataType> = FileObj<MetadataType> & {
+  class FileRef<MetadataType> extends FileObj<MetadataType> {
     remove: (callback: (error: any) => void) => void;
     link: (version?: string, location?: string) => string;
     get: (property?: string) => FileObj<MetadataType> | any;
@@ -96,13 +96,13 @@ declare module "meteor/ostrio:files" {
   }
   
 
-  export interface SearchOptions<MetadataType, TransformedType> {
+  export interface SearchOptions<MetadataType, TransformAdditions> {
     sort?: Mongo.SortSpecifier;
     skip?: number;
     limit?: number;
     fields?: Mongo.FieldSpecifier;
     reactive?: boolean;
-    transform?: (fileObj: FileObj<MetadataType>) => FileObj<TransformedType>;
+    transform?: (fileObj: FileObj<MetadataType>) => FileObj<MetadataType> & TransformAdditions;
   }
   
 
@@ -148,27 +148,21 @@ declare module "meteor/ostrio:files" {
   }
 
 
-  export class FileCursor<MetadataType> extends FileObj<MetadataType> { // Is it correct to say that it extends FileObj?
-    remove(callback: (err) => void): void;
-    link(): string;
-    get(property: string): Object | any;
-    fetch(): Object[];
-    with(): ReactiveVar<FileCursor<MetadataType>>;
-  }
+  export class FileCursor<MetadataType> extends FileRef<MetadataType> { }
 
 
-  export class FilesCursor<MetadataType> extends Mongo.Cursor<FileObj<MetadataType>> {
+  export class FilesCursor<MetadataType, TransformAdditions> extends Mongo.Cursor<FileObj<MetadataType>> {
     cursor: Mongo.Cursor<FileObj<MetadataType>>; // Refers to base cursor? Why is this existing?
 
-    get(): Object[];
+    get(): Array<FileCursor<MetadataType> & TransformAdditions>;
     hasNext(): boolean;
-    next(): Object;
+    next(): FileCursor<MetadataType> & TransformAdditions;
     hasPrevious(): boolean;
-    previous(): Object;
-    first(): Object;
-    last(): Object;
-    remove(callback: (err) => void): void;
-    each(): FileCursor<MetadataType>[];
+    previous(): FileCursor<MetadataType> & TransformAdditions;
+    first(): FileCursor<MetadataType> & TransformAdditions;
+    last(): FileCursor<MetadataType> & TransformAdditions;
+    remove(callback: (err: Object) => void): void;
+    each(): Array<FileCursor<MetadataType> & TransformAdditions>;
     current(): Object | undefined;
   }
 
@@ -185,18 +179,24 @@ declare module "meteor/ostrio:files" {
      * @param selector [[http://docs.meteor.com/api/collections.html#selectors | Mongo-Style selector]]
      * @param options [[http://docs.meteor.com/api/collections.html#sortspecifiers | Mongo-Style selector Options]]
     
-     * @typeParam TransformedType The result of transforming a document with options.tranform().
+     * @template TransformAdditions Additional properties provided by transforming a document with options.tranform(). 
+     *            Note that removing fields with a transform function is not currently supported as this may break 
+     *            functions defined on a FileRef or FileCursor.
      */
-    find<TransformedType = FileRef<MetadataType>>(selector?: Mongo.Selector<Partial<FileObj<MetadataType>>>, options?: SearchOptions<MetadataType, TransformedType>): FilesCursor<TransformedType>;
+    find<TransformAdditions = {}>(selector?: Mongo.Selector<Partial<FileObj<MetadataType>>>, options?: SearchOptions<MetadataType, TransformAdditions>): FilesCursor<MetadataType, TransformAdditions>;
+    
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options.
      * 
      * @param selector [[http://docs.meteor.com/api/collections.html#selectors | Mongo-Style selector]]
      * @param options [[http://docs.meteor.com/api/collections.html#sortspecifiers | Mongo-Style selector Options]]
-    
-     * @typeParam TransformedType The result of transforming a document with options.tranform().
+     * 
+     * @template TransformAdditions Additional properties provided by transforming a document with options.tranform().
+     *            Note that removing fields with a transform function is not currently supported as this may break 
+     *            functions defined on a FileRef or FileCursor.
      */
-    findOne<TransformedType = FileRef<MetadataType>>(selector?: Mongo.Selector<Partial<FileObj<MetadataType>>> | string, options?: SearchOptions<MetadataType, TransformedType>): FileCursor<TransformedType>;
+    findOne<TransformAdditions = {}>(selector?: Mongo.Selector<Partial<FileObj<MetadataType>>> | string, options?: SearchOptions<MetadataType, TransformAdditions>): FileCursor<MetadataType> & TransformAdditions;
+    
     insert(settings: InsertOptions<MetadataType>, autoStart?: boolean): FileUpload;
     remove(select: Mongo.Selector<FileObj<MetadataType>> | string, callback?: (error: Object) => Object): FilesCollection<MetadataType>;
     link(fileRef: FileRef<MetadataType>, version?: string): string;
