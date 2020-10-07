@@ -1,17 +1,20 @@
-*This example is for the front-end UI only. The server side [methods](https://github.com/VeliovGroup/Meteor-Files/wiki#api) and [publications](https://github.com/VeliovGroup/Meteor-Files/wiki/collection) are the same.*
+# React.js usage
+
+*This example is for the front-end UI only. The server side [methods](https://github.com/VeliovGroup/Meteor-Files/wiki#api) and [publications](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/collection.md) are the same.*
 
 ## Brief:
+
 In this example two components is used. First - to handle the uploads, adds a file input box and progress bar. Second - to show the file details (`FileIndividualFile.js`).
 
- - The individual file component allows to delete, rename, and view the files. Twitter Bootstrap is used for styling;
- - Tested with `Meteor@1.6.1` and `React16`;
- - Uses the latest `withTracker` access the meteor data.
- - Uses React Component (rather than deprecated createClass)
+- The individual file component allows to delete, rename, and view the files. Twitter Bootstrap is used for styling;
+- Tested with `Meteor@1.6.1` and `React16`;
+- Uses the latest `withTracker` access the meteor data.
+- Uses React Component (rather than deprecated createClass)
 
 ## Assumptions
- - You have Meteor methods for `RemoveFile` and `RenameFile`
- - You have a publication called `files.all` 
- which is a FilesCollection, declared something like this:
+
+- You have Meteor methods for `RemoveFile` and `RenameFile`
+- You have a publication called `files.all` which is a FilesCollection, declared something like this:
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -21,7 +24,7 @@ export const UserFiles = new FilesCollection({collectionName: 'userfiles'});
 UserFiles.attachSchema(FilesCollection.schema);
 ```
 
-## FileUpload.js:
+### FileUpload.js:
 
 ```jsx
 import { withTracker } from 'meteor/react-meteor-data';
@@ -201,7 +204,7 @@ export default withTracker( ( props ) => {
 })(FileUploadComponent);
 ```
 
-## Second Component: FileIndividualFile.js
+### Second Component: FileIndividualFile.js
 
 ```jsx
 import React, { Component } from 'react';
@@ -211,9 +214,7 @@ class IndividualFile extends Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-    };
-    
+    this.state = {};
     this.removeFile = this.removeFile.bind(this);
     this.renameFile = this.renameFile.bind(this);
 

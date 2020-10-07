@@ -1,10 +1,10 @@
-##### `find([selector, options])` [*Isomorphic*]
+### `find([selector, options])` [*Isomorphic*]
 
 Find and return Cursor for matching documents.
 
-  - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
-  - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
-  - Returns {*[FilesCursor](https://github.com/VeliovGroup/Meteor-Files/wiki/FilesCursor)*}
+- `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
+- `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
+- Returns {*[FilesCursor](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/FilesCursor.md)*}
 
 ```js
 import { Meteor }          from 'meteor/meteor';

@@ -1,29 +1,33 @@
-##### Use DropBox As Storage
+# Use DropBox As Storage
 
 Example below shows how to store and serve uploaded file via DropBox. This example also covers file removing from both your application and DropBox.
 
 See [real, production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/files.collection.js#L186)
 
 Prepare: install [dropbox-js](https://github.com/dropbox/dropbox-js):
+
 ```shell
 npm install --save dropbox@=0.10.3
 ```
+
 Or:
+
 ```shell
 meteor npm install dropbox@=0.10.3
 ```
 
 Prepare: Get access to DropBox API:
- - Go to https://www.dropbox.com/developers (*Sign(in|up) if required*)
- - Click on [Create your app](https://www.dropbox.com/developers/apps/create)
- - Choose "*Dropbox API*"
- - Choose "*App folder*"
- - Type-in your application name
- - Go to you application's *settings*
- - Click on "*Enable additional users*"
- - Obtain "*App key*" for `key` in `new Dropbox.Client({})`
- - Obtain "*App secret*" for `secret` in `new Dropbox.Client({})`
- - Obtain "*Generated access token*" (Click on "*Generate Access token*") for `token` in `new Dropbox.Client({})`
+
+- Go to [`dropbox/developers`](https://www.dropbox.com/developers) (*Sign(in|up) if required*)
+- Click on [Create your app](https://www.dropbox.com/developers/apps/create)
+- Choose "*Dropbox API*"
+- Choose "*App folder*"
+- Type-in your application name
+- Go to you application's *settings*
+- Click on "*Enable additional users*"
+- Obtain "*App key*" for `key` in `new Dropbox.Client({})`
+- Obtain "*App secret*" for `secret` in `new Dropbox.Client({})`
+- Obtain "*Generated access token*" (Click on "*Generate Access token*") for `token` in `new Dropbox.Client({})`
 
 ```javascript
 var Dropbox, Request, bound, client, fs, Collections = {};

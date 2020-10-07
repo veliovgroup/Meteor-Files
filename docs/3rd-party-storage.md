@@ -1,11 +1,14 @@
-##### How to use third-party storage
+# How to use third-party storage
 
-Meteor-Files (*MF*) package has very flexible API, so you're free to integrate it with any 3rd party storage. Basically any 3rd party storage with REST API or NodeJS SDK may be easily integrated.
+Meteor-Files package has flexible API, so it can get integrated it with any 3rd party storage.
+Any 3rd party storage with REST API or Node.js SDK can be easily integrated.
 
-We made a next integration examples for you:
- - [AWS S3 Bucket Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)
- - [DropBox Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)
- - [GridFS Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)
- - [Google Cloud Storage Integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)
+__Integration examples:__
+
+- [AWS S3 Bucket Integration](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)
+- [DropBox Integration](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/dropbox-integration.md)
+- [GridFS using `GridFSBucket`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)
+- [GridFS using `gridfs-stream` (legacy)](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-integration.md)
+- [Google Cloud Storage Integration](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)
 
 *AWS S3* and *DropBox* is available in [demo app](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo) out-of-the box

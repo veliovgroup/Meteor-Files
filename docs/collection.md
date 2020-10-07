@@ -1,4 +1,4 @@
-##### `FilesCollection.collection` [*Isomorphic*]
+### `FilesCollection.collection` [*Isomorphic*]
 
 *Direct reference to [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection).*
 

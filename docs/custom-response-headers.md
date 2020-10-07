@@ -1,6 +1,6 @@
 # Custom Response Headers
 
-- `config.responseHeaders` option (*passed into [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)*)
+- `config.responseHeaders` option (*passed into [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md)*)
 
 *Allows to change default response headers.*
 

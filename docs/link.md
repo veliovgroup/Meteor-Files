@@ -1,11 +1,11 @@
-##### `link(fileRef [, version])` [*Isomorphic*]
+### `link(fileRef [, version])` [*Isomorphic*]
 
 Create downloadable link.
 
-  - `fileRef` {*Object*} - Object returned from MongoDB collection, like: `FilesCollection.collection.findOne({})`
-  - `version` {*String*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
-  - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
-  - Returns {*String*} - Full URL to file
+- `fileRef` {*Object*} - Object returned from MongoDB collection, like: `FilesCollection.collection.findOne({})`
+- `version` {*String*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
+- `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
+- Returns {*String*} - Full URL to file
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';

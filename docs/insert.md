@@ -1,4 +1,4 @@
-##### `insert(settings[, autoStart])` [*Client*]
+### `insert(settings[, autoStart])` [*Client*]
 
 *Upload file to Server via DDP, [RTC/DC](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) or HTTP.*
 
@@ -71,7 +71,7 @@
         Upload as base64 string, useful for data taken from <code>canvas</code>
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload)#upload-base64-string">See Examples</a>
+        <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md#upload-base64-string">See Examples</a>
       </td>
     </tr>
     <tr>
@@ -247,7 +247,7 @@
 
 <code>insert()</code> method returns <code>FileUpload</code> class instance. <strong>Note</strong>: same instance is used as <em><strong>context</strong></em> in all callback functions (<em>see above</em>)
 
-#### <code>FileUpload</code> methods and properties:
+### <code>FileUpload</code> methods and properties:
 
 <table>
   <thead>
@@ -542,13 +542,13 @@
 
 The <code>fileData</code> object (<em>see above</em>):
 
-  - <code>size</code> {<em>Number</em>} - File size in bytes
-  - <code>type</code> {<em>String</em>}
-  - <code>mime</code>, <code>mime-type</code> {<em>String</em>}
-  - <code>ext</code>, <code>extension</code> {<em>String</em>}
-  - <code>name</code> {<em>String</em>} - File name
+- <code>size</code> {<em>Number</em>} - File size in bytes
+- <code>type</code> {<em>String</em>}
+- <code>mime</code>, <code>mime-type</code> {<em>String</em>}
+- <code>ext</code>, <code>extension</code> {<em>String</em>}
+- <code>name</code> {<em>String</em>} - File name
 
-#### Upload form:
+### Upload form:
 
 ```handlebars
 <template name="uploadForm">
@@ -618,7 +618,7 @@ Template.uploadForm.events({
 });
 ```
 
-##### Alternative, using events:
+#### Alternative, using events:
 
 ```js
 import { Template } from 'meteor/templating';
@@ -648,7 +648,7 @@ Template.uploadForm.events({
 });
 ```
 
-##### Events based example:
+#### Events based example:
 
 ```js
 import { Template } from 'meteor/templating';
@@ -687,7 +687,7 @@ Template.uploadForm.events({
 });
 ```
 
-##### Upload base64 string:
+#### Upload base64 string:
 
 ```js
 import { Images } from '/imports/collections/images.js';
@@ -715,7 +715,7 @@ Images.insert({
 });
 ```
 
-##### Piping:
+#### Piping:
 
 Note: data flow in `webrtc` transport uses ArrayBuffer, while `ddp` and `http` uses dataURI (*Base64*). `webrtc` is available only on [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch.
 

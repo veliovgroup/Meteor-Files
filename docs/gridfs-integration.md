@@ -2,19 +2,22 @@
 
 **Deprecation warning:** The `gridfs-stream` [has not been updated in a long time](https://github.com/aheckmann/gridfs-stream) and is therefore
 considered deprecated. An alternative is to use the Mongo driver's native `GridFSBucket`, which is also [described in
-this wiki](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Bucket-Integration).
+this wiki](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md).
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
-Please note - by default all files will be served with `200` response code, which is fine if you planning to deal only with small files, or not planning to serve files back to users (*use only upload and storage*). For support of `206` partial content see [this article](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS---206-Streaming).
+Please note - by default all files will be served with `200` response code, which is fine if you planning to deal only with small files, or not planning to serve files back to users (*use only upload and storage*). For support of `206` partial content see [this article](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
 ### Preparation
 
 Firstly you need to install [gridfs-stream](https://github.com/aheckmann/gridfs-stream):
+
 ```shell
 npm install --save gridfs-stream
 ```
+
 Or:
+
 ```shell
 meteor npm install --save gridfs-stream
 ```
@@ -165,7 +168,7 @@ export const Images = new FilesCollection({
     if (_id) {
       const readStream = gfs.createReadStream({ _id });
       readStream.on('error', err => {
-        // File not found Error handling without Server Crash 
+        // File not found Error handling without Server Crash
         http.response.statusCode = 404;
         http.response.end('file not found');
         console.log(`chunk of file ${file._id}/${file.name} was not found`);

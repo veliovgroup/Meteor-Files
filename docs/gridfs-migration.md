@@ -18,7 +18,7 @@ First create three Methods in P that each share one of the three crucial Parts o
 - Sharing the `fs.files`* metadata for the files' respective subversions
 - Sharing the `fs.chunks`* (the actual data) of all stored files and their subversions
 
-*This assumes the [default configuration of your GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration) which is by default using the `db.fs.files` and `db.fs.chunks` collections.*
+*This assumes the [default configuration of your GridFS](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md) which is by default using the `db.fs.files` and `db.fs.chunks` collections.*
 
 *For custom configuration you may consult the JS Mongo Native Driver documentation on [GridFSBucket](http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html).*
 

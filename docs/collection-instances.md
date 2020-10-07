@@ -1,4 +1,4 @@
-## *FilesCollection* Instances and *Mongo.Collection* Instances
+# *FilesCollection* Instances and *Mongo.Collection* Instances
 
 While *FilesCollection* has a direct reference to a [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection),
 the `Mongo.Collection` has a back-reference to the *FilesCollection* itself.
@@ -19,7 +19,7 @@ const parent = collection.filesCollection;
 console.log(parent === Images);
 ```
 
-### Using dburles:mongo-collection-instances
+## Using `dburles:mongo-collection-instances`
 
 In Meteor for `Mongo.Collection` instances management, we suggest to use [dburles:mongo-collection-instances](https://github.com/dburles/mongo-collection-instances).
 It allows to retrieve `Mongo.Collection` instances by its name in any module or file.
@@ -44,7 +44,7 @@ const ImagesCollection = Mongo.Collection.get('Images');
 const Images = ImagesCollection.filesCollection;
 ```
 
-### Using a custom collection instance management
+## Using a custom collection instance management
 
 This simplified example shows, how to make use of that technique in your own implementation.
 Assume having a map of all `Mongo.Collection` instances:
