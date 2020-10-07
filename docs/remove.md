@@ -1,10 +1,10 @@
-##### `remove(selector[, cb])` [*Isomorphic*]
+### `remove(selector[, cb])` [*Isomorphic*]
 
 Remove records from FilesCollection and files from FS.
 
-  - `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
-  - `cb` {*Function*} - Callback, with one `error` argument
-  - Returns {*FilesCollection*} - Current FilesCollection instance
+- `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
+- `cb` {*Function*} - Callback, with one `error` argument
+- Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -34,7 +34,7 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
 });
 ```
 
-*Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor#use-onbeforeremove-to-avoid-unauthorized-remove)*
+*Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeremove-to-avoid-unauthorized-remove)*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';

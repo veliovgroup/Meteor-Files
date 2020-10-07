@@ -16,22 +16,22 @@ meteor npm install --save aws-sdk
 
 Typical regions are these, see full list at AWS S3 console. *Every region is supported.*
 
-  * US Standard (default): `us-standard`
-  * US West (Oregon): `us-west-2`
-  * US West (Northern California): `us-west-1`
-  * EU (Ireland): `eu-west-1`
-  * EU (Frankfurt): `eu-central-1`
-  * Asia Pacific (Singapore): `ap-southeast-1`
-  * Asia Pacific (Tokyo): `ap-northeast-1`
-  * South America (Sao Paulo): `sa-east-1`
+* US Standard (default): `us-standard`
+* US West (Oregon): `us-west-2`
+* US West (Northern California): `us-west-1`
+* EU (Ireland): `eu-west-1`
+* EU (Frankfurt): `eu-central-1`
+* Asia Pacific (Singapore): `ap-southeast-1`
+* Asia Pacific (Tokyo): `ap-northeast-1`
+* South America (Sao Paulo): `sa-east-1`
 
 Prepare: Get access to AWS S3:
 
-  * Go to [aws.amazon.com/s3](http://aws.amazon.com/s3/) (*Sign(in|up) if required*)
-  * Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
-    * Create an S3 bucket in preferred region
-    * Get an "Access Key Id" and "Secret Key"
-    * Note that in order to delete files from S3 you will additionally have to add the action "s3:DeleteObject" to the created policy.
+* Go to [aws.amazon.com/s3](http://aws.amazon.com/s3/) (*Sign(in|up) if required*)
+* Follow the steps from [this procedure - (to the step where policy and user is created)](https://vincetocco.com/backup-your-servers-automatically-to-amazon-aws-s3/)
+  * Create an S3 bucket in preferred region
+  * Get an "Access Key Id" and "Secret Key"
+  * Note that in order to delete files from S3 you will additionally have to add the action "s3:DeleteObject" to the created policy.
 
 ## Settings.json
 

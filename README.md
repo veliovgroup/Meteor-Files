@@ -1,91 +1,47 @@
+[![support](https://img.shields.io/badge/support-PayPal-white)](https://paypal.me/veliovgroup)
 [![Mentioned in Awesome ostrio:files](https://awesome.re/mentioned-badge.svg)](https://project-awesome.org/Urigo/awesome-meteor#files)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
-[![GitHub forks](https://img.shields.io/github/forks/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/network)
 [![GitHub stars](https://img.shields.io/github/stars/VeliovGroup/Meteor-Files.svg)](https://github.com/VeliovGroup/Meteor-Files/stargazers)
+<a href="https://ostr.io/info/built-by-developers-for-developers">
+  <img src="https://ostr.io/apple-touch-icon-60x60.png" height="20">
+</a>
 
 # Files for Meteor.js
 
-<a href="https://www.patreon.com/bePatron?u=20396046">
-  <img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" height="38">
-</a>
-
-<a href="https://ostr.io/info/built-by-developers-for-developers">
-  <img src="https://ostr.io/apple-touch-icon-60x60.png" height="38">
-</a>
+Stable, fast, robust, and well-maintained Meteor.js package for files management using MongoDB Collection API. What does exactly this means? Calling [`.insert()`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md) method would initiate a file upload and then insert new record into collection. Calling [`.remove()`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/remove.md) method would erase stored file and record from MongoDB Collection. And so on, no need to learn new APIs. It's flavored with extra low-level methods like [`.unlink()`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/unlink.md) and [`.write()`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/write.md) for complex integrations.
 
 ## ToC:
 
-- [Wiki](https://github.com/VeliovGroup/Meteor-Files/wiki) - Full documentation
-- [About this package](https://github.com/VeliovGroup/Meteor-Files#files-for-meteor)
-- [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage) examples - AWS S3, DropBox, GridFS and Google Storage
-- [Help / Support](https://github.com/VeliovGroup/Meteor-Files#support)
-- [Support this project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
-- [Contribution](https://github.com/VeliovGroup/Meteor-Files#contribution)
-- [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
-- [Demo apps and examples](https://github.com/VeliovGroup/Meteor-Files#demo-application)
-- [Related Packages](https://github.com/VeliovGroup/Meteor-Files#related-packages)
-- [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
+- [Wiki](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/toc.md) - Full documentation
 - [Installation](https://github.com/VeliovGroup/Meteor-Files#installation)
-- [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
-- [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
-- [FAQ](https://github.com/VeliovGroup/Meteor-Files#faq)
+  - [ES6 Import](https://github.com/VeliovGroup/Meteor-Files#es6-import)
 - [API](https://github.com/VeliovGroup/Meteor-Files#api-overview-full-api):
   - [Initialize Collection](https://github.com/VeliovGroup/Meteor-Files#new-filescollectionconfig-isomorphic)
   - [Upload file](https://github.com/VeliovGroup/Meteor-Files#insertsettings-autostart-client)
   - [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
   - [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
+- [Documentation and tutorials](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/toc.md)
+  - [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md) examples - AWS S3, DropBox, GridFS and Google Storage
+  - [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
+  - [Demo apps and examples](https://github.com/VeliovGroup/Meteor-Files#demo-application)
+- [Related Packages](https://github.com/VeliovGroup/Meteor-Files#related-packages)
+- [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
+- [Help / Support](https://github.com/VeliovGroup/Meteor-Files#get-support)
+- [FAQ](https://github.com/VeliovGroup/Meteor-Files#faq)
+- [Awards](https://github.com/VeliovGroup/Meteor-Files#awards)
+- [Help & Contribute](https://github.com/VeliovGroup/Meteor-Files#contribution)
+- [Support this project](https://github.com/VeliovGroup/Meteor-Files#support-meteor-files-project)
 - [Supporters](https://github.com/VeliovGroup/Meteor-Files#supporters)
-
-[Award winning](https://themeteorchef.com/blog/giant-cotton-apron-awards-show), extremely fast and robust package for file uploading, managing and streaming (*Audio & Video & Images*), with support of server's file system (FS) or third party storage, like: *AWS*, *DropBox*, *Google Storage*, *Google Drive*, *GridFS* or any other with API.
-
-Upload, Download, Serve and Stream files within your Meteor application. Without system dependencies, try [demo app](https://github.com/VeliovGroup/Meteor-Files#demo-application), which works smoothly on free/sandbox Heroku plan, [one click Heroku deploy](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
-
-## Support:
-
-- [Ask a question via Gitter chat](https://gitter.im/VeliovGroup/Meteor-Files)
-- [Ask a question or submit an issue](https://github.com/VeliovGroup/Meteor-Files/issues)
-- [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
-- For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/wiki)
-
-## Support Meteor-Files project:
-
-- [Become a patron](https://www.patreon.com/bePatron?u=20396046) — support my open source contributions with monthly donation
-- [Donate via PayPal](https://paypal.me/veliovgroup)
-- Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
-- Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
-- Share via [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
-- Use [ostr.io](https://ostr.io) — [Monitoring](https://snmp-monitoring.com), [Analytics](https://ostr.io/info/web-analytics), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [Pre-rendering](https://prerendering.com) for a website
-
-## Contribution:
-
-All PRs are always welcome on [`dev` branch](https://github.com/VeliovGroup/Meteor-Files/tree/dev). Please, always give expressive description to your changes and additions.
-
-## Awards:
-
-<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show">
-  <img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png" width="160">
-</a>
-
-## Demo application:
-
-- [Live: __files.veliov.com__](https://files.veliov.com)
-- [Source Code Rep](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo)
-- [Compiled Rep](https://github.com/VeliovGroup/Meteor-Files-Demo)
-- [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
-
-## Related Packages:
-
-- [pyfiles (meteor-python-files)](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
-- [meteor-autoform-file](https://github.com/VeliovGroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)
 
 ## Why `Meteor-Files`?
 
-- Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/VeliovGroup/Meteor-Files/wiki/About-Upload-Transports)
+- Compatible with all front-end frameworks from Blaze to [React](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/react-example.md)
+- Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)
 - Sustainable and resumable uploads, which will survive connection interruption and server reboot (*if a server has persistent storage*)
 - Upload files through computing cloud without persistent File System, like Heroku
-- You need store files at *[GridFS](https://github.com/VeliovGroup/Meteor-Files/wiki/GridFS-Integration)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/wiki/AWS-S3-Integration)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Google-Cloud-Storage-Integration)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/wiki/DropBox-Integration)*? (*[Use 3rd-party storage](https://github.com/VeliovGroup/Meteor-Files/wiki/Third-party-storage)*)
-- You need to check file mime-type, size or extension? Easy! Use *[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook
-- You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)* hook, and *[manage file's subversions](https://github.com/VeliovGroup/Meteor-Files/wiki/Create-and-Manage-Subversions)* in a single record
+- You need store files at *[GridFS](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/dropbox-integration.md)*? (*[Use 3rd-party storage](hhttps://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
+- You need to check file mime-type, size or extension? Easy! Use *[`onBeforeUpload`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md)* hook
+- You need to [resize images](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md)* hook, and *[manage file's subversions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/file-subversions.md)* in a single record
 
 ## Installation:
 
@@ -99,24 +55,11 @@ meteor add ostrio:files
 import { FilesCollection } from 'meteor/ostrio:files';
 ```
 
-## FAQ:
-
-1. __Where are files stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) it's equals to `assets/app/uploads` and relative to running script:
-    - __a.__ On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
-    - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](https://github.com/VeliovGroup/Meteor-Files/wiki/MeteorUp-(MUP)-Usage)
-2. __Cordova usage and development__: With support of community we do regular testing on virtual and real devices. To make sure `Meteor-Files` library runs smoothly in Cordova environment — enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedOrigins: true}` on both `Client` and `Server`. For more details read [Cookie's repository FAQ](https://github.com/VeliovGroup/Meteor-Cookies#faq)
-3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
-4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
-5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
-7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/VeliovGroup/Meteor-Files/issues/737) for details
-8. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/VeliovGroup/Meteor-Files/issues/742) for details
-
-## API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/wiki)*)
+## API overview (*[full API](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/readme.md)*)
 
 ### `new FilesCollection([config])` [*Isomorphic*]
 
-Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor)
+Read full docs for [`FilesCollection` Constructor](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md)
 
 Shared code:
 
@@ -149,7 +92,7 @@ if (Meteor.isServer) {
 
 ### `insert(settings[, autoStart])` [*Client*]
 
-Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Files/wiki/Insert-(Upload))
+Read full docs for [`insert()` method](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md)
 
 Upload form (template):
 
@@ -358,6 +301,58 @@ Template.file.helpers({
 
 For more expressive example see [Download demo](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo-simplest-download-button)
 
+## FAQ:
+
+1. __Where are files stored by default?__: by default if `config.storagePath` isn't passed into [*Constructor*](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md) it's equals to `assets/app/uploads` and relative to running script:
+    - __a.__ On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
+    - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](hhttps://github.com/VeliovGroup/Meteor-Files/blob/master/docs/meteorup-usage.md)
+2. __Cordova usage and development__: With support of community we do regular testing on virtual and real devices. To make sure `Meteor-Files` library runs smoothly in Cordova environment — enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedOrigins: true}` on both `Client` and `Server`. For more details read [Cookie's repository FAQ](https://github.com/VeliovGroup/Meteor-Cookies#faq)
+3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md)
+4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
+5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
+6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
+7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/VeliovGroup/Meteor-Files/issues/737) for details
+8. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/VeliovGroup/Meteor-Files/issues/742) for details
+
+## Awards:
+
+<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show">
+  <img src="https://raw.githubusercontent.com/VeliovGroup/Meteor-Files-Demos/master/GCAA.png" width="160">
+</a>
+
+## Get Support:
+
+- [Ask a question via Gitter chat](https://gitter.im/VeliovGroup/Meteor-Files)
+- [Ask a question or submit an issue](https://github.com/VeliovGroup/Meteor-Files/issues)
+- [Releases / Changelog / History](https://github.com/VeliovGroup/Meteor-Files/releases)
+- For more docs and examples [read wiki](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/readme.md)
+
+## Demo application:
+
+- [Live: __files.veliov.com__](https://files.veliov.com)
+- [Source Code Rep](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo)
+- [Compiled Rep](https://github.com/VeliovGroup/Meteor-Files-Demo)
+- [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
+
+## Related Packages:
+
+- [pyfiles (meteor-python-files)](https://github.com/VeliovGroup/meteor-python-files) Python Client for Meteor-Files package
+- [meteor-autoform-file](https://github.com/VeliovGroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)
+
+## Support Meteor-Files project:
+
+- Star on [GitHub](https://github.com/VeliovGroup/Meteor-Files)
+- Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
+- Share via [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
+- [Sponsor via GitHub](https://github.com/sponsors/dr-dimitru)
+- [Support via PayPal](https://paypal.me/veliovgroup) — support my open source contributions once or on regular basis
+- Use [ostr.io](https://ostr.io) — [Monitoring](https://snmp-monitoring.com), [Analytics](https://ostr.io/info/web-analytics), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [Pre-rendering](https://prerendering.com) for a website
+
+## Contribution:
+
+- __Want to help?__ Please check [issues](https://github.com/VeliovGroup/Meteor-Files/issues) for open and tagged as [`help wanted` issues](https://github.com/VeliovGroup/Meteor-Files/issues?q=is%3Aissue+is%3Aopen+label%3A"help+wanted");
+- __Want to contribute?__ Read and follow [PR rules](https://github.com/VeliovGroup/Meteor-Files/blob/master/.github/PULL_REQUEST_TEMPLATE). All PRs are welcome on [`dev` branch](https://github.com/VeliovGroup/Meteor-Files/tree/dev). Please, always give expressive description to your changes and additions.
+
 ## Supporters:
 
 We would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
@@ -371,9 +366,3 @@ We would like to thank everyone who support this project. *Because of those guys
 - [@themeteorchef](https://github.com/themeteorchef)
 - [@MeDBejoHok](https://github.com/medbejohok)
 - [@martunta](https://github.com/martunta)
-
-----
-
-| Meteor-Files | Expressive package to manage files within Meteor |
-|:-------------:|:------------- |
-| [![logo](https://raw.githubusercontent.com/VeliovGroup/Meteor-Files/master/logo-bw.png)](https://github.com/VeliovGroup/Meteor-Files) | If you found this package useful, please do not hesitate to star it at both [GitHub](https://github.com/VeliovGroup/Meteor-Files) and [Atmosphere](https://atmospherejs.com/ostrio/files). Also you may like to [Tweet](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files&text=File%20upload%20and%20delivery%20in%20Meteorjs%20-%20now%20it's%20easy!) about it or share at [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) <br /> [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/veliovgroup) |

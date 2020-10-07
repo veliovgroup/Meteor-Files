@@ -18,7 +18,7 @@ meteor npm install request
 ### Step 1: install [google-cloud-storage](https://github.com/googleapis/nodejs-storage)
 
 ```shell
-npm install @google-cloud/storage"
+npm install @google-cloud/storage
 ```
 
 ### Step 2: Setup your Google Cloud Storage

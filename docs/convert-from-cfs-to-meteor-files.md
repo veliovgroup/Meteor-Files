@@ -3,21 +3,20 @@
 *Convert from the now depreciated CollectionFS (CFS) package to this Meteor-Files Package.*
 
 ## Brief:
-Here is a quick way to migrate files from one collection to the other. In this example a "schema update" file is used, each time Meteor starts, it checks a known collection for the database version. This way it will update things, without doing it twice.
 
-Script in this example is used for Amazon S3, you can replace new Meteor-Files storage at your option with (local, Dropbox, etc.).
-
-Old package: https://github.com/CollectionFS/Meteor-CollectionFS
-
+- This is a quick way to migrate files from one collection to the other
+- In this example a "schema update" file is used, each time Meteor starts, it checks a known collection for the database version. This way it will update things, without doing it twice
+- Script in this example is used for Amazon S3, you can replace new Meteor-Files storage at your option with (local, Dropbox, etc.)
+- Old package: [`CollectionFS/Meteor-CollectionFS`](https://github.com/CollectionFS/Meteor-CollectionFS)
 
 ## Run this once on startup (__and only once!__)
+
 After this completes, you can remove any of the `cfs:*` packages
 
 __Note__: this creates copies of the files on your local server, make sure there is enough storage space for them!!
 I use docker containers, so the files get wiped out on the next container deployment which is why we don't bother deleting them.
 
-
-```jsx
+```js
 let bound = Meteor.bindEnvironment(function (callback) {
   return callback();
 });
@@ -61,7 +60,7 @@ Docs.find().forEach(function (fileObj) {
 
     console.log('Ended: ', fileName);
     // UserFiles is the new Meteor-Files/FilesCollection collection instance
-    
+
     UserFiles.addFile(fileName, {
       fileName: newFileName,
       type: fileType,

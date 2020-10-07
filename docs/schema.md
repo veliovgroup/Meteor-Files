@@ -1,6 +1,6 @@
 # Schema
 
-*Below is default Files collection schema. Please keep default schema structure when extending it!. To pass your own schema use* `schema` *property when passing config to* [`FilesCollection`](https://github.com/VeliovGroup/Meteor-Files/wiki/Constructor) *constructor.*
+*Below is default Files collection schema. Please keep default schema structure when extending it!. To pass your own schema use* `schema` *property when passing config to* [`FilesCollection`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md) *constructor.*
 
 For more info see [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.
 
