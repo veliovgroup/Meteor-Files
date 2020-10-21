@@ -1843,6 +1843,9 @@ export class FilesCollection extends FilesCollectionCore {
       respond(readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end}), 206);
       break;
     default:
+      if (!http.response.headersSent) {
+        http.response.setHeader('Content-Length', `${vRef.size}`);
+      }
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
       respond(readableStream || fs.createReadStream(vRef.path), 200);
       break;
