@@ -1768,6 +1768,8 @@ export class FilesCollection extends FilesCollectionCore {
         if (!stream._isEnded) {
           if (typeof stream.close === 'function') {
             stream.close(closeStreamCb);
+          } else if (typeof stream.end === 'function') {
+            stream.end(closeStreamCb);
           } else if (typeof stream.destroy === 'function') {
             stream.destroy('Got to close this stream', closeStreamCb);
           }
