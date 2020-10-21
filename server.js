@@ -1687,7 +1687,7 @@ export class FilesCollection extends FilesCollectionCore {
       dispositionType = 'inline; ';
     }
 
-    const dispositionName     = `filename=\"${encodeURI(vRef.name || fileRef.name).replace(/\,/g, '%2C')}\"; filename*=UTF-8''${encodeURIComponent(vRef.name || fileRef.name)}; `;
+    const dispositionName = `filename=\"${encodeURI(vRef.name || fileRef.name).replace(/\,/g, '%2C')}\"; filename*=UTF-8''${encodeURIComponent(vRef.name || fileRef.name)}; `;
     const dispositionEncoding = 'charset=UTF-8';
 
     if (!http.response.headersSent) {
@@ -1695,18 +1695,18 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     if (http.request.headers.range && !force200) {
-      partiral    = true;
+      partiral = true;
       const array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
-      start       = parseInt(array[1]);
-      end         = parseInt(array[2]);
+      start = parseInt(array[1]);
+      end = parseInt(array[2]);
       if (isNaN(end)) {
-        end       = vRef.size - 1;
+        end = vRef.size - 1;
       }
-      take        = end - start;
+      take = end - start;
     } else {
       start = 0;
-      end   = vRef.size - 1;
-      take  = vRef.size;
+      end = vRef.size - 1;
+      take = vRef.size;
     }
 
     if (partiral || (http.params.query.play && (http.params.query.play === 'true'))) {
@@ -1720,7 +1720,9 @@ export class FilesCollection extends FilesCollectionCore {
         reqRange.end   = start + take;
       }
 
-      if ((start + take) >= vRef.size) { reqRange.end = vRef.size - 1; }
+      if ((start + take) >= vRef.size) {
+        reqRange.end = vRef.size - 1;
+      }
 
       if (this.strict && ((reqRange.start >= (vRef.size - 1)) || (reqRange.end > (vRef.size - 1)))) {
         responseType = '416';
