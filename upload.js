@@ -273,7 +273,7 @@ export class UploadInstance extends EventEmitter {
           // is smaller than chunkSize, so we limit to fileSize
           sentBytes = this.fileData.size;
         }
-        
+
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
         this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
@@ -392,7 +392,7 @@ export class UploadInstance extends EventEmitter {
         }, (error) => {
           this.transferTime += +new Date() - this.startTime[opts.chunkId];
           if (error) {
-            if (`${error}` === 'Error: network') {
+            if (`${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
               this.result.pause();
             } else {
               if (this.result.state.get() !== 'aborted') {
