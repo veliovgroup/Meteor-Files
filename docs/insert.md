@@ -337,8 +337,7 @@
         Pipe data before upload
       </td>
       <td>
-        All data must be in <code>data URI</code> scheme (*Base64*)<br />
-        Only for <code>webrtc</code> transport data represented as <code>ArrayBuffer</code>.
+        All data must be in <code>data URI</code> scheme (*Base64*)
       </td>
     </tr>
     <tr>
@@ -606,7 +605,7 @@ Template.uploadForm.events({
           if (error) {
             alert('Error during upload: ' + error);
           } else {
-            alert('File "' + fileObj.name + '" successfully uploaded');
+            alert(`File "${fileObj.name}" successfully uploaded`);
           }
           template.currentFile.set(false);
         },
@@ -639,7 +638,7 @@ Template.uploadForm.events({
         if (error) {
           alert('Error during upload: ' + error);
         } else {
-          alert('File "' + fileObj.name + '" successfully uploaded');
+          alert(`File "${fileObj.name}" successfully uploaded`);
         }
         template.currentFile.set(false);
       }).start();
@@ -673,7 +672,7 @@ Template.uploadForm.events({
 
       uploader.on('uploaded', function (error, fileObj) {
         if (!error) {
-          alert('File "' + fileObj.name + '" successfully uploaded');
+          alert(`File "${fileObj.name}" successfully uploaded`);
         }
       });
 

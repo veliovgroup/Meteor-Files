@@ -101,7 +101,7 @@ Template.uploadForm.events({
 
       uploader.on('uploaded', (error, fileObj) => {
         if (!error) {
-          window.alert('File "' + fileObj.name + '" successfully uploaded');
+          window.alert(`File "${fileObj.name}" successfully uploaded`);
         }
       });
 
