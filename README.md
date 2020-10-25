@@ -149,7 +149,7 @@ Template.uploadForm.events({
         if (error) {
           alert('Error during upload: ' + error);
         } else {
-          alert('File "' + fileObj.name + '" successfully uploaded');
+          alert(`File "${fileObj.name}" successfully uploaded`);
         }
         template.currentUpload.set(false);
       });
