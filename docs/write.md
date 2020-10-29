@@ -20,7 +20,7 @@ import { FilesCollection } from 'meteor/ostrio:files';
 
 const Images = new FilesCollection({collectionName: 'Images'});
 
-fs.readFile('/data/imgs/sample.png', function (error, data) {
+fs.readFile('/data/imgs/sample.png', (error, data) => {
   if (error) {
     throw error;
   } else {
@@ -28,11 +28,11 @@ fs.readFile('/data/imgs/sample.png', function (error, data) {
       fileName: 'sample.png',
       fielId: 'abc123myId', //optional
       type: 'image/png'
-    }, function (writeError, fileRef) {
+    }, (writeError, fileRef) => {
       if (writeError) {
         throw writeError;
       } else {
-        console.log(fileRef.name + ' is successfully saved to FS. _id: ' + fileRef._id);
+        console.log(`${fileRef.name} is successfully saved to FS. _id: ${fileRef._id}`);
       }
     });
   }
