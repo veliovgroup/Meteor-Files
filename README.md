@@ -1,3 +1,4 @@
+[![support](https://img.shields.io/badge/support-GitHub-white)](https://github.com/sponsors/dr-dimitru)
 [![support](https://img.shields.io/badge/support-PayPal-white)](https://paypal.me/veliovgroup)
 [![Mentioned in Awesome ostrio:files](https://awesome.re/mentioned-badge.svg)](https://project-awesome.org/Urigo/awesome-meteor#files)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/VeliovGroup/Meteor-Files)
@@ -112,7 +113,7 @@ Shared code:
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 const Images = new FilesCollection({collectionName: 'Images'});
-export default Images; // To be imported in other files
+export default Images; // import in other files
 ```
 
 Client's code:
@@ -147,9 +148,9 @@ Template.uploadForm.events({
 
       upload.on('end', function (error, fileObj) {
         if (error) {
-          alert('Error during upload: ' + error);
+          alert(`Error during upload: ${error}`);
         } else {
-          alert('File "' + fileObj.name + '" successfully uploaded');
+          alert(`File "${fileObj.name}" successfully uploaded`);
         }
         template.currentUpload.set(false);
       });
