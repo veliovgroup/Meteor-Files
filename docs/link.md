@@ -1,11 +1,56 @@
-### `link(fileRef [, version])` [*Isomorphic*]
+# Link; or get downloadable URL
 
-Create downloadable link.
+Use [`fileUrl`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/template-helper.md) helper with Blaze to get *downloadable* URL to a file.
 
-- `fileRef` {*Object*} - Object returned from MongoDB collection, like: `FilesCollection.collection.findOne({})`
-- `version` {*String*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
+There are two options to get *downloadable* URL to the uploaded file using `.link()` method:
+
+- Using `.link()` method of [*FilesCollection* instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) — __No need to have a subscription__
+- Using `.link()` method of [*FileCursor* instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) — Use it when you have a subscription or local static collection
+
+## FilesCollection#link
+
+Use `.link()` method of [*FileCursor* instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) to create *downloadable* link from *file's* plain object. To get an *Object* use `FilesCollection#collection.findOne({})` of for example inside [`end` event](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) on the *Client* and [`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) on the *Server*
+
+```js
+FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
+```
+
+- `fileRef` {*Object*} - Object returned from MongoDB collection or [after upload](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L85)
+- `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
+- `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
+- Returns {*String*} - Absolute URL to file
+
+## FileCursor#link
+
+Use `.link()` method of [*FileCursor* instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) to create *downloadable* link from a cursor returned for example from [`FilesCollection#findOne({})`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md)
+
+```js
+FileCursor#link(version, URIBase); // [*Isomorphic*]
+```
+
+- `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
 - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
 - Returns {*String*} - Full URL to file
+
+## Required fields:
+
+```js
+import { FilesCollection } from 'meteor/ostrio:files';
+const Images = new FilesCollection({collectionName: 'Images'});
+
+Images.findOne({}, {
+  fields: {
+    _id: 1,
+    public: 1,
+    versions: 1, // <-- only when versioning is used
+    extension: 1,
+    _downloadRoute: 1,
+    _collectionName: 1
+  }
+});
+```
+
+## Examples
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -21,10 +66,10 @@ Images.findOne({}).link();
 Images.findOne({}).link('thumbnail');
 // Equals to above
 const fileRef = Images.collection.findOne({});
-Images.link(fileRef, 'thumbnail');
+Images.link(fileRef);
 
 // Change domain:
 Images.link(fileRef, 'original', 'https://other-domain.com/');
-// Relative path:
+// Relative path to domain:
 Images.link(fileRef, 'original', '/');
 ```
