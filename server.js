@@ -852,7 +852,7 @@ export class FilesCollection extends FilesCollectionCore {
       };
 
       // Method used to Abort upload
-      // - Feeing memory by .end()ing writableStreams
+      // - Freeing memory by ending writableStreams
       // - Removing temporary record from @_preCollection
       // - Removing record from @collection
       // - .unlink()ing chunks from FS
