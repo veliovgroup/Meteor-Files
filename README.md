@@ -37,7 +37,7 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 ## Why `Meteor-Files`?
 
 - Compatible with all front-end frameworks from Blaze to [React](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/react-example.md)
-- Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)
+- Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/about-transports.md)
 - Sustainable and resumable uploads, which will survive connection interruption and server reboot (*if a server has persistent storage*)
 - Upload files through computing cloud without persistent File System, like Heroku
 - You need store files at *[GridFS](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/dropbox-integration.md)*? (*[Use 3rd-party storage](hhttps://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
