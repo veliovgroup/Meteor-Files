@@ -1,14 +1,14 @@
-import { Mongo }           from 'meteor/mongo';
-import { Meteor }          from 'meteor/meteor';
-import { DDP }             from 'meteor/ddp-client';
-import { Cookies }         from 'meteor/ostrio:cookies';
-import { check, Match }    from 'meteor/check';
-import { UploadInstance }  from './upload.js';
+import { Mongo } from 'meteor/mongo';
+import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp-client';
+import { Cookies } from 'meteor/ostrio:cookies';
+import { check, Match } from 'meteor/check';
+import { UploadInstance } from './upload.js';
 import FilesCollectionCore from './core.js';
 import { formatFleURL, helpers } from './lib.js';
 
 const NOOP = () => { };
-const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload', 'allowQueryStringCookies'];
+const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload', 'disableSetTokenCookie', 'allowQueryStringCookies'];
 
 /*
  * @locus Anywhere
@@ -29,6 +29,7 @@ const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloa
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
  * @param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
+ * @param config.disableSetTokenCookie {Boolean} - Disable cookie setting. Useful when you use multiple file collections or when you want to implement your own authorization.
  * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
  * @summary Create new instance of FilesCollection
  */
@@ -81,6 +82,10 @@ export class FilesCollection extends FilesCollectionCore {
       this.disableUpload = false;
     }
 
+    if (!helpers.isBoolean(this.disableSetTokenCookie)) {
+      this.disableSetTokenCookie = false;
+    }
+
     if (!helpers.isString(this.downloadRoute)) {
       this.downloadRoute = '/cdn/storage';
     }
@@ -107,21 +112,25 @@ export class FilesCollection extends FilesCollectionCore {
       this.onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?';
     }
 
-    const setTokenCookie = () => {
-      if (Meteor.connection._lastSessionId) {
-        cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax' });
-        if (Meteor.isCordova && this.allowQueryStringCookies) {
-          cookie.send();
-        }
-      }
-    };
+    if (!config.disableSetTokenCookie) {
 
-    if (typeof Accounts !== 'undefined' && Accounts !== null) {
-      DDP.onReconnect((conn) => {
-        conn.onReconnect = setTokenCookie;
-      });
-      Meteor.startup(setTokenCookie);
-      Accounts.onLogin(setTokenCookie);
+      const setTokenCookie = () => {
+        if (Meteor.connection._lastSessionId) {
+          cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax' });
+          if (Meteor.isCordova && this.allowQueryStringCookies) {
+            cookie.send();
+          }
+        }
+      };
+
+      if (typeof Accounts !== 'undefined' && Accounts !== null) {
+        DDP.onReconnect((conn) => {
+          conn.onReconnect = setTokenCookie;
+        });
+        Meteor.startup(setTokenCookie);
+        Accounts.onLogin(setTokenCookie);
+      }
+
     }
 
     check(this.onbeforeunloadMessage, Match.OneOf(String, Function));
@@ -130,10 +139,10 @@ export class FilesCollection extends FilesCollectionCore {
       const _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false;
       if (window.Worker && window.Blob && _URL && helpers.isFunction(_URL.createObjectURL)) {
         this._supportWebWorker = true;
-        this._webWorkerUrl     = _URL.createObjectURL(new window.Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}));
+        this._webWorkerUrl = _URL.createObjectURL(new window.Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], { type: 'application/javascript' }));
       } else if (window.Worker) {
         this._supportWebWorker = true;
-        this._webWorkerUrl     = Meteor.absoluteUrl('packages/ostrio_files/worker.min.js');
+        this._webWorkerUrl = Meteor.absoluteUrl('packages/ostrio_files/worker.min.js');
       } else {
         this._supportWebWorker = false;
       }
