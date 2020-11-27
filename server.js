@@ -52,7 +52,7 @@ const NOOP  = () => {  };
  * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return `true` to continue
  *  - return `false` or `String` to abort upload
- * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
+ * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, usefull when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
  * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
@@ -1103,7 +1103,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUserDefault
-   * @summary Returns object with `userId` and `user()` method which return user's object
+   * @summary Default way of recognising user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defnied. Returns object with `userId` and `user()` method which return user's object
    * @returns {Object}
    */
   _getUserDefault(http) {
