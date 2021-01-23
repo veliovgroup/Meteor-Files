@@ -26,7 +26,7 @@ fs.readFile('/data/imgs/sample.png', (error, data) => {
   } else {
     Images.write(data, {
       fileName: 'sample.png',
-      fielId: 'abc123myId', //optional
+      fileId: 'abc123myId', //optional
       type: 'image/png'
     }, (writeError, fileRef) => {
       if (writeError) {
