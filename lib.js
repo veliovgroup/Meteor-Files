@@ -200,7 +200,7 @@ const formatFleURL = (fileRef, version = 'original', _URIBase = (__meteor_runtim
   if (fileRef.public === true) {
     return _root + (version === 'original' ? `${fileRef._downloadRoute}/${fileRef._id}${ext}` : `${fileRef._downloadRoute}/${version}-${fileRef._id}${ext}`);
   }
-  return _root + `${fileRef._downloadRoute}/${fileRef._collectionName}/${fileRef._id}/${version}/${fileRef._id}${ext}`;
+  return `${_root}${fileRef._downloadRoute}/${fileRef._collectionName}/${fileRef._id}/${version}/${fileRef._id}${ext}`;
 };
 
 export { fixJSONParse, fixJSONStringify, formatFleURL, helpers };
