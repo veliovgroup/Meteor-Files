@@ -11,7 +11,6 @@ import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 import fs       from 'fs-extra';
 import nodeQs   from 'querystring';
 import request  from 'request-libcurl';
-import fileType from 'file-type';
 import nodePath from 'path';
 
 /*
@@ -1039,21 +1038,6 @@ export class FilesCollection extends FilesCollectionCore {
     check(fileData, Object);
     if (helpers.isObject(fileData) && fileData.type) {
       mime = fileData.type;
-    }
-
-    if (fileData.path && (!mime || !helpers.isString(mime))) {
-      try {
-        let buf  = Buffer.alloc(262);
-        const fd = fs.openSync(fileData.path, 'r');
-        const br = fs.readSync(fd, buf, 0, 262, 0);
-        fs.close(fd, NOOP);
-        if (br < 262) {
-          buf = buf.slice(0, br);
-        }
-        ({mime} = fileType(buf));
-      } catch (e) {
-        // We're good
-      }
     }
 
     if (!mime || !helpers.isString(mime)) {
