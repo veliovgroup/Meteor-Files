@@ -1,16 +1,18 @@
-import { Mongo }           from 'meteor/mongo';
-import { WebApp }          from 'meteor/webapp';
-import { Meteor }          from 'meteor/meteor';
-import { Random }          from 'meteor/random';
-import { Cookies }         from 'meteor/ostrio:cookies';
-import WriteStream         from './write-stream.js';
-import { check, Match }    from 'meteor/check';
+import { Mongo } from 'meteor/mongo';
+import { fetch } from 'meteor/fetch';
+import { WebApp } from 'meteor/webapp';
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { Cookies } from 'meteor/ostrio:cookies';
+import { check, Match } from 'meteor/check';
+
+import WriteStream from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
-import fs       from 'fs-extra';
-import nodeQs   from 'querystring';
-import request  from 'request-libcurl';
+import AbortController from 'abort-controller';
+import fs from 'fs-extra';
+import nodeQs from 'querystring';
 import nodePath from 'path';
 
 /*
@@ -1213,19 +1215,20 @@ export class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name load
    * @param {String} url - URL to file
-   * @param {Object} opts - Object with file-data
+   * @param {Object} [opts] - Object with file-data
    * @param {Object} opts.headers - HTTP headers to use when requesting the file
    * @param {String} opts.name - File name, alias: `fileName`
    * @param {String} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
    * @param {String} opts.userId - UserId, default *null*
    * @param {String} opts.fileId - _id, default *null*
+   * @param {Number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
    * @param {Function} callback - function(error, fileObj){...}
-   * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
-   * @summary Download file, write stream to FS and add to FilesCollection Collection
+   * @param {Boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
+   * @summary Download file over HTTP, write stream to FS, and add to FilesCollection Collection
    * @returns {FilesCollection} Instance
    */
-  load(url, _opts = {}, _callback, _proceedAfterUpload) {
+  load(url, _opts = {}, _callback, _proceedAfterUpload = false) {
     this._debug(`[FilesCollection] [load(${url}, ${JSON.stringify(_opts)}, callback)]`);
     let opts = _opts;
     let callback = _callback;
@@ -1234,7 +1237,7 @@ export class FilesCollection extends FilesCollectionCore {
     if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
-      opts     = {};
+      opts = {};
     } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
     } else if (helpers.isBoolean(opts)) {
@@ -1247,13 +1250,19 @@ export class FilesCollection extends FilesCollectionCore {
     check(proceedAfterUpload, Match.Optional(Boolean));
 
     if (!helpers.isObject(opts)) {
-      opts = {};
+      opts = {
+        timeout: 360000
+      };
     }
 
-    const fileId    = opts.fileId || Random.id();
-    const FSName    = this.namingFunction ? this.namingFunction(opts) : fileId;
+    if (!opts.timeout) {
+      opts.timeout = 360000;
+    }
+
+    const fileId = opts.fileId || Random.id();
+    const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
-    const fileName  = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1] || FSName;
+    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || FSName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
     opts.path  = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
@@ -1283,44 +1292,105 @@ export class FilesCollection extends FilesCollectionCore {
           callback && callback(efError);
           this._debug(`[FilesCollection] [load] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
         } else {
-          request({
-            url,
-            headers: opts.headers || {},
-            wait: true
-          }, (reqError, response) => bound(() => {
-            if (reqError) {
-              callback && callback(reqError);
-              this._debug(`[FilesCollection] [load] [request.get(${url})] Error:`, reqError);
-            } else {
-              this._debug(`[FilesCollection] [load] Received: ${url}`);
-              const result = this._dataToSchema({
-                name: fileName,
-                path: opts.path,
-                meta: opts.meta,
-                type: opts.type || response.headers['content-type'] || this._getMimeType({path: opts.path}),
-                size: opts.size || parseInt(response.headers['content-length'] || 0),
-                userId: opts.userId,
-                extension
-              });
+          let isEnded = false;
+          let timer = null;
+          const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
+          const onEnd = (_error, response) => {
+            if (!isEnded) {
+              if (timer) {
+                Meteor.clearTimeout(timer);
+                timer = null;
+              }
 
-              if (!result.size) {
-                fs.stat(opts.path, (error, stats) => bound(() => {
-                  if (error) {
-                    callback && callback(error);
-                  } else {
-                    result.versions.original.size = (result.size = stats.size);
-                    storeResult(result, callback);
-                  }
-                }));
+              isEnded = true;
+              if (response && response.status === 200) {
+                this._debug(`[FilesCollection] [load] Received: ${url}`);
+                const result = this._dataToSchema({
+                  name: fileName,
+                  path: opts.path,
+                  meta: opts.meta,
+                  type: opts.type || response.headers.get('content-type') || this._getMimeType({path: opts.path}),
+                  size: opts.size || parseInt(response.headers.get('content-length') || 0),
+                  userId: opts.userId,
+                  extension
+                });
+
+                if (!result.size) {
+                  fs.stat(opts.path, (statError, stats) => {
+                    bound(() => {
+                      if (statError) {
+                        callback && callback(statError);
+                      } else {
+                        result.versions.original.size = (result.size = stats.size);
+                        storeResult(result, callback);
+                      }
+                    });
+                  });
+                } else {
+                  storeResult(result, callback);
+                }
               } else {
-                storeResult(result, callback);
+                const error = _error || new Meteor.Error(response?.status || 408, response?.statusText || 'Bad response with empty details');
+                this._debug(`[FilesCollection] [load] [fetch(${url})] Error:`, error);
+
+                if (!wStream.destroyed) {
+                  wStream.destroy();
+                }
+
+                fs.remove(opts.path, (removeError) => {
+                  bound(() => {
+                    callback && callback(error);
+                    if (removeError) {
+                      this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.remove(${opts.path})] removeError:`, removeError);
+                    }
+                  });
+                });
               }
             }
-          })).pipe(fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions})).send();
+          };
+
+          let resp = void 0;
+          wStream.on('error', (error) => {
+            bound(() => {
+              onEnd(error);
+            });
+          });
+          wStream.on('close', () => {
+            bound(() => {
+              onEnd(void 0, resp);
+            });
+          });
+          wStream.on('finish', () => {
+            bound(() => {
+              onEnd(void 0, resp);
+            });
+          });
+
+          const controller = new AbortController();
+          fetch(url, {
+            headers: opts.headers || {},
+            signal: controller.signal
+          }).then((res) => {
+            resp = res;
+            res.body.on('error', (error) => {
+              bound(() => {
+                onEnd(error);
+              });
+            });
+            res.body.pipe(wStream);
+          }).catch((fetchError) => {
+            onEnd(fetchError);
+          });
+
+          if (opts.timeout > 0) {
+            timer = Meteor.setTimeout(() => {
+              onEnd(new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`));
+              controller.abort();
+            }, opts.timeout);
+          }
         }
       });
     });
-
 
     return this;
   }

@@ -8,14 +8,15 @@ Package.describe({
 
 Npm.depends({
   'fs-extra': '9.1.0',
-  eventemitter3: '4.0.7'
+  eventemitter3: '4.0.7',
+  'abort-controller': '3.0.0'
 });
 
 Package.onUse(function(api) {
   api.versionsFrom('1.9');
   api.use('webapp', 'server');
-  api.use(['reactive-var', 'tracker', 'http', 'ddp-client'], 'client');
-  api.use(['mongo', 'check', 'random', 'ecmascript', 'ostrio:cookies@2.6.1'], ['client', 'server']);
+  api.use(['reactive-var', 'tracker', 'ddp-client'], 'client');
+  api.use(['mongo', 'check', 'random', 'ecmascript', 'fetch', 'ostrio:cookies@2.6.1'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');
