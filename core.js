@@ -1,6 +1,6 @@
-import { EventEmitter }            from 'eventemitter3';
-import { check, Match }            from 'meteor/check';
-import { formatFleURL, helpers }   from './lib.js';
+import { EventEmitter } from 'eventemitter3';
+import { check, Match } from 'meteor/check';
+import { formatFleURL, helpers } from './lib.js';
 import { FilesCursor, FileCursor } from './cursor.js';
 
 export default class FilesCollectionCore extends EventEmitter {
@@ -149,12 +149,12 @@ export default class FilesCollectionCore extends EventEmitter {
    * @summary Internal method. Classify file based on 'type' field
    */
   _updateFileTypes(data) {
-    data.isVideo  = /^video\//i.test(data.type);
-    data.isAudio  = /^audio\//i.test(data.type);
-    data.isImage  = /^image\//i.test(data.type);
-    data.isText   = /^text\//i.test(data.type);
-    data.isJSON   = /^application\/json$/i.test(data.type);
-    data.isPDF    = /^application\/(x-)?pdf$/i.test(data.type);
+    data.isVideo = /^video\//i.test(data.type);
+    data.isAudio = /^audio\//i.test(data.type);
+    data.isImage = /^image\//i.test(data.type);
+    data.isText = /^text\//i.test(data.type);
+    data.isJSON = /^application\/json$/i.test(data.type);
+    data.isPDF = /^application\/(x-)?pdf$/i.test(data.type);
   }
 
   /*
