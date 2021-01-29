@@ -659,6 +659,9 @@ export class UploadInstance extends EventEmitter {
       if (!this.result.onPause.curValue && !Meteor.status().connected) {
         this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
         this.result.pause();
+      } else if (this.result.onPause.curValue && Meteor.status().connected) {
+        this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
+        this.result.continue();
       }
     });
 
