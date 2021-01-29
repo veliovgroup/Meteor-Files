@@ -53,7 +53,7 @@ export class FileUpload extends EventEmitter {
   }
   continue() {
     this.config._debug('[FilesCollection] [insert] [.continue()]');
-    if (this.onPause.get()) {
+    if (this.onPause.get() && Meteor.status().connected) {
       this.onPause.set(false);
       this.state.set('active');
       this.emit('continue', this.file);
