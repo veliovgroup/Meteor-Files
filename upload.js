@@ -31,7 +31,7 @@ export class FileUpload extends EventEmitter {
     this.state = new ReactiveVar('active');
     this.onPause = new ReactiveVar(false);
     this.progress = new ReactiveVar(0);
-    this.continueFunc = () => { };
+    this.continueFunc = () => {};
     this.estimateTime = new ReactiveVar(1000);
     this.estimateSpeed = new ReactiveVar(0);
     this.estimateTimer = Meteor.setInterval(() => {
@@ -390,24 +390,30 @@ export class UploadInstance extends EventEmitter {
             'x-chunkid': opts.chunkId,
             'content-type': 'text/plain'
           }
-        }).then(() => {
-          this.transferTime += +new Date() - this.startTime[opts.chunkId];
-          ++this.sentChunks;
-          if (this.sentChunks >= this.fileLength) {
-            this.emit('sendEOF');
-          } else if (this.currentChunk < this.fileLength) {
-            this.emit('upload');
-          }
-          this.emit('calculateStats');
-        }).catch((error) => {
-          this.transferTime += +new Date() - this.startTime[opts.chunkId];
-          if (`${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
-            this.result.pause();
+        }).then((responce) => {
+          if (responce.status === 204) {
+            this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [then] chunk successfully sent');
+            this.transferTime += +new Date() - this.startTime[opts.chunkId];
+            ++this.sentChunks;
+            if (this.sentChunks >= this.fileLength) {
+              this.emit('sendEOF');
+            } else if (this.currentChunk < this.fileLength) {
+              this.emit('upload');
+            }
+            this.emit('calculateStats');
           } else {
-            if (this.result.state.get() !== 'aborted') {
+            this.emit('end', new Meteor.Error(responce.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
+          }
+        }).catch((error) => {
+          this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [error] EXCEPTION while sending chunk', error);
+          this.transferTime += +new Date() - this.startTime[opts.chunkId];
+          Meteor.setTimeout(() => {
+            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+              this.result.pause();
+            } else if (this.result.state.get() !== 'aborted') {
               this.emit('end', error);
             }
-          }
+          }, 512);
         });
       }
     }
@@ -511,7 +517,6 @@ export class UploadInstance extends EventEmitter {
       if (this.worker) {
         this.worker.postMessage({
           f: this.config.file,
-          sc: this.sentChunks,
           cc: this.currentChunk,
           cs: this.config.chunkSize,
           ib: this.config.isBase64
