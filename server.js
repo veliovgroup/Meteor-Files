@@ -519,6 +519,7 @@ export class FilesCollection extends FilesCollectionCore {
             }
 
             if (httpReq.headers['x-start'] !== '1') {
+              // CHUNK UPLOAD SCENARIO:
               opts = {
                 fileId: httpReq.headers['x-fileid']
               };
@@ -538,6 +539,7 @@ export class FilesCollection extends FilesCollectionCore {
               ({result, opts}  = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
 
               if (opts.eof) {
+                // FINISH UPLOAD SCENARIO:
                 this._handleUpload(result, opts, (_error) => {
                   let error = _error;
                   if (error) {
@@ -582,6 +584,7 @@ export class FilesCollection extends FilesCollectionCore {
                 httpResp.end();
               }
             } else {
+              // START SCENARIO:
               try {
                 opts = JSON.parse(body);
               } catch (jsonErr) {
@@ -593,19 +596,19 @@ export class FilesCollection extends FilesCollectionCore {
                 opts.file = {};
               }
 
-              opts.___s = true;
               this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
               if (helpers.isObject(opts.file) && opts.file.meta) {
                 opts.file.meta = fixJSONParse(opts.file.meta);
               }
 
+              opts.___s = true;
               ({result} = this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
 
               if (this.collection.findOne(result._id)) {
                 throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
               }
 
-              opts._id       = opts.fileId;
+              opts._id = opts.fileId;
               opts.createdAt = new Date();
               opts.maxLength = opts.fileLength;
               this._preCollection.insert(helpers.omit(opts, '___s'));
