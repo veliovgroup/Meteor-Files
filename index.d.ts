@@ -142,7 +142,6 @@ declare module "meteor/ostrio:files" {
       onError?: (error: Meteor.Error, fileData: FileData<MetadataType>) => any;
       onProgress?: (progress: number, fileData: FileData<MetadataType>) => any;
       onBeforeUpload?: (fileData: FileData<MetadataType>) => any;
-      streams?: number | 'dynamic';
       chunkSize?: number | 'dynamic';
       allowWebWorkers?: boolean;
       type?: string;

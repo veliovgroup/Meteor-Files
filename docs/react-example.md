@@ -66,7 +66,6 @@ class FileUploadComponent extends Component {
             locator: self.props.fileLocator,
             userId: Meteor.userId() // Optional, used to check on server for file tampering
           },
-          streams: 'dynamic',
           chunkSize: 'dynamic',
           allowWebWorkers: true // If you see issues with uploads, change this to false
         }, false)

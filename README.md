@@ -138,7 +138,6 @@ Template.uploadForm.events({
       // multiple files were selected
       const upload = Images.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false);
 
@@ -311,7 +310,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md)
 4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
+6. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
 7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/VeliovGroup/Meteor-Files/issues/737) for details
 8. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/VeliovGroup/Meteor-Files/issues/742) for details
 
