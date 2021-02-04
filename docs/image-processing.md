@@ -1,19 +1,22 @@
-### Create thumbnails after upload
+# Create thumbnails after upload
 
 At this tutorial we will create thumbnails with GraphicksMagick/ImageMagick (*a.k.a. `gm`/`im`*) after file is fully uploaded to Server. Note: GraphicksMagick or ImageMagick should be installed on dev/prod machine before you implement code below.
 
 Links:
- - [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/)
- - [ImageMagick](https://www.imagemagick.org/script/download.php)
- - See how this example used in [real-life production code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19)
- - [gm](https://www.npmjs.com/package/gm) NPM package
- - [im](https://www.npmjs.com/package/im) NPM package
- - [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
 
-### Install image library
+- [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/)
+- [ImageMagick](https://www.imagemagick.org/script/download.php)
+- See how this example [used in our demo app](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js)
+- [gm](https://www.npmjs.com/package/gm) NPM package
+- [im](https://www.npmjs.com/package/im) NPM package
+- [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
+
+## Install image library
+
 __TL;TR;__ - There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
 
 Before you go - install ImageMagick or GraphicksMagick CLI tools. There are numerous ways to install it. For instance, if you're on OS X you can use Homebrew:
+
 ```shell
 brew install graphicsmagick
 # or for ImageMagick:
@@ -21,26 +24,32 @@ brew install graphicsmagick
 ```
 
 Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as ImageMagick in this way:
+
 ```shell
 npm install gm --save
+```
 
-And then where you use it: 
-```jsx
-const gm = require('gm'); 
+And then where you use it:
+
+```js
+const gm = require('gm');
 const im = gm.subClass({ imageMagick: true });
 ```
 
 Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it, - [see the comparison](https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick).
 
-### Install Meteor/NPM packages
+## Install Meteor/NPM packages
+
 ```shell
 meteor add ostrio:files
 meteor npm install --save gm fs-extra
 ```
 
-### Create FilesCollection
+## Create FilesCollection
+
 Initiate *FilesCollection* (`/lib/files.js`):
-```jsx
+
+```js
 import { FilesCollection }   from 'meteor/ostrio:files';
 
 const uploadsCollection = new FilesCollection({
@@ -50,22 +59,25 @@ const uploadsCollection = new FilesCollection({
 export default uploadsCollection;
 ```
 
-### Upload form example
+## Upload form example
+
 Simple upload form (`/client/upload.html`):
-```html
+
+```handlebars
 <template name="uploadForm">
   {{#if upload}}
     <ul>
-      <span id="progress">{{upload.progress}}%</span>
+      <span>{{upload.progress}}%</span>
     </ul>
   {{else}}
-    <input id="fileInput" type="file" />
+    <input data-upload-file type="file"/>
   {{/if}}
 </template>
 ```
 
 Simple upload form (`/client/upload.js`):
-```jsx
+
+```js
 import { Template }    from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 
@@ -83,11 +95,10 @@ Template.uploadForm.helpers({
 });
 
 Template.uploadForm.events({
-  'change #fileInput'(e, template) {
+  'change [data-upload-file]'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       const uploader = uploadsCollection.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false);
 
@@ -115,9 +126,11 @@ Template.uploadForm.events({
 });
 ```
 
-### Catch uploaded files
+## Catch uploaded files
+
 Catch `afterUpload` event (`/server/files.js`):
-```jsx
+
+```js
 import uploadsCollection from '/lib/files.js';
 import createThumbnails from '/server/image-processing.js';
 
@@ -133,9 +146,11 @@ uploadsCollection.on('afterUpload', function(fileRef) {
 });
 ```
 
-### Process uploaded images
+## Process uploaded images
+
 Create thumbnails (`/server/image-processing.js`):
-```jsx
+
+```js
 import { check }  from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -175,7 +190,7 @@ const createThumbnails = (collection, fileRef, cb) => {
             }
           });
 
-          const path = (collection.storagePath(fileRef)) + '/thumbnail-' + fileRef._id + '.' + fileRef.extension;
+          const path = `${collection.storagePath(fileRef)}/thumbnail-${fileRef._id}.${fileRef.extension}`;
           const img = gm(fileRef.path)
             .quality(70)
             .define('filter:support=2')
@@ -222,15 +237,18 @@ const createThumbnails = (collection, fileRef, cb) => {
                         size: stat.size,
                         type: fileRef.type,
                         extension: fileRef.extension,
-                        name: fileRef.name, // <-- Name with extension used if file's version is being downloaded
+                        name: fileRef.name, // <-- Name with extension used when file's version is being downloaded
                         meta: {
                           width: imgInfo.width,
                           height: imgInfo.height
                         }
                       };
 
-                      const upd = { $set: {} };
-                      upd['$set']['versions.thumbnail'] = fileRef.versions.thumbnail;
+                      const upd = {
+                        $set: {
+                          'versions.thumbnail': fileRef.versions.thumbnail
+                        }
+                      };
 
                       collection.collection.update(fileRef._id, upd, (colUpdError) => {
                         if (cb) {
