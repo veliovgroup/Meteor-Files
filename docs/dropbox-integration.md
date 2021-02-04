@@ -3,7 +3,8 @@
 Example below shows how to store and serve uploaded file via DropBox. This example also covers file removing from both your application and DropBox.
 
 ## Prerequisite
-We will use next packages: Request (NPM), Node-fetch (NPM) and Underscore (meteor)
+
+We will use next packages: request (NPM), Node-fetch (NPM) and Underscore (meteor)
 
 ```shell
 meteor npm install request
@@ -24,17 +25,18 @@ meteor npm install dropbox@=4.0.30
 ```
 
 ### Step 2: Get access to DropBox API:
- - Go to https://www.dropbox.com/developers (*Sign(in|up) if required*)
- - Click on [Create your app](https://www.dropbox.com/developers/apps/create)
- - Choose "*Dropbox API*"
- - Choose "*App folder*"
- - Type-in your application name
- - Go to you application's *settings*
- - Click on "*Enable additional users*"
- - Obtain "*Generated access token*" (Click on "*Generate Access token*") for `accessToken` in `new Dropbox({})`
+
+- Go to [DropBox Developers](https://www.dropbox.com/developers) (*Sign(in|up) if required*)
+- Click on [Create your app](https://www.dropbox.com/developers/apps/create)
+- Choose "*Dropbox API*"
+- Choose "*App folder*"
+- Type-in your application name
+- Go to you application's *settings*
+- Click on "*Enable additional users*"
+- Obtain "*Generated access token*" (Click on "*Generate Access token*") for `accessToken` in `new Dropbox({})`
 
 ```javascript
-var Dropbox, Request, bound, client, fs, Collections = {};
+var Dropbox, request, bound, client, fs, Collections = {};
 
 if(Meteor.isServer){
   Dropbox = require('dropbox').Dropbox;
@@ -48,7 +50,7 @@ if(Meteor.isServer){
   });
 }
 
-Request = require('request');
+request = require('request');
 fs = require('fs');
 
 Collections.files = new FilesCollection({
@@ -84,7 +86,7 @@ Collections.files = new FilesCollection({
           console.error(error);
         });
       };
-      
+
       var writeToDB = function(fileRef, version, data){
         // DropBox already uses random URLs
         // No need to use random file names
@@ -116,7 +118,7 @@ Collections.files = new FilesCollection({
           readFile(fileRef, vRef, version);
         });
       };
-      
+
       sendToStorage(fileRef);
     } catch(error){
       // There was an error while uploading the file to Dropbox, displaying the concerned file
@@ -148,7 +150,7 @@ Collections.files = new FilesCollection({
       // If file is moved to DropBox
       // We will pipe request to DropBox
       // So, original link will stay always secure
-      Request({
+      request({
         url: path,
         headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent')
       }).on('response', function(response){

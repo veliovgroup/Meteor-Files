@@ -57,8 +57,7 @@ if (Meteor.isClient) {
             } else {
               return "Please upload file in next formats: 'ogg', 'mp4', 'avi', 'webm' with size less than 512 Mb. You have tried to upload file with \"" + this.ext + "\" extension and with \"" + (Math.round((this.size / (1024 * 1024)) * 100) / 100) + "\" Mb";
             }
-          },
-          streams: 8
+          }
         });
       });
     }

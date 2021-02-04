@@ -220,7 +220,7 @@
         Isomorphic
       </td>
       <td>
-        Upload &amp; Serve (<em>for 206 responce</em>) chunk size
+        Upload &amp; Serve (<em>for 206 response</em>) chunk size
       </td>
       <td>
         <code>272144</code>

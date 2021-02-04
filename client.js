@@ -1,9 +1,9 @@
-import { Mongo }           from 'meteor/mongo';
-import { Meteor }          from 'meteor/meteor';
-import { DDP }             from 'meteor/ddp-client';
-import { Cookies }         from 'meteor/ostrio:cookies';
-import { check, Match }    from 'meteor/check';
-import { UploadInstance }  from './upload.js';
+import { DDP } from 'meteor/ddp-client';
+import { Mongo } from 'meteor/mongo';
+import { Meteor } from 'meteor/meteor';
+import { Cookies } from 'meteor/ostrio:cookies';
+import { check, Match } from 'meteor/check';
+import { UploadInstance } from './upload.js';
 import FilesCollectionCore from './core.js';
 import { formatFleURL, helpers } from './lib.js';
 
@@ -130,10 +130,10 @@ export class FilesCollection extends FilesCollectionCore {
       const _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false;
       if (window.Worker && window.Blob && _URL && helpers.isFunction(_URL.createObjectURL)) {
         this._supportWebWorker = true;
-        this._webWorkerUrl     = _URL.createObjectURL(new window.Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}));
+        this._webWorkerUrl = _URL.createObjectURL(new window.Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], {type: 'application/javascript'}));
       } else if (window.Worker) {
         this._supportWebWorker = true;
-        this._webWorkerUrl     = Meteor.absoluteUrl('packages/ostrio_files/worker.min.js');
+        this._webWorkerUrl = Meteor.absoluteUrl('packages/ostrio_files/worker.min.js');
       } else {
         this._supportWebWorker = false;
       }
@@ -219,7 +219,6 @@ export class FilesCollection extends FilesCollectionCore {
    *   {String}      fileId         - Optionnal `fileId` used at insert
    *   {Object}      meta           - Additional data as object, use later for search
    *   {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
-   *   {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
    *   {Number|dynamic} chunkSize   - Chunk size for upload
    *   {String}      transport      - Upload transport `http` or `ddp`
    *   {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
