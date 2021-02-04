@@ -16,7 +16,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.9');
   api.use('webapp', 'server');
   api.use(['reactive-var', 'tracker', 'ddp-client'], 'client');
-  api.use(['mongo', 'check', 'random', 'ecmascript', 'fetch', 'ostrio:cookies@2.6.1'], ['client', 'server']);
+  api.use(['mongo', 'check', 'random', 'ecmascript', 'fetch', 'ostrio:cookies@2.7.0'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');
