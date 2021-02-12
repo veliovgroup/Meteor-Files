@@ -22,9 +22,9 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
   - [Stream files](https://github.com/VeliovGroup/Meteor-Files#stream-files)
   - [Download Button](https://github.com/VeliovGroup/Meteor-Files#download-button)
 - [Documentation and tutorials](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/toc.md)
+  - [__Demo apps and examples__](https://github.com/VeliovGroup/Meteor-Files#demo-application)
   - [3rd-party storage integration](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/3rd-party-storage.md) examples - AWS S3, DropBox, GridFS and Google Storage
   - [TypeScript Definitions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
-  - [Demo apps and examples](https://github.com/VeliovGroup/Meteor-Files#demo-application)
 - [Related Packages](https://github.com/VeliovGroup/Meteor-Files#related-packages)
 - [Why this package?](https://github.com/VeliovGroup/Meteor-Files#why-meteor-files)
 - [Help / Support](https://github.com/VeliovGroup/Meteor-Files#get-support)
@@ -138,7 +138,6 @@ Template.uploadForm.events({
       // multiple files were selected
       const upload = Images.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false);
 
@@ -311,7 +310,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md)
 4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
 5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-6. In __Safari__ (Mobile and Desktop) for `DDP` upload streams are hard-coded to `1` and chunk size is reduced by algorithm, due to error thrown if too many connection is open by the browser or frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
+6. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/VeliovGroup/Meteor-Files/issues/458)
 7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/VeliovGroup/Meteor-Files/issues/737) for details
 8. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/VeliovGroup/Meteor-Files/issues/742) for details
 
@@ -331,9 +330,7 @@ For more expressive example see [Download demo](https://github.com/VeliovGroup/M
 ## Demo application:
 
 - [Live: __files.veliov.com__](https://files.veliov.com)
-- [Source Code Rep](https://github.com/VeliovGroup/Meteor-Files-Demos/tree/master/demo)
-- [Compiled Rep](https://github.com/VeliovGroup/Meteor-Files-Demo)
-- [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/VeliovGroup/Meteor-Files-Demo)
+- [Source Code Rep](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app)
 
 ## Related Packages:
 

@@ -206,17 +206,6 @@ Upload file to a Server via DDP or HTTP.
     </tr>
     <tr>
       <td align="right">
-        `settings.streams` {*Number*|dynamic}
-      </td>
-      <td>
-        Quantity of parallel upload streams
-      </td>
-      <td>
-        `dynamic` is recommended
-      </td>
-    </tr>
-    <tr>
-      <td align="right">
         `settings.chunkSize` {*Number*|dynamic}
       </td>
       <td>
@@ -619,7 +608,6 @@ Template.uploadForm.events({
           }
           template.currentFile.set(false);
         },
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       });
     }
@@ -642,7 +630,6 @@ Template.uploadForm.events({
       // multiple files were selected
       Images.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false).on('start', function () {
         template.currentFile.set(this);
@@ -672,7 +659,6 @@ Template.uploadForm.events({
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       const uploader = Images.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false);
 
@@ -751,7 +737,6 @@ Template.uploadForm.events({
       // multiple files were selected
       Images.insert({
         file: e.currentTarget.files[0],
-        streams: 'dynamic',
         chunkSize: 'dynamic'
       }, false).pipe(encrypt).pipe(zip).start();
     }

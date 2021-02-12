@@ -1,6 +1,6 @@
+import { DDP } from 'meteor/ddp-client';
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
-import { DDP } from 'meteor/ddp-client';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 import { UploadInstance } from './upload.js';
@@ -228,7 +228,6 @@ export class FilesCollection extends FilesCollectionCore {
    *   {String}      fileId         - Optionnal `fileId` used at insert
    *   {Object}      meta           - Additional data as object, use later for search
    *   {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
-   *   {Number|dynamic} streams     - Quantity of parallel upload streams, default: 2
    *   {Number|dynamic} chunkSize   - Chunk size for upload
    *   {String}      transport      - Upload transport `http` or `ddp`
    *   {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`

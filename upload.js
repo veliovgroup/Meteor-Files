@@ -1,8 +1,8 @@
-import { HTTP }         from 'meteor/http';
-import { Meteor }       from 'meteor/meteor';
-import { Random }       from 'meteor/random';
-import { Tracker }      from 'meteor/tracker';
-import { ReactiveVar }  from 'meteor/reactive-var';
+import { fetch } from 'meteor/fetch';
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { Tracker } from 'meteor/tracker';
+import { ReactiveVar } from 'meteor/reactive-var';
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
@@ -23,15 +23,16 @@ export class FileUpload extends EventEmitter {
     this.config._debug('[FilesCollection] [FileUpload] [constructor]');
 
     if (!this.config.isBase64) {
-      this.file        = Object.assign({}, helpers.clone(this.config.file), this.config.fileData);
+      this.file = Object.assign({}, helpers.clone(this.config.file), this.config.fileData);
     } else {
-      this.file        = this.config.fileData;
+      this.file = this.config.fileData;
     }
-    this.state         = new ReactiveVar('active');
-    this.onPause       = new ReactiveVar(false);
-    this.progress      = new ReactiveVar(0);
-    this.continueFunc  = () => { };
-    this.estimateTime  = new ReactiveVar(1000);
+
+    this.state = new ReactiveVar('active');
+    this.onPause = new ReactiveVar(false);
+    this.progress = new ReactiveVar(0);
+    this.continueFunc = () => {};
+    this.estimateTime = new ReactiveVar(1000);
     this.estimateSpeed = new ReactiveVar(0);
     this.estimateTimer = Meteor.setInterval(() => {
       if (this.state.get() === 'active') {
@@ -52,7 +53,7 @@ export class FileUpload extends EventEmitter {
   }
   continue() {
     this.config._debug('[FilesCollection] [insert] [.continue()]');
-    if (this.onPause.get()) {
+    if (this.onPause.get() && Meteor.status().connected) {
       this.onPause.set(false);
       this.state.set('active');
       this.emit('continue', this.file);
@@ -104,14 +105,6 @@ export class UploadInstance extends EventEmitter {
       this.config.meta = {};
     }
 
-    if (!this.config.streams) {
-      this.config.streams = 2;
-    }
-
-    if (this.config.streams < 1) {
-      this.config.streams = 2;
-    }
-
     if (!helpers.isString(this.config.transport)) {
       this.config.transport = 'ddp';
     }
@@ -138,7 +131,6 @@ export class UploadInstance extends EventEmitter {
       type: Match.Optional(String),
       onError: Match.Optional(Function),
       onAbort: Match.Optional(Function),
-      streams: Match.OneOf('dynamic', Number),
       onStart: Match.Optional(Function),
       fileName: Match.Optional(String),
       isBase64: Match.Optional(Boolean),
@@ -219,7 +211,6 @@ export class UploadInstance extends EventEmitter {
       this.startTime     = {};
       this.config.debug  = this.collection.debug;
       this.config._debug = this.collection._debug;
-      this.currentChunk  = 0;
       this.transferTime  = 0;
       this.trackerComp   = null;
       this.sentChunks    = 0;
@@ -259,10 +250,9 @@ export class UploadInstance extends EventEmitter {
       this.addListener('prepare', this.prepare);
       this.addListener('sendChunk', this.sendChunk);
       this.addListener('proceedChunk', this.proceedChunk);
-      this.addListener('createStreams', this.createStreams);
 
       this.addListener('calculateStats', helpers.throttle(() => {
-        const _t = (this.transferTime / this.sentChunks) / this.config.streams;
+        const _t = (this.transferTime / (this.sentChunks || 1));
         this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
         this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
 
@@ -361,53 +351,56 @@ export class UploadInstance extends EventEmitter {
     if (opts.binData) {
       if (this.config.transport === 'ddp') {
         this.config.ddp.call(this.collection._methodNames._Write, opts, (error) => {
-          this.transferTime += (+new Date) - this.startTime[opts.chunkId];
+          this.transferTime += Date.now() - this.startTime[opts.chunkId];
           if (error) {
             if (this.result.state.get() !== 'aborted') {
               this.emit('end', error);
             }
           } else {
-            ++this.sentChunks;
-            if (this.sentChunks >= this.fileLength) {
+            if (++this.sentChunks >= this.fileLength) {
               this.emit('sendEOF');
-            } else if (this.currentChunk < this.fileLength) {
+            } else {
               this.emit('upload');
             }
             this.emit('calculateStats');
           }
         });
       } else {
-        HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
-          content: opts.binData,
+        fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+          method: 'POST',
+          body: opts.binData,
+          cache: 'no-cache',
+          credentials: 'include',
+          type: 'cors',
           headers: {
             'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null,
             'x-fileid': opts.fileId,
             'x-chunkid': opts.chunkId,
             'content-type': 'text/plain'
-          },
-          beforeSend(xhr) {
-            xhr.withCredentials = true;
-            return true;
           }
-        }, (error) => {
-          this.transferTime += +new Date() - this.startTime[opts.chunkId];
-          if (error) {
-            if (`${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
-              this.result.pause();
-            } else {
-              if (this.result.state.get() !== 'aborted') {
-                this.emit('end', error);
-              }
-            }
-          } else {
-            ++this.sentChunks;
-            if (this.sentChunks >= this.fileLength) {
+        }).then((response) => {
+          if (response.status === 204) {
+            this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [then] chunk successfully sent');
+            this.transferTime += Date.now() - this.startTime[opts.chunkId];
+            if (++this.sentChunks >= this.fileLength) {
               this.emit('sendEOF');
-            } else if (this.currentChunk < this.fileLength) {
+            } else {
               this.emit('upload');
             }
             this.emit('calculateStats');
+          } else {
+            this.emit('end', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
           }
+        }).catch((error) => {
+          this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [error] EXCEPTION while sending chunk', error);
+          this.transferTime += Date.now() - this.startTime[opts.chunkId];
+          Meteor.setTimeout(() => {
+            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+              this.result.pause();
+            } else if (this.result.state.get() !== 'aborted') {
+              this.emit('end', error);
+            }
+          }, 512);
         });
       }
     }
@@ -427,32 +420,33 @@ export class UploadInstance extends EventEmitter {
           this.emit('end', error, result);
         });
       } else {
-        HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
-          content: '',
+        fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+          method: 'POST',
+          body: '',
+          cache: 'no-cache',
+          credentials: 'include',
+          type: 'cors',
           headers: {
             'x-eof': '1',
             'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null,
             'x-fileId': opts.fileId,
             'content-type': 'text/plain'
           },
-          beforeSend(xhr) {
-            xhr.withCredentials = true;
-            return true;
-          }
-        }, (error, _result) => {
-          let result;
-          try {
-            result = JSON.parse((helpers.isObject(_result) ? _result.content : void 0) || {});
-          } catch (e) {
-            console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
-            result = {};
-          }
-
+        }).then((response) => response.json()).then((result) => {
           if (result.meta) {
             result.meta = fixJSONParse(result.meta);
           }
 
-          this.emit('end', error, result);
+          this.emit('end', void 0, result);
+        }).catch((error) => {
+          Meteor.setTimeout(() => {
+            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+              this.result.pause();
+            } else if (this.result.state.get() !== 'aborted') {
+              console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
+              this.emit('end', error);
+            }
+          }, 512);
         });
       }
     }
@@ -511,33 +505,22 @@ export class UploadInstance extends EventEmitter {
       return this;
     }
 
-    if (this.currentChunk <= this.fileLength) {
-      ++this.currentChunk;
+    if (this.sentChunks + 1 <= this.fileLength) {
       if (this.worker) {
         this.worker.postMessage({
           f: this.config.file,
-          sc: this.sentChunks,
-          cc: this.currentChunk,
+          cc: this.sentChunks + 1,
           cs: this.config.chunkSize,
           ib: this.config.isBase64
         });
       } else {
-        this.emit('proceedChunk', this.currentChunk);
+        this.emit('proceedChunk', this.sentChunks + 1);
       }
     } else {
       this.emit('sendEOF');
     }
-    this.startTime[this.currentChunk] = +new Date();
+    this.startTime[this.sentChunks + 1] = Date.now();
     return this;
-  }
-
-  createStreams() {
-    this.collection._debug('[FilesCollection] [UploadInstance] [createStreams]');
-    let i = 1;
-    while (i <= this.config.streams) {
-      this.emit('upload');
-      i++;
-    }
   }
 
   prepare() {
@@ -569,21 +552,7 @@ export class UploadInstance extends EventEmitter {
       _len = Math.ceil(this.fileData.size / this.config.chunkSize);
     }
 
-    if (this.config.streams === 'dynamic') {
-      this.config.streams = helpers.clone(_len);
-      if (this.config.streams > 24) { this.config.streams = 24; }
-
-      if (this.config.transport === 'http') {
-        this.config.streams = Math.round(this.config.streams / 2);
-      } else if (isSafari) {
-        this.config.streams = 1;
-      }
-    }
-
     this.fileLength = _len <= 0 ? 1 : _len;
-    if (this.config.streams > this.fileLength) {
-      this.config.streams = this.fileLength;
-    }
     this.result.config.fileLength = this.fileLength;
 
     const opts = {
@@ -599,14 +568,20 @@ export class UploadInstance extends EventEmitter {
 
     const handleStart = (error) => {
       if (error) {
-        this.collection._debug('[FilesCollection] [_Start] Error:', error);
-        this.emit('end', error);
+        Meteor.setTimeout(() => {
+          if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+            this.result.pause();
+          } else if (this.result.state.get() !== 'aborted') {
+            this.collection._debug('[FilesCollection] [_Start] Error:', error);
+            this.emit('end', error);
+          }
+        }, 512);
       } else {
         this.result.continueFunc = () => {
           this.collection._debug('[FilesCollection] [insert] [continueFunc]');
-          this.emit('createStreams');
+          this.emit('upload');
         };
-        this.emit('createStreams');
+        this.emit('upload');
       }
     };
 
@@ -617,17 +592,23 @@ export class UploadInstance extends EventEmitter {
         opts.file.meta = fixJSONStringify(opts.file.meta);
       }
 
-      HTTP.call('POST', `${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
-        data: opts,
+      fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+        method: 'POST',
+        body: JSON.stringify(opts),
+        cache: 'no-cache',
+        credentials: 'include',
+        type: 'cors',
         headers: {
           'x-start': '1',
           'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
-        },
-        beforeSend(xhr) {
-          xhr.withCredentials = true;
-          return true;
         }
-      }, handleStart);
+      }).then((response) => {
+        if (response.status === 204) {
+          handleStart();
+        } else {
+          this.emit('end', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
+        }
+      }).catch(handleStart);
     }
   }
 
@@ -662,6 +643,9 @@ export class UploadInstance extends EventEmitter {
       if (!this.result.onPause.curValue && !Meteor.status().connected) {
         this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
         this.result.pause();
+      } else if (this.result.onPause.curValue && Meteor.status().connected) {
+        this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
+        this.result.continue();
       }
     });
 

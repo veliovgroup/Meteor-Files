@@ -48,4 +48,3 @@ The cons:
 
 - No mobile browsers support;
 - Chunk size limited to 64KB;
-- Only single stream is supported (*so, it's currently uses synchronous chunk uploads*. If `RTC/DC` will be accepted by community we will implement asynchronous chunks upload).
