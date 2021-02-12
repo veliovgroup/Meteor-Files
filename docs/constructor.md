@@ -829,6 +829,52 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.getUser</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Replace default way of recognizing user.
+        <strong>Arguments</strong>:
+        <ul>
+          <li>
+            <code>http</code> {<em>Object</em>} - Middleware request instance
+          </li>
+          <li>
+            <code>http.request</code> {<em>Object</em>} - example: <code>http.request.headers</code>
+          </li>
+          <li>
+            <code>http.response</code> {<em>Object</em>} - example: <code>http.response.end()</code>
+          </li>
+        </ul>
+      </td>
+      <td>
+        Default function recognizing user based on x_mtok cookie.
+      </td>
+      <td>
+       Usefull when you want to auth user based on custom cookie (or other way).
+       Must return null or {userId: null || String, user: function=> null || user }
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.disableSetTokenCookie</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Client
+      </td>
+      <td>
+        Disable automatic cookie setting
+      </td>
+      <td>
+      </td>
+      <td>
+       Useful when you use multiple file collections or when you want to implement your own authorization.
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config._preCollection</code> {<em>Mongo.Collection</em>}
       </td>
       <td>
