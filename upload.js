@@ -70,7 +70,6 @@ export class FileUpload extends EventEmitter {
   }
   abort() {
     this.config._debug('[FilesCollection] [insert] [.abort()]');
-    window.removeEventListener('beforeunload', this.config.beforeunload, false);
     this.pause();
     this.config._onEnd();
     this.state.set('aborted');
@@ -142,6 +141,8 @@ export class UploadInstance extends EventEmitter {
       allowWebWorkers: Boolean
     });
 
+    this.config.isEnded = false;
+
     if (this.config.isBase64 === true) {
       check(this.config.file, String);
 
@@ -208,17 +209,18 @@ export class UploadInstance extends EventEmitter {
         this.worker = null;
       }
 
-      this.startTime     = {};
-      this.config.debug  = this.collection.debug;
+      this.fetchControllers = {};
       this.config._debug = this.collection._debug;
-      this.transferTime  = 0;
-      this.trackerComp   = null;
-      this.sentChunks    = 0;
-      this.fileLength    = 1;
-      this.EOFsent       = false;
-      this.fileId        = this.config.fileId || Random.id();
-      this.FSName        = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
-      this.pipes         = [];
+      this.config.debug = this.collection.debug;
+      this.transferTime = 0;
+      this.trackerComp = null;
+      this.sentChunks = 0;
+      this.fileLength = 1;
+      this.startTime = {};
+      this.EOFsent = false;
+      this.fileId = this.config.fileId || Random.id();
+      this.FSName = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
+      this.pipes = [];
 
       this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
       this.fileData['mime-type'] = this.fileData.mime;
@@ -270,6 +272,16 @@ export class UploadInstance extends EventEmitter {
       }, 250));
 
       this.addListener('_onEnd', () => {
+        if (this.config.isEnded) {
+          return;
+        }
+        this.config.isEnded = true;
+        for (const uid in this.fetchControllers) {
+          if (this.fetchControllers[uid]) {
+            this.fetchControllers[uid].abort();
+            delete this.fetchControllers[uid];
+          }
+        }
         if (this.result.estimateTimer) {
           Meteor.clearInterval(this.result.estimateTimer);
         }
@@ -283,9 +295,10 @@ export class UploadInstance extends EventEmitter {
           window.removeEventListener('beforeunload', this.beforeunload, false);
         }
         if (this.result) {
-          return this.result.progress.set(0);
+          this.result.progress.set(0);
+          return;
         }
-        return void 0;
+        return;
       });
     } else {
       throw new Meteor.Error(500, '[FilesCollection] [insert] Have you forget to pass a File itself?');
@@ -366,8 +379,11 @@ export class UploadInstance extends EventEmitter {
           }
         });
       } else {
+        const uid = Random.id();
+        this.fetchControllers[uid] = new AbortController();
         fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           method: 'POST',
+          signal: this.fetchControllers[uid].signal,
           body: opts.binData,
           cache: 'no-cache',
           credentials: 'include',
@@ -379,28 +395,34 @@ export class UploadInstance extends EventEmitter {
             'content-type': 'text/plain'
           }
         }).then((response) => {
-          if (response.status === 204) {
-            this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [then] chunk successfully sent');
-            this.transferTime += Date.now() - this.startTime[opts.chunkId];
-            if (++this.sentChunks >= this.fileLength) {
-              this.emit('sendEOF');
+          delete this.fetchControllers[uid];
+          if (!this.config.isEnded) {
+            if (response.status === 204) {
+              this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [then] chunk successfully sent');
+              this.transferTime += Date.now() - this.startTime[opts.chunkId];
+              if (++this.sentChunks >= this.fileLength) {
+                this.emit('sendEOF');
+              } else {
+                this.emit('upload');
+              }
+              this.emit('calculateStats');
             } else {
-              this.emit('upload');
+              this.emit('end', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
             }
-            this.emit('calculateStats');
-          } else {
-            this.emit('end', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
           }
         }).catch((error) => {
-          this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [error] EXCEPTION while sending chunk', error);
-          this.transferTime += Date.now() - this.startTime[opts.chunkId];
-          Meteor.setTimeout(() => {
-            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
-              this.result.pause();
-            } else if (this.result.state.get() !== 'aborted') {
-              this.emit('end', error);
-            }
-          }, 512);
+          delete this.fetchControllers[uid];
+          if (!this.config.isEnded) {
+            this.collection._debug('[FilesCollection] [sendChunk] [fetch()] [error] EXCEPTION while sending chunk', error);
+            this.transferTime += Date.now() - this.startTime[opts.chunkId];
+            Meteor.setTimeout(() => {
+              if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+                this.result.pause();
+              } else if (this.result.state.get() !== 'aborted') {
+                this.emit('end', error);
+              }
+            }, 512);
+          }
         });
       }
     }
@@ -417,11 +439,16 @@ export class UploadInstance extends EventEmitter {
 
       if (this.config.transport === 'ddp') {
         this.config.ddp.call(this.collection._methodNames._Write, opts, (error, result) => {
-          this.emit('end', error, result);
+          if (!this.config.isEnded) {
+            this.emit('end', error, result);
+          }
         });
       } else {
+        const uid = Random.id();
+        this.fetchControllers[uid] = new AbortController();
         fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
           method: 'POST',
+          signal: this.fetchControllers[uid].signal,
           body: '',
           cache: 'no-cache',
           credentials: 'include',
@@ -433,20 +460,26 @@ export class UploadInstance extends EventEmitter {
             'content-type': 'text/plain'
           },
         }).then((response) => response.json()).then((result) => {
-          if (result.meta) {
-            result.meta = fixJSONParse(result.meta);
-          }
-
-          this.emit('end', void 0, result);
-        }).catch((error) => {
-          Meteor.setTimeout(() => {
-            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
-              this.result.pause();
-            } else if (this.result.state.get() !== 'aborted') {
-              console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
-              this.emit('end', error);
+          delete this.fetchControllers[uid];
+          if (!this.config.isEnded) {
+            if (result.meta) {
+              result.meta = fixJSONParse(result.meta);
             }
-          }, 512);
+
+            this.emit('end', void 0, result);
+          }
+        }).catch((error) => {
+          delete this.fetchControllers[uid];
+          if (!this.config.isEnded) {
+            Meteor.setTimeout(() => {
+              if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+                this.result.pause();
+              } else if (this.result.state.get() !== 'aborted') {
+                console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
+                this.emit('end', error);
+              }
+            }, 512);
+          }
         });
       }
     }
@@ -567,21 +600,23 @@ export class UploadInstance extends EventEmitter {
     }
 
     const handleStart = (error) => {
-      if (error) {
-        Meteor.setTimeout(() => {
-          if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
-            this.result.pause();
-          } else if (this.result.state.get() !== 'aborted') {
-            this.collection._debug('[FilesCollection] [_Start] Error:', error);
-            this.emit('end', error);
-          }
-        }, 512);
-      } else {
-        this.result.continueFunc = () => {
-          this.collection._debug('[FilesCollection] [insert] [continueFunc]');
+      if (!this.config.isEnded) {
+        if (error) {
+          Meteor.setTimeout(() => {
+            if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
+              this.result.pause();
+            } else if (this.result.state.get() !== 'aborted') {
+              this.collection._debug('[FilesCollection] [_Start] Error:', error);
+              this.emit('end', error);
+            }
+          }, 512);
+        } else {
+          this.result.continueFunc = () => {
+            this.collection._debug('[FilesCollection] [insert] [continueFunc]');
+            this.emit('upload');
+          };
           this.emit('upload');
-        };
-        this.emit('upload');
+        }
       }
     };
 
@@ -592,8 +627,11 @@ export class UploadInstance extends EventEmitter {
         opts.file.meta = fixJSONStringify(opts.file.meta);
       }
 
+      const uid = Random.id();
+      this.fetchControllers[uid] = new AbortController();
       fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
         method: 'POST',
+        signal: this.fetchControllers[uid].signal,
         body: JSON.stringify(opts),
         cache: 'no-cache',
         credentials: 'include',
@@ -603,12 +641,18 @@ export class UploadInstance extends EventEmitter {
           'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
         }
       }).then((response) => {
-        if (response.status === 204) {
-          handleStart();
-        } else {
-          this.emit('end', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
+        delete this.fetchControllers[uid];
+        if (!this.config.isEnded) {
+          if (response.status === 204) {
+            handleStart();
+          } else {
+            this.emit('end', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
+          }
         }
-      }).catch(handleStart);
+      }).catch((error) => {
+        delete this.fetchControllers[uid];
+        handleStart(error);
+      });
     }
   }
 
