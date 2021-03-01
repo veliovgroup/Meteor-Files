@@ -53,6 +53,7 @@ const NOOP  = () => {  };
  * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return `true` to continue
  *  - return `false` or `String` to abort upload
+ * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, usefull when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
  * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
@@ -78,6 +79,7 @@ export class FilesCollection extends FilesCollectionCore {
         schema: this.schema,
         public: this.public,
         strict: this.strict,
+        getUser: this.getUser,
         chunkSize: this.chunkSize,
         protected: this.protected,
         collection: this.collection,
@@ -157,6 +159,10 @@ export class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
+    }
+
+    if (!helpers.isFunction(this.getUser)) {
+      this.getUser = false;
     }
 
     if (!helpers.isBoolean(this.allowClientCode)) {
@@ -390,6 +396,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.debug, Boolean);
     check(this.schema, Object);
     check(this.public, Boolean);
+    check(this.getUser, Match.OneOf(false, Function));
     check(this.protected, Match.OneOf(Boolean, Function));
     check(this.chunkSize, Number);
     check(this.downloadRoute, String);
@@ -508,15 +515,7 @@ export class FilesCollection extends FilesCollectionCore {
           try {
             let opts;
             let result;
-            let user;
-
-            if (httpReq.headers['x-mtok'] && this._getUserId(httpReq.headers['x-mtok'])) {
-              user = {
-                userId: this._getUserId(httpReq.headers['x-mtok'])
-              };
-            } else {
-              user = this._getUser({request: httpReq, response: httpResp});
-            }
+            let user = this._getUser({request: httpReq, response: httpResp});
 
             if (httpReq.headers['x-start'] !== '1') {
               // CHUNK UPLOAD SCENARIO:
@@ -1084,7 +1083,19 @@ export class FilesCollection extends FilesCollectionCore {
    * @summary Returns object with `userId` and `user()` method which return user's object
    * @returns {Object}
    */
-  _getUser(http) {
+  _getUser() {
+    return this.getUser ?
+      this.getUser(...arguments) : this._getUserDefault(...arguments);
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCollection
+   * @name _getUserDefault
+   * @summary Default way of recognising user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defnied. Returns object with `userId` and `user()` method which return user's object
+   * @returns {Object}
+   */
+  _getUserDefault(http) {
     const result = {
       user() { return null; },
       userId: null
