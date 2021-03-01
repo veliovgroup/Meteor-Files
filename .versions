@@ -21,7 +21,7 @@ fetch@0.1.1
 geojson-utils@1.0.10
 id-map@1.1.0
 inter-process-messaging@0.1.1
-local-test:ostrio:files@2.0.0
+local-test:ostrio:files@2.0.1
 logging@1.2.0
 meteor@1.9.3
 minimongo@1.6.1
@@ -35,7 +35,7 @@ mongo-id@1.0.7
 npm-mongo@3.8.1
 ordered-dict@1.1.0
 ostrio:cookies@2.7.0
-ostrio:files@2.0.0
+ostrio:files@2.0.1
 promise@0.11.2
 random@1.2.0
 react-fast-refresh@0.1.0
