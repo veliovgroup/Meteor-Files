@@ -765,7 +765,7 @@ export class FilesCollection extends FilesCollectionCore {
           }
           throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
         } else {
-          throw new Meteor.Error(401, '[FilesCollection] [remove] Run code from client is not allowed!');
+          throw new Meteor.Error(405, '[FilesCollection] [remove] Running code on a client is not allowed!');
         }
       };
 
@@ -1116,7 +1116,7 @@ export class FilesCollection extends FilesCollectionCore {
         const userId = this._getUserId(mtok);
 
         if (userId) {
-          result.user   = () => Meteor.users.findOne(userId);
+          result.user = () => Meteor.users.findOne(userId);
           result.userId = userId;
         }
       }
