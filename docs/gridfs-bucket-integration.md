@@ -74,8 +74,8 @@ In order to stay flexible enough in the choice of the bucket  we use a factory f
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createAfterUpdate = bucket =>
-  function createOnAfterUpload (file) {
+export const createOnAfterUpload = bucket =>
+  function onAfterUpload (file) {
     const self = this;
 
     // here you could manipulate your file
