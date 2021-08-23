@@ -1,4 +1,4 @@
-By default files served from GridFS returned with `200` response code. Which means if you serve video/audio/large downloads, file will be entirely read to memory and serve to client. This behavior is not best solution in terms of performance and resource usage.
+By default files served from GridFS returned with `200` response code. This behavior is not best solution in terms of performance and resource usage.
 
 `206` partial content response is much better from all sides, for video and audio it allows to support time-seeking, for large files - resumable downloads. For server-side it reduces memory and CPU consumption.
 
