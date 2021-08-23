@@ -112,7 +112,7 @@ export const createAfterUpdate = bucket =>
           
           self.collection.update(file._id, {
             $set: {
-              [ property ]: ver._id.toHexString();
+              [ property ]: ver._id.toHexString(),
             }
           });
           
