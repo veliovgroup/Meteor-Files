@@ -15,14 +15,14 @@ import fs from 'fs-extra';
 import nodeQs from 'querystring';
 import nodePath from 'path';
 
-/*
+/**
  * @const {Object} bound  - Meteor.bindEnvironment (Fiber wrapper)
  * @const {Function} NOOP - No Operation function, placeholder for required callbacks
  */
 const bound = Meteor.bindEnvironment(callback => callback());
 const NOOP  = () => {  };
 
-/*
+/**
  * @locus Anywhere
  * @class FilesCollection
  * @param config           {Object}   - [Both]   Configuration object with next properties:
@@ -246,21 +246,21 @@ export class FilesCollection extends FilesCollectionCore {
         const headers = {};
         switch (responseCode) {
         case '206':
-          headers.Pragma               = 'private';
+          headers.Pragma = 'private';
           headers['Transfer-Encoding'] = 'chunked';
           break;
         case '400':
-          headers['Cache-Control']     = 'no-cache';
+          headers['Cache-Control'] = 'no-cache';
           break;
         case '416':
-          headers['Content-Range']     = `bytes */${versionRef.size}`;
+          headers['Content-Range'] = `bytes */${versionRef.size}`;
           break;
         default:
           break;
         }
 
-        headers.Connection       = 'keep-alive';
-        headers['Content-Type']  = versionRef.type || 'application/octet-stream';
+        headers.Connection = 'keep-alive';
+        headers['Content-Type'] = versionRef.type || 'application/octet-stream';
         headers['Accept-Ranges'] = 'bytes';
         return headers;
       };
@@ -884,7 +884,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name _prepareUpload
@@ -972,7 +972,7 @@ export class FilesCollection extends FilesCollectionCore {
     return {result, opts};
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name _finishUpload
@@ -1007,7 +1007,7 @@ export class FilesCollection extends FilesCollectionCore {
     });
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name _handleUpload
@@ -1029,7 +1029,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getMimeType
@@ -1050,7 +1050,7 @@ export class FilesCollection extends FilesCollectionCore {
     return mime;
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUserId
@@ -1076,7 +1076,7 @@ export class FilesCollection extends FilesCollectionCore {
     return null;
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
@@ -1088,7 +1088,7 @@ export class FilesCollection extends FilesCollectionCore {
       this.getUser(...arguments) : this._getUserDefault(...arguments);
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUserDefault
@@ -1125,7 +1125,7 @@ export class FilesCollection extends FilesCollectionCore {
     return result;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name write
@@ -1224,7 +1224,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name load
@@ -1409,7 +1409,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name addFile
@@ -1512,7 +1512,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name remove
@@ -1551,7 +1551,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name deny
@@ -1565,7 +1565,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this.collection;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name allow
@@ -1579,7 +1579,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this.collection;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name denyClient
@@ -1596,7 +1596,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this.collection;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name allowClient
@@ -1614,7 +1614,7 @@ export class FilesCollection extends FilesCollectionCore {
   }
 
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name unlink
@@ -1644,7 +1644,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name _404
@@ -1667,7 +1667,7 @@ export class FilesCollection extends FilesCollectionCore {
     }
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name download
@@ -1726,7 +1726,7 @@ export class FilesCollection extends FilesCollectionCore {
     return this._404(http);
   }
 
-  /*
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name serve
