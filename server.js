@@ -1834,12 +1834,17 @@ export class FilesCollection extends FilesCollectionCore {
 
       const closeStream = () => {
         if (!stream._isEnded) {
-          if (typeof stream.close === 'function') {
-            stream.close(closeStreamCb);
-          } else if (typeof stream.end === 'function') {
-            stream.end(closeStreamCb);
-          } else if (typeof stream.destroy === 'function') {
-            stream.destroy('Got to close this stream', closeStreamCb);
+          try {
+            if (typeof stream.close === 'function') {
+              stream.close(closeStreamCb);
+            } else if (typeof stream.end === 'function') {
+              stream.end(closeStreamCb);
+            } else if (typeof stream.destroy === 'function') {
+              stream.destroy('Got to close this stream', closeStreamCb);
+            }
+          } catch (closeStreamError) {
+            // Perhaps one of the method has thrown an error
+            // or stream has been already ended/closed/exhausted
           }
         }
       };
