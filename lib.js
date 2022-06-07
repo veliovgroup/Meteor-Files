@@ -114,7 +114,7 @@ const helpers = {
 const _helpers = ['String', 'Number', 'Date'];
 for (let i = 0; i < _helpers.length; i++) {
   helpers['is' + _helpers[i]] = function (obj) {
-    return Object.prototype.toString.call(obj) === '[object ' + _helpers[i] + ']';
+    return Object.prototype.toString.call(obj) === `[object ${_helpers[i]}]`;
   };
 }
 
