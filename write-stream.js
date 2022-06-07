@@ -1,16 +1,16 @@
-import fs          from 'fs-extra';
-import { Meteor }  from 'meteor/meteor';
+import fs from 'fs-extra';
+import { Meteor } from 'meteor/meteor';
 import { helpers } from './lib.js';
-const NOOP = () => {};
+const noop = () => {};
 
-/*
+/**
  * @const {Object} bound   - Meteor.bindEnvironment (Fiber wrapper)
  * @const {Object} fdCache - File Descriptors Cache
  */
-const bound   = Meteor.bindEnvironment(callback => callback());
+const bound = Meteor.bindEnvironment(callback => callback());
 const fdCache = {};
 
-/*
+/**
  * @private
  * @locus Server
  * @class WriteStream
@@ -30,10 +30,10 @@ export default class WriteStream {
       return;
     }
 
-    this.fd            = null;
+    this.fd = null;
+    this.ended = false;
+    this.aborted = false;
     this.writtenChunks = 0;
-    this.ended         = false;
-    this.aborted       = false;
 
     if (fdCache[this.path] && !fdCache[this.path].ended && !fdCache[this.path].aborted) {
       this.fd = fdCache[this.path].fd;
@@ -62,7 +62,7 @@ export default class WriteStream {
     }
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name write
    * @param {Number} num - Chunk position in a stream
@@ -94,7 +94,7 @@ export default class WriteStream {
     return false;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name end
    * @param {Function} callback - Callback
@@ -131,7 +131,7 @@ export default class WriteStream {
     return false;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name abort
    * @param {Function} callback - Callback
@@ -141,11 +141,11 @@ export default class WriteStream {
   abort(callback) {
     this.aborted = true;
     delete fdCache[this.path];
-    fs.unlink(this.path, (callback || NOOP));
+    fs.unlink(this.path, (callback || noop));
     return true;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name stop
    * @summary Stop writing to writableStream
