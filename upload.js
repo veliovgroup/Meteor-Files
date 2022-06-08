@@ -245,20 +245,11 @@ export class UploadInstance extends EventEmitter {
 
       this.result.config._onEnd = () => this.emit('_onEnd');
 
-      this.addListener('end', this.end);
-      this.addListener('start', this.start);
-      this.addListener('upload', this.upload);
-      this.addListener('sendEOF', this.sendEOF);
-      this.addListener('prepare', this.prepare);
-      this.addListener('sendChunk', this.sendChunk);
-      this.addListener('proceedChunk', this.proceedChunk);
+      this._setProgress = (progress) => {
+        if (this.result.progress.get() >= 100) {
+          return;
+        }
 
-      this.addListener('calculateStats', helpers.throttle(() => {
-        const _t = (this.transferTime / (this.sentChunks || 1));
-        this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
-        this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
-
-        const progress = Math.round((this.sentChunks / this.fileLength) * 100);
         let sentBytes = this.config.chunkSize * this.sentChunks;
         if (sentBytes > this.fileData.size) {
           // this case often occurs, when the last chunk
@@ -269,6 +260,27 @@ export class UploadInstance extends EventEmitter {
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
         this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
+      };
+
+      this.addListener('end', this.end);
+      this.addListener('start', this.start);
+      this.addListener('upload', this.upload);
+      this.addListener('sendEOF', this.sendEOF);
+      this.addListener('prepare', this.prepare);
+      this.addListener('sendChunk', this.sendChunk);
+      this.addListener('proceedChunk', this.proceedChunk);
+
+      this.addListener('calculateStats', helpers.throttle(() => {
+        if (this.result.progress.get() >= 100) {
+          return;
+        }
+
+        const _t = (this.transferTime / (this.sentChunks || 1));
+        this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
+        this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
+
+        const progress = Math.round((this.sentChunks / this.fileLength) * 100);
+        this._setProgress(progress);
       }, 250));
 
       this.addListener('_onEnd', () => {
@@ -307,6 +319,7 @@ export class UploadInstance extends EventEmitter {
       console.timeEnd(`insert ${this.fileData.name}`);
     }
 
+    this._setProgress(100);
     this.emit('_onEnd');
     this.result.emit('uploaded', error, data);
     this.config.onUploaded && this.config.onUploaded.call(this.result, error, data);
