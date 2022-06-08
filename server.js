@@ -1832,7 +1832,7 @@ export class FilesCollection extends FilesCollectionCore {
       };
 
       const closeStream = () => {
-        if (!stream._isEnded) {
+        if (!stream._isEnded && !stream.destroyed) {
           try {
             if (typeof stream.close === 'function') {
               stream.close(closeStreamCb);
