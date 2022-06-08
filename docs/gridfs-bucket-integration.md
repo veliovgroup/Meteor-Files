@@ -2,7 +2,7 @@
 
 This example shows how to handle (store, serve, remove) uploaded files via GridFS.
 The Javascript Mongo driver (the one that Meteor uses under the hood) allows to define
-[so called "Buckets"](http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html).
+[so called "Buckets"](http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html).
 
 The Buckets are basically named collections for storing the file's metadata and chunkdata.
 This allows to *horizontally scale your files* the same way you do with your document collections.
@@ -32,17 +32,14 @@ For support of `206` partial content see [this article](https://github.com/Velio
 Before we can use a bucket, we need to define it with a given name.
 This is similar to creating a collection using a name for documents.
 
-In a larger app we will need lots of buckets in order to horizontally scale.
-It thus makes sense to create these buckets from a function.
-
-The following code is such a helper function that can easily be extended to accept more options:
+The following code is a helper function to create a bucket. It can easily be extended to accept more options:
 
 ```js
 import { MongoInternals } from 'meteor/mongo';
 
 export const createBucket = (bucketName) => {
   const options = bucketName ? {bucketName} : (void 0);
-  return new MongoInternals.NpmModule.GridFSBucket(MongoInternals.defaultRemoteCollectionDriver().mongo.db, options);
+  return new MongoInternals.NpmModules.mongodb.module.GridFSBucket(MongoInternals.defaultRemoteCollectionDriver().mongo.db, options);
 }
 ```
 
@@ -62,7 +59,7 @@ we also wrap this in a function:
 ```js
 import { MongoInternals } from 'meteor/mongo';
 
-export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModule.ObjectID(gridFsFileId);
+export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModules.mongodb.module.ObjectID(gridFsFileId);
 ```
 
 ## 3. Create an upload handler for the bucket
@@ -88,7 +85,7 @@ export const createAfterUpdate = bucket =>
       fs.createReadStream(file.versions[ versionName ].path)
 
       // this is where we upload the binary to the bucket using bucket.openUploadStream
-      // see http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html#openUploadStream 
+      // see http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openUploadStream 
         .pipe(bucket.openUploadStream(
           file.name,
           {
@@ -135,7 +132,7 @@ const createInterceptDownload = bucket =>
     const { gridFsFileId } = file.versions[ versionName ].meta || {};
     if (gridFsFileId) {
       // opens the download stream using a given gfs id
-      // see: http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html#openDownloadStream
+      // see: http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openDownloadStream
       const gfsId = createObjectId({ gridFsFileId });
       const readStream = bucket.openDownloadStream(gfsId);
 
