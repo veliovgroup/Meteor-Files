@@ -294,10 +294,6 @@ export class UploadInstance extends EventEmitter {
         if (this.beforeunload) {
           window.removeEventListener('beforeunload', this.beforeunload, false);
         }
-        if (this.result) {
-          this.result.progress.set(0);
-          return;
-        }
         return;
       });
     } else {
