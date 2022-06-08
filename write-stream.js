@@ -39,24 +39,23 @@ export default class WriteStream {
       this.fd = fdCache[this.path].fd;
       this.writtenChunks = fdCache[this.path].writtenChunks;
     } else {
-      fs.ensureFile(this.path, (efError) => {
+      fs.stat(this.path, (statError, stats) => {
         bound(() => {
-          if (efError) {
-            this.abort();
-            throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [Error:] ' + efError);
-          } else {
-            fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
-              bound(() => {
-                if (oError) {
-                  this.abort();
-                  throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [open] [Error:] ' + oError);
-                } else {
-                  this.fd = fd;
-                  fdCache[this.path] = this;
-                }
-              });
-            });
+          if (statError || !stats.isFile()) {
+            fs.writeFileSync(this.path, '');
           }
+
+          fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
+            bound(() => {
+              if (oError) {
+                this.abort();
+                throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [open] [Error:]', oError);
+              } else {
+                this.fd = fd;
+                fdCache[this.path] = this;
+              }
+            });
+          });
         });
       });
     }

@@ -11,16 +11,16 @@ import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 import AbortController from 'abort-controller';
-import fs from 'fs-extra';
+import fs from 'fs';
 import nodeQs from 'querystring';
 import nodePath from 'path';
 
 /**
  * @const {Object} bound  - Meteor.bindEnvironment (Fiber wrapper)
- * @const {Function} NOOP - No Operation function, placeholder for required callbacks
+ * @const {Function} noop - No Operation function, placeholder for required callbacks
  */
 const bound = Meteor.bindEnvironment(callback => callback());
-const NOOP  = () => {  };
+const noop  = function noop () {};
 
 /**
  * @locus Anywhere
@@ -291,9 +291,12 @@ export class FilesCollection extends FilesCollectionCore {
 
     this._debug('[FilesCollection.storagePath] Set to:', this.storagePath({}));
 
-    fs.mkdirs(this.storagePath({}), { mode: this.parentDirPermissions }, (error) => {
+    fs.mkdir(this.storagePath({}), {
+      mode: this.parentDirPermissions,
+      recursive: true
+    }, (error) => {
       if (error) {
-        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable! ${error}`);
+        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable!`, error);
       }
     });
 
@@ -343,7 +346,7 @@ export class FilesCollection extends FilesCollectionCore {
         changed(doc) {
           if (doc.isFinished) {
             self._debug(`[FilesCollection] [_preCollectionCursor.observe] [changed]: ${doc._id}`);
-            self._preCollection.remove({_id: doc._id}, NOOP);
+            self._preCollection.remove({_id: doc._id}, noop);
           }
         },
         removed(doc) {
@@ -574,7 +577,7 @@ export class FilesCollection extends FilesCollectionCore {
                 return;
               }
 
-              this.emit('_handleUpload', result, opts, NOOP);
+              this.emit('_handleUpload', result, opts, noop);
 
               if (!httpResp.headersSent) {
                 httpResp.writeHead(204);
@@ -849,7 +852,7 @@ export class FilesCollection extends FilesCollectionCore {
             throw handleUploadErr;
           }
         } else {
-          self.emit('_handleUpload', result, opts, NOOP);
+          self.emit('_handleUpload', result, opts, noop);
         }
         return true;
       };
@@ -981,7 +984,7 @@ export class FilesCollection extends FilesCollectionCore {
    */
   _finishUpload(result, opts, cb) {
     this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
-    fs.chmod(result.path, this.permissions, NOOP);
+    fs.chmod(result.path, this.permissions, noop);
     result.type   = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
@@ -1189,36 +1192,35 @@ export class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    fs.ensureFile(opts.path, (efError) => {
+    fs.stat(opts.path, (statErr, stats) => {
       bound(() => {
-        if (efError) {
-          callback && callback(efError);
-          this._debug(`[FilesCollection] [write] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
-        } else {
-          const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
-          stream.end(buffer, (streamErr) => {
-            bound(() => {
-              if (streamErr) {
-                callback && callback(streamErr);
-              } else {
-                this.collection.insert(result, (insertErr, _id) => {
-                  if (insertErr) {
-                    callback && callback(insertErr);
-                    this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
-                  } else {
-                    const fileRef = this.collection.findOne(_id);
-                    callback && callback(null, fileRef);
-                    if (proceedAfterUpload === true) {
-                      this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-                      this.emit('afterUpload', fileRef);
-                    }
-                    this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
-                  }
-                });
-              }
-            });
-          });
+        if (statErr || !stats.isFile()) {
+          fs.writeFileSync(opts.path, '');
         }
+
+        const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
+        stream.end(buffer, (streamErr) => {
+          bound(() => {
+            if (streamErr) {
+              callback && callback(streamErr);
+            } else {
+              this.collection.insert(result, (insertErr, _id) => {
+                if (insertErr) {
+                  callback && callback(insertErr);
+                  this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+                } else {
+                  const fileRef = this.collection.findOne(_id);
+                  callback && callback(null, fileRef);
+                  if (proceedAfterUpload === true) {
+                    this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
+                    this.emit('afterUpload', fileRef);
+                  }
+                  this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
+                }
+              });
+            }
+          });
+        });
       });
     });
     return this;
@@ -1300,108 +1302,107 @@ export class FilesCollection extends FilesCollectionCore {
       });
     };
 
-    fs.ensureFile(opts.path, (efError) => {
+    fs.stat(opts.path, (statErr, stats) => {
       bound(() => {
-        if (efError) {
-          callback && callback(efError);
-          this._debug(`[FilesCollection] [load] [ensureFile] [Error:] ${fileName} -> ${opts.path}`, efError);
-        } else {
-          let isEnded = false;
-          let timer = null;
-          const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
-          const onEnd = (_error, response) => {
-            if (!isEnded) {
-              if (timer) {
-                Meteor.clearTimeout(timer);
-                timer = null;
-              }
+        if (statErr || !stats.isFile()) {
+          fs.writeFileSync(opts.path, '');
+        }
 
-              isEnded = true;
-              if (response && response.status === 200) {
-                this._debug(`[FilesCollection] [load] Received: ${url}`);
-                const result = this._dataToSchema({
-                  name: fileName,
-                  path: opts.path,
-                  meta: opts.meta,
-                  type: opts.type || response.headers.get('content-type') || this._getMimeType({path: opts.path}),
-                  size: opts.size || parseInt(response.headers.get('content-length') || 0),
-                  userId: opts.userId,
-                  extension
-                });
+        let isEnded = false;
+        let timer = null;
+        const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
+        const onEnd = (_error, response) => {
+          if (!isEnded) {
+            if (timer) {
+              Meteor.clearTimeout(timer);
+              timer = null;
+            }
 
-                if (!result.size) {
-                  fs.stat(opts.path, (statError, stats) => {
-                    bound(() => {
-                      if (statError) {
-                        callback && callback(statError);
-                      } else {
-                        result.versions.original.size = (result.size = stats.size);
-                        storeResult(result, callback);
-                      }
-                    });
-                  });
-                } else {
-                  storeResult(result, callback);
-                }
-              } else {
-                const error = _error || new Meteor.Error(response?.status || 408, response?.statusText || 'Bad response with empty details');
-                this._debug(`[FilesCollection] [load] [fetch(${url})] Error:`, error);
+            isEnded = true;
+            if (response && response.status === 200) {
+              this._debug(`[FilesCollection] [load] Received: ${url}`);
+              const result = this._dataToSchema({
+                name: fileName,
+                path: opts.path,
+                meta: opts.meta,
+                type: opts.type || response.headers.get('content-type') || this._getMimeType({path: opts.path}),
+                size: opts.size || parseInt(response.headers.get('content-length') || 0),
+                userId: opts.userId,
+                extension
+              });
 
-                if (!wStream.destroyed) {
-                  wStream.destroy();
-                }
-
-                fs.remove(opts.path, (removeError) => {
+              if (!result.size) {
+                fs.stat(opts.path, (statError, newStats) => {
                   bound(() => {
-                    callback && callback(error);
-                    if (removeError) {
-                      this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.remove(${opts.path})] removeError:`, removeError);
+                    if (statError) {
+                      callback && callback(statError);
+                    } else {
+                      result.versions.original.size = (result.size = newStats.size);
+                      storeResult(result, callback);
                     }
                   });
                 });
+              } else {
+                storeResult(result, callback);
               }
-            }
-          };
+            } else {
+              const error = _error || new Meteor.Error(response?.status || 408, response?.statusText || 'Bad response with empty details');
+              this._debug(`[FilesCollection] [load] [fetch(${url})] Error:`, error);
 
-          let resp = void 0;
-          wStream.on('error', (error) => {
+              if (!wStream.destroyed) {
+                wStream.destroy();
+              }
+
+              fs.remove(opts.path, (removeError) => {
+                bound(() => {
+                  callback && callback(error);
+                  if (removeError) {
+                    this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.remove(${opts.path})] removeError:`, removeError);
+                  }
+                });
+              });
+            }
+          }
+        };
+
+        let resp = void 0;
+        wStream.on('error', (error) => {
+          bound(() => {
+            onEnd(error);
+          });
+        });
+        wStream.on('close', () => {
+          bound(() => {
+            onEnd(void 0, resp);
+          });
+        });
+        wStream.on('finish', () => {
+          bound(() => {
+            onEnd(void 0, resp);
+          });
+        });
+
+        const controller = new AbortController();
+        fetch(url, {
+          headers: opts.headers || {},
+          signal: controller.signal
+        }).then((res) => {
+          resp = res;
+          res.body.on('error', (error) => {
             bound(() => {
               onEnd(error);
             });
           });
-          wStream.on('close', () => {
-            bound(() => {
-              onEnd(void 0, resp);
-            });
-          });
-          wStream.on('finish', () => {
-            bound(() => {
-              onEnd(void 0, resp);
-            });
-          });
+          res.body.pipe(wStream);
+        }).catch((fetchError) => {
+          onEnd(fetchError);
+        });
 
-          const controller = new AbortController();
-          fetch(url, {
-            headers: opts.headers || {},
-            signal: controller.signal
-          }).then((res) => {
-            resp = res;
-            res.body.on('error', (error) => {
-              bound(() => {
-                onEnd(error);
-              });
-            });
-            res.body.pipe(wStream);
-          }).catch((fetchError) => {
-            onEnd(fetchError);
-          });
-
-          if (opts.timeout > 0) {
-            timer = Meteor.setTimeout(() => {
-              onEnd(new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`));
-              controller.abort();
-            }, opts.timeout);
-          }
+        if (opts.timeout > 0) {
+          timer = Meteor.setTimeout(() => {
+            onEnd(new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`));
+            controller.abort();
+          }, opts.timeout);
         }
       });
     });
@@ -1546,7 +1547,7 @@ export class FilesCollection extends FilesCollectionCore {
         self.onAfterRemove(docs);
       });
     } else {
-      this.collection.remove(selector, (callback || NOOP));
+      this.collection.remove(selector, (callback || noop));
     }
     return this;
   }
@@ -1628,17 +1629,17 @@ export class FilesCollection extends FilesCollectionCore {
     this._debug(`[FilesCollection] [unlink(${fileRef._id}, ${version})]`);
     if (version) {
       if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
-        fs.unlink(fileRef.versions[version].path, (callback || NOOP));
+        fs.unlink(fileRef.versions[version].path, (callback || noop));
       }
     } else {
       if (helpers.isObject(fileRef.versions)) {
         for(let vKey in fileRef.versions) {
           if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
-            fs.unlink(fileRef.versions[vKey].path, (callback || NOOP));
+            fs.unlink(fileRef.versions[vKey].path, (callback || noop));
           }
         }
       } else {
-        fs.unlink(fileRef.path, (callback || NOOP));
+        fs.unlink(fileRef.path, (callback || noop));
       }
     }
     return this;
