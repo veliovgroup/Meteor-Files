@@ -160,7 +160,7 @@ Template.uploadForm.events({
 });
 ```
 
-For multiple file upload see [this demo code](https://github.com/VeliovGroup/Meteor-Files-Demos/blob/master/demo/imports/client/upload/upload-form.js#L73).
+For multiple file upload see [this demo code](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L130).
 
 Upload base64 string (*introduced in v1.7.1*):
 
