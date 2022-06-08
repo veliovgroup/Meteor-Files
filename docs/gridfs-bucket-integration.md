@@ -127,7 +127,7 @@ factory function as in step 3:
 ```js
 import { createObjectId } from '../createObjectId';
 
-const createInterceptDownload = bucket =>
+export const createInterceptDownload = bucket =>
   function interceptDownload (http, file, versionName) {
     const { gridFsFileId } = file.versions[ versionName ].meta || {};
     if (gridFsFileId) {
@@ -166,7 +166,7 @@ is removing the file handle:
 ```js
 import { createObjectId } from '../createObjectId'
 
-const createOnAfterRemove = bucket =>
+export const createOnAfterRemove = bucket =>
   function onAfterRemove (files) {
     files.forEach(file => {
       Object.keys(file.versions).forEach(versionName => {
