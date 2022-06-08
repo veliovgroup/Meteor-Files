@@ -317,7 +317,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(this.responseHeaders, Match.OneOf(Object, Function));
     check(this.allowQueryStringCookies, Boolean);
 
-    new Cookies({
+    this._cookies = new Cookies({
       allowQueryStringCookies: this.allowQueryStringCookies,
       allowedCordovaOrigins: this.allowedOrigins
     });
