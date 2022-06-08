@@ -32,10 +32,7 @@ For support of `206` partial content see [this article](https://github.com/Velio
 Before we can use a bucket, we need to define it with a given name.
 This is similar to creating a collection using a name for documents.
 
-In a larger app we will need lots of buckets in order to horizontally scale.
-It thus makes sense to create these buckets from a function.
-
-The following code is such a helper function that can easily be extended to accept more options:
+The following code is a helper function to create a bucket. It can easily be extended to accept more options:
 
 ```js
 import { MongoInternals } from 'meteor/mongo';
