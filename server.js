@@ -334,7 +334,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
       check(this._preCollectionName, String);
 
-      this._preCollection._ensureIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
+      this._preCollection.createIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
           _id: 1,
