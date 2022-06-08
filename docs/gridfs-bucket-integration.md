@@ -71,8 +71,8 @@ In order to stay flexible enough in the choice of the bucket  we use a factory f
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createAfterUpdate = bucket =>
-  function createOnAfterUpload (file) {
+export const createOnAfterUpload = bucket =>
+  function onAfterUpload (file) {
     const self = this;
 
     // here you could manipulate your file
@@ -109,7 +109,7 @@ export const createAfterUpdate = bucket =>
           
           self.collection.update(file._id, {
             $set: {
-              [ property ]: ver._id.toHexString();
+              [ property ]: ver._id.toHexString(),
             }
           });
           
@@ -127,7 +127,7 @@ factory function as in step 3:
 ```js
 import { createObjectId } from '../createObjectId';
 
-const createInterceptDownload = bucket =>
+export const createInterceptDownload = bucket =>
   function interceptDownload (http, file, versionName) {
     const { gridFsFileId } = file.versions[ versionName ].meta || {};
     if (gridFsFileId) {
@@ -166,7 +166,7 @@ is removing the file handle:
 ```js
 import { createObjectId } from '../createObjectId'
 
-const createOnAfterRemove = bucket =>
+export const createOnAfterRemove = bucket =>
   function onAfterRemove (files) {
     files.forEach(file => {
       Object.keys(file.versions).forEach(versionName => {
