@@ -1696,10 +1696,8 @@ export class FilesCollection extends FilesCollectionCore {
     if (!vRef || !helpers.isObject(vRef)) {
       return this._404(http);
     } else if (fileRef) {
-      if (this.downloadCallback) {
-        if (!this.downloadCallback.call(Object.assign(http, this._getUser(http)), fileRef)) {
-          return this._404(http);
-        }
+      if (helpers.isFunction(this.downloadCallback) && !this.downloadCallback.call(Object.assign(http, this._getUser(http)), fileRef)) {
+        return this._404(http);
       }
 
       if (this.interceptDownload && helpers.isFunction(this.interceptDownload) && this.interceptDownload(http, fileRef, version) === true) {
