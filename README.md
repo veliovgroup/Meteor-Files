@@ -42,7 +42,7 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 - Upload files through computing cloud without persistent File System, like Heroku
 - You need store files at *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)*? (*[Use 3rd-party storage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
 - You need to check file mime-type, size or extension? Easy! Use *[`onBeforeUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hook
-- You need to [resize images](https://github.com/veliovgroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hook, and *[manage file's subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md)* in a single record
+- You need to [resize images](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hook, and *[manage file's subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md)* in a single record
 
 ## Installation:
 
