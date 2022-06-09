@@ -97,7 +97,7 @@
 - __Post-processing:__
   - `tutorial` [Create Thumbnails](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/image-processing.md)
   - `tutorial` [Image post-processing using AWS Lambda](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md#further-image-jpeg-png-processing-with-aws-lambda)
-  - `code-sample` [Resize, create thumbnail](https://github.com/veliovgroup/Meteor-Files-Demos/blob/master/demo/imports/server/image-processing.js#L19)
+  - `code-sample` [Resize, create thumbnail](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js#L19)
 
 ### Related Packages:
 
