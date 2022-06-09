@@ -23,6 +23,53 @@ const bound = Meteor.bindEnvironment(callback => callback());
 const noop = function noop () {};
 
 /**
+ * Create (ensure) index on MongoDB collection, catch and log exception if thrown
+ * @function createIndex
+ * @param {Mongo.Collection} collection - Mongo.Collection instance
+ * @param {object} keys - Field and value pairs where the field is the index key and the value describes the type of index for that field
+ * @param {object} opts - Set of options that controls the creation of the index
+ * @returns {void 0}
+ */
+const createIndex = async (collection, keys, opts) => {
+  try {
+    await collection.rawCollection().createIndex(keys, opts);
+  } catch (e) {
+    if (e.code === 85) {
+      let indexName;
+      const indexes = await collection.rawCollection().indexes();
+      for (const index of indexes) {
+        let allMatch = true;
+        for (const indexKey of Object.keys(keys)) {
+          if (typeof index.key[indexKey] === 'undefined') {
+            allMatch = false;
+            break;
+          }
+        }
+
+        for (const indexKey of Object.keys(index.key)) {
+          if (typeof keys[indexKey] === 'undefined') {
+            allMatch = false;
+            break;
+          }
+        }
+
+        if (allMatch) {
+          indexName = index.name;
+          break;
+        }
+      }
+
+      if (indexName) {
+        await collection.rawCollection().dropIndex(indexName);
+        await collection.rawCollection().createIndex(keys, opts);
+      }
+    } else {
+      Meteor._debug(`Can not set ${Object.keys(keys).join(' + ')} index on "${collection._name}" collection`, { keys, opts, details: e });
+    }
+  }
+};
+
+/**
  * @locus Anywhere
  * @class FilesCollection
  * @param config           {Object}   - [Both]   Configuration object with next properties:
@@ -336,7 +383,7 @@ export class FilesCollection extends FilesCollectionCore {
       }
       check(this._preCollectionName, String);
 
-      this._preCollection.createIndex({ createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
+      createIndex(this._preCollection, { createdAt: 1 }, { expireAfterSeconds: this.continueUploadTTL, background: true });
       const _preCollectionCursor = this._preCollection.find({}, {
         fields: {
           _id: 1,
