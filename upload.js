@@ -92,7 +92,7 @@ export class FileUpload extends EventEmitter {
 export class UploadInstance extends EventEmitter {
   constructor(config, collection) {
     super();
-    this.config     = config;
+    this.config = config;
     this.collection = collection;
     this.collection._debug('[FilesCollection] [insert()]');
 
