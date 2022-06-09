@@ -291,14 +291,16 @@ export class FilesCollection extends FilesCollectionCore {
 
     this._debug('[FilesCollection.storagePath] Set to:', this.storagePath({}));
 
-    fs.mkdir(this.storagePath({}), {
-      mode: this.parentDirPermissions,
-      recursive: true
-    }, (error) => {
+    try {
+      fs.mkdirSync(this.storagePath({}), {
+        mode: this.parentDirPermissions,
+        recursive: true
+      });
+    } catch (error) {
       if (error) {
         throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable!`, error);
       }
-    });
+    }
 
     check(this.strict, Boolean);
     check(this.permissions, Number);
@@ -493,8 +495,7 @@ export class FilesCollection extends FilesCollectionCore {
 
         const handleError = (_error) => {
           let error = _error;
-          console.warn('[FilesCollection] [Upload] [HTTP] Exception:', error);
-          console.trace();
+          Meteor._debug('[FilesCollection] [Upload] [HTTP] Exception:', error);
 
           if (!httpResp.headersSent) {
             httpResp.writeHead(500);
@@ -523,7 +524,7 @@ export class FilesCollection extends FilesCollectionCore {
             if (httpReq.headers['x-start'] !== '1') {
               // CHUNK UPLOAD SCENARIO:
               opts = {
-                fileId: httpReq.headers['x-fileid']
+                fileId: helpers.sanitize(httpReq.headers['x-fileid'], 20, 'a')
               };
 
               if (httpReq.headers['x-eof'] === '1') {
@@ -590,12 +591,16 @@ export class FilesCollection extends FilesCollectionCore {
               try {
                 opts = JSON.parse(body);
               } catch (jsonErr) {
-                console.error('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!', jsonErr);
+                Meteor._debug('Can\'t parse incoming JSON from Client on [.insert() | upload], something went wrong!', jsonErr);
                 opts = {file: {}};
               }
 
               if (!helpers.isObject(opts.file)) {
                 opts.file = {};
+              }
+
+              if (opts.fileId) {
+                opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
               }
 
               this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
@@ -790,6 +795,12 @@ export class FilesCollection extends FilesCollectionCore {
 
         check(returnMeta, Match.Optional(Boolean));
 
+        opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
+
+        if (opts.FSName) {
+          opts.FSName = helpers.sanitize(opts.FSName);
+        }
+
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
         const { result } = self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
@@ -831,6 +842,8 @@ export class FilesCollection extends FilesCollectionCore {
           binData: Match.Optional(String),
           chunkId: Match.Optional(Number)
         });
+
+        opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
 
         if (opts.binData) {
           opts.binData = Buffer.from(opts.binData, 'base64');
@@ -908,6 +921,10 @@ export class FilesCollection extends FilesCollectionCore {
       opts.chunkId = -1;
     }
 
+    if (opts.fileId) {
+      opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
+    }
+
     if (!helpers.isString(opts.FSName)) {
       opts.FSName = opts.fileId;
     }
@@ -928,7 +945,7 @@ export class FilesCollection extends FilesCollectionCore {
     result.ext = extension;
     result._id = opts.fileId;
     result.userId = userId || null;
-    opts.FSName = opts.FSName.replace(/([^a-z0-9\-\_]+)/gi, '-');
+    opts.FSName = helpers.sanitize(opts.FSName);
     result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
@@ -1138,7 +1155,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @param {String} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
    * @param {String} opts.userId - UserId, default *null*
-   * @param {String} opts.fileId - _id, default *null*
+   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
    * @param {Function} callback - function(error, fileObj){...}
    * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Write buffer to FS and add to FilesCollection Collection
@@ -1164,6 +1181,7 @@ export class FilesCollection extends FilesCollectionCore {
     check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
+    opts.fileId = opts.fileId && helpers.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
     const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : FSName;
@@ -1237,7 +1255,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @param {String} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
    * @param {String} opts.userId - UserId, default *null*
-   * @param {String} opts.fileId - _id, default *null*
+   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
    * @param {Number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
    * @param {Function} callback - function(error, fileObj){...}
    * @param {Boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
@@ -1275,7 +1293,7 @@ export class FilesCollection extends FilesCollectionCore {
       opts.timeout = 360000;
     }
 
-    const fileId = opts.fileId || Random.id();
+    const fileId = (opts.fileId && helpers.sanitize(opts.fileId, 20, 'a')) || Random.id();
     const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || FSName;
@@ -1418,7 +1436,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @param {String} opts          - [Optional] Object with file-data
    * @param {String} opts.type     - [Optional] File mime-type
    * @param {Object} opts.meta     - [Optional] File additional meta-data
-   * @param {String} opts.fileId   - _id, default *null*
+   * @param {String} opts.fileId   - _id, sanitized, max-length: 20 symbols default *null*
    * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
    * @param {String} opts.userId   - [Optional] UserId, default *null*
    * @param {Function} callback    - [Optional] function(error, fileObj){...}
@@ -1488,7 +1506,7 @@ export class FilesCollection extends FilesCollectionCore {
           userId: opts.userId,
           extension,
           _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-          fileId: opts.fileId || null
+          fileId: (opts.fileId && helpers.sanitize(opts.fileId, 20, 'a')) || null
         });
 
 
@@ -1827,7 +1845,7 @@ export class FilesCollection extends FilesCollectionCore {
         if (!closeError) {
           stream._isEnded = true;
         } else {
-          this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [respond] [closeStreamCb] Error:`, closeError);
+          this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [respond] [closeStreamCb] (this is error on the stream we wish to forcefully close after it isn't needed anymore. It's okay that it throws errors. Consider this as purely informational message)`, closeError);
         }
       };
 
@@ -1852,10 +1870,8 @@ export class FilesCollection extends FilesCollectionCore {
         http.response.writeHead(code);
       }
 
-      http.response.on('close', closeStream);
       http.request.on('aborted', () => {
         http.request.aborted = true;
-        closeStream();
       });
 
       stream.on('open', () => {
@@ -1874,7 +1890,6 @@ export class FilesCollection extends FilesCollectionCore {
         closeStream();
         streamErrorHandler(err);
       }).on('end', () => {
-        closeStream();
         if (!http.response.finished) {
           http.response.end();
         }

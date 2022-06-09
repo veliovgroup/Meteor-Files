@@ -484,7 +484,7 @@ export class UploadInstance extends EventEmitter {
               if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
                 this.result.pause();
               } else if (this.result.state.get() !== 'aborted') {
-                console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
+                Meteor._debug('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
                 this.emit('end', error);
               }
             }, 512);

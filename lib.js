@@ -1,6 +1,9 @@
 import { check } from 'meteor/check';
 
 const helpers = {
+  sanitize(str = '', max = 28, replacement = '-') {
+    return str.replace(/([^a-z0-9\-\_]+)/gi, replacement).substring(0, max);
+  },
   isUndefined(obj) {
     return obj === void 0;
   },

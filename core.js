@@ -135,7 +135,7 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _getExt(fileName) {
     if (fileName.includes('.')) {
-      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase();
+      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase().replace(/([^a-z0-9\-\_\.]+)/gi, '').substring(0, 20);
       return { ext: extension, extension, extensionWithDot: `.${extension}` };
     }
     return { ext: '', extension: '', extensionWithDot: '' };

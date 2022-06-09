@@ -77,7 +77,7 @@ export default class WriteStream {
           bound(() => {
             callback && callback(error, written, buffer);
             if (error) {
-              console.warn('[FilesCollection] [writeStream] [write] [Error:]', error);
+              Meteor._debug('[FilesCollection] [writeStream] [write] [Error:]', error);
               this.abort();
             } else {
               ++this.writtenChunks;
