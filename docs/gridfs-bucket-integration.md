@@ -2,14 +2,14 @@
 
 This example shows how to handle (store, serve, remove) uploaded files via GridFS.
 The Javascript Mongo driver (the one that Meteor uses under the hood) allows to define
-[so called "Buckets"](http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html).
+[so called "Buckets"](http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html).
 
 The Buckets are basically named collections for storing the file's metadata and chunkdata.
 This allows to *horizontally scale your files* the same way you do with your document collections.
 
 **A note for beginners:** This tutorial is a bit advanced and we try to explain the involved steps as detailed as
 possible. If you still need some reference to play with, we have set up an example project. The project
-is available via [`files-gridfs-autoform-example`](https://github.com/VeliovGroup/files-gridfs-autoform-example)
+is available via [`files-gridfs-autoform-example`](https://github.com/veliovgroup/files-gridfs-autoform-example)
 
 ## About GridFS
 
@@ -25,24 +25,21 @@ plus some additional metadata.
 
 Please note - by default all files will be served with `200` response code, which is fine if you planning to deal
 only with small files, or not planning to serve files back to users (*use only upload and storage*).
-For support of `206` partial content see [this article](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
+For support of `206` partial content see [this article](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
 ## 1. Create a `GridFSBucket` factory
 
 Before we can use a bucket, we need to define it with a given name.
 This is similar to creating a collection using a name for documents.
 
-In a larger app we will need lots of buckets in order to horizontally scale.
-It thus makes sense to create these buckets from a function.
-
-The following code is such a helper function that can easily be extended to accept more options:
+The following code is a helper function to create a bucket. It can easily be extended to accept more options:
 
 ```js
 import { MongoInternals } from 'meteor/mongo';
 
 export const createBucket = (bucketName) => {
   const options = bucketName ? {bucketName} : (void 0);
-  return new MongoInternals.NpmModule.GridFSBucket(MongoInternals.defaultRemoteCollectionDriver().mongo.db, options);
+  return new MongoInternals.NpmModules.mongodb.module.GridFSBucket(MongoInternals.defaultRemoteCollectionDriver().mongo.db, options);
 }
 ```
 
@@ -62,7 +59,7 @@ we also wrap this in a function:
 ```js
 import { MongoInternals } from 'meteor/mongo';
 
-export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModule.ObjectID(gridFsFileId);
+export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModules.mongodb.module.ObjectID(gridFsFileId);
 ```
 
 ## 3. Create an upload handler for the bucket
@@ -74,8 +71,8 @@ In order to stay flexible enough in the choice of the bucket  we use a factory f
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createAfterUpdate = bucket =>
-  function createOnAfterUpload (file) {
+export const createOnAfterUpload = bucket =>
+  function onAfterUpload (file) {
     const self = this;
 
     // here you could manipulate your file
@@ -88,7 +85,7 @@ export const createAfterUpdate = bucket =>
       fs.createReadStream(file.versions[ versionName ].path)
 
       // this is where we upload the binary to the bucket using bucket.openUploadStream
-      // see http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html#openUploadStream 
+      // see http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openUploadStream 
         .pipe(bucket.openUploadStream(
           file.name,
           {
@@ -112,7 +109,7 @@ export const createAfterUpdate = bucket =>
           
           self.collection.update(file._id, {
             $set: {
-              [ property ]: ver._id.toHexString();
+              [ property ]: ver._id.toHexString(),
             }
           });
           
@@ -130,12 +127,12 @@ factory function as in step 3:
 ```js
 import { createObjectId } from '../createObjectId';
 
-const createInterceptDownload = bucket =>
+export const createInterceptDownload = bucket =>
   function interceptDownload (http, file, versionName) {
     const { gridFsFileId } = file.versions[ versionName ].meta || {};
     if (gridFsFileId) {
       // opens the download stream using a given gfs id
-      // see: http://mongodb.github.io/node-mongodb-native/3.2/api/GridFSBucket.html#openDownloadStream
+      // see: http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openDownloadStream
       const gfsId = createObjectId({ gridFsFileId });
       const readStream = bucket.openDownloadStream(gfsId);
 
@@ -169,7 +166,7 @@ is removing the file handle:
 ```js
 import { createObjectId } from '../createObjectId'
 
-const createOnAfterRemove = bucket =>
+export const createOnAfterRemove = bucket =>
   function onAfterRemove (files) {
     files.forEach(file => {
       Object.keys(file.versions).forEach(versionName => {

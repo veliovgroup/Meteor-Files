@@ -15,7 +15,7 @@ Use `.link()` method of [*FileCursor* instance](https://github.com/veliovgroup/M
 FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
 ```
 
-- `fileRef` {*Object*} - Object returned from MongoDB collection or [after upload](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L85)
+- `fileRef` {*Object*} - Object returned from MongoDB collection or [after upload](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L194-L205)
 - `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
 - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
 - Returns {*String*} - Absolute URL to file

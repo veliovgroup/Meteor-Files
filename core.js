@@ -135,7 +135,7 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _getExt(fileName) {
     if (fileName.includes('.')) {
-      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase();
+      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase().replace(/([^a-z0-9\-\_\.]+)/gi, '').substring(0, 20);
       return { ext: extension, extension, extensionWithDot: `.${extension}` };
     }
     return { ext: '', extension: '', extensionWithDot: '' };
@@ -170,7 +170,7 @@ export default class FilesCollectionCore extends EventEmitter {
       name: data.name,
       extension: data.extension,
       ext: data.extension,
-      extensionWithDot: '.' + data.extension,
+      extensionWithDot: `.${data.extension}`,
       path: data.path,
       meta: data.meta,
       type: data.type,
@@ -257,17 +257,17 @@ export default class FilesCollectionCore extends EventEmitter {
    * @name link
    * @param {Object} fileRef - File reference object
    * @param {String} version - Version of file you would like to request
-   * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+   * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL
    * @returns {String} Empty string returned in case if file not found in DB
    */
-  link(fileRef, version = 'original', URIBase) {
+  link(fileRef, version = 'original', uriBase) {
     this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
     check(fileRef, Object);
 
     if (!fileRef) {
       return '';
     }
-    return formatFleURL(fileRef, version, URIBase);
+    return formatFleURL(fileRef, version, uriBase);
   }
 }

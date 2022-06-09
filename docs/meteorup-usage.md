@@ -4,7 +4,7 @@
 
 [MeteorUp (MUP)](https://github.com/kadirahq/meteor-up) uses Docker, and by default, there is no volume mounted on the server. Therefore, even if `storagePath` is declared in constructor, files that are being uploaded are still being stored in cache, and on every deploy, all the uploaded files __get erased__.
 
-Read more at [Issue #270](https://github.com/VeliovGroup/Meteor-Files/issues/72) and [Issue #290](https://github.com/VeliovGroup/Meteor-Files/issues/290).
+Read more at [Issue #270](https://github.com/veliovgroup/Meteor-Files/issues/72) and [Issue #290](https://github.com/veliovgroup/Meteor-Files/issues/290).
 
 To solve this issue, a volume has to be declared in `project-root/mup.json`. In this example, images will be stored at `/images` directory.
 
@@ -74,4 +74,4 @@ Images = new FilesCollection({
 });
 ```
 
-Now, files will be uploaded to `/images` on server, and can be accessed like in [demos](https://github.com/VeliovGroup/Meteor-Files-Demos).
+Now, files will be uploaded to `/images` on server, and can be accessed like in [demos](https://github.com/veliovgroup/Meteor-Files-Demos).

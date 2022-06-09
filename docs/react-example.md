@@ -1,6 +1,6 @@
 # React.js usage
 
-*This example is for the front-end UI only. The server side [methods](https://github.com/VeliovGroup/Meteor-Files/wiki#api) and [publications](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/collection.md) are the same.*
+*This example is for the front-end UI only. The server side [methods](https://github.com/veliovgroup/Meteor-Files/wiki#api) and [publications](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md) are the same.*
 
 ## Brief:
 

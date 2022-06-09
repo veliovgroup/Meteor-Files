@@ -1,6 +1,9 @@
 import { check } from 'meteor/check';
 
 const helpers = {
+  sanitize(str = '', max = 28, replacement = '-') {
+    return str.replace(/([^a-z0-9\-\_]+)/gi, replacement).substring(0, max);
+  },
   isUndefined(obj) {
     return obj === void 0;
   },
@@ -18,6 +21,9 @@ const helpers = {
   },
   isFunction(obj) {
     return typeof obj === 'function' || false;
+  },
+  isDate(date) {
+    return !Number.isNaN(new Date(date).getDate());
   },
   isEmpty(obj) {
     if (this.isDate(obj)) {
@@ -114,7 +120,7 @@ const helpers = {
 const _helpers = ['String', 'Number', 'Date'];
 for (let i = 0; i < _helpers.length; i++) {
   helpers['is' + _helpers[i]] = function (obj) {
-    return Object.prototype.toString.call(obj) === '[object ' + _helpers[i] + ']';
+    return Object.prototype.toString.call(obj) === `[object ${_helpers[i]}]`;
   };
 }
 
@@ -174,20 +180,20 @@ const fixJSONStringify = function(obj) {
  * @name formatFleURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like build URL for
- * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+ * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
  * @summary Returns formatted URL for file
  * @returns {String} Downloadable link
  */
-const formatFleURL = (fileRef, version = 'original', _URIBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
+const formatFleURL = (fileRef, version = 'original', _uriBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
   check(fileRef, Object);
   check(version, String);
-  let URIBase = _URIBase;
+  let uriBase = _uriBase;
 
-  if (!helpers.isString(URIBase)) {
-    URIBase = (__meteor_runtime_config__ || {}).ROOT_URL || '/';
+  if (!helpers.isString(uriBase)) {
+    uriBase = (__meteor_runtime_config__ || {}).ROOT_URL || '/';
   }
 
-  const _root = URIBase.replace(/\/+$/, '');
+  const _root = uriBase.replace(/\/+$/, '');
   const vRef = (fileRef.versions && fileRef.versions[version]) || fileRef || {};
 
   let ext;

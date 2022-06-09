@@ -92,7 +92,7 @@ export class FileUpload extends EventEmitter {
 export class UploadInstance extends EventEmitter {
   constructor(config, collection) {
     super();
-    this.config     = config;
+    this.config = config;
     this.collection = collection;
     this.collection._debug('[FilesCollection] [insert()]');
 
@@ -245,20 +245,11 @@ export class UploadInstance extends EventEmitter {
 
       this.result.config._onEnd = () => this.emit('_onEnd');
 
-      this.addListener('end', this.end);
-      this.addListener('start', this.start);
-      this.addListener('upload', this.upload);
-      this.addListener('sendEOF', this.sendEOF);
-      this.addListener('prepare', this.prepare);
-      this.addListener('sendChunk', this.sendChunk);
-      this.addListener('proceedChunk', this.proceedChunk);
+      this._setProgress = (progress) => {
+        if (this.result.progress.get() >= 100) {
+          return;
+        }
 
-      this.addListener('calculateStats', helpers.throttle(() => {
-        const _t = (this.transferTime / (this.sentChunks || 1));
-        this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
-        this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
-
-        const progress = Math.round((this.sentChunks / this.fileLength) * 100);
         let sentBytes = this.config.chunkSize * this.sentChunks;
         if (sentBytes > this.fileData.size) {
           // this case often occurs, when the last chunk
@@ -269,6 +260,27 @@ export class UploadInstance extends EventEmitter {
         this.result.progress.set(progress);
         this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
         this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
+      };
+
+      this.addListener('end', this.end);
+      this.addListener('start', this.start);
+      this.addListener('upload', this.upload);
+      this.addListener('sendEOF', this.sendEOF);
+      this.addListener('prepare', this.prepare);
+      this.addListener('sendChunk', this.sendChunk);
+      this.addListener('proceedChunk', this.proceedChunk);
+
+      this.addListener('calculateStats', helpers.throttle(() => {
+        if (this.result.progress.get() >= 100) {
+          return;
+        }
+
+        const _t = (this.transferTime / (this.sentChunks || 1));
+        this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
+        this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
+
+        const progress = Math.round((this.sentChunks / this.fileLength) * 100);
+        this._setProgress(progress);
       }, 250));
 
       this.addListener('_onEnd', () => {
@@ -294,10 +306,6 @@ export class UploadInstance extends EventEmitter {
         if (this.beforeunload) {
           window.removeEventListener('beforeunload', this.beforeunload, false);
         }
-        if (this.result) {
-          this.result.progress.set(0);
-          return;
-        }
         return;
       });
     } else {
@@ -311,6 +319,7 @@ export class UploadInstance extends EventEmitter {
       console.timeEnd(`insert ${this.fileData.name}`);
     }
 
+    this._setProgress(100);
     this.emit('_onEnd');
     this.result.emit('uploaded', error, data);
     this.config.onUploaded && this.config.onUploaded.call(this.result, error, data);
@@ -475,7 +484,7 @@ export class UploadInstance extends EventEmitter {
               if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
                 this.result.pause();
               } else if (this.result.state.get() !== 'aborted') {
-                console.warn('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
+                Meteor._debug('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
                 this.emit('end', error);
               }
             }, 512);

@@ -34,7 +34,7 @@ The cons:
 
 ## RTC Data Chanel (UDP)
 
-This transport supported only in [webrtc-data-channel](https://github.com/VeliovGroup/Meteor-Files/tree/webrtc-data-channel) branch. It's in testing mode, we're waiting for community feedback, before merging to `master`. If you're interested in RTC/DC uploads, try this branch locally. Any feedback on RTC/DC usage for uploads is highly appreciated!
+This transport supported only in [webrtc-data-channel](https://github.com/veliovgroup/Meteor-Files/tree/webrtc-data-channel) branch. It's in testing mode, we're waiting for community feedback, before merging to `master`. If you're interested in RTC/DC uploads, try this branch locally. Any feedback on RTC/DC usage for uploads is highly appreciated!
 
 The pros:
 

@@ -1,16 +1,16 @@
-import fs          from 'fs-extra';
-import { Meteor }  from 'meteor/meteor';
+import fs from 'fs-extra';
+import { Meteor } from 'meteor/meteor';
 import { helpers } from './lib.js';
-const NOOP = () => {};
+const noop = () => {};
 
-/*
+/**
  * @const {Object} bound   - Meteor.bindEnvironment (Fiber wrapper)
  * @const {Object} fdCache - File Descriptors Cache
  */
-const bound   = Meteor.bindEnvironment(callback => callback());
+const bound = Meteor.bindEnvironment(callback => callback());
 const fdCache = {};
 
-/*
+/**
  * @private
  * @locus Server
  * @class WriteStream
@@ -30,39 +30,38 @@ export default class WriteStream {
       return;
     }
 
-    this.fd            = null;
+    this.fd = null;
+    this.ended = false;
+    this.aborted = false;
     this.writtenChunks = 0;
-    this.ended         = false;
-    this.aborted       = false;
 
     if (fdCache[this.path] && !fdCache[this.path].ended && !fdCache[this.path].aborted) {
       this.fd = fdCache[this.path].fd;
       this.writtenChunks = fdCache[this.path].writtenChunks;
     } else {
-      fs.ensureFile(this.path, (efError) => {
+      fs.stat(this.path, (statError, stats) => {
         bound(() => {
-          if (efError) {
-            this.abort();
-            throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [Error:] ' + efError);
-          } else {
-            fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
-              bound(() => {
-                if (oError) {
-                  this.abort();
-                  throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [open] [Error:] ' + oError);
-                } else {
-                  this.fd = fd;
-                  fdCache[this.path] = this;
-                }
-              });
-            });
+          if (statError || !stats.isFile()) {
+            fs.writeFileSync(this.path, '');
           }
+
+          fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
+            bound(() => {
+              if (oError) {
+                this.abort();
+                throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [open] [Error:]', oError);
+              } else {
+                this.fd = fd;
+                fdCache[this.path] = this;
+              }
+            });
+          });
         });
       });
     }
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name write
    * @param {Number} num - Chunk position in a stream
@@ -78,7 +77,7 @@ export default class WriteStream {
           bound(() => {
             callback && callback(error, written, buffer);
             if (error) {
-              console.warn('[FilesCollection] [writeStream] [write] [Error:]', error);
+              Meteor._debug('[FilesCollection] [writeStream] [write] [Error:]', error);
               this.abort();
             } else {
               ++this.writtenChunks;
@@ -94,7 +93,7 @@ export default class WriteStream {
     return false;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name end
    * @param {Function} callback - Callback
@@ -131,7 +130,7 @@ export default class WriteStream {
     return false;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name abort
    * @param {Function} callback - Callback
@@ -141,11 +140,11 @@ export default class WriteStream {
   abort(callback) {
     this.aborted = true;
     delete fdCache[this.path];
-    fs.unlink(this.path, (callback || NOOP));
+    fs.unlink(this.path, (callback || noop));
     return true;
   }
 
-  /*
+  /**
    * @memberOf writeStream
    * @name stop
    * @summary Stop writing to writableStream

@@ -77,7 +77,7 @@ Upload file to a Server via DDP or HTTP.
         Upload as base64 string, useful for data taken from `canvas`
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/insert.md#upload-base64-string">See Examples</a>
+        <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#upload-base64-string">See Examples</a>
       </td>
     </tr>
     <tr>

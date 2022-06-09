@@ -159,10 +159,10 @@
         Allows to change default response headers
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/custom-response-headers.md#default-function">Default <em>Function</em></a>
+        <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#default-function">Default <em>Function</em></a>
       </td>
       <td>
-        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
+        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
       </td>
     </tr>
     <tr>
@@ -206,10 +206,10 @@
         Collection Schema
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/schema.md#schema">Default Schema</a>
+        <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">Default Schema</a>
       </td>
       <td>
-        <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/schema.md#schema">For more info read Schema docs</a>
+        <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">For more info read Schema docs</a>
       </td>
     </tr>
     <tr>
@@ -324,7 +324,7 @@
         <strong>Arguments</strong>:
         <ul>
           <li>
-            <code>fileObj</code> - see <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/schema.md#schema">schema</a>
+            <code>fileObj</code> - see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">schema</a>
           </li>
         </ul><br>
         <strong>Context</strong>:
@@ -363,7 +363,7 @@
         <strong>Arguments</strong>:
         <ul>
           <li>
-            <code>fileObj</code> {<em>Object</em>|<em>null</em>} - If requested file exists - <a href="https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/schema.md#schema">file object</a>, otherwise -
+            <code>fileObj</code> {<em>Object</em>|<em>null</em>} - If requested file exists - <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">file object</a>, otherwise -
             <code>null</code>
           </li>
         </ul><br>
@@ -517,7 +517,7 @@
         <code>false</code>
       </td>
       <td>
-        See: <a href="https://github.com/VeliovGroup/Meteor-Files/issues/208">#208</a>
+        See: <a href="https://github.com/veliovgroup/Meteor-Files/issues/208">#208</a>
       </td>
     </tr>
     <tr>
@@ -1116,7 +1116,7 @@ const Images = new FilesCollection({
 
 #### Use onBeforeRemove to avoid unauthorized remove:
 
-*For more info see [remove method](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/remove.md).*
+*For more info see [remove method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md).*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
