@@ -177,7 +177,7 @@ const fixJSONStringify = function(obj) {
  * @name formatFleURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like build URL for
- * @param {String} uriBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+ * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
  * @summary Returns formatted URL for file
  * @returns {String} Downloadable link
  */

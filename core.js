@@ -257,7 +257,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @name link
    * @param {Object} fileRef - File reference object
    * @param {String} version - Version of file you would like to request
-   * @param {String} uriBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+   * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL
    * @returns {String} Empty string returned in case if file not found in DB
    */

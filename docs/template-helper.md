@@ -34,7 +34,7 @@ if (Meteor.isClient) {
 
 __Note:__ If requested version of file is not available - the original file will be returned.
 
-For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/file-subversions.md) section
+For more info about file's subversions see: [create subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md) section
 
 ```handlebars
 <a href="{{fileURL fileRef 'small'}}?download=true" target="_parent" download="{{compare fileRef.versions.small.name '||' fileRef.name}}">
@@ -59,7 +59,7 @@ For `compare` helper see [ostrio:templatehelpers](https://atmospherejs.com/ostri
 
 __Note:__ If thumbnail (*subversion of the file*) is not available the original file will be returned.
 
-For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/file-subversions.md) section
+For more info about file's subversions see: [create subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md) section
 
 ```handlebars
 <img src="{{fileURL fileRef 'thumb'}}" alt="{{fileRef.name}}" />
@@ -69,7 +69,7 @@ For more info about file's subversions see: [create subversions](https://github.
 
 #### Example for video with multiple subversions:
 
-For more info about file's subversions see: [create subversions](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/file-subversions.md) section
+For more info about file's subversions see: [create subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md) section
 
 ```handlebars
 <video width="80%" height="auto" controls="controls" poster="{{fileURL fileRef 'videoPoster'}}">

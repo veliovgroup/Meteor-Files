@@ -288,7 +288,7 @@ export class FilesCollection extends FilesCollectionCore {
  * @name fileURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like to request
- * @param {String} uriBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+ * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
  * @summary Get download URL for file by fileRef, even without subscription
  * @example {{fileURL fileRef}}
  * @returns {String}

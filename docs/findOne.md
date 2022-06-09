@@ -4,7 +4,7 @@ Finds the first document that matches the selector, as ordered by sort and skip 
 
 - `selector` {*String*|*Object*} - [Mongo-Style selector](http://docs.meteor.com/api/collections.html#selectors)
 - `options` {*Object*} - [Mongo-Style selector Options](http://docs.meteor.com/api/collections.html#sortspecifiers)
-- Returns {*[FileCursor](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/FileCursor.md)*}
+- Returns {*[FileCursor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)*}
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';

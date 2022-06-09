@@ -4,7 +4,7 @@ Unlink file an its subversions from FS.
 
 __This is low-level method. You shouldn't use it__, unless you know what you're doing.
 
-Unlike [`fs.remove`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/remove.md) if `callback` is not specified it wouldn't throw an exception on error.
+Unlike [`fs.remove`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md) if `callback` is not specified it wouldn't throw an exception on error.
 
 - `fileRef` {*Object*} - Full `fileRef` object, returned from `FilesCollection.findOne().get()`
 - `version` {*String*} - [Optional] If specified, only subversion will be unlinked
@@ -18,3 +18,4 @@ Images.unlink(Images.collection.findOne({}));
 // OR:
 Images.unlink(Images.collection.findOne({}), 'thumbnail');
 ```
+

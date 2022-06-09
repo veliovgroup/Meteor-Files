@@ -2,7 +2,7 @@ By default files served from GridFS returned with `200` response code. This beha
 
 `206` partial content response is much better from all sides, for video and audio it allows to support time-seeking, for large files - resumable downloads. For server-side it reduces memory and CPU consumption.
 
-Below is code sample suggested by [@j1016h](https://github.com/j1016h), where [`interceptDownload`](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md) is used to alter default file-serving behavior - *use it as it at your own risk, or take it and modify to meet your own needs*.
+Below is code sample suggested by [@j1016h](https://github.com/j1016h), where [`interceptDownload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) is used to alter default file-serving behavior - *use it as it at your own risk, or take it and modify to meet your own needs*.
 
 ```js
 interceptDownload(http, image, versionName) {

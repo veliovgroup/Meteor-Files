@@ -9,7 +9,7 @@ This allows to *horizontally scale your files* the same way you do with your doc
 
 **A note for beginners:** This tutorial is a bit advanced and we try to explain the involved steps as detailed as
 possible. If you still need some reference to play with, we have set up an example project. The project
-is available via [`files-gridfs-autoform-example`](https://github.com/VeliovGroup/files-gridfs-autoform-example)
+is available via [`files-gridfs-autoform-example`](https://github.com/veliovgroup/files-gridfs-autoform-example)
 
 ## About GridFS
 
@@ -25,7 +25,7 @@ plus some additional metadata.
 
 Please note - by default all files will be served with `200` response code, which is fine if you planning to deal
 only with small files, or not planning to serve files back to users (*use only upload and storage*).
-For support of `206` partial content see [this article](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
+For support of `206` partial content see [this article](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
 ## 1. Create a `GridFSBucket` factory
 

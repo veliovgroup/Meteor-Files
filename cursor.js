@@ -38,7 +38,7 @@ export class FileCursor {
    * @memberOf FileCursor
    * @name link
    * @param version {String} - Name of file's subversion
-   * @param uriBase {String} - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+   * @param uriBase {String} - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL to File
    * @returns {String}
    */

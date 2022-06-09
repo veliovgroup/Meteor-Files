@@ -34,7 +34,7 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
 });
 ```
 
-*Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/VeliovGroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeremove-to-avoid-unauthorized-remove)*
+*Use onBeforeRemove to avoid unauthorized actions, for more info see [onBeforeRemove callback](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeremove-to-avoid-unauthorized-remove)*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
