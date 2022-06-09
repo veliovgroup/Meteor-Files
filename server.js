@@ -20,7 +20,7 @@ import nodePath from 'path';
  * @const {Function} noop - No Operation function, placeholder for required callbacks
  */
 const bound = Meteor.bindEnvironment(callback => callback());
-const noop  = function noop () {};
+const noop = function noop () {};
 
 /**
  * @locus Anywhere
@@ -538,7 +538,7 @@ export class FilesCollection extends FilesCollectionCore {
                 throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
               }
 
-              ({result, opts}  = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
+              ({result, opts} = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
 
               if (opts.eof) {
                 // FINISH UPLOAD SCENARIO:
@@ -704,10 +704,10 @@ export class FilesCollection extends FilesCollectionCore {
               let version;
               if (_file.includes('-')) {
                 version = _file.split('-')[0];
-                _file   = _file.split('-')[1].split('?')[0];
+                _file = _file.split('-')[1].split('?')[0];
               } else {
                 version = 'original';
-                _file   = _file.split('?')[0];
+                _file = _file.split('?')[0];
               }
 
               const params = {
@@ -798,7 +798,7 @@ export class FilesCollection extends FilesCollectionCore {
           throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
         }
 
-        opts._id       = opts.fileId;
+        opts._id = opts.fileId;
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
         try {
@@ -921,16 +921,16 @@ export class FilesCollection extends FilesCollectionCore {
       opts.file.meta = {};
     }
 
-    let result       = opts.file;
-    result.name      = fileName;
-    result.meta      = opts.file.meta;
+    let result = opts.file;
+    result.name = fileName;
+    result.meta = opts.file.meta;
     result.extension = extension;
-    result.ext       = extension;
-    result._id       = opts.fileId;
-    result.userId    = userId || null;
-    opts.FSName      = opts.FSName.replace(/([^a-z0-9\-\_]+)/gi, '-');
-    result.path      = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
-    result           = Object.assign(result, this._dataToSchema(result));
+    result.ext = extension;
+    result._id = opts.fileId;
+    result.userId = userId || null;
+    opts.FSName = opts.FSName.replace(/([^a-z0-9\-\_]+)/gi, '-');
+    result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
+    result = Object.assign(result, this._dataToSchema(result));
 
     if (this.onBeforeUpload && helpers.isFunction(this.onBeforeUpload)) {
       ctx = Object.assign({
@@ -985,7 +985,7 @@ export class FilesCollection extends FilesCollectionCore {
   _finishUpload(result, opts, cb) {
     this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
     fs.chmod(result.path, this.permissions, noop);
-    result.type   = this._getMimeType(opts.file);
+    result.type = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
 
@@ -1153,7 +1153,7 @@ export class FilesCollection extends FilesCollectionCore {
     if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
-      opts     = {};
+      opts = {};
     } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
     } else if (helpers.isBoolean(opts)) {
@@ -1164,8 +1164,8 @@ export class FilesCollection extends FilesCollectionCore {
     check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
-    const fileId   = opts.fileId || Random.id();
-    const FSName   = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fileId = opts.fileId || Random.id();
+    const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : FSName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
@@ -1281,7 +1281,7 @@ export class FilesCollection extends FilesCollectionCore {
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || FSName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
-    opts.path  = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
+    opts.path = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
 
     const storeResult = (result, cb) => {
       result._id = fileId;
@@ -1435,7 +1435,7 @@ export class FilesCollection extends FilesCollectionCore {
     if (helpers.isFunction(opts)) {
       proceedAfterUpload = callback;
       callback = opts;
-      opts     = {};
+      opts = {};
     } else if (helpers.isBoolean(callback)) {
       proceedAfterUpload = callback;
     } else if (helpers.isBoolean(opts)) {
@@ -1458,11 +1458,11 @@ export class FilesCollection extends FilesCollectionCore {
         if (!helpers.isObject(opts)) {
           opts = {};
         }
-        opts.path  = path;
+        opts.path = path;
 
         if (!opts.fileName) {
           const pathParts = path.split(nodePath.sep);
-          opts.fileName   = path.split(nodePath.sep)[pathParts.length - 1];
+          opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
         }
 
         const {extension} = this._getExt(opts.fileName);
@@ -1780,11 +1780,11 @@ export class FilesCollection extends FilesCollectionCore {
       reqRange = {start, end};
       if (isNaN(start) && !isNaN(end)) {
         reqRange.start = end - take;
-        reqRange.end   = end;
+        reqRange.end = end;
       }
       if (!isNaN(start) && isNaN(end)) {
         reqRange.start = start;
-        reqRange.end   = start + take;
+        reqRange.end = start + take;
       }
 
       if ((start + take) >= vRef.size) {
