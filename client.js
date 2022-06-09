@@ -113,7 +113,6 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     if (!config.disableSetTokenCookie) {
-
       const setTokenCookie = () => {
         if (Meteor.connection._lastSessionId) {
           cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax' });
@@ -123,14 +122,14 @@ export class FilesCollection extends FilesCollectionCore {
         }
       };
 
-      if (typeof Accounts !== 'undefined' && Accounts !== null) {
+      const _accounts = (Package && Package['accounts-base'] && Package['accounts-base'].Accounts) ? Package['accounts-base'].Accounts : undefined;
+      if (_accounts) {
         DDP.onReconnect((conn) => {
           conn.onReconnect = setTokenCookie;
         });
         Meteor.startup(setTokenCookie);
-        Accounts.onLogin(setTokenCookie);
+        _accounts.onLogin(setTokenCookie);
       }
-
     }
 
     check(this.onbeforeunloadMessage, Match.OneOf(String, Function));
@@ -225,7 +224,7 @@ export class FilesCollection extends FilesCollectionCore {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/FileReader
    * @param {Object} config - Configuration object with next properties:
    *   {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
-   *   {String}      fileId         - Optionnal `fileId` used at insert
+   *   {String}      fileId         - Optional `fileId` used at insert
    *   {Object}      meta           - Additional data as object, use later for search
    *   {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
    *   {Number|dynamic} chunkSize   - Chunk size for upload
@@ -289,21 +288,22 @@ export class FilesCollection extends FilesCollectionCore {
  * @name fileURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like to request
- * @param {String} URIBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+ * @param {String} uriBase - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
  * @summary Get download URL for file by fileRef, even without subscription
  * @example {{fileURL fileRef}}
  * @returns {String}
  */
 Meteor.startup(() => {
-  if (typeof Template !== 'undefined' && Template !== null) {
-    Template.registerHelper('fileURL', (fileRef, _version = 'original', _URIBase) => {
+  const _template = (Package && Package.templating && Package.templating.Template) ? Package.templating.Template : undefined;
+  if (_template) {
+    _template.registerHelper('fileURL', (fileRef, _version = 'original', _uriBase) => {
       if (!helpers.isObject(fileRef)) {
         return '';
       }
 
       const version = (!helpers.isString(_version)) ? 'original' : _version;
-      const URIBase = (!helpers.isString(_URIBase)) ? void 0 : _URIBase;
-      return formatFleURL(fileRef, version, URIBase);
+      const uriBase = (!helpers.isString(_uriBase)) ? void 0 : _uriBase;
+      return formatFleURL(fileRef, version, uriBase);
     });
   }
 });
