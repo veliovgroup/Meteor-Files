@@ -10,7 +10,7 @@ import { Meteor } from 'meteor/meteor';
  */
 export class FileCursor {
   constructor(_fileRef, _collection) {
-    this._fileRef    = _fileRef;
+    this._fileRef = _fileRef;
     this._collection = _collection;
     Object.assign(this, _fileRef);
   }
@@ -38,14 +38,14 @@ export class FileCursor {
    * @memberOf FileCursor
    * @name link
    * @param version {String} - Name of file's subversion
-   * @param URIBase {String} - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
+   * @param uriBase {String} - [Optional] URI base, see - https://github.com/VeliovGroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL to File
    * @returns {String}
    */
-  link(version = 'original', URIBase) {
+  link(version = 'original', uriBase) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef) {
-      return this._collection.link(this._fileRef, version, URIBase);
+      return this._collection.link(this._fileRef, version, uriBase);
     }
     return '';
   }
@@ -103,9 +103,9 @@ export class FileCursor {
 export class FilesCursor {
   constructor(_selector = {}, options, _collection) {
     this._collection = _collection;
-    this._selector   = _selector;
-    this._current    = -1;
-    this.cursor      = this._collection.collection.find(this._selector, options);
+    this._selector = _selector;
+    this._current = -1;
+    this.cursor = this._collection.collection.find(this._selector, options);
   }
 
   /*
