@@ -47,6 +47,7 @@ export default class WriteStream {
             fs.mkdirSync(paths.join('/'), { recursive: true });
             fs.writeFileSync(this.path, '');
           }
+
           fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
             bound(() => {
               if (oError) {
