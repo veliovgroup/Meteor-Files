@@ -13,7 +13,7 @@
   - `opts.userId` {*String*} - UserId, default *null*
   - `opts.fileId` {*String*} - _id of inserted file, if not set - Random.id() will be used
 - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
-- proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
+- `proceedAfterUpload` {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
 - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```js

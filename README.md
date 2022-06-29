@@ -55,7 +55,20 @@ meteor add ostrio:files
 import { FilesCollection } from 'meteor/ostrio:files';
 ```
 
-## API overview (*[full API](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)*)
+## API overview
+
+For detailed docs, examples, and API — read [documentation section](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md).
+
+- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Isomorphic*] - Initialize FilesCollection
+- [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload file(s) from client to server
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Isomorphic*] - Create cursor for FilesCollection
+- [`remove()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md) [*Isomorphic*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
+- [`findOne()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md) [*Isomorphic*] - Find one file in FilesCollection
+- [`write()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/write.md) [*Server*] - Write `Buffer` to FS and FilesCollection
+- [`load()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/load.md) [*Server*] - Write file to FS and FilesCollection from remote URL
+- [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
+- [`unlink()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlink.md) [*Server*] - "Unlink" (e.g. remove) file from FS
+- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Isomorphic*] - Generate downloadable link
 
 ### `new FilesCollection([config])` [*Isomorphic*]
 
