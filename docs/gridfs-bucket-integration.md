@@ -152,7 +152,10 @@ export const createInterceptDownload = bucket =>
       });
 
       http.response.setHeader('Cache-Control', this.cacheControl);
-      http.response.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
+      
+      const dispositionName = "filename=\"" + (encodeURIComponent(file.name)) + "\"; filename=*UTF-8\"" + (encodeURIComponent(file.name)) + "\"; ";
+      const dispositionEncoding = 'charset=utf-8';
+      http.response.setHeader('Content-Disposition', dispositionType + dispositionName + dispositionEncoding);
     }
     return Boolean(gridFsFileId); // Serve file from either GridFS or FS if it wasn't uploaded yet
   }
