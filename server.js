@@ -1254,9 +1254,12 @@ class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    fs.stat(opts.path, (statErr, stats) => {
+    fs.stat(opts.path, (statError, stats) => {
       bound(() => {
-        if (statErr || !stats.isFile()) {
+        if (statError || !stats.isFile()) {
+          const paths = opts.path.split('/');
+          paths.pop();
+          fs.mkdirSync(paths.join('/'), { recursive: true });
           fs.writeFileSync(opts.path, '');
         }
 
@@ -1364,9 +1367,12 @@ class FilesCollection extends FilesCollectionCore {
       });
     };
 
-    fs.stat(opts.path, (statErr, stats) => {
+    fs.stat(opts.path, (statError, stats) => {
       bound(() => {
-        if (statErr || !stats.isFile()) {
+        if (statError || !stats.isFile()) {
+          const paths = opts.path.split('/');
+          paths.pop();
+          fs.mkdirSync(paths.join('/'), { recursive: true });
           fs.writeFileSync(opts.path, '');
         }
 
@@ -1394,10 +1400,10 @@ class FilesCollection extends FilesCollectionCore {
               });
 
               if (!result.size) {
-                fs.stat(opts.path, (statError, newStats) => {
+                fs.stat(opts.path, (statErrorOnEnd, newStats) => {
                   bound(() => {
-                    if (statError) {
-                      callback && callback(statError);
+                    if (statErrorOnEnd) {
+                      callback && callback(statErrorOnEnd);
                     } else {
                       result.versions.original.size = (result.size = newStats.size);
                       storeResult(result, callback);
