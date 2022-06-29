@@ -235,7 +235,7 @@
         Isomorphic
       </td>
       <td>
-        Function which returns <code>String</code>
+        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>
       </td>
       <td>
         <code>false</code>
