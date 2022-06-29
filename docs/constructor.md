@@ -951,7 +951,8 @@
 ### Examples:
 
 ```js
-import { FilesCollection } from 'meteor/ostrio:files';
+import { FilesCollection, helpers } from 'meteor/ostrio:files';
+
 const imagesCollection = new FilesCollection({
   storagePath: 'assets/app/uploads/images',
   downloadRoute: '/files/images',
@@ -989,7 +990,12 @@ const imagesCollection = new FilesCollection({
       return true;
     }
     return false;
-  }
+  },
+  namingFunction(file) {
+    // MAKE SURE namingFunction IS SET ON Server
+    // OVERWRITE Client's namingFunction FOR SECURITY REASONS AGAINST REVERSE-ENGINEERING ACTIONS
+    return helpers.sanitize(file.fileId);
+  },
 });
 
 // Export FilesCollection instance, so it can be imported in other files
@@ -998,9 +1004,11 @@ export default imagesCollection;
 
 ### Add extra security:
 
+Attach SimpleSchema and `.denyClient` insecure calls to limit window for error
+
 #### Attach schema [*Isomorphic*]:
 
-*To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
+*To attach schema, use/install [`aldeed:collection2`](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
