@@ -33,7 +33,7 @@ const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloa
  * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
  * @summary Create new instance of FilesCollection
  */
-export class FilesCollection extends FilesCollectionCore {
+class FilesCollection extends FilesCollectionCore {
   constructor(config) {
     super();
     if (config) {
@@ -307,3 +307,5 @@ Meteor.startup(() => {
     });
   }
 });
+
+export { FilesCollection, helpers };
