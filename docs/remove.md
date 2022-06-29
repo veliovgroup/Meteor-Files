@@ -9,23 +9,23 @@ Remove records from FilesCollection and files from FS.
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage:
 // Drop collection's data and remove all associated files from FS
-Images.remove({});
+imagesCollection.remove({});
 // Remove particular file
-Images.remove({_id: 'Rfy2HLutYK4XWkwhm'});
+imagesCollection.remove({_id: 'Rfy2HLutYK4XWkwhm'});
 // Equals to above
-Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
+imagesCollection.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
 
 
 // Direct Collection usage
 // Remove record(s) ONLY from collection
-Images.collection.remove({});
+imagesCollection.collection.remove({});
 
 // Using callback
-Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
+imagesCollection.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
   if (error) {
     console.error(`File wasn't removed, error:  ${error.reason}`);
   } else {
@@ -39,8 +39,8 @@ Images.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   allowClientCode: true,
   onBeforeRemove(cursor) {
     const records = cursor.fetch();

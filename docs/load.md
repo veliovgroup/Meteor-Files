@@ -32,9 +32,9 @@ Write file to file system from remote URL (external resource) and add record to 
  */
 
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
-Images.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
   fileName: 'logo.png',
   fileId: 'abc123myId', //optional
   timeout: 60000, // optional timeout

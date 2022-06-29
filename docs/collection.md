@@ -3,27 +3,27 @@
 *Direct reference to [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection).*
 
 ```js
-import { Meteor }          from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 if (Meteor.isServer) {
   /* Set deny/allow rules:
    * Deny all
    * @see http://docs.meteor.com/#/full/deny
    */
-  Images.denyClient();
+  imagesCollection.denyClient();
 
   /* Allow all
    * @see http://docs.meteor.com/#/full/allow
    */
-  Images.allowClient();
+  imagesCollection.allowClient();
 
   /* Deny per action
    * @see http://docs.meteor.com/#/full/deny
    */
-  Images.deny({
+  imagesCollection.deny({
     insert: function() {
       return false;
     },
@@ -38,7 +38,7 @@ if (Meteor.isServer) {
   /* Allow per action
    * @see http://docs.meteor.com/#/full/allow
    */
-  Images.allow({
+  imagesCollection.allow({
     insert: function() {
       return true;
     },
@@ -52,8 +52,8 @@ if (Meteor.isServer) {
 }
 
 // Example 1:
-Images.collection.find({}).forEach(function (fileRef) {
-  Images.link(fileRef);
+imagesCollection.collection.find({}).forEach(function (fileRef) {
+  imagesCollection.link(fileRef);
 });
 
 // Example: Subscribe:
@@ -64,7 +64,7 @@ if (Meteor.isClient) {
 // Example: Publish:
 if (Meteor.isServer) {
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({});
+    return imagesCollection.collection.find({});
   });
 }
 
@@ -72,7 +72,7 @@ if (Meteor.isServer) {
 // See issue #316
 if (Meteor.isServer) {
   Meteor.publish('files.images.all', function () {
-    return Images.collection.find({}, {
+    return imagesCollection.collection.find({}, {
       fields: {
         extension: 1,
         _downloadRoute: 1,

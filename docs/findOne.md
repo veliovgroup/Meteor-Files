@@ -9,11 +9,11 @@ Finds the first document that matches the selector, as ordered by sort and skip 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage:
 // Set cursor:
-const file = Images.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
+const file = imagesCollection.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
 // Generate downloadable link:
 file.link();
 // Get cursor's data as plain Object:
@@ -32,7 +32,7 @@ file.remove(function (error) {
 
 
 // Direct Collection usage:
-Images.collection.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
+imagesCollection.collection.findOne({_id: 'Rfy2HLutYK4XWkwhm'});
 // Remove record from collection:
-Images.collection.remove({_id: 'Rfy2HLutYK4XWkwhm'});
+imagesCollection.collection.remove({_id: 'Rfy2HLutYK4XWkwhm'});
 ```

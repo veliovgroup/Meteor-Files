@@ -36,9 +36,9 @@ FileCursor#link(version, URIBase); // [*Isomorphic*]
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
-Images.findOne({}, {
+imagesCollection.findOne({}, {
   fields: {
     _id: 1,
     public: 1,
@@ -54,22 +54,22 @@ Images.findOne({}, {
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage:
-Images.collection.find({}).forEach(function (fileRef) {
-  Images.link(fileRef);
+imagesCollection.collection.find({}).forEach(function (fileRef) {
+  imagesCollection.link(fileRef);
 });
 
-Images.findOne({}).link();
+imagesCollection.findOne({}).link();
 // Get thumbnail subversion
-Images.findOne({}).link('thumbnail');
+imagesCollection.findOne({}).link('thumbnail');
 // Equals to above
-const fileRef = Images.collection.findOne({});
-Images.link(fileRef);
+const fileRef = imagesCollection.collection.findOne({});
+imagesCollection.link(fileRef);
 
 // Change domain:
-Images.link(fileRef, 'original', 'https://other-domain.com/');
+imagesCollection.link(fileRef, 'original', 'https://other-domain.com/');
 // Relative path to domain:
-Images.link(fileRef, 'original', '/');
+imagesCollection.link(fileRef, 'original', '/');
 ```

@@ -5,8 +5,8 @@ Implementation of Cursor for FilesCollection. Returned from `FilesCollection#fin
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection();
-const cursor = Images.find(); // <-- Returns FilesCursor Instance
+const imagesCollection = new FilesCollection();
+const cursor = imagesCollection.find(); // <-- Returns FilesCursor Instance
 ```
 
 #### Methods:
@@ -24,7 +24,7 @@ const cursor = Images.find(); // <-- Returns FilesCursor Instance
 - `forEach(callback, context)` - {*undefined*} - Call `callback` once for each matching document, sequentially and synchronously.
   - `callback` - {*Function*} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
   - `context` - {*Object*} - An object which will be the value of `this` inside `callback`
-- `each()` - {*[FileCursor]*} - Returns an Array of `FileCursor` made for each document on current Cursor. Useful when using in `{{#each FilesCursor#each}}...{{/each}}` block template helper
+- `each()` - {*[FileCursor]*} - Returns an Array of `FileCursor` made for each document on current Cursor. Useful when using in `{{#each cursor.each}}...{{/each}}` block template helper
 - `map(callback, context)` - {*Array*} - Map `callback` over all matching documents. Returns an Array
   - `callback` - {*Function*} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
   - `context` - {*Object*} - An object which will be the value of `this` inside `callback`

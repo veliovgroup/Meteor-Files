@@ -16,7 +16,7 @@ is available via [`files-gridfs-autoform-example`](https://github.com/veliovgrou
 The [MongoDB documentation on GridFS](https://docs.mongodb.com/manual/core/gridfs/) defines it as the following:
 
 > GridFS is a specification for storing and retrieving files that exceed the BSON-document size limit of 16 MB.
-> 
+>  
 > Instead of storing a file in a single document, GridFS divides the file into parts, or chunks [1], and stores each
 chunk as a separate document. By default, GridFS uses a default chunk size of 255 kB; that is, GridFS divides a file
 into chunks of 255 kB with the exception of the last chunk. The last chunk is only as large as necessary.
@@ -197,7 +197,7 @@ import { createOnAfterRemove } from 'path/to/createOnAfterRemove'
 
 const imageBucket = createBucket('allImages');
 
-export const Images = new FilesCollection({
+export const imagesCollection = new FilesCollection({
   debug: false, // Change to `true` for debugging
   collectionName: 'images',
   allowClientCode: false,
@@ -211,10 +211,10 @@ export const Images = new FilesCollection({
 });
 
 if (Meteor.isServer) {
-  Images.denyClient();
+  imagesCollection.denyClient();
   
   // demo / testing only:
-  Meteor.publish('files.images.all', () => Images.collection.find({}));
+  Meteor.publish('files.images.all', () => imagesCollection.collection.find({}));
 }
 
 if (Meteor.isClient) {
@@ -224,7 +224,7 @@ if (Meteor.isClient) {
 
 ## 7. Upload images and Check your mongo shell
 
-Consider you upload two images to the Images collection, you can open your mongo shell and check the `fs.` collections:
+Consider you upload two images to the imagesCollection collection, you can open your mongo shell and check the `fs.` collections:
 
 ```bash
 $ meteor mongo

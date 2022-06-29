@@ -7,18 +7,18 @@ Find and return Cursor for matching documents.
 - Returns {*[FilesCursor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)*}
 
 ```js
-import { Meteor }          from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage:
 // Set cursor:
-const filesCursor = Images.find();
+const filesCursor = imagesCollection.find();
 
 // Get Mongo cursor:
 Meteor.publish('images', function() {
-  Images.find().cursor;
+  imagesCollection.find().cursor;
 });
 
 // Get cursor's data:
@@ -33,7 +33,7 @@ filesCursor.remove(function (error) {
   }
 });
 // Remove only Collection records from DB:
-Images.collection.remove();
+imagesCollection.collection.remove();
 
 // Each:
 filesCursor.each(function (file) {

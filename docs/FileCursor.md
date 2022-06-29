@@ -6,8 +6,8 @@ All document's original properties is available directly by name, like: `FileCur
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection();
-const cursor = Images.findOne(); // <-- Returns FileCursor Instance
+const imagesCollection = new FilesCollection();
+const cursor = imagesCollection.findOne(); // <-- Returns FileCursor Instance
 ```
 
 #### Methods:
@@ -19,4 +19,4 @@ const cursor = Images.findOne(); // <-- Returns FileCursor Instance
   - `link('original', '/')` - {*String*} - Returns __relative__ downloadable URL to File
 - `get(property)` - {*Object*|*mix*} - Returns current document as a plain Object, if `property` is specified - returns value of sub-object property
 - `fetch()` - {*[Object]*}- Returns current document as plain Object in Array
-- `with()` - {*FileCursor*} - Returns reactive version of current FileCursor, useful to use with `{{#with FileCursor#with}}...{{/with}}` block template helper
+- `with()` - {*FileCursor*} - Returns reactive version of current FileCursor, useful to use with `{{#with cursor.with}}...{{/with}}` block template helper

@@ -101,7 +101,7 @@ Meteor-Files library features and highlights
 - [Simplest upload app](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-upload)
 - [Simplest streaming app](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-streaming)
 - [Simplest download button](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-download-button)
-- [Fully-features file sharing app](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app) — [live: __files.veliov.com__](https://files.veliov.com)
+- [Fully-featured file sharing app](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app) — [live: __files.veliov.com__](https://files.veliov.com)
 
 ### Examples:
 
@@ -121,5 +121,5 @@ Meteor-Files library features and highlights
 
 ### Related packages:
 
-- [`pyfiles` (meteor-python-files))](https://github.com/veliovgroup/meteor-python-files) Python Client for Meteor-Files package
+- [`pyfiles` (meteor-python-files)](https://github.com/veliovgroup/meteor-python-files) Python Client for Meteor-Files package
 - [`meteor-autoform-file`](https://github.com/veliovgroup/meteor-autoform-file) - Upload and manage files with [autoForm](https://github.com/aldeed/meteor-autoform)

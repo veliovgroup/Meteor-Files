@@ -334,7 +334,6 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 
 ## Get Support:
 
-- [Ask a question via Gitter chat](https://gitter.im/veliovgroup/Meteor-Files)
 - [Ask a question or submit an issue](https://github.com/veliovgroup/Meteor-Files/issues)
 - [Releases / Changelog / History](https://github.com/veliovgroup/Meteor-Files/releases)
 - For more docs and examples [read wiki](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
