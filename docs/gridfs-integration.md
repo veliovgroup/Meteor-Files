@@ -29,7 +29,7 @@ Create a `FilesCollection` instance:
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-export const Images = new FilesCollection({
+export const imagesCollection = new FilesCollection({
   debug: false, // Change to `true` for debugging
   collectionName: 'images',
   allowClientCode: false,
@@ -40,7 +40,7 @@ export const Images = new FilesCollection({
 });
 
 if (Meteor.isServer) {
-  Images.denyClient();
+  imagesCollection.denyClient();
 }
 ```
 
@@ -100,7 +100,7 @@ Add `onAfterUpload` and `interceptDownload` hooks that would move file to GridFS
 #### Handle removing
 
 From now we can store/serve files to/from GridFS. But what will happen if we decide to
-delete an image? An Image document will be deleted, but a GridFS record will stay in db forever!
+delete an image? An `imagesCollection` document will be deleted, but a GridFS record will stay in db forever!
 That's not what we want, right?
 
 So let's fix this by adding `onAfterRemove` hook:
@@ -135,7 +135,7 @@ if (Meteor.isServer) {
   );
 }
 
-export const Images = new FilesCollection({
+export const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: false,
   debug: Meteor.isServer && process.env.NODE_ENV === 'development',
@@ -189,6 +189,6 @@ export const Images = new FilesCollection({
 });
 
 if (Meteor.isServer) {
-  Images.denyClient();
+  imagesCollection.denyClient();
 }
 ```

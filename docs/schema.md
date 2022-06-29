@@ -98,8 +98,8 @@ const defaultSchema = {
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({ collectionName: 'Images'});
-Images.collection.attachSchema(new SimpleSchema(Images.schema));
+const imagesCollection = new FilesCollection({ collectionName: 'images'});
+imagesCollection.collection.attachSchema(new SimpleSchema(Images.schema));
 ```
 
 ## Extend default schema:
@@ -114,11 +114,11 @@ const mySchema = Object.assign({}, FilesCollection.schema, {
   }
 });
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   schema: mySchema
 });
-Images.collection.attachSchema(new SimpleSchema(mySchema));
+imagesCollection.collection.attachSchema(new SimpleSchema(mySchema));
 ```
 
 Or with ES6 object spread syntax:
@@ -132,11 +132,11 @@ const mySchema = {
   }
 };
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   schema: mySchema
 });
-Images.collection.attachSchema(new SimpleSchema(mySchema));
+imagesCollection.collection.attachSchema(new SimpleSchema(mySchema));
 ```
 
 ## Pass your own schema (*not recommended*):
@@ -145,8 +145,8 @@ Images.collection.attachSchema(new SimpleSchema(mySchema));
 import { FilesCollection } from 'meteor/ostrio:files';
 const mySchema = { /* Your schema here */ };
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   schema: mySchema
 });
 ```

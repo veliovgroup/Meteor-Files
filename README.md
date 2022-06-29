@@ -1,7 +1,6 @@
 [![support](https://img.shields.io/badge/support-GitHub-white)](https://github.com/sponsors/dr-dimitru)
 [![support](https://img.shields.io/badge/support-PayPal-white)](https://paypal.me/veliovgroup)
 [![Mentioned in Awesome ostrio:files](https://awesome.re/mentioned-badge.svg)](https://project-awesome.org/Urigo/awesome-meteor#files)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/veliovgroup/Meteor-Files)
 [![GitHub stars](https://img.shields.io/github/stars/veliovgroup/Meteor-Files.svg)](https://github.com/veliovgroup/Meteor-Files/stargazers)
 <a href="https://ostr.io/info/built-by-developers-for-developers">
   <img src="https://ostr.io/apple-touch-icon-60x60.png" height="20">
@@ -13,38 +12,36 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 
 ## ToC:
 
-- [Wiki](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/toc.md) - Full documentation
-- [Installation](https://github.com/veliovgroup/Meteor-Files#installation)
-  - [ES6 Import](https://github.com/veliovgroup/Meteor-Files#es6-import)
-- [API](https://github.com/veliovgroup/Meteor-Files#api-overview-full-api):
-  - [Initialize Collection](https://github.com/veliovgroup/Meteor-Files#new-filescollectionconfig-isomorphic)
-  - [Upload file](https://github.com/veliovgroup/Meteor-Files#insertsettings-autostart-client)
-  - [Stream files](https://github.com/veliovgroup/Meteor-Files#stream-files)
-  - [Download Button](https://github.com/veliovgroup/Meteor-Files#download-button)
-- [Documentation and tutorials](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/toc.md)
-  - [__Demo apps and examples__](https://github.com/veliovgroup/Meteor-Files#demo-application)
-  - [3rd-party storage integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md) examples - AWS S3, DropBox, GridFS and Google Storage
-  - [TypeScript Definitions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
-- [Related Packages](https://github.com/veliovgroup/Meteor-Files#related-packages)
-- [Why this package?](https://github.com/veliovgroup/Meteor-Files#why-meteor-files)
-- [Help / Support](https://github.com/veliovgroup/Meteor-Files#get-support)
-- [FAQ](https://github.com/veliovgroup/Meteor-Files#faq)
-- [Awards](https://github.com/veliovgroup/Meteor-Files#awards)
-- [Help & Contribute](https://github.com/veliovgroup/Meteor-Files#contribution)
-- [Support this project](https://github.com/veliovgroup/Meteor-Files#support-meteor-files-project)
-- [Supporters](https://github.com/veliovgroup/Meteor-Files#supporters)
+- [📔 Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/toc.md) - Docs, API, Demos, Examples
+- __⚡️ Quick start__:
+  - [🔧 Installation](https://github.com/veliovgroup/Meteor-Files#installation)
+  - [👨‍💻 API examples](https://github.com/veliovgroup/Meteor-Files#api-overview):
+    - [Initialize Collection](https://github.com/veliovgroup/Meteor-Files#new-filescollectionconfig-isomorphic)
+    - [Upload file](https://github.com/veliovgroup/Meteor-Files#insertsettings-autostart-client)
+    - [Stream files](https://github.com/veliovgroup/Meteor-Files#stream-files)
+    - [Download Button](https://github.com/veliovgroup/Meteor-Files#download-button)
+- [📦 Related Packages](https://github.com/veliovgroup/Meteor-Files#related-packages)
+- [✨ Key features](https://github.com/veliovgroup/Meteor-Files#key-features)
+- [🙋‍♂️ Help / Support](https://github.com/veliovgroup/Meteor-Files#get-support)
+- [🤔 FAQ](https://github.com/veliovgroup/Meteor-Files#faq)
+- [🏅 Awards](https://github.com/veliovgroup/Meteor-Files#awards)
+- [🤝 Help & Contribute](https://github.com/veliovgroup/Meteor-Files#contribution)
+- [🎗 Support this project](https://github.com/veliovgroup/Meteor-Files#support-meteor-files-project)
+- [🙏 Supporters](https://github.com/veliovgroup/Meteor-Files#supporters)
 
-## Why `Meteor-Files`?
+## Key features
 
 - Compatible with all front-end frameworks from Blaze to [React](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/react-example.md)
 - Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/about-transports.md)
-- Sustainable and resumable uploads, which will survive connection interruption and server reboot (*if a server has persistent storage*)
-- Upload files through computing cloud without persistent File System, like Heroku
-- You need store files at *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)*? (*[Use 3rd-party storage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
-- You need to check file mime-type, size or extension? Easy! Use *[`onBeforeUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hook
-- You need to [resize images](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js#L19) after upload? Easy too! Use *[`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hook, and *[manage file's subversions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md)* in a single record
+- Sustainable and "resumable" uploads will resume upon connection interruption or server reboot
+- Upload files through computing cloud without persistent File System, like Heroku (*"resumable" uploads are not supported on Heroku and alike*)
+- Use *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)* and other (*[3rd-party storage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
+- APIs for checking file mime-type, size, extension, an other file's properties before upload using *[`onBeforeUpload` hook](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)*
+- APIs for [resizing images](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js#L19), *[subversions management](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md)*, and other post-processing tasks using *[`onAfterUpload` hook](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)*
 
 ## Installation:
+
+Install [`ostrio:files` from Atmosphere](https://atmospherejs.com/ostrio/files)
 
 ```shell
 meteor add ostrio:files
@@ -52,11 +49,26 @@ meteor add ostrio:files
 
 ### ES6 Import:
 
+Import in isomorphic location (e.g. on server and client)
+
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 ```
 
-## API overview (*[full API](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)*)
+## API overview
+
+For detailed docs, examples, and API — read [documentation section](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md).
+
+- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Isomorphic*] - Initialize FilesCollection
+- [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload file(s) from client to server
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Isomorphic*] - Create cursor for FilesCollection
+- [`remove()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md) [*Isomorphic*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
+- [`findOne()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md) [*Isomorphic*] - Find one file in FilesCollection
+- [`write()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/write.md) [*Server*] - Write `Buffer` to FS and FilesCollection
+- [`load()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/load.md) [*Server*] - Write file to FS and FilesCollection from remote URL
+- [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
+- [`unlink()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlink.md) [*Server*] - "Unlink" (e.g. remove) file from FS
+- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Isomorphic*] - Generate downloadable link
 
 ### `new FilesCollection([config])` [*Isomorphic*]
 
@@ -68,8 +80,8 @@ Shared code:
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload(file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats
@@ -86,7 +98,7 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
   Meteor.publish('files.images.all', function () {
-    return Images.find().cursor;
+    return imagesCollection.find().cursor;
   });
 }
 ```
@@ -112,14 +124,14 @@ Shared code:
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
-export default Images; // import in other files
+const imagesCollection = new FilesCollection({collectionName: 'images'});
+export default imagesCollection; // import in other files
 ```
 
 Client's code:
 
 ```js
-import { Template }    from 'meteor/templating';
+import { Template } from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 Template.uploadForm.onCreated(function () {
   this.currentUpload = new ReactiveVar(false);
@@ -136,7 +148,7 @@ Template.uploadForm.events({
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
-      const upload = Images.insert({
+      const upload = imagesCollection.insert({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false);
@@ -166,14 +178,14 @@ Upload base64 string (*introduced in v1.7.1*):
 
 ```js
 // As dataURI
-Images.insert({
+imagesCollection.insert({
   file: 'data:image/png,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As plain base64:
-Images.insert({
+imagesCollection.insert({
   file: 'base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png', // <— Mandatory
@@ -209,26 +221,26 @@ Shared code:
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
-const Videos = new FilesCollection({collectionName: 'Videos'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
+const videosCollection = new FilesCollection({collectionName: 'videos'});
 
 if (Meteor.isServer) {
   // Upload sample files on server's startup:
   Meteor.startup(() => {
-    Images.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+    imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png'
     });
-    Videos.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
+    videosCollection.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
       fileName: 'Big-Buck-Bunny.mp4'
     });
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.find().cursor;
+    return imagesCollection.find().cursor;
   });
 
   Meteor.publish('files.videos.all', function () {
-    return Videos.find().cursor;
+    return videosCollection.find().cursor;
   });
 } else {
   // Subscribe to file's collections on Client
@@ -242,10 +254,10 @@ Client's code:
 ```js
 Template.file.helpers({
   imageFile() {
-    return Images.findOne();
+    return imagesCollection.findOne();
   },
   videoFile() {
-    return Videos.findOne();
+    return videosCollection.findOne();
   }
 });
 ```
@@ -269,19 +281,19 @@ Shared code:
 ```js
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 if (Meteor.isServer) {
   // Load sample image into FilesCollection on server's startup:
   Meteor.startup(function () {
-    Images.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+    imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png',
       meta: {}
     });
   });
 
   Meteor.publish('files.images.all', function () {
-    return Images.find().cursor;
+    return imagesCollection.find().cursor;
   });
 } else {
   // Subscribe on the client
@@ -294,7 +306,7 @@ Client's code:
 ```js
 Template.file.helpers({
   fileRef() {
-    return Images.findOne();
+    return imagesCollection.findOne();
   }
 });
 ```
@@ -317,17 +329,18 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 ## Awards:
 
 <a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show">
-  <img src="https://raw.githubusercontent.com/veliovgroup/Meteor-Files-Demos/master/GCAA.png" width="160">
+  <img src="https://raw.githubusercontent.com/veliovgroup/Meteor-Files-Demos/master/GCAA.png" width="120">
 </a>
 
 ## Get Support:
 
-- [Ask a question via Gitter chat](https://gitter.im/veliovgroup/Meteor-Files)
 - [Ask a question or submit an issue](https://github.com/veliovgroup/Meteor-Files/issues)
 - [Releases / Changelog / History](https://github.com/veliovgroup/Meteor-Files/releases)
 - For more docs and examples [read wiki](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
 
 ## Demo application:
+
+Fully-featured file-sharing app
 
 - [Live: __files.veliov.com__](https://files.veliov.com)
 - [Source Code Rep](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app)
@@ -341,7 +354,7 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 
 - Star on [GitHub](https://github.com/veliovgroup/Meteor-Files)
 - Star on [Atmosphere](https://atmospherejs.com/ostrio/files)
-- Share via [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2FVeliovGroup%2FMeteor-Files)
+- Share via [Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Fgithub.com%2Fveliovgroup%2FMeteor-Files) and [Twitter](https://twitter.com/share?url=https%3A%2F%2Fgithub.com%2Fveliovgroup%2FMeteor-Files)
 - [Sponsor via GitHub](https://github.com/sponsors/dr-dimitru)
 - [Support via PayPal](https://paypal.me/veliovgroup) — support my open source contributions once or on regular basis
 - Use [ostr.io](https://ostr.io) — [Monitoring](https://snmp-monitoring.com), [Analytics](https://ostr.io/info/web-analytics), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [Pre-rendering](https://prerendering.com) for a website
@@ -353,7 +366,7 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 
 ## Supporters:
 
-We would like to thank everyone who support this project. *Because of those guys this project can have 100% of our attention*.
+We would like to thank everyone who support this project
 
 - [@vanshady](https://github.com/vanshady)
 - [@Neophen](https://github.com/Neophen)

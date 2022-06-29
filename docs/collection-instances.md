@@ -6,17 +6,17 @@ the `Mongo.Collection` has a back-reference to the *FilesCollection* itself.
 The reference chain is as the following:
 
 ```js
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // get the underlying Mongo.Collection
-const collection = Images.collection;
+const collection = imagesCollection.collection;
 
 // get the 'parent' FilesCollection
 // of this collection instance
 const parent = collection.filesCollection;
 
 // returns true
-console.log(parent === Images);
+console.log(parent === imagesCollection);
 ```
 
 ## Using `dburles:mongo-collection-instances`
@@ -34,14 +34,14 @@ meteor add dburles:mongo-collection-instances
 Then initialize *FilesCollection*, which itself will create a new `Mongo.Collection`, that is automatically added to a hidden `Mongo.Collection` instances list.
 
 ```js
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 ```
 
 To retrieve *FilesCollection* use - `Mongo.Collection.get('collectionName')`:
 
 ```js
-const ImagesCollection = Mongo.Collection.get('Images');
-const Images = ImagesCollection.filesCollection;
+const ImagesCollection = Mongo.Collection.get('images');
+const imagesCollection = ImagesCollection.filesCollection;
 ```
 
 ## Using a custom collection instance management
@@ -56,12 +56,12 @@ const collectionsMap = {};
 Since you may not want to store the *FilesCollection* instance (*because it is not a* `Mongo.Collection`), you can still reference the underlying Mongo.Collection:
 
 ```js
-const Images = new FilesCollection({collectionName: 'Images'});
-collectionsMap.Images = Images.collection;
+const imagesCollection = new FilesCollection({collectionName: 'images'});
+collectionsMap.images = imagesCollection.collection;
 ```
 
 Access the *FilesCollection* by reference:
 
 ```js
-const Images = collectionsMap.Images.filesCollection;
+const imagesCollection = collectionsMap.images.filesCollection;
 ```

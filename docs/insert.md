@@ -566,9 +566,9 @@ Shared code:
 // /imports/collections/images.js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 // Export created instance of the FilesCollection
-export { Images };
+export { imagesCollection };
 ```
 
 Client's code:
@@ -576,7 +576,7 @@ Client's code:
 ```js
 import { ReactiveVar } from 'meteor/reactive-var';
 import { Template }    from 'meteor/templating';
-import { Images }      from '/imports/collections/images.js';
+import { imagesCollection }      from '/imports/collections/images.js';
 
 Template.uploadForm.onCreated(function () {
   this.currentFile = new ReactiveVar(false);
@@ -595,7 +595,7 @@ Template.uploadForm.events({
       // there was multiple files selected
       const file = e.currentTarget.files[0];
 
-      Images.insert({
+      imagesCollection.insert({
         file: file,
         onStart() {
           template.currentFile.set(this);
@@ -621,14 +621,14 @@ Events-driven upload
 
 ```js
 import { Template } from 'meteor/templating';
-import { Images }   from '/imports/collections/images.js';
+import { imagesCollection }   from '/imports/collections/images.js';
 
 Template.uploadForm.events({
   'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
-      Images.insert({
+      imagesCollection.insert({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false).on('start', function () {
@@ -652,12 +652,12 @@ Another way to upload using events:
 
 ```js
 import { Template } from 'meteor/templating';
-import { Images }   from '/imports/collections/images.js';
+import { imagesCollection }   from '/imports/collections/images.js';
 
 Template.uploadForm.events({
   'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      const uploader = Images.insert({
+      const uploader = imagesCollection.insert({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false);
@@ -689,24 +689,24 @@ Template.uploadForm.events({
 ### Upload base64 String
 
 ```js
-import { Images } from '/imports/collections/images.js';
+import { imagesCollection } from '/imports/collections/images.js';
 
 // As dataURI
-Images.insert({
+imagesCollection.insert({
   file: 'data:image/png,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As base64:
-Images.insert({
+imagesCollection.insert({
   file: 'image/png,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As plain base64:
-Images.insert({
+imagesCollection.insert({
   file: 'base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png', // <— Mandatory
@@ -720,7 +720,7 @@ Note: data flow in `ddp` and `http` uses dataURI (e.g. *Base64*)
 
 ```js
 import { Template } from 'meteor/templating';
-import { Images }   from '/imports/collections/images.js';
+import { imagesCollection }   from '/imports/collections/images.js';
 
 const encrypt = function encrypt(data) {
   return someHowEncryptAndReturnAsBase64(data);
@@ -735,7 +735,7 @@ Template.uploadForm.events({
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
-      Images.insert({
+      imagesCollection.insert({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false).pipe(encrypt).pipe(zip).start();

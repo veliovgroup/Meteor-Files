@@ -23,7 +23,7 @@ Write file to file system from remote URL (external resource) and add record to 
   - `opts.fileId` {*String*} - id, optional - if not set - Random.id() will be used
   - `opts.timeout` {*Number*} - timeout in milliseconds, default: `360000` (*6 mins*); Set to `0` to disable timeout; *Disabling timeout not recommended, sockets won't get closed until server rebooted*
 - `callback` {*Function*} - Triggered after first byte is received. With `error`, and `fileRef`, where `fileRef` is a new record from DB
-- proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after external source is loaded to FS
+- `proceedAfterUpload` {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after external source is loaded to FS
 - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```js
@@ -32,9 +32,9 @@ Write file to file system from remote URL (external resource) and add record to 
  */
 
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
-Images.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
   fileName: 'logo.png',
   fileId: 'abc123myId', //optional
   timeout: 60000, // optional timeout

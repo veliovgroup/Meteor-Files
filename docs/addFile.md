@@ -1,6 +1,6 @@
 ### `addFile(path [, opts, callback, proceedAfterUpload])` [*Server*]
 
-*Add local file to FilesCollection from FS.*
+Add local file to FilesCollection from FS.
 
 *Note: You can not use this method on* `public` *collections. As they supposed to be served without NodeJS (Meteor) participation. But you always can move file to root of your web-server and then add a record to FilesCollection.*
 
@@ -13,15 +13,15 @@
   - `opts.userId` {*String*} - UserId, default *null*
   - `opts.fileId` {*String*} - _id of inserted file, if not set - Random.id() will be used
 - `callback` {*Function*} - Triggered after new record is added to Collection. With `error`, and `fileRef`, where `fileRef` is a new record from DB
-- proceedAfterUpload {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
+- `proceedAfterUpload` {*Boolean*} - Proceed `onAfterUpload` hook (*if defined*) after local file is added to `FilesCollection`
 - Returns {*FilesCollection*} - Current FilesCollection instance
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({collectionName: 'Images'});
+const imagesCollection = new FilesCollection({collectionName: 'images'});
 
-Images.addFile('/var/www/files/sample.png', {
+imagesCollection.addFile('/var/www/files/sample.png', {
   fileName: 'sample.png',
   type: 'image/png',
   fileId: 'abc123AwesomeId',

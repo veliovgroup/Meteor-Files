@@ -115,7 +115,7 @@ const createIndex = async (collection, keys, opts) => {
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
  */
-export class FilesCollection extends FilesCollectionCore {
+class FilesCollection extends FilesCollectionCore {
   constructor(config) {
     super();
     let storagePath;
@@ -844,10 +844,6 @@ export class FilesCollection extends FilesCollectionCore {
 
         opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
 
-        if (opts.FSName) {
-          opts.FSName = helpers.sanitize(opts.FSName);
-        }
-
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
         const { result } = self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
@@ -968,10 +964,6 @@ export class FilesCollection extends FilesCollectionCore {
       opts.chunkId = -1;
     }
 
-    if (opts.fileId) {
-      opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
-    }
-
     if (!helpers.isString(opts.FSName)) {
       opts.FSName = opts.fileId;
     }
@@ -993,6 +985,11 @@ export class FilesCollection extends FilesCollectionCore {
     result._id = opts.fileId;
     result.userId = userId || null;
     opts.FSName = helpers.sanitize(opts.FSName);
+
+    if (this.namingFunction) {
+      opts.FSName = this.namingFunction(opts);
+    }
+
     result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
@@ -1230,12 +1227,12 @@ export class FilesCollection extends FilesCollectionCore {
 
     opts.fileId = opts.fileId && helpers.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
-    const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
-    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : FSName;
+    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
 
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
+    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
     opts.type = this._getMimeType(opts);
     if (!helpers.isObject(opts.meta)) {
       opts.meta = {};
@@ -1341,12 +1338,12 @@ export class FilesCollection extends FilesCollectionCore {
     }
 
     const fileId = (opts.fileId && helpers.sanitize(opts.fileId, 20, 'a')) || Random.id();
-    const FSName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
-    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || FSName;
+    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${FSName}${extensionWithDot}`;
+    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
 
     const storeResult = (result, cb) => {
       result._id = fileId;
@@ -1988,3 +1985,5 @@ export class FilesCollection extends FilesCollectionCore {
     }
   }
 }
+
+export { FilesCollection, helpers };

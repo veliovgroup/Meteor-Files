@@ -1,5 +1,7 @@
 # Example on using [MeteorUp](https://github.com/kadirahq/meteor-up)
 
+Add persistent storage/volume to meteor up (MUP) configuration
+
 ## Brief
 
 [MeteorUp (MUP)](https://github.com/kadirahq/meteor-up) uses Docker, and by default, there is no volume mounted on the server. Therefore, even if `storagePath` is declared in constructor, files that are being uploaded are still being stored in cache, and on every deploy, all the uploaded files __get erased__.
@@ -53,15 +55,15 @@ module.exports = {
 };
 ```
 
-## Images constructor example
+## imagesCollection constructor example
 
 ```javascript
-Images = new FilesCollection({
+const imagesCollection = new FilesCollection({
   debug: true,
   storagePath: '/images',
   permissions: 0o774,
   parentDirPermissions: 0o774,
-  collectionName: 'Images',
+  collectionName: 'images',
   allowClientCode: false, // Disallow remove files from Client
   onBeforeUpload(file) {
     // Allow upload files under 10MB, and only in png/jpg/jpeg formats

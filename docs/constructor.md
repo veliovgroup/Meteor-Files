@@ -63,7 +63,7 @@
             <code>defaultPath</code> - Default recommended path
           </li>
         </ul>
-        Context is current <em>FilesCollction</em> instance.<br /><br />
+        Context is current <em>FilesCollection</em> instance.<br /><br />
         Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
         To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
         The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
@@ -235,7 +235,7 @@
         Isomorphic
       </td>
       <td>
-        Function which returns <code>String</code>
+        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>
       </td>
       <td>
         <code>false</code>
@@ -951,11 +951,12 @@
 ### Examples:
 
 ```js
-import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({
-  storagePath: 'assets/app/uploads/Images',
+import { FilesCollection, helpers } from 'meteor/ostrio:files';
+
+const imagesCollection = new FilesCollection({
+  storagePath: 'assets/app/uploads/images',
   downloadRoute: '/files/images',
-  collectionName: 'Images',
+  collectionName: 'images',
   permissions: 0o755,
   allowClientCode: false,
   cacheControl: 'public, max-age=31536000',
@@ -978,7 +979,7 @@ const Images = new FilesCollection({
   downloadCallback(fileObj) {
     if (this.params.query.download == 'true') {
       // Increment downloads counter
-      Images.update(fileObj._id, {$inc: {'meta.downloads': 1}});
+      imagesCollection.update(fileObj._id, {$inc: {'meta.downloads': 1}});
     }
     // Must return true to continue download
     return true;
@@ -989,23 +990,30 @@ const Images = new FilesCollection({
       return true;
     }
     return false;
-  }
+  },
+  namingFunction(file) {
+    // MAKE SURE namingFunction IS SET ON Server
+    // OVERWRITE Client's namingFunction FOR SECURITY REASONS AGAINST REVERSE-ENGINEERING ACTIONS
+    return helpers.sanitize(file.fileId);
+  },
 });
 
 // Export FilesCollection instance, so it can be imported in other files
-export default Images;
+export default imagesCollection;
 ```
 
 ### Add extra security:
 
+Attach SimpleSchema and `.denyClient` insecure calls to limit window for error
+
 #### Attach schema [*Isomorphic*]:
 
-*To attach schema, use/install [aldeed:collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
+*To attach schema, use/install [`aldeed:collection2`](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({/* ... */});
-Images.collection.attachSchema(new SimpleSchema(Images.schema));
+const imagesCollection = new FilesCollection({/* ... */});
+imagesCollection.collection.attachSchema(new SimpleSchema(imagesCollection.schema));
 ```
 
 *You're free to extend the schema to include your own properties. The default schema is stored under* `FilesCollection.schema` *object.*
@@ -1019,24 +1027,24 @@ const mySchema = {
     type: Array
   }
 };
-const Images = new FilesCollection({
+const imagesCollection = new FilesCollection({
   /* ... */
   schema: mySchema
 });
-Images.collection.attachSchema(new SimpleSchema(mySchema));
+imagesCollection.collection.attachSchema(new SimpleSchema(mySchema));
 ```
 
 #### Deny collection interaction on client [*Server*]:
 
-*Deny insert/update/remove from client*
+Deny insert/update/remove from client
 
 ```js
-import { Meteor }          from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
 if (Meteor.isServer) {
-  const Images = new FilesCollection({/* ... */});
-  Images.deny({
+  const imagesCollection = new FilesCollection({/* ... */});
+  imagesCollection.deny({
     insert() {
       return true;
     },
@@ -1049,21 +1057,21 @@ if (Meteor.isServer) {
   });
 
   /* Equal shortcut: */
-  Images.denyClient();
+  imagesCollection.denyClient();
 }
 ```
 
 #### Allow collection interaction on client [*Server*]:
 
-*Allow insert/update/remove from client*
+Allow insert/update/remove from client
 
 ```js
-import { Meteor }          from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
 if (Meteor.isServer) {
-  const Images = new FilesCollection({/* ... */});
-  Images.allow({
+  const imagesCollection = new FilesCollection({/* ... */});
+  imagesCollection.allow({
     insert() {
       return true;
     },
@@ -1076,7 +1084,7 @@ if (Meteor.isServer) {
   });
 
   /* Equal shortcut: */
-  Images.allowClient();
+  imagesCollection.allowClient();
 }
 ```
 
@@ -1084,10 +1092,10 @@ if (Meteor.isServer) {
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({/* ... */});
+const imagesCollection = new FilesCollection({/* ... */});
 // Alias addListener
-Images.on('afterUpload', function (fileRef) {
-  /* `this` context is the Images (FilesCollection) instance */
+imagesCollection.on('afterUpload', function (fileRef) {
+  /* `this` context is the imagesCollection (FilesCollection) instance */
 });
 ```
 
@@ -1095,8 +1103,8 @@ Images.on('afterUpload', function (fileRef) {
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   allowClientCode: true,
   onBeforeUpload() {
     if (this.userId) {
@@ -1116,12 +1124,12 @@ const Images = new FilesCollection({
 
 #### Use onBeforeRemove to avoid unauthorized remove:
 
-*For more info see [remove method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md).*
+For more info see [remove method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md).
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   allowClientCode: true,
   onBeforeRemove() {
     if (this.userId) {
@@ -1144,11 +1152,11 @@ const Images = new FilesCollection({
 For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use [`mmmagic` package](https://github.com/mscdex/mmmagic) for this:
 
 ```js
-import { Meteor }          from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Images = new FilesCollection({
-  collectionName: 'Images',
+const imagesCollection = new FilesCollection({
+  collectionName: 'images',
   onAfterUpload(file) {
     if (Meteor.isServer) {
       // check real mimetype

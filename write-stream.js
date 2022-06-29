@@ -22,7 +22,7 @@ const fdCache = {};
  */
 export default class WriteStream {
   constructor(path, maxLength, file, permissions) {
-    this.path = path;
+    this.path = path.trim();
     this.maxLength = maxLength;
     this.file = file;
     this.permissions = permissions;
@@ -42,9 +42,11 @@ export default class WriteStream {
       fs.stat(this.path, (statError, stats) => {
         bound(() => {
           if (statError || !stats.isFile()) {
+            const paths = this.path.split('/');
+            paths.pop();
+            fs.mkdirSync(paths.join('/'), { recursive: true });
             fs.writeFileSync(this.path, '');
           }
-
           fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
             bound(() => {
               if (oError) {
