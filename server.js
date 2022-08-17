@@ -111,6 +111,7 @@ const createIndex = async (collection, keys, opts) => {
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
  * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
  * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
+ * @param config.sanitize {Function} - Override default sanitize function
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {String}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -121,39 +122,40 @@ class FilesCollection extends FilesCollectionCore {
     let storagePath;
     if (config) {
       ({
-        storagePath,
-        debug: this.debug,
-        schema: this.schema,
-        public: this.public,
-        strict: this.strict,
-        getUser: this.getUser,
-        chunkSize: this.chunkSize,
-        protected: this.protected,
-        collection: this.collection,
-        permissions: this.permissions,
-        cacheControl: this.cacheControl,
-        downloadRoute: this.downloadRoute,
-        onAfterUpload: this.onAfterUpload,
-        onAfterRemove: this.onAfterRemove,
-        disableUpload: this.disableUpload,
-        onBeforeRemove: this.onBeforeRemove,
-        integrityCheck: this.integrityCheck,
-        collectionName: this.collectionName,
-        onBeforeUpload: this.onBeforeUpload,
-        namingFunction: this.namingFunction,
-        responseHeaders: this.responseHeaders,
-        disableDownload: this.disableDownload,
-        allowedOrigins: this.allowedOrigins,
-        allowClientCode: this.allowClientCode,
-        downloadCallback: this.downloadCallback,
-        onInitiateUpload: this.onInitiateUpload,
-        interceptRequest: this.interceptRequest,
-        interceptDownload: this.interceptDownload,
-        continueUploadTTL: this.continueUploadTTL,
-        parentDirPermissions: this.parentDirPermissions,
-        allowQueryStringCookies: this.allowQueryStringCookies,
         _preCollection: this._preCollection,
         _preCollectionName: this._preCollectionName,
+        allowClientCode: this.allowClientCode,
+        allowedOrigins: this.allowedOrigins,
+        allowQueryStringCookies: this.allowQueryStringCookies,
+        cacheControl: this.cacheControl,
+        chunkSize: this.chunkSize,
+        collection: this.collection,
+        collectionName: this.collectionName,
+        continueUploadTTL: this.continueUploadTTL,
+        debug: this.debug,
+        disableDownload: this.disableDownload,
+        disableUpload: this.disableUpload,
+        downloadCallback: this.downloadCallback,
+        downloadRoute: this.downloadRoute,
+        getUser: this.getUser,
+        integrityCheck: this.integrityCheck,
+        interceptDownload: this.interceptDownload,
+        interceptRequest: this.interceptRequest,
+        namingFunction: this.namingFunction,
+        onAfterRemove: this.onAfterRemove,
+        onAfterUpload: this.onAfterUpload,
+        onBeforeRemove: this.onBeforeRemove,
+        onBeforeUpload: this.onBeforeUpload,
+        onInitiateUpload: this.onInitiateUpload,
+        parentDirPermissions: this.parentDirPermissions,
+        permissions: this.permissions,
+        protected: this.protected,
+        public: this.public,
+        responseHeaders: this.responseHeaders,
+        sanitize: this.sanitize,
+        schema: this.schema,
+        storagePath,
+        strict: this.strict,
       } = config);
     }
 
@@ -286,6 +288,10 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isNumber(this.continueUploadTTL)) {
       this.continueUploadTTL = 10800;
+    }
+
+    if (!helpers.isFunction(this.sanitize)) {
+      this.sanitize = helpers.sanitize;
     }
 
     if (!helpers.isFunction(this.responseHeaders)) {
@@ -571,7 +577,7 @@ class FilesCollection extends FilesCollectionCore {
             if (httpReq.headers['x-start'] !== '1') {
               // CHUNK UPLOAD SCENARIO:
               opts = {
-                fileId: helpers.sanitize(httpReq.headers['x-fileid'], 20, 'a')
+                fileId: this.sanitize(httpReq.headers['x-fileid'], 20, 'a')
               };
 
               if (httpReq.headers['x-eof'] === '1') {
@@ -647,7 +653,7 @@ class FilesCollection extends FilesCollectionCore {
               }
 
               if (opts.fileId) {
-                opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
+                opts.fileId = this.sanitize(opts.fileId, 20, 'a');
               }
 
               this._debug(`[FilesCollection] [File Start HTTP] ${opts.file.name || '[no-name]'} - ${opts.fileId}`);
@@ -842,7 +848,7 @@ class FilesCollection extends FilesCollectionCore {
 
         check(returnMeta, Match.Optional(Boolean));
 
-        opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
+        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
 
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
@@ -886,7 +892,7 @@ class FilesCollection extends FilesCollectionCore {
           chunkId: Match.Optional(Number)
         });
 
-        opts.fileId = helpers.sanitize(opts.fileId, 20, 'a');
+        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
 
         if (opts.binData) {
           opts.binData = Buffer.from(opts.binData, 'base64');
@@ -984,7 +990,7 @@ class FilesCollection extends FilesCollectionCore {
     result.ext = extension;
     result._id = opts.fileId;
     result.userId = userId || null;
-    opts.FSName = helpers.sanitize(opts.FSName);
+    opts.FSName = this.sanitize(opts.FSName);
 
     if (this.namingFunction) {
       opts.FSName = this.namingFunction(opts);
@@ -1225,7 +1231,7 @@ class FilesCollection extends FilesCollectionCore {
     check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
-    opts.fileId = opts.fileId && helpers.sanitize(opts.fileId, 20, 'a');
+    opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
     const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
@@ -1340,7 +1346,7 @@ class FilesCollection extends FilesCollectionCore {
       opts.timeout = 360000;
     }
 
-    const fileId = (opts.fileId && helpers.sanitize(opts.fileId, 20, 'a')) || Random.id();
+    const fileId = (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || Random.id();
     const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
@@ -1556,7 +1562,7 @@ class FilesCollection extends FilesCollectionCore {
           userId: opts.userId,
           extension,
           _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-          fileId: (opts.fileId && helpers.sanitize(opts.fileId, 20, 'a')) || null
+          fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null
         });
 
 
