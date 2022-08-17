@@ -875,6 +875,23 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.sanitize</code> {<em>Function</em>}
+      </td>
+      <td>
+        Server (*accepted, but no used on the Client*)
+      </td>
+      <td>
+        Sanitizer for sensitive Strings; Overrides default <code>sanitize()</code> method of <em>FilesCollection</em> instance. Primary used for <code>FSName</code> and <code>fileId</code>. <em>Very low-level</em>. <b>Warning: use with caution!</b>
+      </td>
+      <td>
+        <a href="https://github.com/veliovgroup/Meteor-Files/blob/313e842468f743c04a5310778ea63c7fd2d3c612/lib.js#L4-L6">Default function</a>
+      </td>
+      <td>
+        Read more in <a href="https://github.com/veliovgroup/Meteor-Files/issues/847">#847</a>, <a href="https://github.com/wekan/wekan/pull/4638">wekan/#4638</a>, and <a href="https://github.com/wekan/wekan/issues/4640">wekan/#4640</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config._preCollection</code> {<em>Mongo.Collection</em>}
       </td>
       <td>

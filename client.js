@@ -8,9 +8,9 @@ import FilesCollectionCore from './core.js';
 import { formatFleURL, helpers } from './lib.js';
 
 const NOOP = () => { };
-const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloadRoute', 'collection', 'collectionName', 'namingFunction', 'onBeforeUpload', 'allowClientCode', 'onbeforeunloadMessage', 'disableUpload', 'disableSetTokenCookie', 'allowQueryStringCookies'];
+const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
 
-/*
+/**
  * @locus Anywhere
  * @class FilesCollection
  * @param config           {Object}   - [Both]   Configuration object with next properties:
@@ -31,6 +31,7 @@ const allowedParams = ['debug', 'ddp', 'schema', 'public', 'chunkSize', 'downloa
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableSetTokenCookie {Boolean} - Disable cookie setting. Useful when you use multiple file collections or when you want to implement your own authorization.
  * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
+ * @param config.sanitize {Function} - Override default sanitize function
  * @summary Create new instance of FilesCollection
  */
 class FilesCollection extends FilesCollectionCore {
@@ -173,7 +174,7 @@ class FilesCollection extends FilesCollectionCore {
     };
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getMimeType
@@ -194,7 +195,7 @@ class FilesCollection extends FilesCollectionCore {
     return mime;
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
@@ -217,7 +218,7 @@ class FilesCollection extends FilesCollectionCore {
     return result;
   }
 
-  /*
+  /**
    * @locus Client
    * @memberOf FilesCollection
    * @name insert
@@ -251,13 +252,13 @@ class FilesCollection extends FilesCollectionCore {
    */
   insert(config, autoStart = true) {
     if (this.disableUpload) {
-      console.warn('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
+      Meteor._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
       return {};
     }
     return (new UploadInstance(config, this))[autoStart ? 'start' : 'manual']();
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name remove
