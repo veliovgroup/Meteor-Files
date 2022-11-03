@@ -276,7 +276,7 @@ class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
-    if (this.allowedOrigins === true) {
+    if (this.allowedOrigins === true || this.allowedOrigins === void 0) {
       this.allowedOrigins = /^http:\/\/localhost:12[0-9]{3}$/;
     }
 
