@@ -276,7 +276,7 @@ class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
-    if (!helpers.isBoolean(this.allowedOrigins) || this.allowedOrigins === true) {
+    if (this.allowedOrigins === true) {
       this.allowedOrigins = /^http:\/\/localhost:12[0-9]{3}$/;
     }
 
@@ -372,6 +372,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.interceptDownload, Match.OneOf(false, Function));
     check(this.continueUploadTTL, Number);
     check(this.responseHeaders, Match.OneOf(Object, Function));
+    check(this.allowedOrigins, Match.OneOf(Boolean, RegExp));
     check(this.allowQueryStringCookies, Boolean);
 
     this._cookies = new Cookies({
