@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import nodePath from 'path';
 import { Meteor } from 'meteor/meteor';
 import { helpers } from './lib.js';
 const noop = () => {};
@@ -42,18 +43,18 @@ export default class WriteStream {
       fs.stat(this.path, (statError, stats) => {
         bound(() => {
           if (statError || !stats.isFile()) {
-            const paths = this.path.split('/');
+            const paths = this.path.split(nodePath.sep);
             paths.pop();
             try {
-              fs.mkdirSync(paths.join('/'), { recursive: true });
+              fs.mkdirSync(paths.join(nodePath.sep), { recursive: true });
             } catch (mkdirError) {
-              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [mkdirSync] ERROR: can not make/ensure directory ${paths.join('/')}`, mkdirError);
+              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [mkdirSync] ERROR: can not make/ensure directory "${paths.join(nodePath.sep)}"`, mkdirError);
             }
 
             try {
               fs.writeFileSync(this.path, '');
             } catch (writeFileError) {
-              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [writeFileSync] ERROR: can not write file ${this.path}`, writeFileError);
+              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [writeFileSync] ERROR: can not write file "${this.path}"`, writeFileError);
             }
           }
 
