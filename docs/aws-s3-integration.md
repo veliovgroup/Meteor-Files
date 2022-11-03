@@ -228,8 +228,8 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
 
   // Intercept FilesCollection's remove method to remove file from AWS:S3
   const _origRemove = UserFiles.remove;
-  UserFiles.remove = function (search) {
-    const cursor = this.collection.find(search);
+  UserFiles.remove = function (selector, callback) {
+    const cursor = this.collection.find(selector);
     cursor.forEach((fileRef) => {
       _.each(fileRef.versions, (vRef) => {
         if (vRef && vRef.meta && vRef.meta.pipePath) {
@@ -248,8 +248,8 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
       });
     });
 
-    //remove original file from database
-    _origRemove.call(this, search);
+    // Remove original file from database
+    _origRemove.call(this, selector, callback);
   };
 } else {
   throw new Meteor.Error(401, 'Missing Meteor file settings');
