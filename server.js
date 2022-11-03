@@ -30,13 +30,15 @@ const noop = function noop () {};
  * @param {object} opts - Set of options that controls the creation of the index
  * @returns {void 0}
  */
-const createIndex = async (collection, keys, opts) => {
+const createIndex = async (_collection, keys, opts) => {
+  const collection = _collection.rawCollection();
+
   try {
-    await collection.rawCollection().createIndex(keys, opts);
+    await collection.createIndex(keys, opts);
   } catch (e) {
     if (e.code === 85) {
       let indexName;
-      const indexes = await collection.rawCollection().indexes();
+      const indexes = await collection.indexes();
       for (const index of indexes) {
         let allMatch = true;
         for (const indexKey of Object.keys(keys)) {
@@ -60,11 +62,11 @@ const createIndex = async (collection, keys, opts) => {
       }
 
       if (indexName) {
-        await collection.rawCollection().dropIndex(indexName);
-        await collection.rawCollection().createIndex(keys, opts);
+        await collection.dropIndex(indexName);
+        await collection.createIndex(keys, opts);
       }
     } else {
-      Meteor._debug(`Can not set ${Object.keys(keys).join(' + ')} index on "${collection._name}" collection`, { keys, opts, details: e });
+      Meteor._debug(`Can not set ${Object.keys(keys).join(' + ')} index on "${_collection._name}" collection`, { keys, opts, details: e });
     }
   }
 };
@@ -274,7 +276,7 @@ class FilesCollection extends FilesCollectionCore {
       this.disableDownload = false;
     }
 
-    if (!helpers.isBoolean(this.allowedOrigins) || this.allowedOrigins === true) {
+    if (this.allowedOrigins === true || this.allowedOrigins === void 0) {
       this.allowedOrigins = /^http:\/\/localhost:12[0-9]{3}$/;
     }
 
@@ -370,6 +372,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.interceptDownload, Match.OneOf(false, Function));
     check(this.continueUploadTTL, Number);
     check(this.responseHeaders, Match.OneOf(Object, Function));
+    check(this.allowedOrigins, Match.OneOf(Boolean, RegExp));
     check(this.allowQueryStringCookies, Boolean);
 
     this._cookies = new Cookies({
@@ -1734,9 +1737,9 @@ class FilesCollection extends FilesCollectionCore {
       http.response.writeHead(404, {
         'Content-Type': 'text/plain',
         'Content-Length': text.length
-      }
-      );
+      });
     }
+
     if (!http.response.finished) {
       http.response.end(text);
     }

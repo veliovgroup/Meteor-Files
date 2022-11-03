@@ -44,15 +44,24 @@ export default class WriteStream {
           if (statError || !stats.isFile()) {
             const paths = this.path.split('/');
             paths.pop();
-            fs.mkdirSync(paths.join('/'), { recursive: true });
-            fs.writeFileSync(this.path, '');
+            try {
+              fs.mkdirSync(paths.join('/'), { recursive: true });
+            } catch (mkdirError) {
+              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [mkdirSync] ERROR: can not make/ensure directory ${paths.join('/')}`, mkdirError);
+            }
+
+            try {
+              fs.writeFileSync(this.path, '');
+            } catch (writeFileError) {
+              throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [writeFileSync] ERROR: can not write file ${this.path}`, writeFileError);
+            }
           }
 
           fs.open(this.path, 'r+', this.permissions, (oError, fd) => {
             bound(() => {
               if (oError) {
                 this.abort();
-                throw new Meteor.Error(500, '[FilesCollection] [writeStream] [ensureFile] [open] [Error:]', oError);
+                throw new Meteor.Error(500, '[FilesCollection] [writeStream] [constructor] [open] [Error:]', oError);
               } else {
                 this.fd = fd;
                 fdCache[this.path] = this;
