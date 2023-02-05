@@ -1,7 +1,8 @@
 {
-  "parser": "babel-eslint",
+  "parser": "@babel/eslint-parser",
   "parserOptions": {
-    "sourceType": "module"
+    "sourceType": "module",
+    "requireConfigFile": false
   },
   "env": {
     "node": true,
@@ -17,7 +18,6 @@
     "Worker": true,
     "navigator": true
   },
-  "ecmaFeatures": {},
   "rules": {
     "strict": [2, "never"],
     "no-shadow": 2,
