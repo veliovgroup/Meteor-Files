@@ -1430,11 +1430,11 @@ class FilesCollection extends FilesCollectionCore {
                 wStream.destroy();
               }
 
-              fs.remove(opts.path, (removeError) => {
+              fs.unlink(opts.path, (unlinkError) => {
                 bound(() => {
                   callback && callback(error);
-                  if (removeError) {
-                    this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.remove(${opts.path})] removeError:`, removeError);
+                  if (unlinkError) {
+                    this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.unlink(${opts.path})] unlinkError:`, unlinkError);
                   }
                 });
               });

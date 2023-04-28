@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '2.3.2',
+  version: '2.3.3',
   summary: 'Upload files to a server or 3rd party storage: AWS:S3, GridFS, DropBox, and other',
   git: 'https://github.com/veliovgroup/Meteor-Files',
   documentation: 'README.md'
