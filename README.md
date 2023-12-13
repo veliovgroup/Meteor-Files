@@ -319,12 +319,13 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
     - __a.__ On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
     - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/meteorup-usage.md)
 2. __Cordova usage and development__: With support of community we do regular testing on virtual and real devices. To make sure `Meteor-Files` library runs smoothly in Cordova environment — enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedOrigins: true}` on both `Client` and `Server`. For more details read [Cookie's repository FAQ](https://github.com/veliovgroup/Meteor-Cookies#faq)
-3. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md)
-4. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
-5. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-6. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/veliovgroup/Meteor-Files/issues/458)
-7. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/veliovgroup/Meteor-Files/issues/737) for details
-8. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/veliovgroup/Meteor-Files/issues/742) for details
+3. __meteor-desktop usage and development__: Meteor-Files can be used in [meteor-desktop](https://github.com/Meteor-Community-Packages/meteor-desktop) projects as well. As meteor-desktop works exactly like Cordova, all Cordova requirements and recommendations apply.
+4. __How to pause/continue upload and get progress/speed/remaining time?__: see *Object* returned from [`insert` method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md)
+5. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` above `ostrio:files`
+6. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
+7. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. Limit simultaneous uploads to `6` is recommended for Safari. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/veliovgroup/Meteor-Files/issues/458)
+8. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/veliovgroup/Meteor-Files/issues/737) for details
+9. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/veliovgroup/Meteor-Files/issues/742) for details
 
 ## Awards:
 
