@@ -2051,6 +2051,44 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * @locus Anywhere
+   * @memberOf FilesCollection
+   * @name removeAsync
+   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @throws {Meteor.Error} If cursor is empty
+   * @summary Remove documents from the collection
+   * @returns {Promise<FilesCollection>} Instance
+   */
+  async removeAsync(selector, callback) {
+    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
+    if (selector === void 0) {
+      return 0;
+    }
+    check(callback, Match.Optional(Function));
+
+    const files = this.collection.find(selector);
+    if (files.count() > 0) {
+      files.forEach((file) => {
+        this.unlink(file);
+      });
+    } else {
+      throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
+    }
+
+    if (this.onAfterRemove) {
+      const docs = files.fetch();
+      const self = this;
+      await this.collection.removeAsync(selector, function () {
+        callback && callback.apply(this, arguments);
+        self.onAfterRemove(docs);
+      });
+    } else {
+      await this.collection.removeAsync(selector, callback || noop);
+    }
+    return this;
+  }
+
+  /**
    * @locus Server
    * @memberOf FilesCollection
    * @name deny

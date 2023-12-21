@@ -37,16 +37,16 @@ export class FileCursor {
    * @locus Anywhere
    * @memberOf FileCursor
    * @name removeAsync
-   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+   * @throws {Meteor.Error} - If no file reference is provided
    * @summary Remove document
    * @returns {Promise<FileCursor>}
    */
-  async removeAsync(callback) {
+  async removeAsync() {
     this._collection._debug('[FilesCollection] [FileCursor] [removeAsync()]');
     if (this._fileRef) {
-      await this._collection.remove(this._fileRef._id, callback);
+      await this._collection.removeAsync(this._fileRef._id);
     } else {
-      callback && callback(new Meteor.Error(404, 'No such file'));
+      throw (new Meteor.Error(404, 'No such file'));
     }
     return this;
   }
