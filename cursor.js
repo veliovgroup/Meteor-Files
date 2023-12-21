@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from "meteor/meteor";
 
 /*
  * @private
@@ -24,11 +24,29 @@ export class FileCursor {
    * @returns {FileCursor}
    */
   remove(callback) {
-    this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
+    this._collection._debug("[FilesCollection] [FileCursor] [remove()]");
     if (this._fileRef) {
       this._collection.remove(this._fileRef._id, callback);
     } else {
-      callback && callback(new Meteor.Error(404, 'No such file'));
+      callback && callback(new Meteor.Error(404, "No such file"));
+    }
+    return this;
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FileCursor
+   * @name removeAsync
+   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+   * @summary Remove document
+   * @returns {Promise<FileCursor>}
+   */
+  async removeAsync(callback) {
+    this._collection._debug("[FilesCollection] [FileCursor] [removeAsync()]");
+    if (this._fileRef) {
+      await this._collection.remove(this._fileRef._id, callback);
+    } else {
+      callback && callback(new Meteor.Error(404, "No such file"));
     }
     return this;
   }
@@ -42,12 +60,33 @@ export class FileCursor {
    * @summary Returns downloadable URL to File
    * @returns {String}
    */
-  link(version = 'original', uriBase) {
-    this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
+  link(version = "original", uriBase) {
+    this._collection._debug(
+      `[FilesCollection] [FileCursor] [link(${version})]`
+    );
     if (this._fileRef) {
       return this._collection.link(this._fileRef, version, uriBase);
     }
-    return '';
+    return "";
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FileCursor
+   * @name linkAsync
+   * @param version {String} - Name of file's subversion
+   * @param uriBase {String} - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
+   * @summary Returns downloadable URL to File
+   * @returns {Promise<String>}
+   */
+  async linkAsync(version = "original", uriBase) {
+    this._collection._debug(
+      `[FilesCollection] [FileCursor] [linkAsync(${version})]`
+    );
+    if (this._fileRef) {
+      return await this._collection.link(this._fileRef, version, uriBase);
+    }
+    return "";
   }
 
   /*
@@ -59,7 +98,9 @@ export class FileCursor {
    * @returns {Object|mix}
    */
   get(property) {
-    this._collection._debug(`[FilesCollection] [FileCursor] [get(${property})]`);
+    this._collection._debug(
+      `[FilesCollection] [FileCursor] [get(${property})]`
+    );
     if (property) {
       return this._fileRef[property];
     }
@@ -74,7 +115,7 @@ export class FileCursor {
    * @returns {[Object]}
    */
   fetch() {
-    this._collection._debug('[FilesCollection] [FileCursor] [fetch()]');
+    this._collection._debug("[FilesCollection] [FileCursor] [fetch()]");
     return [this._fileRef];
   }
 
@@ -86,8 +127,26 @@ export class FileCursor {
    * @returns {[Object]}
    */
   with() {
-    this._collection._debug('[FilesCollection] [FileCursor] [with()]');
-    return Object.assign(this, this._collection.collection.findOne(this._fileRef._id));
+    this._collection._debug("[FilesCollection] [FileCursor] [with()]");
+    return Object.assign(
+      this,
+      this._collection.collection.findOne(this._fileRef._id)
+    );
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FileCursor
+   * @name with
+   * @summary Returns reactive version of current FileCursor, useful to use with `{{#with}}...{{/with}}` block template helper
+   * @returns {Promise<[Object]>}
+   */
+  async withAsync() {
+    this._collection._debug("[FilesCollection] [FileCursor] [withAsync()]");
+    return Object.assign(
+      this,
+      await this._collection.collection.findOneAsync(this._fileRef._id)
+    );
   }
 }
 
@@ -116,8 +175,20 @@ export class FilesCursor {
    * @returns {[Object]}
    */
   get() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [get()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [get()]");
     return this.cursor.fetch();
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name getAsync
+   * @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
+   * @returns {Promise<[Object]>}
+   */
+  async getAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [getAsync()]");
+    return await this.cursor.fetchAsync();
   }
 
   /*
@@ -128,8 +199,20 @@ export class FilesCursor {
    * @returns {Boolean}
    */
   hasNext() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    return this._current < (this.cursor.count() - 1);
+    this._collection._debug("[FilesCollection] [FilesCursor] [hasNext()]");
+    return this._current < this.cursor.count() - 1;
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name hasNextAsync
+   * @summary Returns `true` if there is next item available on Cursor
+   * @returns {Boolean}
+   */
+  async hasNextAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [hasNextAsync()]");
+    return this._current < (await this.cursor.countAsync()) - 1;
   }
 
   /*
@@ -140,8 +223,20 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   next() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [next()]');
-    this.cursor.fetch()[++this._current];
+    this._collection._debug("[FilesCollection] [FilesCursor] [next()]");
+    return this.cursor.fetch()[++this._current];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name nextAsync
+   * @summary Returns next item on Cursor, if available
+   * @returns {Promise<Object|undefined>}
+   */
+  async nextAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [nextAsync()]");
+    return await this.cursor.fetchAsync()[++this._current];
   }
 
   /*
@@ -152,7 +247,7 @@ export class FilesCursor {
    * @returns {Boolean}
    */
   hasPrevious() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [hasPrevious()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [hasPrevious()]");
     return this._current !== -1;
   }
 
@@ -164,8 +259,22 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   previous() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [previous()]");
     this.cursor.fetch()[--this._current];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name previousAsync
+   * @summary Returns previous item on Cursor, if available
+   * @returns {Promise<Object|undefined>}
+   */
+  async previousAsync() {
+    this._collection._debug(
+      "[FilesCollection] [FilesCursor] [previousAsync()]"
+    );
+    return this.cursor.fetchAsync()[--this._current];
   }
 
   /*
@@ -176,8 +285,20 @@ export class FilesCursor {
    * @returns {[Object]}
    */
   fetch() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [fetch()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [fetch()]");
     return this.cursor.fetch() || [];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name fetchAsync
+   * @summary Returns all matching document(s) as an Array.
+   * @returns {Promise<[Object]>}
+   */
+  async fetchAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [fetchAsync()]");
+    return (await this.cursor.fetchAsync()) || [];
   }
 
   /*
@@ -188,9 +309,22 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   first() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [first()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [first()]");
     this._current = 0;
     return this.fetch()[this._current];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name firstAsync
+   * @summary Returns first item on Cursor, if available
+   * @returns {Promise<Object|undefined>}
+   */
+  async firstAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [firstAsync()]");
+    this._current = 0;
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
@@ -201,9 +335,22 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   last() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [last()]");
     this._current = this.count() - 1;
     return this.fetch()[this._current];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name last
+   * @summary Returns last item on Cursor, if available
+   * @returns {Object|undefined}
+   */
+  async lastAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [last()]");
+    this._current = (await this.countAsync()) - 1;
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
@@ -214,8 +361,20 @@ export class FilesCursor {
    * @returns {Number}
    */
   count() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [count()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [count()]");
     return this.cursor.count();
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name countAsync
+   * @summary Returns the number of documents that match a query
+   * @returns {Promise<Number>}
+   */
+  async count() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [countAsync()]");
+    return await this.cursor.countAsync();
   }
 
   /*
@@ -227,8 +386,22 @@ export class FilesCursor {
    * @returns {FilesCursor}
    */
   remove(callback) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [remove()]");
     this._collection.remove(this._selector, callback);
+    return this;
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name removeAsync
+   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+   * @summary Removes all documents that match a query
+   * @returns {Promise<FilesCursor>}
+   */
+  async removeAsync(callback) {
+    this._collection._debug("[FilesCollection] [FilesCursor] [removeAsync()]");
+    await this._collection.removeAsync(this._selector, callback);
     return this;
   }
 
@@ -242,8 +415,22 @@ export class FilesCursor {
    * @returns {undefined}
    */
   forEach(callback, context = {}) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [forEach()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [forEach()]");
     this.cursor.forEach(callback, context);
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name forEachAsync
+   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
+   * @param context {Object} - An object which will be the value of `this` inside `callback`
+   * @summary Call `callback` once for each matching document, sequentially and synchronously.
+   * @returns {Promise<undefined>}
+   */
+  async forEachAsync(callback, context = {}) {
+    this._collection._debug("[FilesCollection] [FilesCursor] [forEachAsync()]");
+    await this.cursor.forEachAsync(callback, context);
   }
 
   /*
@@ -270,8 +457,22 @@ export class FilesCursor {
    * @returns {Array}
    */
   map(callback, context = {}) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [map()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [map()]");
     return this.cursor.map(callback, context);
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name mapAsync
+   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
+   * @param context {Object} - An object which will be the value of `this` inside `callback`
+   * @summary Map `callback` over all matching documents. Returns an Array.
+   * @returns {Promise<Array>}
+   */
+  async mapAsync(callback, context = {}) {
+    this._collection._debug("[FilesCollection] [FilesCursor] [mapAsync()]");
+    return await this.cursor.mapAsync(callback, context);
   }
 
   /*
@@ -282,11 +483,26 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   current() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [current()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [current()]");
     if (this._current < 0) {
       this._current = 0;
     }
     return this.fetch()[this._current];
+  }
+
+  /*
+   * @locus Anywhere
+   * @memberOf FilesCursor
+   * @name currentAsync
+   * @summary Returns current item on Cursor, if available
+   * @returns {Promise<Object|undefined>}
+   */
+  async currentAsync() {
+    this._collection._debug("[FilesCollection] [FilesCursor] [currentAsync()]");
+    if (this._current < 0) {
+      this._current = 0;
+    }
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
@@ -299,7 +515,7 @@ export class FilesCursor {
    * @returns {Object} - live query handle
    */
   observe(callbacks) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [observe()]');
+    this._collection._debug("[FilesCollection] [FilesCursor] [observe()]");
     return this.cursor.observe(callbacks);
   }
 
@@ -313,7 +529,9 @@ export class FilesCursor {
    * @returns {Object} - live query handle
    */
   observeChanges(callbacks) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [observeChanges()]');
+    this._collection._debug(
+      "[FilesCollection] [FilesCursor] [observeChanges()]"
+    );
     return this.cursor.observeChanges(callbacks);
   }
 }
