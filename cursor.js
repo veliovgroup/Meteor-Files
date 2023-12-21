@@ -1,4 +1,4 @@
-import { Meteor } from "meteor/meteor";
+import { Meteor } from 'meteor/meteor';
 
 /*
  * @private
@@ -24,11 +24,11 @@ export class FileCursor {
    * @returns {FileCursor}
    */
   remove(callback) {
-    this._collection._debug("[FilesCollection] [FileCursor] [remove()]");
+    this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
     if (this._fileRef) {
       this._collection.remove(this._fileRef._id, callback);
     } else {
-      callback && callback(new Meteor.Error(404, "No such file"));
+      callback && callback(new Meteor.Error(404, 'No such file'));
     }
     return this;
   }
@@ -42,11 +42,11 @@ export class FileCursor {
    * @returns {Promise<FileCursor>}
    */
   async removeAsync(callback) {
-    this._collection._debug("[FilesCollection] [FileCursor] [removeAsync()]");
+    this._collection._debug('[FilesCollection] [FileCursor] [removeAsync()]');
     if (this._fileRef) {
       await this._collection.remove(this._fileRef._id, callback);
     } else {
-      callback && callback(new Meteor.Error(404, "No such file"));
+      callback && callback(new Meteor.Error(404, 'No such file'));
     }
     return this;
   }
@@ -60,14 +60,14 @@ export class FileCursor {
    * @summary Returns downloadable URL to File
    * @returns {String}
    */
-  link(version = "original", uriBase) {
+  link(version = 'original', uriBase) {
     this._collection._debug(
       `[FilesCollection] [FileCursor] [link(${version})]`
     );
     if (this._fileRef) {
       return this._collection.link(this._fileRef, version, uriBase);
     }
-    return "";
+    return '';
   }
 
   /*
@@ -79,14 +79,14 @@ export class FileCursor {
    * @summary Returns downloadable URL to File
    * @returns {Promise<String>}
    */
-  async linkAsync(version = "original", uriBase) {
+  async linkAsync(version = 'original', uriBase) {
     this._collection._debug(
       `[FilesCollection] [FileCursor] [linkAsync(${version})]`
     );
     if (this._fileRef) {
       return await this._collection.link(this._fileRef, version, uriBase);
     }
-    return "";
+    return '';
   }
 
   /*
@@ -115,7 +115,7 @@ export class FileCursor {
    * @returns {[Object]}
    */
   fetch() {
-    this._collection._debug("[FilesCollection] [FileCursor] [fetch()]");
+    this._collection._debug('[FilesCollection] [FileCursor] [fetch()]');
     return [this._fileRef];
   }
 
@@ -127,7 +127,7 @@ export class FileCursor {
    * @returns {[Object]}
    */
   with() {
-    this._collection._debug("[FilesCollection] [FileCursor] [with()]");
+    this._collection._debug('[FilesCollection] [FileCursor] [with()]');
     return Object.assign(
       this,
       this._collection.collection.findOne(this._fileRef._id)
@@ -142,7 +142,7 @@ export class FileCursor {
    * @returns {Promise<[Object]>}
    */
   async withAsync() {
-    this._collection._debug("[FilesCollection] [FileCursor] [withAsync()]");
+    this._collection._debug('[FilesCollection] [FileCursor] [withAsync()]');
     return Object.assign(
       this,
       await this._collection.collection.findOneAsync(this._fileRef._id)
@@ -175,7 +175,7 @@ export class FilesCursor {
    * @returns {[Object]}
    */
   get() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [get()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [get()]');
     return this.cursor.fetch();
   }
 
@@ -187,7 +187,7 @@ export class FilesCursor {
    * @returns {Promise<[Object]>}
    */
   async getAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [getAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
     return await this.cursor.fetchAsync();
   }
 
@@ -199,7 +199,7 @@ export class FilesCursor {
    * @returns {Boolean}
    */
   hasNext() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [hasNext()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
     return this._current < this.cursor.count() - 1;
   }
 
@@ -211,7 +211,7 @@ export class FilesCursor {
    * @returns {Boolean}
    */
   async hasNextAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [hasNextAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [hasNextAsync()]');
     return this._current < (await this.cursor.countAsync()) - 1;
   }
 
@@ -223,7 +223,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   next() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [next()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [next()]');
     return this.cursor.fetch()[++this._current];
   }
 
@@ -235,7 +235,7 @@ export class FilesCursor {
    * @returns {Promise<Object|undefined>}
    */
   async nextAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [nextAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [nextAsync()]');
     return await this.cursor.fetchAsync()[++this._current];
   }
 
@@ -247,7 +247,7 @@ export class FilesCursor {
    * @returns {Boolean}
    */
   hasPrevious() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [hasPrevious()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [hasPrevious()]');
     return this._current !== -1;
   }
 
@@ -259,7 +259,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   previous() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [previous()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
     this.cursor.fetch()[--this._current];
   }
 
@@ -272,7 +272,7 @@ export class FilesCursor {
    */
   async previousAsync() {
     this._collection._debug(
-      "[FilesCollection] [FilesCursor] [previousAsync()]"
+      '[FilesCollection] [FilesCursor] [previousAsync()]'
     );
     return this.cursor.fetchAsync()[--this._current];
   }
@@ -285,7 +285,7 @@ export class FilesCursor {
    * @returns {[Object]}
    */
   fetch() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [fetch()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [fetch()]');
     return this.cursor.fetch() || [];
   }
 
@@ -297,7 +297,7 @@ export class FilesCursor {
    * @returns {Promise<[Object]>}
    */
   async fetchAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [fetchAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [fetchAsync()]');
     return (await this.cursor.fetchAsync()) || [];
   }
 
@@ -309,7 +309,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   first() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [first()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [first()]');
     this._current = 0;
     return this.fetch()[this._current];
   }
@@ -322,7 +322,7 @@ export class FilesCursor {
    * @returns {Promise<Object|undefined>}
    */
   async firstAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [firstAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [firstAsync()]');
     this._current = 0;
     return (await this.fetchAsync())[this._current];
   }
@@ -335,7 +335,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   last() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [last()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
     this._current = this.count() - 1;
     return this.fetch()[this._current];
   }
@@ -348,7 +348,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   async lastAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [last()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
     this._current = (await this.countAsync()) - 1;
     return (await this.fetchAsync())[this._current];
   }
@@ -361,7 +361,7 @@ export class FilesCursor {
    * @returns {Number}
    */
   count() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [count()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [count()]');
     return this.cursor.count();
   }
 
@@ -373,7 +373,7 @@ export class FilesCursor {
    * @returns {Promise<Number>}
    */
   async count() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [countAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
     return await this.cursor.countAsync();
   }
 
@@ -386,7 +386,7 @@ export class FilesCursor {
    * @returns {FilesCursor}
    */
   remove(callback) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [remove()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
     this._collection.remove(this._selector, callback);
     return this;
   }
@@ -400,7 +400,7 @@ export class FilesCursor {
    * @returns {Promise<FilesCursor>}
    */
   async removeAsync(callback) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [removeAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [removeAsync()]');
     await this._collection.removeAsync(this._selector, callback);
     return this;
   }
@@ -415,7 +415,7 @@ export class FilesCursor {
    * @returns {undefined}
    */
   forEach(callback, context = {}) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [forEach()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [forEach()]');
     this.cursor.forEach(callback, context);
   }
 
@@ -429,7 +429,7 @@ export class FilesCursor {
    * @returns {Promise<undefined>}
    */
   async forEachAsync(callback, context = {}) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [forEachAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [forEachAsync()]');
     await this.cursor.forEachAsync(callback, context);
   }
 
@@ -457,7 +457,7 @@ export class FilesCursor {
    * @returns {Array}
    */
   map(callback, context = {}) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [map()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [map()]');
     return this.cursor.map(callback, context);
   }
 
@@ -471,7 +471,7 @@ export class FilesCursor {
    * @returns {Promise<Array>}
    */
   async mapAsync(callback, context = {}) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [mapAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [mapAsync()]');
     return await this.cursor.mapAsync(callback, context);
   }
 
@@ -483,7 +483,7 @@ export class FilesCursor {
    * @returns {Object|undefined}
    */
   current() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [current()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [current()]');
     if (this._current < 0) {
       this._current = 0;
     }
@@ -498,7 +498,7 @@ export class FilesCursor {
    * @returns {Promise<Object|undefined>}
    */
   async currentAsync() {
-    this._collection._debug("[FilesCollection] [FilesCursor] [currentAsync()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [currentAsync()]');
     if (this._current < 0) {
       this._current = 0;
     }
@@ -515,7 +515,7 @@ export class FilesCursor {
    * @returns {Object} - live query handle
    */
   observe(callbacks) {
-    this._collection._debug("[FilesCollection] [FilesCursor] [observe()]");
+    this._collection._debug('[FilesCollection] [FilesCursor] [observe()]');
     return this.cursor.observe(callbacks);
   }
 
@@ -530,7 +530,7 @@ export class FilesCursor {
    */
   observeChanges(callbacks) {
     this._collection._debug(
-      "[FilesCollection] [FilesCursor] [observeChanges()]"
+      '[FilesCollection] [FilesCursor] [observeChanges()]'
     );
     return this.cursor.observeChanges(callbacks);
   }

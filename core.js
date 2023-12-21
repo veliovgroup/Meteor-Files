@@ -1,7 +1,7 @@
-import { EventEmitter } from "eventemitter3";
-import { check, Match } from "meteor/check";
-import { formatFleURL, helpers } from "./lib.js";
-import { FilesCursor, FileCursor } from "./cursor.js";
+import { EventEmitter } from 'eventemitter3';
+import { check, Match } from 'meteor/check';
+import { formatFleURL, helpers } from './lib.js';
+import { FilesCursor, FileCursor } from './cursor.js';
 
 export default class FilesCollectionCore extends EventEmitter {
   constructor() {
@@ -60,7 +60,7 @@ export default class FilesCollectionCore extends EventEmitter {
       type: String,
       optional: true,
     },
-    "mime-type": {
+    'mime-type': {
       type: String,
       optional: true,
     },
@@ -121,11 +121,11 @@ export default class FilesCollectionCore extends EventEmitter {
     const fileName = fileData.name || fileData.fileName;
     if (helpers.isString(fileName) && fileName.length > 0) {
       return (fileData.name || fileData.fileName)
-        .replace(/^\.\.+/, "")
-        .replace(/\.{2,}/g, ".")
-        .replace(/\//g, "");
+        .replace(/^\.\.+/, '')
+        .replace(/\.{2,}/g, '.')
+        .replace(/\//g, '');
     }
-    return "";
+    return '';
   }
 
   /*
@@ -137,14 +137,14 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {Object}
    */
   _getExt(fileName) {
-    if (fileName.includes(".")) {
-      const extension = (fileName.split(".").pop().split("?")[0] || "")
+    if (fileName.includes('.')) {
+      const extension = (fileName.split('.').pop().split('?')[0] || '')
         .toLowerCase()
-        .replace(/([^a-z0-9\-\_\.]+)/gi, "")
+        .replace(/([^a-z0-9\-\_\.]+)/gi, '')
         .substring(0, 20);
       return { ext: extension, extension, extensionWithDot: `.${extension}` };
     }
-    return { ext: "", extension: "", extensionWithDot: "" };
+    return { ext: '', extension: '', extensionWithDot: '' };
   }
 
   /*
@@ -181,7 +181,7 @@ export default class FilesCollectionCore extends EventEmitter {
       meta: data.meta,
       type: data.type,
       mime: data.type,
-      "mime-type": data.type,
+      'mime-type': data.type,
       size: data.size,
       userId: data.userId || null,
       versions: {
@@ -323,7 +323,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @summary Returns downloadable URL
    * @returns {String} Empty string returned in case if file not found in DB
    */
-  link(fileRef, version = "original", uriBase) {
+  link(fileRef, version = 'original', uriBase) {
     this._debug(
       `[FilesCollection] [link(${
         helpers.isObject(fileRef) ? fileRef._id : void 0
@@ -332,7 +332,7 @@ export default class FilesCollectionCore extends EventEmitter {
     check(fileRef, Object);
 
     if (!fileRef) {
-      return "";
+      return '';
     }
     return formatFleURL(fileRef, version, uriBase);
   }

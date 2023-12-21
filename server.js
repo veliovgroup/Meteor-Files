@@ -1,19 +1,19 @@
-import { Mongo } from "meteor/mongo";
-import { fetch } from "meteor/fetch";
-import { WebApp } from "meteor/webapp";
-import { Meteor } from "meteor/meteor";
-import { Random } from "meteor/random";
-import { Cookies } from "meteor/ostrio:cookies";
-import { check, Match } from "meteor/check";
+import { Mongo } from 'meteor/mongo';
+import { fetch } from 'meteor/fetch';
+import { WebApp } from 'meteor/webapp';
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { Cookies } from 'meteor/ostrio:cookies';
+import { check, Match } from 'meteor/check';
 
-import WriteStream from "./write-stream.js";
-import FilesCollectionCore from "./core.js";
-import { fixJSONParse, fixJSONStringify, helpers } from "./lib.js";
+import WriteStream from './write-stream.js';
+import FilesCollectionCore from './core.js';
+import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
-import AbortController from "abort-controller";
-import fs from "fs";
-import nodeQs from "querystring";
-import nodePath from "path";
+import AbortController from 'abort-controller';
+import fs from 'fs';
+import nodeQs from 'querystring';
+import nodePath from 'path';
 
 /**
  * @const {Object} bound  - Meteor.bindEnvironment (Fiber wrapper)
@@ -42,14 +42,14 @@ const createIndex = async (_collection, keys, opts) => {
       for (const index of indexes) {
         let allMatch = true;
         for (const indexKey of Object.keys(keys)) {
-          if (typeof index.key[indexKey] === "undefined") {
+          if (typeof index.key[indexKey] === 'undefined') {
             allMatch = false;
             break;
           }
         }
 
         for (const indexKey of Object.keys(index.key)) {
-          if (typeof keys[indexKey] === "undefined") {
+          if (typeof keys[indexKey] === 'undefined') {
             allMatch = false;
             break;
           }
@@ -67,7 +67,7 @@ const createIndex = async (_collection, keys, opts) => {
       }
     } else {
       Meteor._debug(
-        `Can not set ${Object.keys(keys).join(" + ")} index on "${
+        `Can not set ${Object.keys(keys).join(' + ')} index on "${
           _collection._name
         }" collection`,
         { keys, opts, details: e }
@@ -193,7 +193,7 @@ class FilesCollection extends FilesCollectionCore {
     this.chunkSize = Math.floor(this.chunkSize / 8) * 8;
 
     if (!helpers.isString(this.collectionName) && !this.collection) {
-      this.collectionName = "MeteorUploadFiles";
+      this.collectionName = 'MeteorUploadFiles';
     }
 
     if (!this.collection) {
@@ -213,10 +213,10 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isString(this.downloadRoute)) {
-      this.downloadRoute = "/cdn/storage";
+      this.downloadRoute = '/cdn/storage';
     }
 
-    this.downloadRoute = this.downloadRoute.replace(/\/$/, "");
+    this.downloadRoute = this.downloadRoute.replace(/\/$/, '');
 
     if (!helpers.isFunction(this.namingFunction)) {
       this.namingFunction = false;
@@ -255,15 +255,15 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isNumber(this.permissions)) {
-      this.permissions = parseInt("644", 8);
+      this.permissions = parseInt('644', 8);
     }
 
     if (!helpers.isNumber(this.parentDirPermissions)) {
-      this.parentDirPermissions = parseInt("755", 8);
+      this.parentDirPermissions = parseInt('755', 8);
     }
 
     if (!helpers.isString(this.cacheControl)) {
-      this.cacheControl = "public, max-age=31536000, s-maxage=31536000";
+      this.cacheControl = 'public, max-age=31536000, s-maxage=31536000';
     }
 
     if (!helpers.isFunction(this.onAfterUpload)) {
@@ -314,23 +314,23 @@ class FilesCollection extends FilesCollectionCore {
       this.responseHeaders = (responseCode, fileRef, versionRef) => {
         const headers = {};
         switch (responseCode) {
-          case "206":
-            headers.Pragma = "private";
-            headers["Transfer-Encoding"] = "chunked";
-            break;
-          case "400":
-            headers["Cache-Control"] = "no-cache";
-            break;
-          case "416":
-            headers["Content-Range"] = `bytes */${versionRef.size}`;
-            break;
-          default:
-            break;
+        case '206':
+          headers.Pragma = 'private';
+          headers['Transfer-Encoding'] = 'chunked';
+          break;
+        case '400':
+          headers['Cache-Control'] = 'no-cache';
+          break;
+        case '416':
+          headers['Content-Range'] = `bytes */${versionRef.size}`;
+          break;
+        default:
+          break;
         }
 
-        headers.Connection = "keep-alive";
-        headers["Content-Type"] = versionRef.type || "application/octet-stream";
-        headers["Accept-Ranges"] = "bytes";
+        headers.Connection = 'keep-alive';
+        headers['Content-Type'] = versionRef.type || 'application/octet-stream';
+        headers['Accept-Ranges'] = 'bytes';
         return headers;
       };
     }
@@ -359,12 +359,12 @@ class FilesCollection extends FilesCollectionCore {
             `[FilesCollection.${self.collectionName}] "storagePath" function must return a String!`
           );
         }
-        sp = sp.replace(/\/$/, "");
+        sp = sp.replace(/\/$/, '');
         return nodePath.normalize(sp);
       };
     }
 
-    this._debug("[FilesCollection.storagePath] Set to:", this.storagePath({}));
+    this._debug('[FilesCollection.storagePath] Set to:', this.storagePath({}));
 
     try {
       fs.mkdirSync(this.storagePath({}), {
@@ -541,9 +541,9 @@ class FilesCollection extends FilesCollectionCore {
 
           result = http
             ? this.protected.call(
-                Object.assign(http, { user, userId }),
-                fileRef || null
-              )
+              Object.assign(http, { user, userId }),
+              fileRef || null
+            )
             : this.protected.call({ user, userId }, fileRef || null);
         } else {
           result = !!userId;
@@ -554,13 +554,13 @@ class FilesCollection extends FilesCollectionCore {
         }
 
         const rc = helpers.isNumber(result) ? result : 401;
-        this._debug("[FilesCollection._checkAccess] WARN: Access denied!");
+        this._debug('[FilesCollection._checkAccess] WARN: Access denied!');
         if (http) {
-          const text = "Access denied!";
+          const text = 'Access denied!';
           if (!http.response.headersSent) {
             http.response.writeHead(rc, {
-              "Content-Type": "text/plain",
-              "Content-Length": text.length,
+              'Content-Type': 'text/plain',
+              'Content-Length': text.length,
             });
           }
 
@@ -581,8 +581,8 @@ class FilesCollection extends FilesCollectionCore {
       _Remove: `_FilesCollectionRemove_${this.collectionName}`,
     };
 
-    this.on("_handleUpload", this._handleUpload);
-    this.on("_finishUpload", this._finishUpload);
+    this.on('_handleUpload', this._handleUpload);
+    this.on('_finishUpload', this._finishUpload);
     this._handleUploadSync = Meteor.wrapAsync(this._handleUpload.bind(this));
 
     if (this.disableUpload && this.disableDownload) {
@@ -595,27 +595,27 @@ class FilesCollection extends FilesCollectionCore {
         !httpResp.headersSent
       ) {
         if (this.allowedOrigins.test(httpReq.headers.origin)) {
-          httpResp.setHeader("Access-Control-Allow-Credentials", "true");
+          httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
           httpResp.setHeader(
-            "Access-Control-Allow-Origin",
+            'Access-Control-Allow-Origin',
             httpReq.headers.origin
           );
         }
 
-        if (httpReq.method === "OPTIONS") {
+        if (httpReq.method === 'OPTIONS') {
           httpResp.setHeader(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS"
+            'Access-Control-Allow-Methods',
+            'GET, POST, OPTIONS'
           );
           httpResp.setHeader(
-            "Access-Control-Allow-Headers",
-            "Range, Content-Type, x-mtok, x-start, x-chunkid, x-fileid, x-eof"
+            'Access-Control-Allow-Headers',
+            'Range, Content-Type, x-mtok, x-start, x-chunkid, x-fileid, x-eof'
           );
           httpResp.setHeader(
-            "Access-Control-Expose-Headers",
-            "Accept-Ranges, Content-Encoding, Content-Length, Content-Range"
+            'Access-Control-Expose-Headers',
+            'Accept-Ranges, Content-Encoding, Content-Length, Content-Range'
           );
-          httpResp.setHeader("Allow", "GET, POST, OPTIONS");
+          httpResp.setHeader('Allow', 'GET, POST, OPTIONS');
           httpResp.writeHead(200);
           httpResp.end();
           return;
@@ -628,14 +628,14 @@ class FilesCollection extends FilesCollectionCore {
           `${this.downloadRoute}/${this.collectionName}/__upload`
         )
       ) {
-        if (httpReq.method !== "POST") {
+        if (httpReq.method !== 'POST') {
           next();
           return;
         }
 
         const handleError = (_error) => {
           let error = _error;
-          Meteor._debug("[FilesCollection] [Upload] [HTTP] Exception:", error);
+          Meteor._debug('[FilesCollection] [Upload] [HTTP] Exception:', error);
 
           if (!httpResp.headersSent) {
             httpResp.writeHead(500);
@@ -647,31 +647,31 @@ class FilesCollection extends FilesCollectionCore {
             }
 
             if (!helpers.isString(error)) {
-              error = "Unexpected error!";
+              error = 'Unexpected error!';
             }
 
             httpResp.end(JSON.stringify({ error }));
           }
         };
 
-        let body = "";
+        let body = '';
         const handleData = () => {
           try {
             let opts;
             let result;
             let user = this._getUser({ request: httpReq, response: httpResp });
 
-            if (httpReq.headers["x-start"] !== "1") {
+            if (httpReq.headers['x-start'] !== '1') {
               // CHUNK UPLOAD SCENARIO:
               opts = {
-                fileId: this.sanitize(httpReq.headers["x-fileid"], 20, "a"),
+                fileId: this.sanitize(httpReq.headers['x-fileid'], 20, 'a'),
               };
 
-              if (httpReq.headers["x-eof"] === "1") {
+              if (httpReq.headers['x-eof'] === '1') {
                 opts.eof = true;
               } else {
-                opts.binData = Buffer.from(body, "base64");
-                opts.chunkId = parseInt(httpReq.headers["x-chunkid"]);
+                opts.binData = Buffer.from(body, 'base64');
+                opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
               }
 
               const _continueUpload = this._continueUpload(opts.fileId);
@@ -685,7 +685,7 @@ class FilesCollection extends FilesCollectionCore {
               ({ result, opts } = this._prepareUpload(
                 Object.assign(opts, _continueUpload),
                 user.userId,
-                "HTTP"
+                'HTTP'
               ));
 
               if (opts.eof) {
@@ -706,7 +706,7 @@ class FilesCollection extends FilesCollectionCore {
                       }
 
                       if (!helpers.isString(error)) {
-                        error = "Unexpected error!";
+                        error = 'Unexpected error!';
                       }
 
                       httpResp.end(JSON.stringify({ error }));
@@ -728,7 +728,7 @@ class FilesCollection extends FilesCollectionCore {
                 return;
               }
 
-              this.emit("_handleUpload", result, opts, noop);
+              this.emit('_handleUpload', result, opts, noop);
 
               if (!httpResp.headersSent) {
                 httpResp.writeHead(204);
@@ -753,12 +753,12 @@ class FilesCollection extends FilesCollectionCore {
               }
 
               if (opts.fileId) {
-                opts.fileId = this.sanitize(opts.fileId, 20, "a");
+                opts.fileId = this.sanitize(opts.fileId, 20, 'a');
               }
 
               this._debug(
                 `[FilesCollection] [File Start HTTP] ${
-                  opts.file.name || "[no-name]"
+                  opts.file.name || '[no-name]'
                 } - ${opts.fileId}`
               );
               if (helpers.isObject(opts.file) && opts.file.meta) {
@@ -769,7 +769,7 @@ class FilesCollection extends FilesCollectionCore {
               ({ result } = this._prepareUpload(
                 helpers.clone(opts),
                 user.userId,
-                "HTTP Start Method"
+                'HTTP Start Method'
               ));
 
               if (this.collection.findOne(result._id)) {
@@ -782,11 +782,11 @@ class FilesCollection extends FilesCollectionCore {
               opts._id = opts.fileId;
               opts.createdAt = new Date();
               opts.maxLength = opts.fileLength;
-              this._preCollection.insert(helpers.omit(opts, "___s"));
+              this._preCollection.insert(helpers.omit(opts, '___s'));
               this._createStream(
                 result._id,
                 result.path,
-                helpers.omit(opts, "___s")
+                helpers.omit(opts, '___s')
               );
 
               if (opts.returnMeta) {
@@ -819,19 +819,19 @@ class FilesCollection extends FilesCollectionCore {
 
         httpReq.setTimeout(20000, handleError);
         if (
-          typeof httpReq.body === "object" &&
+          typeof httpReq.body === 'object' &&
           Object.keys(httpReq.body).length !== 0
         ) {
           body = JSON.stringify(httpReq.body);
           handleData();
         } else {
-          httpReq.on("data", (data) =>
+          httpReq.on('data', (data) =>
             bound(() => {
               body += data;
             })
           );
 
-          httpReq.on("end", () =>
+          httpReq.on('end', () =>
             bound(() => {
               handleData();
             })
@@ -851,20 +851,20 @@ class FilesCollection extends FilesCollectionCore {
           ) {
             uri = httpReq._parsedUrl.path.replace(
               `${this.downloadRoute}/${this.collectionName}`,
-              ""
+              ''
             );
-            if (uri.indexOf("/") === 0) {
+            if (uri.indexOf('/') === 0) {
               uri = uri.substring(1);
             }
 
-            const uris = uri.split("/");
+            const uris = uri.split('/');
             if (uris.length === 3) {
               const params = {
                 _id: uris[0],
                 query: httpReq._parsedUrl.query
                   ? nodeQs.parse(httpReq._parsedUrl.query)
                   : {},
-                name: uris[2].split("?")[0],
+                name: uris[2].split('?')[0],
                 version: uris[1],
               };
 
@@ -888,21 +888,21 @@ class FilesCollection extends FilesCollectionCore {
           }
         } else {
           if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}`)) {
-            uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}`, "");
-            if (uri.indexOf("/") === 0) {
+            uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}`, '');
+            if (uri.indexOf('/') === 0) {
               uri = uri.substring(1);
             }
 
-            const uris = uri.split("/");
+            const uris = uri.split('/');
             let _file = uris[uris.length - 1];
             if (_file) {
               let version;
-              if (_file.includes("-")) {
-                version = _file.split("-")[0];
-                _file = _file.split("-")[1].split("?")[0];
+              if (_file.includes('-')) {
+                version = _file.split('-')[0];
+                _file = _file.split('-')[1].split('?')[0];
               } else {
-                version = "original";
-                _file = _file.split("?")[0];
+                version = 'original';
+                _file = _file.split('?')[0];
               }
 
               const params = {
@@ -910,7 +910,7 @@ class FilesCollection extends FilesCollectionCore {
                   ? nodeQs.parse(httpReq._parsedUrl.query)
                   : {},
                 file: _file,
-                _id: _file.split(".")[0],
+                _id: _file.split('.')[0],
                 version,
                 name: _file,
               };
@@ -962,7 +962,7 @@ class FilesCollection extends FilesCollectionCore {
             ) {
               throw new Meteor.Error(
                 403,
-                "[FilesCollection] [remove] Not permitted!"
+                '[FilesCollection] [remove] Not permitted!'
               );
             }
           }
@@ -972,11 +972,11 @@ class FilesCollection extends FilesCollectionCore {
             self.remove(selector);
             return true;
           }
-          throw new Meteor.Error(404, "Cursor is empty, no files is removed");
+          throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
         } else {
           throw new Meteor.Error(
             405,
-            "[FilesCollection] [remove] Running code on a client is not allowed!"
+            '[FilesCollection] [remove] Running code on a client is not allowed!'
           );
         }
       };
@@ -998,7 +998,7 @@ class FilesCollection extends FilesCollectionCore {
 
         check(returnMeta, Match.Optional(Boolean));
 
-        opts.fileId = self.sanitize(opts.fileId, 20, "a");
+        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
 
         self._debug(
           `[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`
@@ -1007,7 +1007,7 @@ class FilesCollection extends FilesCollectionCore {
         const { result } = self._prepareUpload(
           helpers.clone(opts),
           this.userId,
-          "DDP Start Method"
+          'DDP Start Method'
         );
 
         if (self.collection.findOne(result._id)) {
@@ -1021,11 +1021,11 @@ class FilesCollection extends FilesCollectionCore {
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
         try {
-          self._preCollection.insert(helpers.omit(opts, "___s"));
+          self._preCollection.insert(helpers.omit(opts, '___s'));
           self._createStream(
             result._id,
             result.path,
-            helpers.omit(opts, "___s")
+            helpers.omit(opts, '___s')
           );
         } catch (e) {
           self._debug(
@@ -1057,10 +1057,10 @@ class FilesCollection extends FilesCollectionCore {
           chunkId: Match.Optional(Number),
         });
 
-        opts.fileId = self.sanitize(opts.fileId, 20, "a");
+        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
 
         if (opts.binData) {
-          opts.binData = Buffer.from(opts.binData, "base64");
+          opts.binData = Buffer.from(opts.binData, 'base64');
         }
 
         const _continueUpload = self._continueUpload(opts.fileId);
@@ -1075,7 +1075,7 @@ class FilesCollection extends FilesCollectionCore {
         ({ result, opts } = self._prepareUpload(
           Object.assign(opts, _continueUpload),
           this.userId,
-          "DDP"
+          'DDP'
         ));
 
         if (opts.eof) {
@@ -1083,13 +1083,13 @@ class FilesCollection extends FilesCollectionCore {
             return self._handleUploadSync(result, opts);
           } catch (handleUploadErr) {
             self._debug(
-              "[FilesCollection] [Write Method] [DDP] Exception:",
+              '[FilesCollection] [Write Method] [DDP] Exception:',
               handleUploadErr
             );
             throw handleUploadErr;
           }
         } else {
-          self.emit("_handleUpload", result, opts, noop);
+          self.emit('_handleUpload', result, opts, noop);
         }
         return true;
       };
@@ -1107,7 +1107,7 @@ class FilesCollection extends FilesCollectionCore {
           `[FilesCollection] [Abort Method]: ${_id} - ${
             helpers.isObject(_continueUpload.file)
               ? _continueUpload.file.path
-              : ""
+              : ''
           }`
         );
 
@@ -1147,7 +1147,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!opts.binData) {
-      opts.binData = "EOF";
+      opts.binData = 'EOF';
     }
 
     if (!helpers.isNumber(opts.chunkId)) {
@@ -1213,7 +1213,7 @@ class FilesCollection extends FilesCollectionCore {
           403,
           helpers.isString(isUploadAllowed)
             ? isUploadAllowed
-            : "@onBeforeUpload() returned false"
+            : '@onBeforeUpload() returned false'
         );
       } else {
         if (
@@ -1271,7 +1271,7 @@ class FilesCollection extends FilesCollectionCore {
       if (colInsert) {
         cb && cb(colInsert);
         this._debug(
-          "[FilesCollection] [Upload] [_finishUpload] [insert] Error:",
+          '[FilesCollection] [Upload] [_finishUpload] [insert] Error:',
           colInsert
         );
       } else {
@@ -1282,7 +1282,7 @@ class FilesCollection extends FilesCollectionCore {
             if (preUpdateError) {
               cb && cb(preUpdateError);
               this._debug(
-                "[FilesCollection] [Upload] [_finishUpload] [update] Error:",
+                '[FilesCollection] [Upload] [_finishUpload] [update] Error:',
                 preUpdateError
               );
             } else {
@@ -1291,7 +1291,7 @@ class FilesCollection extends FilesCollectionCore {
                 `[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`
               );
               this.onAfterUpload && this.onAfterUpload.call(this, result);
-              this.emit("afterUpload", result);
+              this.emit('afterUpload', result);
               cb && cb(null, result);
             }
           }
@@ -1311,13 +1311,13 @@ class FilesCollection extends FilesCollectionCore {
     try {
       if (opts.eof) {
         this._currentUploads[result._id].end(() => {
-          this.emit("_finishUpload", result, opts, cb);
+          this.emit('_finishUpload', result, opts, cb);
         });
       } else {
         this._currentUploads[result._id].write(opts.chunkId, opts.binData, cb);
       }
     } catch (e) {
-      this._debug("[_handleUpload] [EXCEPTION:]", e);
+      this._debug('[_handleUpload] [EXCEPTION:]', e);
       cb && cb(e);
     }
   }
@@ -1338,7 +1338,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!mime || !helpers.isString(mime)) {
-      mime = "application/octet-stream";
+      mime = 'application/octet-stream';
     }
     return mime;
   }
@@ -1358,7 +1358,7 @@ class FilesCollection extends FilesCollectionCore {
       !Meteor.server.sessions instanceof Map ||
       !helpers.isObject(Meteor.server.sessions)
     ) {
-      throw new Error("Received incompatible type of Meteor.server.sessions");
+      throw new Error('Received incompatible type of Meteor.server.sessions');
     }
 
     if (
@@ -1410,12 +1410,12 @@ class FilesCollection extends FilesCollectionCore {
 
     if (http) {
       let mtok = null;
-      if (http.request.headers["x-mtok"]) {
-        mtok = http.request.headers["x-mtok"];
+      if (http.request.headers['x-mtok']) {
+        mtok = http.request.headers['x-mtok'];
       } else {
         const cookie = http.request.Cookies;
-        if (cookie.has("x_mtok")) {
-          mtok = cookie.get("x_mtok");
+        if (cookie.has('x_mtok')) {
+          mtok = cookie.get('x_mtok');
         }
       }
 
@@ -1449,7 +1449,7 @@ class FilesCollection extends FilesCollectionCore {
    * @returns {FilesCollection} Instance
    */
   write(buffer, _opts = {}, _callback, _proceedAfterUpload) {
-    this._debug("[FilesCollection] [write()]");
+    this._debug('[FilesCollection] [write()]');
     let opts = _opts;
     let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
@@ -1468,7 +1468,7 @@ class FilesCollection extends FilesCollectionCore {
     check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
-    opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, "a");
+    opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
     const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
     const fileName =
@@ -1503,14 +1503,14 @@ class FilesCollection extends FilesCollectionCore {
     fs.stat(opts.path, (statError, stats) => {
       bound(() => {
         if (statError || !stats.isFile()) {
-          const paths = opts.path.split("/");
+          const paths = opts.path.split('/');
           paths.pop();
-          fs.mkdirSync(paths.join("/"), { recursive: true });
-          fs.writeFileSync(opts.path, "");
+          fs.mkdirSync(paths.join('/'), { recursive: true });
+          fs.writeFileSync(opts.path, '');
         }
 
         const stream = fs.createWriteStream(opts.path, {
-          flags: "w",
+          flags: 'w',
           mode: this.permissions,
         });
         stream.end(buffer, (streamErr) => {
@@ -1531,7 +1531,7 @@ class FilesCollection extends FilesCollectionCore {
                   if (proceedAfterUpload === true) {
                     this.onAfterUpload &&
                       this.onAfterUpload.call(this, fileRef);
-                    this.emit("afterUpload", fileRef);
+                    this.emit('afterUpload', fileRef);
                   }
                   this._debug(
                     `[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`
@@ -1598,13 +1598,13 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const fileId =
-      (opts.fileId && this.sanitize(opts.fileId, 20, "a")) || Random.id();
+      (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || Random.id();
     const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
-    const pathParts = url.split("/");
+    const pathParts = url.split('/');
     const fileName =
       opts.name || opts.fileName
         ? opts.name || opts.fileName
-        : pathParts[pathParts.length - 1].split("?")[0] || fsName;
+        : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const { extension, extensionWithDot } = this._getExt(fileName);
     opts.path = `${this.storagePath(opts)}${
@@ -1626,7 +1626,7 @@ class FilesCollection extends FilesCollectionCore {
           cb && cb(null, fileRef);
           if (proceedAfterUpload === true) {
             this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-            this.emit("afterUpload", fileRef);
+            this.emit('afterUpload', fileRef);
           }
           this._debug(
             `[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`
@@ -1638,16 +1638,16 @@ class FilesCollection extends FilesCollectionCore {
     fs.stat(opts.path, (statError, stats) => {
       bound(() => {
         if (statError || !stats.isFile()) {
-          const paths = opts.path.split("/");
+          const paths = opts.path.split('/');
           paths.pop();
-          fs.mkdirSync(paths.join("/"), { recursive: true });
-          fs.writeFileSync(opts.path, "");
+          fs.mkdirSync(paths.join('/'), { recursive: true });
+          fs.writeFileSync(opts.path, '');
         }
 
         let isEnded = false;
         let timer = null;
         const wStream = fs.createWriteStream(opts.path, {
-          flags: "w",
+          flags: 'w',
           mode: this.permissions,
           autoClose: true,
           emitClose: false,
@@ -1668,11 +1668,11 @@ class FilesCollection extends FilesCollectionCore {
                 meta: opts.meta,
                 type:
                   opts.type ||
-                  response.headers.get("content-type") ||
+                  response.headers.get('content-type') ||
                   this._getMimeType({ path: opts.path }),
                 size:
                   opts.size ||
-                  parseInt(response.headers.get("content-length") || 0),
+                  parseInt(response.headers.get('content-length') || 0),
                 userId: opts.userId,
                 extension,
               });
@@ -1697,7 +1697,7 @@ class FilesCollection extends FilesCollectionCore {
                 _error ||
                 new Meteor.Error(
                   response?.status || 408,
-                  response?.statusText || "Bad response with empty details"
+                  response?.statusText || 'Bad response with empty details'
                 );
               this._debug(
                 `[FilesCollection] [load] [fetch(${url})] Error:`,
@@ -1724,17 +1724,17 @@ class FilesCollection extends FilesCollectionCore {
         };
 
         let resp = void 0;
-        wStream.on("error", (error) => {
+        wStream.on('error', (error) => {
           bound(() => {
             onEnd(error);
           });
         });
-        wStream.on("close", () => {
+        wStream.on('close', () => {
           bound(() => {
             onEnd(void 0, resp);
           });
         });
-        wStream.on("finish", () => {
+        wStream.on('finish', () => {
           bound(() => {
             onEnd(void 0, resp);
           });
@@ -1747,7 +1747,7 @@ class FilesCollection extends FilesCollectionCore {
         })
           .then((res) => {
             resp = res;
-            res.body.on("error", (error) => {
+            res.body.on('error', (error) => {
               bound(() => {
                 onEnd(error);
               });
@@ -1807,7 +1807,7 @@ class FilesCollection extends FilesCollectionCore {
     if (this.public) {
       throw new Meteor.Error(
         403,
-        "Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection"
+        'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection'
       );
     }
 
@@ -1853,9 +1853,9 @@ class FilesCollection extends FilesCollectionCore {
             size: opts.size,
             userId: opts.userId,
             extension,
-            _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ""),
+            _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
             fileId:
-              (opts.fileId && this.sanitize(opts.fileId, 20, "a")) || null,
+              (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
           });
 
           this.collection.insert(result, (insertErr, _id) => {
@@ -1870,7 +1870,7 @@ class FilesCollection extends FilesCollectionCore {
               callback && callback(null, fileRef);
               if (proceedAfterUpload === true) {
                 this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-                this.emit("afterUpload", fileRef);
+                this.emit('afterUpload', fileRef);
               }
               this._debug(
                 `[FilesCollection] [addFile]: ${result.name} -> ${this.collectionName}`
@@ -1926,7 +1926,7 @@ class FilesCollection extends FilesCollectionCore {
     if (this.public) {
       throw new Meteor.Error(
         403,
-        "Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection"
+        'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection'
       );
     }
 
@@ -1972,9 +1972,9 @@ class FilesCollection extends FilesCollectionCore {
             size: opts.size,
             userId: opts.userId,
             extension,
-            _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ""),
+            _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
             fileId:
-              (opts.fileId && this.sanitize(opts.fileId, 20, "a")) || null,
+              (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
           });
 
           await this.collection.insertAsync(result, async (insertErr, _id) => {
@@ -1989,7 +1989,7 @@ class FilesCollection extends FilesCollectionCore {
               callback && callback(null, fileRef);
               if (proceedAfterUpload === true) {
                 this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-                this.emit("afterUpload", fileRef);
+                this.emit('afterUpload', fileRef);
               }
               this._debug(
                 `[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`
@@ -2033,7 +2033,7 @@ class FilesCollection extends FilesCollectionCore {
       });
     } else {
       callback &&
-        callback(new Meteor.Error(404, "Cursor is empty, no files is removed"));
+        callback(new Meteor.Error(404, 'Cursor is empty, no files is removed'));
       return this;
     }
 
@@ -2169,12 +2169,12 @@ class FilesCollection extends FilesCollectionCore {
     this._debug(
       `[FilesCollection] [download(${http.request.originalUrl})] [_404] File not found`
     );
-    const text = "File Not Found :(";
+    const text = 'File Not Found :(';
 
     if (!http.response.headersSent) {
       http.response.writeHead(404, {
-        "Content-Type": "text/plain",
-        "Content-Length": text.length,
+        'Content-Type': 'text/plain',
+        'Content-Length': text.length,
       });
     }
 
@@ -2193,7 +2193,7 @@ class FilesCollection extends FilesCollectionCore {
    * @summary Initiates the HTTP response
    * @returns {undefined}
    */
-  download(http, version = "original", fileRef) {
+  download(http, version = 'original', fileRef) {
     let vRef;
     this._debug(
       `[FilesCollection] [download(${http.request.originalUrl}, ${version})]`
@@ -2201,7 +2201,7 @@ class FilesCollection extends FilesCollectionCore {
 
     if (fileRef) {
       if (
-        helpers.has(fileRef, "versions") &&
+        helpers.has(fileRef, 'versions') &&
         helpers.has(fileRef.versions, version)
       ) {
         vRef = fileRef.versions[version];
@@ -2246,7 +2246,7 @@ class FilesCollection extends FilesCollectionCore {
           }
 
           if (stats.size !== vRef.size && this.integrityCheck) {
-            responseType = "400";
+            responseType = '400';
           }
 
           return this.serve(
@@ -2255,7 +2255,7 @@ class FilesCollection extends FilesCollectionCore {
             vRef,
             version,
             null,
-            responseType || "200"
+            responseType || '200'
           );
         })
       );
@@ -2282,35 +2282,35 @@ class FilesCollection extends FilesCollectionCore {
     http,
     fileRef,
     vRef,
-    version = "original",
+    version = 'original',
     readableStream = null,
-    _responseType = "200",
+    _responseType = '200',
     force200 = false
   ) {
     let partiral = false;
     let reqRange = false;
-    let dispositionType = "";
+    let dispositionType = '';
     let start;
     let end;
     let take;
     let responseType = _responseType;
 
-    if (http.params.query.download && http.params.query.download === "true") {
-      dispositionType = "attachment; ";
+    if (http.params.query.download && http.params.query.download === 'true') {
+      dispositionType = 'attachment; ';
     } else {
-      dispositionType = "inline; ";
+      dispositionType = 'inline; ';
     }
 
     const dispositionName = `filename=\"${encodeURI(
       vRef.name || fileRef.name
-    ).replace(/\,/g, "%2C")}\"; filename*=UTF-8''${encodeURIComponent(
+    ).replace(/\,/g, '%2C')}\"; filename*=UTF-8''${encodeURIComponent(
       vRef.name || fileRef.name
     )}; `;
-    const dispositionEncoding = "charset=UTF-8";
+    const dispositionEncoding = 'charset=UTF-8';
 
     if (!http.response.headersSent) {
       http.response.setHeader(
-        "Content-Disposition",
+        'Content-Disposition',
         dispositionType + dispositionName + dispositionEncoding
       );
     }
@@ -2332,7 +2332,7 @@ class FilesCollection extends FilesCollectionCore {
 
     if (
       partiral ||
-      (http.params.query.play && http.params.query.play === "true")
+      (http.params.query.play && http.params.query.play === 'true')
     ) {
       reqRange = { start, end };
       if (isNaN(start) && !isNaN(end)) {
@@ -2352,12 +2352,12 @@ class FilesCollection extends FilesCollectionCore {
         this.strict &&
         (reqRange.start >= vRef.size - 1 || reqRange.end > vRef.size - 1)
       ) {
-        responseType = "416";
+        responseType = '416';
       } else {
-        responseType = "206";
+        responseType = '206';
       }
     } else {
-      responseType = "200";
+      responseType = '200';
     }
 
     const streamErrorHandler = (error) => {
@@ -2374,9 +2374,9 @@ class FilesCollection extends FilesCollectionCore {
       ? this.responseHeaders(responseType, fileRef, vRef, version, http)
       : this.responseHeaders;
 
-    if (!headers["Cache-Control"]) {
+    if (!headers['Cache-Control']) {
       if (!http.response.headersSent) {
-        http.response.setHeader("Cache-Control", this.cacheControl);
+        http.response.setHeader('Cache-Control', this.cacheControl);
       }
     }
 
@@ -2402,12 +2402,12 @@ class FilesCollection extends FilesCollectionCore {
       const closeStream = () => {
         if (!stream._isEnded && !stream.destroyed) {
           try {
-            if (typeof stream.close === "function") {
+            if (typeof stream.close === 'function') {
               stream.close(closeStreamCb);
-            } else if (typeof stream.end === "function") {
+            } else if (typeof stream.end === 'function') {
               stream.end(closeStreamCb);
-            } else if (typeof stream.destroy === "function") {
-              stream.destroy("Got to close this stream", closeStreamCb);
+            } else if (typeof stream.destroy === 'function') {
+              stream.destroy('Got to close this stream', closeStreamCb);
             }
           } catch (closeStreamError) {
             // Perhaps one of the method has thrown an error
@@ -2420,17 +2420,17 @@ class FilesCollection extends FilesCollectionCore {
         http.response.writeHead(code);
       }
 
-      http.request.on("aborted", () => {
+      http.request.on('aborted', () => {
         http.request.aborted = true;
       });
 
       stream
-        .on("open", () => {
+        .on('open', () => {
           if (!http.response.headersSent) {
             http.response.writeHead(code);
           }
         })
-        .on("abort", () => {
+        .on('abort', () => {
           closeStream();
           if (!http.response.finished) {
             http.response.end();
@@ -2439,11 +2439,11 @@ class FilesCollection extends FilesCollectionCore {
             http.request.destroy();
           }
         })
-        .on("error", (err) => {
+        .on('error', (err) => {
           closeStream();
           streamErrorHandler(err);
         })
-        .on("end", () => {
+        .on('end', () => {
           if (!http.response.finished) {
             http.response.end();
           }
@@ -2452,65 +2452,65 @@ class FilesCollection extends FilesCollectionCore {
     };
 
     switch (responseType) {
-      case "400":
-        this._debug(
-          `[FilesCollection] [serve(${vRef.path}, ${version})] [400] Content-Length mismatch!`
-        );
-        var text = "Content-Length mismatch!";
+    case '400':
+      this._debug(
+        `[FilesCollection] [serve(${vRef.path}, ${version})] [400] Content-Length mismatch!`
+      );
+      var text = 'Content-Length mismatch!';
 
-        if (!http.response.headersSent) {
-          http.response.writeHead(400, {
-            "Content-Type": "text/plain",
-            "Content-Length": text.length,
-          });
-        }
+      if (!http.response.headersSent) {
+        http.response.writeHead(400, {
+          'Content-Type': 'text/plain',
+          'Content-Length': text.length,
+        });
+      }
 
-        if (!http.response.finished) {
-          http.response.end(text);
-        }
-        break;
-      case "404":
-        this._404(http);
-        break;
-      case "416":
-        this._debug(
-          `[FilesCollection] [serve(${vRef.path}, ${version})] [416] Content-Range is not specified!`
+      if (!http.response.finished) {
+        http.response.end(text);
+      }
+      break;
+    case '404':
+      this._404(http);
+      break;
+    case '416':
+      this._debug(
+        `[FilesCollection] [serve(${vRef.path}, ${version})] [416] Content-Range is not specified!`
+      );
+      if (!http.response.headersSent) {
+        http.response.writeHead(416);
+      }
+      if (!http.response.finished) {
+        http.response.end();
+      }
+      break;
+    case '206':
+      this._debug(
+        `[FilesCollection] [serve(${vRef.path}, ${version})] [206]`
+      );
+      if (!http.response.headersSent) {
+        http.response.setHeader(
+          'Content-Range',
+          `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`
         );
-        if (!http.response.headersSent) {
-          http.response.writeHead(416);
-        }
-        if (!http.response.finished) {
-          http.response.end();
-        }
-        break;
-      case "206":
-        this._debug(
-          `[FilesCollection] [serve(${vRef.path}, ${version})] [206]`
-        );
-        if (!http.response.headersSent) {
-          http.response.setHeader(
-            "Content-Range",
-            `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`
-          );
-        }
-        respond(
-          readableStream ||
+      }
+      respond(
+        readableStream ||
             fs.createReadStream(vRef.path, {
               start: reqRange.start,
               end: reqRange.end,
             }),
-          206
-        );
-        break;
-      default:
-        if (!http.response.headersSent) {
-          http.response.setHeader("Content-Length", `${vRef.size}`);
-        }
-        this._debug(
-          `[FilesCollection] [serve(${vRef.path}, ${version})] [200]`
-        );
-        respond(readableStream || fs.createReadStream(vRef.path), 200);
-        break;
+        206
+      );
+      break;
+    default:
+      if (!http.response.headersSent) {
+        http.response.setHeader('Content-Length', `${vRef.size}`);
+      }
+      this._debug(
+        `[FilesCollection] [serve(${vRef.path}, ${version})] [200]`
+      );
+      respond(readableStream || fs.createReadStream(vRef.path), 200);
+      break;
     }
   }
 }
