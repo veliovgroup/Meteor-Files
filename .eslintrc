@@ -107,7 +107,8 @@
         "afterColon": true
     }],
     "new-cap": [2, {
-      "newIsCap": true
+      "newIsCap": true,
+      "capIsNewExceptionPattern": "^Match\\.."
     }],
     "no-multiple-empty-lines": [2, {
       "max": 2
