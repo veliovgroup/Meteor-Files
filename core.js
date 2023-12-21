@@ -105,6 +105,7 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _debug() {
     if (this.debug) {
+      // eslint-disable-next-line no-console
       (console.info || console.log || function () {}).apply(void 0, arguments);
     }
   }

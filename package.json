@@ -1,5 +1,9 @@
 {
     "scripts": {
         "test": "meteor test-packages ./"
+    },
+    "dependencies": {
+        "chai": "^4.3.10",
+        "sinon": "^17.0.1"
     }
 }

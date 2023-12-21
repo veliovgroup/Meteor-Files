@@ -19,12 +19,14 @@ Package.onUse((api) => {
 
 Package.onTest((api) => {
   api.use('tinytest');
+  api.use('meteortesting:mocha');
   api.use(['ecmascript', 'ostrio:files'], ['client', 'server']);
   api.addFiles('tests/helpers.js', ['client', 'server']);
   api.mainModule('tests/server.js', 'server');
 });
 
 Npm.depends({
+  'chai': '4.2.0',
   eventemitter3: '4.0.7',
   'abort-controller': '3.0.0'
 });
