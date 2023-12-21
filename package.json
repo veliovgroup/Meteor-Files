@@ -1,6 +1,7 @@
 {
     "scripts": {
-        "test": "meteor test-packages ./"
+        "test:tiny": "meteor test-packages ./",
+        "test:mocha": "meteor test-packages ./ --driver-package meteortesting:mocha"
     },
     "dependencies": {
         "chai": "^4.3.10",
