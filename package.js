@@ -21,6 +21,7 @@ Package.onTest((api) => {
   api.use('tinytest');
   api.use(['ecmascript', 'ostrio:files'], ['client', 'server']);
   api.addFiles('tests/helpers.js', ['client', 'server']);
+  api.mainModule('tests/server.js', 'server');
 });
 
 Npm.depends({
