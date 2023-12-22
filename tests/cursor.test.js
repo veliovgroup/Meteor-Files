@@ -1,14 +1,25 @@
-/* global describe, beforeEach, it, afterEach, Meteor */
+/* global describe, beforeEach, after, before it, afterEach, Meteor */
 import { expect } from 'chai';
 import sinon from 'sinon';
 import FilesCollectionCore from '../core.js';
 import { FileCursor, FilesCursor } from '../cursor.js';
 import { FilesCollection } from '../server.js';
 import fs from 'fs';
+import { MongoInternals } from 'meteor/mongo';
 
-let filesCollection = new FilesCollection();
 
 describe('FileCursor', function() {
+  let collectionName = 'FileCursor';
+  let filesCollection;
+
+  before(function() {
+    filesCollection = new FilesCollection({ collectionName });
+  });
+
+  after(async function() {
+    await MongoInternals.defaultRemoteCollectionDriver().mongo.db.collection(collectionName).drop();
+  });
+
   beforeEach(async function() {
     await filesCollection.collection.rawCollection().deleteMany({});
     sinon.restore();
@@ -111,7 +122,18 @@ describe('FileCursor', function() {
 });
 
 describe('FilesCursor', function() {
+  let collectionName = 'FilesCursor';
+  let filesCollection;
   let sandbox;
+
+  before(function() {
+    filesCollection = new FilesCollection({ collectionName });
+  });
+
+  after(async function() {
+    await MongoInternals.defaultRemoteCollectionDriver().mongo.db.collection(collectionName).drop();
+  });
+
   beforeEach(async function() {
     await filesCollection.collection.rawCollection().deleteMany({});
     sandbox = sinon.createSandbox();
