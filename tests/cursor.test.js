@@ -19,15 +19,22 @@ describe('FileCursor', function() {
   });
 
   describe('#remove()', function() {
+    let sandbox;
+    beforeEach(function() {
+      sandbox = sinon.createSandbox();
+    });
+    afterEach(function() {
+      sandbox.restore();
+    });
     it('should call the collection.remove method with the file ID', function() {
       const fileRef = { _id: 'test' };
 
       // Mock the collection.remove method to check the arguments
-      filesCollection.remove = sinon.spy();
+      const remove = sandbox.stub(filesCollection, 'remove').returns('test');
 
       const cursor = new FileCursor(fileRef, filesCollection);
       cursor.remove(() => {
-        expect(filesCollection.remove.calledWith(fileRef._id)).to.be.true;
+        expect(remove.calledWith(fileRef._id)).to.be.true;
       });
     });
 
@@ -335,13 +342,14 @@ describe('FilesCursor', function() {
 
   describe('#remove()', function() {
     it('should remove all matching documents', async function() {
-      const documents = [{ _id: 'test1', path: '/tmp/random' }, { _id: 'test2', path: '/tmp/random' }];
+      const documents = [{ _id: 'test1', path: '/tmp/randomfile123.txt' }, { _id: 'test2', path: '/tmp/randomfile456' }];
+      fs.writeFileSync('/tmp/randomfile123.txt', 'file contents');
+      fs.writeFileSync('/tmp/randomfile123.txt', 'file contents');
       await filesCollection.collection.rawCollection().insertMany(documents);
 
       const cursor = new FilesCursor({_id: 'test1'}, {}, filesCollection);
 
-
-      await new Promise((resolve, reject) => cursor.remove((err, res) => err ? reject(err) : resolve(res) ));
+      cursor.remove();
 
       const result = await filesCollection.collection.rawCollection().find().toArray();
       expect(result).to.have.lengthOf(1);
