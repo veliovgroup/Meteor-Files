@@ -2024,6 +2024,7 @@ class FilesCollection extends FilesCollectionCore {
     if (selector === void 0) {
       return 0;
     }
+
     check(callback, Match.Optional(Function));
 
     const files = this.collection.find(selector);

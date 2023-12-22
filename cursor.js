@@ -217,7 +217,7 @@ export class FilesCursor {
    */
   async nextAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [nextAsync()]');
-    return await this.cursor.fetchAsync()[++this._current];
+    return (await this.cursor.fetchAsync())[++this._current];
   }
 
   /*
@@ -255,7 +255,7 @@ export class FilesCursor {
     this._collection._debug(
       '[FilesCollection] [FilesCursor] [previousAsync()]'
     );
-    return this.cursor.fetchAsync()[--this._current];
+    return (this.cursor.fetchAsync())[--this._current];
   }
 
   /*
