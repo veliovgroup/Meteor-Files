@@ -395,4 +395,82 @@ describe('FilesCursor', function() {
       expect(count).to.equal(documents.length);
     });
   });
+
+  describe('#each()', function() {
+    it('should return an array of FileCursor for each document', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      await filesCollection.collection.rawCollection().insertMany(documents);
+
+      const result = cursor.each();
+
+      expect(result).to.be.an('array');
+      result.forEach((fileCursor, index) => {
+        expect(fileCursor).to.be.instanceOf(FileCursor);
+        expect(fileCursor._fileRef).to.deep.equal(documents[index]);
+      });
+    });
+  });
+
+  describe('#map()', function() {
+    it('should map callback over all matching documents', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      await filesCollection.collection.rawCollection().insertMany(documents);
+
+      const result = cursor.map((doc) => doc._id);
+      expect(result).to.deep.equal(documents.map((doc) => doc._id));
+    });
+  });
+
+  describe('#mapAsync()', function() {
+    it('should map callback over all matching documents', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      await filesCollection.collection.rawCollection().insertMany(documents);
+
+      const result = await cursor.mapAsync((doc) => doc._id);
+      expect(result).to.deep.equal(documents.map((doc) => doc._id));
+    });
+  });
+
+  describe('#current()', function() {
+    it('should return the current item on the cursor', function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      sandbox.stub(cursor, 'fetch').returns(documents);
+      const current = cursor.current();
+      expect(current).to.deep.equal(documents[0]);
+    });
+  });
+
+  describe('#currentAsync()', function() {
+    it('should return the current item on the cursor', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      sandbox.stub(cursor, 'fetchAsync').returns(Promise.resolve(documents));
+      const current = await cursor.currentAsync();
+      expect(current).to.deep.equal(documents[0]);
+    });
+  });
+
+  describe('#observe()', function() {
+    it('should call observe on the cursor', function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const observeStub = sandbox.stub(cursor.cursor, 'observe');
+      const callbacks = {};
+      cursor.observe(callbacks);
+      sinon.assert.calledWith(observeStub, callbacks);
+    });
+  });
+
+  describe('#observeChanges()', function() {
+    it('should call observeChanges on the cursor', function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const observeChangesStub = sandbox.stub(cursor.cursor, 'observeChanges');
+      const callbacks = {};
+      cursor.observeChanges(callbacks);
+      sinon.assert.calledWith(observeChangesStub, callbacks);
+    });
+  });
 });
