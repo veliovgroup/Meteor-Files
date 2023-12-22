@@ -73,25 +73,6 @@ export class FileCursor {
   /*
    * @locus Anywhere
    * @memberOf FileCursor
-   * @name linkAsync
-   * @param version {String} - Name of file's subversion
-   * @param uriBase {String} - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
-   * @summary Returns downloadable URL to File
-   * @returns {Promise<String>}
-   */
-  async linkAsync(version = 'original', uriBase) {
-    this._collection._debug(
-      `[FilesCollection] [FileCursor] [linkAsync(${version})]`
-    );
-    if (this._fileRef) {
-      return await this._collection.link(this._fileRef, version, uriBase);
-    }
-    return '';
-  }
-
-  /*
-   * @locus Anywhere
-   * @memberOf FileCursor
    * @name get
    * @param property {String} - Name of sub-object property
    * @summary Returns current document as a plain Object, if `property` is specified - returns value of sub-object property
@@ -372,7 +353,7 @@ export class FilesCursor {
    * @summary Returns the number of documents that match a query
    * @returns {Promise<Number>}
    */
-  async count() {
+  async countAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
     return await this.cursor.countAsync();
   }

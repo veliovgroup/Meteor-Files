@@ -101,37 +101,4 @@ describe('FileCursor', function() {
       });
     });
   });
-
-  describe('#linkAsync()', function() {
-    let sandbox;
-
-    beforeEach(function() {
-      sandbox = sinon.createSandbox();
-    });
-
-    afterEach(function() {
-      sandbox.restore();
-    });
-
-    it('should call the collection.linkAsync with the fileRef, version and uriBase', async function() {
-      const fileRef = { _id: 'test' };
-      const version = 'v1';
-      const uriBase = 'https://test.com';
-
-      filesCollection.link = sinon.spy();
-
-      const cursor = new FileCursor(fileRef, filesCollection);
-
-      await cursor.linkAsync(version, uriBase);
-      expect(filesCollection.link.calledWith(fileRef, version, uriBase)).to.be.true;
-    });
-
-    it('should call the callback with an empty string if no file reference is provided', async function() {
-      const core = new FilesCollectionCore();
-      const cursor = new FileCursor(null, core);
-
-      let result = await cursor.linkAsync();
-      expect(result).to.be.a.string('');
-    });
-  });
 });
