@@ -184,8 +184,8 @@ class FilesCollection extends FilesCollectionCore {
       this.protected = false;
     }
 
-    if (this.protectedAsync === undefined) {
-      this.protectedAsync = async () => false;
+    if (!this.protectedAsync) {
+      this.protectedAsync = false;
     }
 
     if (!this.chunkSize) {
@@ -520,7 +520,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.public, Boolean);
     check(this.getUser, Match.OneOf(false, Function));
     check(this.protected, Match.OneOf(Boolean, Function));
-    check(this.protectedAsync, Function);
+    check(this.protectedAsync, Match.OneOf(Boolean, Function));
     check(this.chunkSize, Number);
     check(this.downloadRoute, String);
     check(this.namingFunction, Match.OneOf(false, Function));
@@ -534,6 +534,52 @@ class FilesCollection extends FilesCollectionCore {
         `[FilesCollection.${this.collectionName}]: Files can not be public and protected at the same time!`
       );
     }
+
+    this._checkAccessAsync = async (http) => {
+      if (this.protectedAsync) {
+        let result;
+        const { user, userId } = this._getUser(http);
+
+        if (helpers.isFunction(this.protectedAsync)) {
+          let fileRef;
+          if (helpers.isObject(http.params) && http.params._id) {
+            fileRef = await this.collection.findOneAsync(http.params._id);
+          }
+
+          result = http
+            ? await this.protectedAsync(
+              Object.assign(http, { user, userId }),
+              fileRef || null
+            )
+            : await this.protectedAsync({ user, userId }, fileRef || null);
+        } else {
+          result = !!userId;
+        }
+
+        if ((http && result === true) || !http) {
+          return true;
+        }
+
+        const rc = helpers.isNumber(result) ? result : 401;
+        this._debug('[FilesCollection._checkAccess] WARN: Access denied!');
+        if (http) {
+          const text = 'Access denied!';
+          if (!http.response.headersSent) {
+            http.response.writeHead(rc, {
+              'Content-Type': 'text/plain',
+              'Content-Length': text.length,
+            });
+          }
+
+          if (!http.response.finished) {
+            http.response.end(text);
+          }
+        }
+
+        return false;
+      }
+      return true;
+    };
 
     this._checkAccess = (http) => {
       if (this.protected) {
@@ -1901,7 +1947,7 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
-   * @name addFile
+   * @name addFileAsync
    * @param {String} path          - Path to file
    * @param {String} opts          - [Optional] Object with file-data
    * @param {String} opts.type     - [Optional] File mime-type
@@ -1909,26 +1955,15 @@ class FilesCollection extends FilesCollectionCore {
    * @param {String} opts.fileId   - _id, sanitized, max-length: 20 symbols default *null*
    * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
    * @param {String} opts.userId   - [Optional] UserId, default *null*
-   * @param {Function} callback    - [Optional] function(error, fileObj){...}
    * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Add file from FS to FilesCollection
+   * @throws {Meteor.Error} If file does not exist (400) or collection is public (403)
    * @returns {Promise<FilesCollection>} Instance
    */
-  async addFileAsync(path, _opts = {}, _callback, _proceedAfterUpload) {
+  async addFileAsync(path, _opts = {}, _proceedAfterUpload) {
     this._debug(`[FilesCollection] [addFile(${path})]`);
     let opts = _opts;
-    let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
-
-    if (helpers.isFunction(opts)) {
-      proceedAfterUpload = callback;
-      callback = opts;
-      opts = {};
-    } else if (helpers.isBoolean(callback)) {
-      proceedAfterUpload = callback;
-    } else if (helpers.isBoolean(opts)) {
-      proceedAfterUpload = opts;
-    }
 
     if (this.public) {
       throw new Meteor.Error(
@@ -1939,82 +1974,84 @@ class FilesCollection extends FilesCollectionCore {
 
     check(path, String);
     check(opts, Match.Optional(Object));
-    check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
 
-    fs.stat(path, (statErr, stats) =>
-      bound(async () => {
-        if (statErr) {
-          callback && callback(statErr);
-        } else if (stats.isFile()) {
-          if (!helpers.isObject(opts)) {
-            opts = {};
-          }
-          opts.path = path;
+    let stats;
+    try {
+      stats = await fs.promises.stat(path);
+    } catch (statErr) {
+      if (statErr.code === 'ENOENT') {
+        throw new Meteor.Error(
+          400,
+          `[FilesCollection] [addFile(${path})]: File does not exist`
+        );
+      }
+      throw new Meteor.Error(statErr.code, statErr.message);
+    }
+    if (stats.isFile()) {
+      if (!helpers.isObject(opts)) {
+        opts = {};
+      }
+      opts.path = path;
 
-          if (!opts.fileName) {
-            const pathParts = path.split(nodePath.sep);
-            opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
-          }
+      if (!opts.fileName) {
+        const pathParts = path.split(nodePath.sep);
+        opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
+      }
 
-          const { extension } = this._getExt(opts.fileName);
+      const { extension } = this._getExt(opts.fileName);
 
-          if (!helpers.isString(opts.type)) {
-            opts.type = this._getMimeType(opts);
-          }
+      if (!helpers.isString(opts.type)) {
+        opts.type = this._getMimeType(opts);
+      }
 
-          if (!helpers.isObject(opts.meta)) {
-            opts.meta = {};
-          }
+      if (!helpers.isObject(opts.meta)) {
+        opts.meta = {};
+      }
 
-          if (!helpers.isNumber(opts.size)) {
-            opts.size = stats.size;
-          }
+      if (!helpers.isNumber(opts.size)) {
+        opts.size = stats.size;
+      }
 
-          const result = this._dataToSchema({
-            name: opts.fileName,
-            path,
-            meta: opts.meta,
-            type: opts.type,
-            size: opts.size,
-            userId: opts.userId,
-            extension,
-            _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-            fileId:
+      const result = this._dataToSchema({
+        name: opts.fileName,
+        path,
+        meta: opts.meta,
+        type: opts.type,
+        size: opts.size,
+        userId: opts.userId,
+        extension,
+        _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
+        fileId:
               (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
-          });
+      });
 
-          await this.collection.insertAsync(result, async (insertErr, _id) => {
-            if (insertErr) {
-              callback && callback(insertErr);
-              this._debug(
-                `[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`,
-                insertErr
-              );
-            } else {
-              const fileRef = await this.collection.findOneAsync(_id);
-              callback && callback(null, fileRef);
-              if (proceedAfterUpload === true) {
-                this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-                this.emit('afterUpload', fileRef);
-              }
-              this._debug(
-                `[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`
-              );
-            }
-          });
-        } else {
-          callback &&
-            callback(
-              new Meteor.Error(
-                400,
-                `[FilesCollection] [addFile(${path})]: File does not exist`
-              )
-            );
-        }
-      })
+      let _id;
+      try {
+        _id = await this.collection.insertAsync(result);
+      } catch (insertErr){
+        this._debug(
+          `[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`,
+          insertErr
+        );
+        throw new Meteor.Error(insertErr.code, insertErr.message);
+      }
+
+      const fileRef = await this.collection.findOneAsync(_id);
+
+      if (proceedAfterUpload === true) {
+        this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
+        this.emit('afterUpload', fileRef);
+      }
+      this._debug(
+        `[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`
+      );
+      return fileRef;
+    }
+    throw new Meteor.Error(
+      400,
+      `[FilesCollection] [addFile(${path})]: File does not exist`
     );
-    return this;
   }
 
   /**

@@ -83,8 +83,9 @@ describe('FileCursor', function() {
     it('should call the callback with an error if no file reference is provided', async function() {
       const core = new FilesCollectionCore();
       const cursor = new FileCursor(null, core);
-      const fileRef = { _id: 'test', path: 'temp' };
-      await filesCollection.addFileAsync('test', fileRef);
+      fs.writeFileSync('/tmp/test.txt', 'test');
+      const opts = { _id: 'test' };
+      await filesCollection.addFileAsync('/tmp/test.txt', opts);
       let error;
       try {
         await cursor.removeAsync();
@@ -93,6 +94,7 @@ describe('FileCursor', function() {
       }
       expect(error).to.be.instanceOf(Meteor.Error);
       expect(error.reason).to.equal('No such file');
+      fs.unlinkSync('/tmp/test.txt');
     });
   });
 
