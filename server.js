@@ -104,6 +104,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.integrityCheck {Boolean} - [Server] Check file's integrity before serving to users
  * @param config.onAfterUpload  {Function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
  * @param config.onAfterRemove  {Function} - [Server] Called right after file is removed. Removed objects is passed to callback
+ * @param config.onAfterRemoveAsync  {Function} - [Server] Called right after file is removed by the removeAsync method. Removed objects is passed to the function
  * @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
  * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return `true` to continue
@@ -151,6 +152,7 @@ class FilesCollection extends FilesCollectionCore {
         interceptRequest: this.interceptRequest,
         namingFunction: this.namingFunction,
         onAfterRemove: this.onAfterRemove,
+        onAfterRemoveAsync: this.onAfterRemoveAsync,
         onAfterUpload: this.onAfterUpload,
         onBeforeRemove: this.onBeforeRemove,
         onBeforeUpload: this.onBeforeUpload,
@@ -278,6 +280,10 @@ class FilesCollection extends FilesCollectionCore {
       this.onAfterRemove = false;
     }
 
+    if (!helpers.isFunction(this.onAfterRemoveAsync)) {
+      this.onAfterRemoveAsync = false;
+    }
+
     if (!helpers.isFunction(this.onBeforeRemove)) {
       this.onBeforeRemove = false;
     }
@@ -388,6 +394,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.storagePath, Function);
     check(this.cacheControl, String);
     check(this.onAfterRemove, Match.OneOf(false, Function));
+    check(this.onAfterRemoveAsync, Match.OneOf(false, Function));
     check(this.onAfterUpload, Match.OneOf(false, Function));
     check(this.disableUpload, Boolean);
     check(this.integrityCheck, Boolean);
@@ -2060,12 +2067,11 @@ class FilesCollection extends FilesCollectionCore {
    * @summary Remove documents from the collection
    * @returns {Promise<FilesCollection>} Instance
    */
-  async removeAsync(selector, callback) {
+  async removeAsync(selector) {
     this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
     if (selector === void 0) {
       return 0;
     }
-    check(callback, Match.Optional(Function));
 
     const files = this.collection.find(selector);
     if (files.count() > 0) {
@@ -2076,15 +2082,12 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
     }
 
-    if (this.onAfterRemove) {
+    if (this.onAfterRemoveAsync) {
       const docs = files.fetch();
-      const self = this;
-      await this.collection.removeAsync(selector, function () {
-        callback && callback.apply(this, arguments);
-        self.onAfterRemove(docs);
-      });
+      await this.collection.removeAsync(selector);
+      await this.onAfterRemoveAsync(docs);
     } else {
-      await this.collection.removeAsync(selector, callback || noop);
+      await this.collection.removeAsync(selector);
     }
     return this;
   }

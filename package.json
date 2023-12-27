@@ -6,5 +6,10 @@
     "dependencies": {
         "chai": "^4.3.10",
         "sinon": "^17.0.1"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.23.6",
+        "@babel/eslint-parser": "^7.23.3",
+        "eslint": "^8.56.0"
     }
 }

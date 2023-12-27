@@ -376,13 +376,12 @@ export class FilesCursor {
    * @locus Anywhere
    * @memberOf FilesCursor
    * @name removeAsync
-   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
    * @summary Removes all documents that match a query
    * @returns {Promise<FilesCursor>}
    */
-  async removeAsync(callback) {
+  async removeAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [removeAsync()]');
-    await this._collection.removeAsync(this._selector, callback);
+    await this._collection.removeAsync(this._selector);
     return this;
   }
 

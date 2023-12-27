@@ -371,7 +371,14 @@ describe('FilesCursor', function() {
 
       const cursor = new FilesCursor({_id: 'test1'}, {}, filesCollection);
 
-      cursor.remove();
+      await new Promise((resolve, reject) => {
+        cursor.remove((err, res) => {
+          if (err) {
+            reject(err);
+          }
+          resolve(res);
+        });
+      });
 
       const result = await filesCollection.collection.rawCollection().find().toArray();
       expect(result).to.have.lengthOf(1);
