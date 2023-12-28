@@ -114,6 +114,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
  * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
  * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
+ * @param config.downloadCallbackAsync {Function} - [Server] async Callback triggered each time file is requested, return a Promise resolving to a truthy value to continue download, or falsy to abort
  * @param config.interceptRequest {Function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.interceptDownloadAsync {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}. Returns a Promise that resolves to a Boolean.
@@ -2389,7 +2390,7 @@ class FilesCollection extends FilesCollectionCore {
     } else if (fileRef) {
       if (
         helpers.isFunction(this.downloadCallbackAsync) &&
-        !(await this.downloadCallback(
+        !(await this.downloadCallbackAsync(
           Object.assign(http, this._getUser(http)),
           fileRef
         ))
@@ -2411,6 +2412,7 @@ class FilesCollection extends FilesCollectionCore {
         stats = await fs.promises.stat(vRef.path);
       } catch (statErr){
         if (statErr) {
+          console.log('statErr', statErr);
           return this._404(http);
         }
       }
