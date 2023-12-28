@@ -116,6 +116,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
  * @param config.interceptRequest {Function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
  * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
+ * @param config.interceptDownloadAsync {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}. Returns a Promise that resolves to a Boolean.
  * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
  * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
@@ -145,10 +146,12 @@ class FilesCollection extends FilesCollectionCore {
         disableDownload: this.disableDownload,
         disableUpload: this.disableUpload,
         downloadCallback: this.downloadCallback,
+        downloadCallbackAsync: this.downloadCallbackAsync,
         downloadRoute: this.downloadRoute,
         getUser: this.getUser,
         integrityCheck: this.integrityCheck,
         interceptDownload: this.interceptDownload,
+        interceptDownloadAsync: this.interceptDownloadAsync,
         interceptRequest: this.interceptRequest,
         namingFunction: this.namingFunction,
         onAfterRemove: this.onAfterRemove,
@@ -248,6 +251,10 @@ class FilesCollection extends FilesCollectionCore {
       this.interceptDownload = false;
     }
 
+    if (!helpers.isFunction(this.interceptDownloadAsync)) {
+      this.interceptDownloadAsync = false;
+    }
+
     if (!helpers.isBoolean(this.strict)) {
       this.strict = true;
     }
@@ -306,6 +313,10 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isFunction(this.downloadCallback)) {
       this.downloadCallback = false;
+    }
+
+    if (!helpers.isFunction(this.downloadCallbackAsync)) {
+      this.downloadCallbackAsync = false;
     }
 
     if (!helpers.isNumber(this.continueUploadTTL)) {
@@ -401,6 +412,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.onBeforeRemove, Match.OneOf(false, Function));
     check(this.disableDownload, Boolean);
     check(this.downloadCallback, Match.OneOf(false, Function));
+    check(this.downloadCallbackAsync, Match.OneOf(false, Function));
     check(this.interceptRequest, Match.OneOf(false, Function));
     check(this.interceptDownload, Match.OneOf(false, Function));
     check(this.continueUploadTTL, Number);
@@ -2022,14 +2034,13 @@ class FilesCollection extends FilesCollectionCore {
         userId: opts.userId,
         extension,
         _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-        fileId:
-              (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
+        fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
       });
 
       let _id;
       try {
         _id = await this.collection.insertAsync(result);
-      } catch (insertErr){
+      } catch (insertErr) {
         this._debug(
           `[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`,
           insertErr
@@ -2338,6 +2349,93 @@ class FilesCollection extends FilesCollectionCore {
           );
         })
       );
+      return void 0;
+    }
+    return this._404(http);
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name downloadAsync
+   * @param {Object} http    - Server HTTP object
+   * @param {String} version - Requested file version
+   * @param {Object} fileRef - Requested file Object
+   * @summary Initiates the HTTP response
+   * @returns {Promise<undefined>}
+   */
+  async downloadAsync(http, version = 'original', fileRef) {
+    let vRef;
+    this._debug(
+      `[FilesCollection] [download(${http.request.originalUrl}, ${version})]`
+    );
+
+    if (fileRef) {
+      if (
+        helpers.has(fileRef, 'versions') &&
+        helpers.has(fileRef.versions, version)
+      ) {
+        vRef = fileRef.versions[version];
+        vRef._id = fileRef._id;
+      } else {
+        vRef = fileRef;
+      }
+    } else {
+      vRef = false;
+    }
+
+    if (!vRef || !helpers.isObject(vRef)) {
+      return this._404(http);
+    } else if (fileRef) {
+      if (
+        helpers.isFunction(this.downloadCallbackAsync) &&
+        !(await this.downloadCallback(
+          Object.assign(http, this._getUser(http)),
+          fileRef
+        ))
+      ) {
+        return this._404(http);
+      }
+
+      if (
+        this.interceptDownloadAsync &&
+        helpers.isFunction(this.interceptDownloadAsync) &&
+        (await this.interceptDownloadAsync(http, fileRef, version)) === true
+      ) {
+        return void 0;
+      }
+
+      let stats;
+
+      try {
+        stats = await fs.promises.stat(vRef.path);
+      } catch (statErr){
+        if (statErr) {
+          return this._404(http);
+        }
+      }
+      if (!stats.isFile()) {
+        return this._404(http);
+      }
+      let responseType;
+
+      if (stats.size !== vRef.size && !this.integrityCheck) {
+        vRef.size = stats.size;
+      }
+
+      if (stats.size !== vRef.size && this.integrityCheck) {
+        responseType = '400';
+      }
+
+      this.serve(
+        http,
+        fileRef,
+        vRef,
+        version,
+        null,
+        responseType || '200'
+      );
+
       return void 0;
     }
     return this._404(http);

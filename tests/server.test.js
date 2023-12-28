@@ -121,4 +121,123 @@ describe('FilesCollection', () => {
       }
     });
   });
+
+
+  describe('#download', () => {
+    let filesCollection;
+    let http;
+    let version;
+    let fileRef;
+    let statStub;
+    let _404Stub;
+    let serveStub;
+
+    before(() => {
+      filesCollection = new FilesCollection({collectionName: 'testserver-download'});
+    });
+
+    beforeEach(() => {
+      http = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
+
+      version = 'original';
+      fileRef = {
+        versions: {
+          original: {
+            path: '/path/to/file',
+            size: 100,
+          },
+        },
+      };
+
+      // Stubbing the fs.stat method
+      statStub = sinon.stub(fs, 'stat');
+      statStub.yields(null, { isFile: () => true, size: 100 });
+
+      // Stubbing the _404 method
+      _404Stub = sinon.stub(filesCollection, '_404');
+
+      // Stubbing the serve method
+      serveStub = sinon.stub(filesCollection, 'serve');
+    });
+
+    afterEach(() => {
+      // Restore the stubbed methods after each test
+      sinon.restore();
+    });
+
+    it('should download a file successfully', () => {
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.true;
+      expect(_404Stub.called).to.be.false;
+      expect(serveStub.calledOnce).to.be.true;
+    });
+
+    it('should return 404 if file does not exist', () => {
+      statStub.yields(null, { isFile: () => false });
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.true;
+      expect(_404Stub.calledOnce).to.be.true;
+      expect(serveStub.called).to.be.false;
+    });
+
+    it('should call downloadCallback if it is a function', () => {
+      const downloadCallback = sinon.stub().returns(true);
+      filesCollection.downloadCallback = downloadCallback;
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.true;
+      expect(_404Stub.called).to.be.false;
+      expect(serveStub.calledOnce).to.be.true;
+      expect(downloadCallback.calledOnce).to.be.true;
+    });
+
+    it('should not call downloadCallback if it is not a function', () => {
+      filesCollection.downloadCallback = null;
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.true;
+      expect(_404Stub.called).to.be.false;
+      expect(serveStub.calledOnce).to.be.true;
+    });
+
+    it('should return 404 if downloadCallback returns false', () => {
+      const downloadCallback = sinon.stub().returns(false);
+      filesCollection.downloadCallback = downloadCallback;
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.false;
+      expect(_404Stub.calledOnce).to.be.true;
+      expect(serveStub.called).to.be.false;
+
+      filesCollection.downloadCallback = null;
+    });
+
+    it('should call interceptDownload if it is a function, that returns true', () => {
+      const interceptDownload = sinon.stub().returns(true);
+      filesCollection.interceptDownload = interceptDownload;
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.false;
+      expect(_404Stub.called).to.be.false;
+      expect(serveStub.calledOnce).to.be.false;
+      expect(interceptDownload.calledOnce).to.be.true;
+
+      filesCollection.interceptDownload = null;
+    });
+
+    it('should proceed if interceptDownload xis a function, that returns false', () => {
+      const interceptDownload = sinon.stub().returns(false);
+      filesCollection.interceptDownload = interceptDownload;
+      filesCollection.download(http, version, fileRef);
+
+      expect(statStub.calledOnce).to.be.true;
+      expect(_404Stub.called).to.be.false;
+      expect(serveStub.calledOnce).to.be.true;
+      expect(interceptDownload.calledOnce).to.be.true;
+
+      filesCollection.interceptDownload = null;
+    });
+  });
 });
