@@ -109,6 +109,9 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return `true` to continue
  *  - return `false` or `String` to abort upload
+* @param config.onBeforeUploadAsync {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
+ *  - return a Promise resolving to `true` to continue
+ *  - return a Promise resolving to`false` or `String` to abort upload
  * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, usefull when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
  * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
@@ -160,6 +163,7 @@ class FilesCollection extends FilesCollectionCore {
         onAfterUpload: this.onAfterUpload,
         onBeforeRemove: this.onBeforeRemove,
         onBeforeUpload: this.onBeforeUpload,
+        onBeforeUploadAsync: this.onBeforeUploadAsync,
         onInitiateUpload: this.onInitiateUpload,
         parentDirPermissions: this.parentDirPermissions,
         permissions: this.permissions,
@@ -230,6 +234,10 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
+    }
+
+    if (!helpers.isFunction(this.onBeforeUploadAsync)) {
+      this.onBeforeUploadAsync = false;
     }
 
     if (!helpers.isFunction(this.getUser)) {
@@ -538,6 +546,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.downloadRoute, String);
     check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
+    check(this.onBeforeUploadAsync, Match.OneOf(false, Function));
     check(this.onInitiateUpload, Match.OneOf(false, Function));
     check(this.allowClientCode, Boolean);
 
@@ -1305,6 +1314,124 @@ class FilesCollection extends FilesCollectionCore {
           user() {
             if (Meteor.users && result.userId) {
               return Meteor.users.findOne(result.userId);
+            }
+            return null;
+          },
+          eof: opts.eof,
+        }
+      );
+      this.onInitiateUpload.call(ctx, result);
+    }
+
+    return { result, opts };
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _prepareUploadAsync
+   * @summary Internal method. Used to optimize received data and check upload permission
+   * @returns {Object}
+   */
+  async _prepareUploadAsync(opts = {}, userId, transport) {
+    let ctx;
+    if (!helpers.isBoolean(opts.eof)) {
+      opts.eof = false;
+    }
+
+    if (!opts.binData) {
+      opts.binData = 'EOF';
+    }
+
+    if (!helpers.isNumber(opts.chunkId)) {
+      opts.chunkId = -1;
+    }
+
+    if (!helpers.isString(opts.FSName)) {
+      opts.FSName = opts.fileId;
+    }
+
+    this._debug(
+      `[FilesCollection] [Upload] [${transport}] Got #${opts.chunkId}/${
+        opts.fileLength
+      } chunks, dst: ${opts.file.name || opts.file.fileName}`
+    );
+
+    const fileName = this._getFileName(opts.file);
+    const { extension, extensionWithDot } = this._getExt(fileName);
+
+    if (!helpers.isObject(opts.file.meta)) {
+      opts.file.meta = {};
+    }
+
+    let result = opts.file;
+    result.name = fileName;
+    result.meta = opts.file.meta;
+    result.extension = extension;
+    result.ext = extension;
+    result._id = opts.fileId;
+    result.userId = userId || null;
+    opts.FSName = this.sanitize(opts.FSName);
+
+    if (this.namingFunction) {
+      opts.FSName = this.namingFunction(opts);
+    }
+
+    result.path = `${this.storagePath(result)}${nodePath.sep}${
+      opts.FSName
+    }${extensionWithDot}`;
+    result = Object.assign(result, this._dataToSchema(result));
+
+    if (this.onBeforeUploadAsync && helpers.isFunction(this.onBeforeUploadAsync)) {
+      ctx = Object.assign(
+        {
+          file: opts.file,
+        },
+        {
+          chunkId: opts.chunkId,
+          userId: result.userId,
+          async userAsync() {
+            if (Meteor.users && result.userId) {
+              return await Meteor.users.findOne(result.userId);
+            }
+            return null;
+          },
+          eof: opts.eof,
+        }
+      );
+      const isUploadAllowed = await this.onBeforeUploadAsync.call(ctx, result);
+
+      if (isUploadAllowed !== true) {
+        throw new Meteor.Error(
+          403,
+          helpers.isString(isUploadAllowed)
+            ? isUploadAllowed
+            : '@onBeforeUpload() returned false'
+        );
+      } else {
+        if (
+          opts.___s === true &&
+          this.onInitiateUpload &&
+          helpers.isFunction(this.onInitiateUpload)
+        ) {
+          this.onInitiateUpload.call(ctx, result);
+        }
+      }
+    } else if (
+      opts.___s === true &&
+      this.onInitiateUpload &&
+      helpers.isFunction(this.onInitiateUpload)
+    ) {
+      ctx = Object.assign(
+        {
+          file: opts.file,
+        },
+        {
+          chunkId: opts.chunkId,
+          userId: result.userId,
+          async userAsync() {
+            if (Meteor.users && result.userId) {
+              return await Meteor.users.findOneAsync(result.userId);
             }
             return null;
           },
@@ -2412,7 +2539,6 @@ class FilesCollection extends FilesCollectionCore {
         stats = await fs.promises.stat(vRef.path);
       } catch (statErr){
         if (statErr) {
-          console.log('statErr', statErr);
           return this._404(http);
         }
       }

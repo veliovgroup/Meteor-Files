@@ -16,6 +16,118 @@ describe('FilesCollection Constructor', function() {
 
 
 describe('FilesCollection', () => {
+  describe('#_prepareUpload', () => {
+    let filesCollection;
+    let opts;
+    let userId;
+    let transport;
+    let namingFunctionStub;
+    let onBeforeUploadStub;
+    let onInitiateUploadStub;
+
+    before(() =>{
+      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUpload', namingFunction: () => {}, onBeforeUpload: () => {}, onInitiateUpload: () => {}});
+    });
+
+    beforeEach(() => {
+      opts = {
+        file: {
+          name: 'testFile',
+          meta: {},
+        },
+        fileId: '123',
+      };
+      userId = 'user1';
+      transport = 'http';
+
+      // Stubbing the namingFunction method
+      namingFunctionStub = sinon.stub(filesCollection, 'namingFunction');
+      namingFunctionStub.returns('newName');
+
+      // Stubbing the onBeforeUpload method
+      onBeforeUploadStub = sinon.stub(filesCollection, 'onBeforeUpload');
+      onBeforeUploadStub.returns(true);
+
+      // Stubbing the onInitiateUpload method
+      onInitiateUploadStub = sinon.stub(filesCollection, 'onInitiateUpload');
+    });
+
+    afterEach(() => {
+      // Restore the stubbed methods after each test
+      sinon.restore();
+    });
+
+    it('should prepare upload successfully', () => {
+      const { result, opts: newOpts } = filesCollection._prepareUpload(opts, userId, transport);
+
+      expect(result).to.be.an('object');
+      expect(newOpts).to.be.an('object');
+      expect(namingFunctionStub.calledOnce).to.be.true;
+      expect(onBeforeUploadStub.calledOnce).to.be.true;
+      expect(onInitiateUploadStub.called).to.be.false;
+    });
+  });
+
+  describe('#_prepareUploadAsync', () => {
+    let filesCollection;
+    let opts;
+    let userId;
+    let transport;
+    let namingFunctionStub;
+    let onBeforeUploadAsyncStub;
+    let onInitiateUploadStub;
+
+    before(() =>{
+      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUploadAsync', namingFunction: () => {}, onBeforeUploadAsync: async () => {}, onInitiateUpload: async () => {}});
+    });
+
+    beforeEach(() => {
+      opts = {
+        file: {
+          name: 'testFile',
+          meta: {},
+        },
+        fileId: '123',
+      };
+      userId = 'user1';
+      transport = 'http';
+
+      // Stubbing the namingFunction method
+      namingFunctionStub = sinon.stub(filesCollection, 'namingFunction');
+      namingFunctionStub.returns('newName');
+
+      // Stubbing the onBeforeUpload method
+      onBeforeUploadAsyncStub = sinon.stub(filesCollection, 'onBeforeUploadAsync');
+      onBeforeUploadAsyncStub.resolves(true);
+
+      // Stubbing the onInitiateUpload method
+      onInitiateUploadStub = sinon.stub(filesCollection, 'onInitiateUpload');
+    });
+
+    afterEach(() => {
+      // Restore the stubbed methods after each test
+      sinon.restore();
+    });
+
+    it('should prepare upload successfully', async () => {
+      const { result, opts: newOpts } = await  filesCollection._prepareUploadAsync(opts, userId, transport);
+
+      expect(result).to.be.an('object');
+      expect(newOpts).to.be.an('object');
+      expect(namingFunctionStub.calledOnce).to.be.true;
+      expect(onBeforeUploadAsyncStub.calledOnce).to.be.true;
+      expect(onInitiateUploadStub.called).to.be.false;
+    });
+
+    it('should return the same result and opts as the sync version', async () => {
+      const { result, opts: newOpts } = await  filesCollection._prepareUploadAsync(opts, userId, transport);
+      const { result: resultSync, opts: newOptsSync } = filesCollection._prepareUpload(opts, userId, transport);
+
+      expect(result).to.deep.equal(resultSync);
+      expect(newOpts).to.deep.equal(newOptsSync);
+    });
+  });
+
   describe('#addFileAsync', () => {
     let filesCollection;
     let path;
@@ -121,7 +233,6 @@ describe('FilesCollection', () => {
       }
     });
   });
-
 
   describe('#download', () => {
     let filesCollection;
