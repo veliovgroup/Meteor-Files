@@ -161,6 +161,7 @@ class FilesCollection extends FilesCollectionCore {
         onAfterRemove: this.onAfterRemove,
         onAfterRemoveAsync: this.onAfterRemoveAsync,
         onAfterUpload: this.onAfterUpload,
+        onAfterUploadAsync: this.onAfterUploadAsync,
         onBeforeRemove: this.onBeforeRemove,
         onBeforeUpload: this.onBeforeUpload,
         onBeforeUploadAsync: this.onBeforeUploadAsync,
@@ -286,6 +287,10 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isFunction(this.onAfterUpload)) {
       this.onAfterUpload = false;
+    }
+
+    if (!helpers.isFunction(this.onAfterUploadAsync)) {
+      this.onAfterUploadAsync = false;
     }
 
     if (!helpers.isBoolean(this.disableUpload)) {
@@ -416,6 +421,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.onAfterRemove, Match.OneOf(false, Function));
     check(this.onAfterRemoveAsync, Match.OneOf(false, Function));
     check(this.onAfterUpload, Match.OneOf(false, Function));
+    check(this.onAfterUploadAsync, Match.OneOf(false, Function));
     check(this.disableUpload, Boolean);
     check(this.integrityCheck, Boolean);
     check(this.onBeforeRemove, Match.OneOf(false, Function));
@@ -1491,6 +1497,58 @@ class FilesCollection extends FilesCollectionCore {
         );
       }
     });
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _finishUploadAsync
+   * @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
+   * @returns {Promise<undefined>}
+   */
+  async _finishUploadAsync(result, opts) {
+    this._debug(
+      `[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`
+    );
+    await fs.promises.chmod(result.path, this.permissions);
+    result.type = this._getMimeType(opts.file);
+    result.public = this.public;
+    this._updateFileTypes(result);
+
+    let _id;
+    try {
+      _id =  await this.collection.insertAsync(helpers.clone(result));
+    } catch (colInsert) {
+      this._debug(
+        '[FilesCollection] [Upload] [_finishUpload] [insert] Error:',
+        colInsert
+      );
+      throw colInsert;
+    }
+
+    try {
+      await this._preCollection.updateAsync(
+        { _id: opts.fileId },
+        { $set: { isFinished: true } });
+    } catch (preUpdateError) {
+      if (preUpdateError) {
+        this._debug(
+          '[FilesCollection] [Upload] [_finishUpload] [update] Error:',
+          preUpdateError
+        );
+        throw preUpdateError;
+      }
+    }
+
+    result._id = _id;
+
+    this._debug(
+      `[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`
+    );
+
+    this.onAfterUploadAsync && (await this.onAfterUploadAsync.call(this, result));
+
+    this.emit('afterUpload', result);
   }
 
   /**

@@ -128,6 +128,180 @@ describe('FilesCollection', () => {
     });
   });
 
+  describe('#_finishUpload', () => {
+    let filesCollection;
+    let result;
+    let opts;
+    let cb;
+    let chmodStub;
+    let insertStub;
+    let updateStub;
+    let onAfterUploadSpy;
+
+    before(() => {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-finishUpload'});
+    });
+
+    beforeEach(() => {
+      result = { path: '/path/to/file' };
+      opts = { file: { name: 'testFile', meta: {} } };
+      cb = sinon.stub();
+
+      // Stubbing the fs.chmod method
+      chmodStub = sinon.stub(fs, 'chmod');
+      chmodStub.callsFake((path, permissions, callback) => callback());
+
+      // Stubbing the collection.insert method
+      insertStub = sinon.stub(filesCollection.collection, 'insert');
+      insertStub.callsFake((doc, callback) => callback(null, '123'));
+
+      // Stubbing the _preCollection.update method
+      updateStub = sinon.stub(filesCollection._preCollection, 'update');
+      updateStub.callsFake((query, update, callback) => callback());
+
+      // Creating a spy for the onAfterUpload hook
+      onAfterUploadSpy = sinon.spy();
+      filesCollection.onAfterUpload = onAfterUploadSpy;
+    });
+
+    afterEach(() => {
+      // Restore the stubbed methods after each test
+      sinon.restore();
+    });
+
+    it('should finish upload successfully', () => {
+      filesCollection._finishUpload(result, opts, cb);
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.calledOnce).to.be.true;
+      expect(cb.calledOnce).to.be.true;
+      expect(cb.calledWith(null, result)).to.be.true;
+    });
+
+    it('should call callback with a single error argument if insert fails', () => {
+      const error = new Meteor.Error(500, 'Insert failed');
+      insertStub.callsFake((doc, callback) => { callback(error);});
+
+      filesCollection._finishUpload(result, opts, cb);
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.called).to.be.false;
+      expect(cb.calledOnce).to.be.true;
+      expect(cb.calledWith(error)).to.be.true;
+    });
+
+    it('should call callback with a single error argument if update fails', () => {
+      const error = new Meteor.Error(500, 'Update failed');
+      updateStub.callsFake((query, update, callback) => { callback(error);});
+
+      filesCollection._finishUpload(result, opts, cb);
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.calledOnce).to.be.true;
+      expect(cb.calledOnce).to.be.true;
+      expect(cb.calledWith(error)).to.be.true;
+    });
+
+    it('should call onAfterUpload hook if it is a function', () => {
+      filesCollection._finishUpload(result, opts, cb);
+
+      expect(onAfterUploadSpy.calledOnce).to.be.true;
+      expect(onAfterUploadSpy.calledWith(result)).to.be.true;
+    });
+  });
+
+  describe('#_finishUploadAsync', () => {
+    let filesCollection;
+    let result;
+    let opts;
+    let chmodStub;
+    let insertStub;
+    let updateStub;
+    let onAfterUploadAsyncSpy;
+
+    before(() => {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-finishUploadAsync'});
+    });
+
+    beforeEach(() => {
+      result = { path: '/path/to/file' };
+      opts = { file: { name: 'testFile', meta: {} } };
+
+      // Stubbing the fs.promises.chmod method
+      chmodStub = sinon.stub(fs.promises, 'chmod');
+      chmodStub.resolves();
+
+      // Stubbing the collection.insertAsync method
+      insertStub = sinon.stub(filesCollection.collection, 'insertAsync');
+      insertStub.resolves('123');
+
+      // Stubbing the _preCollection.updateAsync method
+      updateStub = sinon.stub(filesCollection._preCollection, 'updateAsync');
+      updateStub.resolves();
+
+      // Creating a spy for the onAfterUpload hook
+      onAfterUploadAsyncSpy = sinon.spy();
+      filesCollection.onAfterUploadAsync = onAfterUploadAsyncSpy;
+    });
+
+    afterEach(() => {
+      // Restore the stubbed methods after each test
+      sinon.restore();
+    });
+
+    it('should finish upload successfully', async () => {
+      await filesCollection._finishUploadAsync(result, opts);
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.calledOnce).to.be.true;
+    });
+
+    it('should throw an error if insert fails', async () => {
+      const error = new Meteor.Error(500, 'Insert failed');
+      insertStub.throws(error);
+
+      let errorThrown;
+      try {
+        await filesCollection._finishUploadAsync(result, opts);
+      } catch (e) {
+        errorThrown = e;
+      }
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.called).to.be.false;
+      expect(errorThrown).to.be.instanceOf(Meteor.Error);
+    });
+
+    it('should throw an error if update fails', async () => {
+      const error = new Meteor.Error(500, 'Update failed');
+      updateStub.throws(error);
+
+      let errorThrown;
+      try {
+        await filesCollection._finishUploadAsync(result, opts);
+      } catch (e) {
+        errorThrown = e;
+      }
+
+      expect(chmodStub.calledOnce).to.be.true;
+      expect(insertStub.calledOnce).to.be.true;
+      expect(updateStub.calledOnce).to.be.true;
+      expect(errorThrown).to.be.instanceOf(Meteor.Error);
+    });
+
+    it('should call onAfterUpload hook if it is a function', async () => {
+      await filesCollection._finishUploadAsync(result, opts);
+
+      expect(onAfterUploadAsyncSpy.calledOnce).to.be.true;
+      expect(onAfterUploadAsyncSpy.calledWith(result)).to.be.true;
+    });
+  });
+
   describe('#addFileAsync', () => {
     let filesCollection;
     let path;
