@@ -12,88 +12,88 @@ export default class FilesCollectionCore extends EventEmitter {
 
   static schema = {
     _id: {
-      type: String,
+      type: String
     },
     size: {
-      type: Number,
+      type: Number
     },
     name: {
-      type: String,
+      type: String
     },
     type: {
-      type: String,
+      type: String
     },
     path: {
-      type: String,
+      type: String
     },
     isVideo: {
-      type: Boolean,
+      type: Boolean
     },
     isAudio: {
-      type: Boolean,
+      type: Boolean
     },
     isImage: {
-      type: Boolean,
+      type: Boolean
     },
     isText: {
-      type: Boolean,
+      type: Boolean
     },
     isJSON: {
-      type: Boolean,
+      type: Boolean
     },
     isPDF: {
-      type: Boolean,
+      type: Boolean
     },
     extension: {
       type: String,
-      optional: true,
+      optional: true
     },
     ext: {
       type: String,
-      optional: true,
+      optional: true
     },
     extensionWithDot: {
       type: String,
-      optional: true,
+      optional: true
     },
     mime: {
       type: String,
-      optional: true,
+      optional: true
     },
     'mime-type': {
       type: String,
-      optional: true,
+      optional: true
     },
     _storagePath: {
-      type: String,
+      type: String
     },
     _downloadRoute: {
-      type: String,
+      type: String
     },
     _collectionName: {
-      type: String,
+      type: String
     },
     public: {
       type: Boolean,
-      optional: true,
+      optional: true
     },
     meta: {
       type: Object,
       blackbox: true,
-      optional: true,
+      optional: true
     },
     userId: {
       type: String,
-      optional: true,
+      optional: true
     },
     updatedAt: {
       type: Date,
-      optional: true,
+      optional: true
     },
     versions: {
       type: Object,
-      blackbox: true,
-    },
+      blackbox: true
+    }
   };
 
   /*
@@ -190,11 +190,11 @@ export default class FilesCollectionCore extends EventEmitter {
           path: data.path,
           size: data.size,
           type: data.type,
-          extension: data.extension,
-        },
+          extension: data.extension
+        }
       },
       _downloadRoute: data._downloadRoute || this.downloadRoute,
-      _collectionName: data._collectionName || this.collectionName,
+      _collectionName: data._collectionName || this.collectionName
     };
 
     //Optional fileId
