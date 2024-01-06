@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import fs from 'fs';
 import sinon from 'sinon';
 import { FilesCollection } from '../server';
+import http from 'http';
 
 describe('FilesCollection Constructor', function() {
   describe('constructor', function() {
@@ -546,6 +547,83 @@ describe('FilesCollection', () => {
     });
   });
 
+  describe('#load()', function() {
+    let filesCollection;
+    const testdata = 'test data';
+    let port;
+
+    before(function() {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-load'});
+
+      const server = http.createServer((req, res) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end(testdata);
+      });
+
+      server.listen(undefined, '127.0.0.1', () => {
+        port = server.address().port;
+      });
+    });
+
+    beforeEach(function() {
+    });
+
+    afterEach(async function() {
+      await filesCollection.collection.removeAsync({});
+    });
+
+    it('should download file over HTTP, write stream to FS, and add to FilesCollection Collection', function(done) {
+      const url = 'http://127.0.0.1:' + port;
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1', timeout: 360000 };
+
+      filesCollection.load(url, opts, () => {
+        const file = filesCollection.collection.findOne({ _id: 'file1' });
+        expect(file).to.be.an('object');
+        done();
+      }, true);
+    });
+  });
+
+  describe('#loadAsync()', function() {
+    let filesCollection;
+    const testdata = 'test data';
+    let port;
+
+    before(function() {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-loadAsync'});
+
+      const server = http.createServer((req, res) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end(testdata);
+      });
+
+      server.listen(undefined, '127.0.0.1', () => {
+        port = server.address().port;
+      });
+    });
+
+    beforeEach(function() {
+    });
+
+    afterEach(async function() {
+      await filesCollection.collection.removeAsync({});
+    });
+
+    it('should download file over HTTP, write stream to FS, and add to FilesCollection Collection', async function() {
+      const url = 'http://127.0.0.1:' + port;
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1', timeout: 360000 };
+
+      const result = await filesCollection.loadAsync(url, opts, true);
+
+      expect(result).to.be.an('object');
+
+      const file = await filesCollection.collection.findOneAsync({ _id: result._id });
+      expect(file).to.be.an('object');
+    });
+  });
+
   describe('#addFileAsync', () => {
     let filesCollection;
     let path;
@@ -654,7 +732,7 @@ describe('FilesCollection', () => {
 
   describe('#download', () => {
     let filesCollection;
-    let http;
+    let httpObj;
     let version;
     let fileRef;
     let statStub;
@@ -666,7 +744,7 @@ describe('FilesCollection', () => {
     });
 
     beforeEach(() => {
-      http = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
+      httpObj = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
 
       version = 'original';
       fileRef = {
@@ -695,7 +773,7 @@ describe('FilesCollection', () => {
     });
 
     it('should download a file successfully', () => {
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -704,7 +782,7 @@ describe('FilesCollection', () => {
 
     it('should return 404 if file does not exist', () => {
       statStub.yields(null, { isFile: () => false });
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.calledOnce).to.be.true;
@@ -714,7 +792,7 @@ describe('FilesCollection', () => {
     it('should call downloadCallback if it is a function', () => {
       const downloadCallback = sinon.stub().returns(true);
       filesCollection.downloadCallback = downloadCallback;
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -724,7 +802,7 @@ describe('FilesCollection', () => {
 
     it('should not call downloadCallback if it is not a function', () => {
       filesCollection.downloadCallback = null;
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -734,7 +812,7 @@ describe('FilesCollection', () => {
     it('should return 404 if downloadCallback returns false', () => {
       const downloadCallback = sinon.stub().returns(false);
       filesCollection.downloadCallback = downloadCallback;
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.calledOnce).to.be.true;
@@ -746,7 +824,7 @@ describe('FilesCollection', () => {
     it('should call interceptDownload if it is a function, that returns true', () => {
       const interceptDownload = sinon.stub().returns(true);
       filesCollection.interceptDownload = interceptDownload;
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.called).to.be.false;
@@ -759,7 +837,7 @@ describe('FilesCollection', () => {
     it('should proceed if interceptDownload xis a function, that returns false', () => {
       const interceptDownload = sinon.stub().returns(false);
       filesCollection.interceptDownload = interceptDownload;
-      filesCollection.download(http, version, fileRef);
+      filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -772,7 +850,7 @@ describe('FilesCollection', () => {
 
   describe('#downloadAsync', () => {
     let filesCollection;
-    let http;
+    let httpObj;
     let version;
     let fileRef;
     let statStub;
@@ -784,7 +862,7 @@ describe('FilesCollection', () => {
     });
 
     beforeEach(() => {
-      http = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
+      httpObj = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
 
       version = 'original';
       fileRef = {
@@ -813,7 +891,7 @@ describe('FilesCollection', () => {
     });
 
     it('should download a file successfully', async () => {
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -822,7 +900,7 @@ describe('FilesCollection', () => {
 
     it('should return 404 if file does not exist', async () => {
       statStub.resolves({ isFile: () => false });
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.calledOnce).to.be.true;
@@ -832,7 +910,7 @@ describe('FilesCollection', () => {
     it('should call downloadCallbackAsync if it is a function', async () => {
       const downloadCallbackAsync = sinon.stub().returns(new Promise((resolve) => resolve(true)));
       filesCollection.downloadCallbackAsync = downloadCallbackAsync;
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -842,7 +920,7 @@ describe('FilesCollection', () => {
 
     it('should not call downloadCallbackAsync if it is not a function', async () => {
       filesCollection.downloadCallbackAsync = null;
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -852,7 +930,7 @@ describe('FilesCollection', () => {
     it('should return 404 if downloadCallbackAsync returns false', async () => {
       const downloadCallbackAsync = sinon.stub().returns(new Promise((resolve) => resolve(false)));
       filesCollection.downloadCallbackAsync = downloadCallbackAsync;
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.calledOnce).to.be.true;
@@ -864,7 +942,7 @@ describe('FilesCollection', () => {
     it('should call interceptDownloadAsync if it is a function, that returns true', async () => {
       const interceptDownloadAsync = sinon.stub().resolves(true);
       filesCollection.interceptDownloadAsync = interceptDownloadAsync;
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.called).to.be.false;
@@ -877,7 +955,7 @@ describe('FilesCollection', () => {
     it('should proceed if interceptDownload is a function, that returns false', async () => {
       const interceptDownloadAsync = sinon.stub().resolves(false);
       filesCollection.interceptDownloadAsync = interceptDownloadAsync;
-      await filesCollection.downloadAsync(http, version, fileRef);
+      await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;

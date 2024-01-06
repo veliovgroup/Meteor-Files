@@ -14,6 +14,13 @@ import AbortController from 'abort-controller';
 import fs from 'fs';
 import nodeQs from 'querystring';
 import nodePath from 'path';
+// in Node.js 14, there is no promises version of stream
+import { pipeline as pipelineCallback } from 'stream';
+import { promisify } from 'util';
+// change to this in "loadAsync" when Meteor supports Node.js 15 upwards
+//import nodeStream from 'stream/promises';
+
+const pipeline = promisify(pipelineCallback);
 
 /**
  * @const {Object} bound  - Meteor.bindEnvironment (Fiber wrapper)
@@ -1570,7 +1577,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {Object} opts.meta - File additional meta-data
    * @param {String} opts.userId - UserId, default *null*
    * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
-   * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
+   * @param {Boolean} proceedAfterUpload - Proceed onAfterUploadAsync hook
    * @summary Write buffer to FS and add to FilesCollection Collection
    * @throws {Meteor.Error} If there is an error writing the file or inserting the document
    * @returns {Promise<FileRef>} Instance
@@ -1579,6 +1586,11 @@ class FilesCollection extends FilesCollectionCore {
     this._debug('[FilesCollection] [writeAsync()]');
     let opts = _opts;
     let proceedAfterUpload = _proceedAfterUpload;
+
+    if (helpers.isBoolean(opts)) {
+      proceedAfterUpload = opts;
+      opts = {};
+    }
 
     check(opts, Match.Optional(Object));
     check(proceedAfterUpload, Match.Optional(Boolean));
@@ -1650,7 +1662,7 @@ class FilesCollection extends FilesCollectionCore {
         if (this.onAfterUploadAsync){
           await this.onAfterUploadAsync.call(this, fileRef);
         }
-        this.emit('afterUpload', fileRef);
+        this.emit('afterUploadAsync', fileRef);
       }
       this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
     } catch (insertErr) {
@@ -1720,7 +1732,6 @@ class FilesCollection extends FilesCollectionCore {
 
     const storeResult = (result, cb) => {
       result._id = fileId;
-
       this.collection.insert(result, (error, _id) => {
         if (error) {
           cb && cb(error);
@@ -1846,6 +1857,138 @@ class FilesCollection extends FilesCollectionCore {
     });
 
     return this;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name loadAsync
+   * @param {String} url - URL to file
+   * @param {Object} [opts] - Object with file-data
+   * @param {Object} opts.headers - HTTP headers to use when requesting the file
+   * @param {String} opts.name - File name, alias: `fileName`
+   * @param {String} opts.type - File mime-type
+   * @param {Object} opts.meta - File additional meta-data
+   * @param {String} opts.userId - UserId, default *null*
+   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
+   * @param {Number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
+   * @param {Function} callback - function(error, fileObj){...}
+   * @param {Boolean} [proceedAfterUpload] - Proceed onAfterUploadAsync hook
+   * @summary Download file over HTTP, write stream to FS, and add to FilesCollection Collection
+   * @returns {Promise<fileObj>} File Object
+   */
+  async loadAsync(url, _opts = {}, _proceedAfterUpload = false) {
+    this._debug(`[FilesCollection] [loadAsync(${url}, ${JSON.stringify(_opts)}, callback)]`);
+    let opts = _opts;
+    let proceedAfterUpload = _proceedAfterUpload;
+
+    if (helpers.isBoolean(_opts)) {
+      proceedAfterUpload = _opts;
+      opts = {};
+    }
+
+    check(url, String);
+    check(opts, Match.Optional(Object));
+    check(proceedAfterUpload, Match.Optional(Boolean));
+
+    if (!helpers.isObject(opts)) {
+      opts = {
+        timeout: 360000
+      };
+    }
+
+    if (!opts.timeout) {
+      opts.timeout = 360000;
+    }
+
+    const fileId = (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || Random.id();
+    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const pathParts = url.split('/');
+    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
+
+    const {extension, extensionWithDot} = this._getExt(fileName);
+    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+
+    // this will be the resolved fileRef
+    let fileRef;
+
+    // storeResult is a function that will be called after the file is downloaded and stored in the database
+    // this might throw an error from collection.insertAsync or collection.findOneAsync
+    const storeResult = async (result) => {
+      result._id = fileId;
+      const _id  = await this.collection.insertAsync(result);
+
+      fileRef = await this.collection.findOneAsync(_id);
+      if (proceedAfterUpload === true) {
+        if (this.onAfterUpload){
+          await this.onAfterUploadAsync.call(this, fileRef);
+        }
+        this.emit('afterUploadAsync', fileRef);
+      }
+      this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
+    };
+
+    // check if the file already exists, otherwise create it
+    let mustCreateFileFirst = false;
+    try {
+      const stats = await fs.promises.stat(opts.path);
+      if (!stats.isFile()) {
+        mustCreateFileFirst = true;
+      }
+    } catch (statError) {
+      mustCreateFileFirst = true;
+    }
+    if(mustCreateFileFirst) {
+      const paths = opts.path.split('/');
+      paths.pop();
+      fs.mkdirSync(paths.join('/'), { recursive: true });
+      fs.writeFileSync(opts.path, '');
+    }
+
+    const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
+    const controller = new AbortController();
+
+    try {
+      const res = await fetch(url, {
+        headers: opts.headers || {},
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        throw new Error(`Unexpected response ${res.statusText}`);
+      }
+
+      await pipeline(res.body, wStream);
+
+      const result = this._dataToSchema({
+        name: fileName,
+        path: opts.path,
+        meta: opts.meta,
+        type: opts.type || res.headers.get('content-type') || this._getMimeType({path: opts.path}),
+        size: opts.size || parseInt(res.headers.get('content-length') || 0),
+        userId: opts.userId,
+        extension
+      });
+
+      if (!result.size) {
+        const newStats = await fs.promises.stat(opts.path);
+        result.versions.original.size = (result.size = newStats.size);
+        await storeResult(result);
+      } else {
+        await storeResult(result);
+      }
+      res.body.pipe(wStream);
+    } catch(error){
+      this._debug(`[FilesCollection] [loadAsync] [fetch(${url})] Error:`, error);
+
+      if (fs.existsSync(opts.path)) {
+        await fs.promises.unlink(opts.path);
+      }
+
+      throw error;
+    }
+
+    return fileRef;
   }
 
   /**
