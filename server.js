@@ -1623,7 +1623,6 @@ class FilesCollection extends FilesCollectionCore {
     } catch (statError) {
       mustCreateFileFirst = true;
     }
-
     if (mustCreateFileFirst) {
       const paths = opts.path.split('/');
       paths.pop();

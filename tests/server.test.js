@@ -425,12 +425,13 @@ describe('FilesCollection', () => {
       collectionMock = sinon.mock(filesCollection.collection);
     });
 
-    afterEach(function() {
+    afterEach(async function() {
       fsPromiseStatStub.restore();
       fsPromisesMkdirStub.restore();
       fsPromiseWriteFileStub.restore();
       fsCreateWriteStreamStub.restore();
       collectionMock.restore();
+      await filesCollection.collection.removeAsync({});
     });
 
     it('should write buffer to FS and add to FilesCollection Collection', async function() {
@@ -503,6 +504,45 @@ describe('FilesCollection', () => {
         expect(e).to.be.instanceOf(Error);
         done();
       });
+    });
+
+    it('actually writes the file to the FS and to the db (no mocking)', async function() {
+      const testData = 'test data';
+      const buffer = Buffer.from(testData);
+
+      const opts = { path: '/tmp/test.txt', name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+
+      sinon.stub(filesCollection, 'storagePath').returns('/tmp');
+      fsPromiseStatStub.restore();
+      fsPromiseWriteFileStub.restore();
+      fsCreateWriteStreamStub.restore();
+      fsPromisesMkdirStub.restore();
+
+      const result = await filesCollection.writeAsync(buffer, opts, true);
+
+      const file = await filesCollection.collection.findOneAsync({ _id: 'file1' });
+      expect(file).to.be.an('object');
+      expect(file).to.have.property('_id', 'file1');
+      expect(file).to.have.property('name', 'test.txt');
+      expect(file).to.have.property('size', 9);
+      expect(file).to.have.property('type', 'text/plain');
+      expect(file).to.have.property('extension', 'txt');
+      expect(file).to.have.property('path');
+      expect(file).to.have.property('versions');
+      expect(file.versions).to.have.property('original');
+      expect(file.versions.original).to.have.property('path');
+      expect(file.versions.original).to.have.property('size', 9);
+      expect(file.versions.original).to.have.property('type', 'text/plain');
+      expect(file.versions.original).to.have.property('extension', 'txt');
+
+      const fileOnDisk = fs.readFileSync(file.versions.original.path, 'utf8');
+      expect(fileOnDisk).to.deep.equal(testData);
+
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('_id', 'file1');
+
+      // Cleanup∏
+      await fs.promises.unlink(file.versions.original.path);
     });
   });
 
