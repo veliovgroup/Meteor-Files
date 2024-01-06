@@ -5,6 +5,7 @@ import fs from 'fs';
 import sinon from 'sinon';
 import { FilesCollection } from '../server';
 import http from 'http';
+import {Readable} from 'stream';
 
 describe('FilesCollection Constructor', function() {
   describe('constructor', function() {
@@ -963,6 +964,48 @@ describe('FilesCollection', () => {
       expect(interceptDownloadAsync.calledOnce).to.be.true;
 
       filesCollection.interceptDownloadAsync = null;
+    });
+  });
+
+  describe('#serve', function() {
+    let server;
+    let filesCollection;
+    let port;
+
+    before(function() {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-serve' });
+    });
+
+    beforeEach(async function() {
+      const path = '/tmp/testfile.txt';
+      const content = 'testfile';
+      server = http.createServer((req, res) => {
+        const readableStream = Readable.from(content);
+        const fileRef = { name: 'testfile.txt' };
+        const vRef = { name: 'testfile.txt', size: Buffer.byteLength(content), path };
+
+        filesCollection.serve({request: req, response: res}, fileRef, vRef, 'original', readableStream);
+      });
+      server.listen(0);
+
+      port = server.address().port;
+    });
+
+    afterEach(function() {
+      server.close();
+    });
+
+    it('should serve a fileRef object', function(done) {
+      http.get('http://localhost:' + port, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          expect(data).to.equal('testfile');
+          done();
+        });
+      });
     });
   });
 });

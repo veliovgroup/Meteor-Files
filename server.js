@@ -1732,6 +1732,7 @@ class FilesCollection extends FilesCollectionCore {
 
     const storeResult = (result, cb) => {
       result._id = fileId;
+
       this.collection.insert(result, (error, _id) => {
         if (error) {
           cb && cb(error);
@@ -1949,10 +1950,24 @@ class FilesCollection extends FilesCollectionCore {
     const controller = new AbortController();
 
     try {
+      let timer;
+
+      if (opts.timeout > 0) {
+        timer = Meteor.setTimeout(() => {
+          controller.abort();
+          throw new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`);
+        }, opts.timeout);
+      }
+
       const res = await fetch(url, {
         headers: opts.headers || {},
         signal: controller.signal
       });
+
+      if (timer) {
+        Meteor.clearTimeout(timer);
+        timer = null;
+      }
 
       if (!res.ok) {
         throw new Error(`Unexpected response ${res.statusText}`);
@@ -1987,6 +2002,7 @@ class FilesCollection extends FilesCollectionCore {
 
       throw error;
     }
+
 
     return fileRef;
   }
@@ -2559,7 +2575,7 @@ class FilesCollection extends FilesCollectionCore {
     let take;
     let responseType = _responseType;
 
-    if (http.params.query.download && (http.params.query.download === 'true')) {
+    if (http.params?.query?.download && (http.params.query.download === 'true')) {
       dispositionType = 'attachment; ';
     } else {
       dispositionType = 'inline; ';
@@ -2587,7 +2603,7 @@ class FilesCollection extends FilesCollectionCore {
       take = vRef.size;
     }
 
-    if (partiral || (http.params.query.play && (http.params.query.play === 'true'))) {
+    if (partiral || (http.params?.query?.play && (http.params.query.play === 'true'))) {
       reqRange = {start, end};
       if (isNaN(start) && !isNaN(end)) {
         reqRange.start = end - take;
