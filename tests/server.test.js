@@ -1,9 +1,9 @@
 /* global describe, beforeEach, it, before, afterEach, Meteor */
 
 import { expect } from 'chai';
-import { FilesCollection } from '../server';
-import sinon from 'sinon';
 import fs from 'fs';
+import sinon from 'sinon';
+import { FilesCollection } from '../server';
 
 describe('FilesCollection Constructor', function() {
   describe('constructor', function() {
@@ -299,6 +299,210 @@ describe('FilesCollection', () => {
 
       expect(onAfterUploadAsyncSpy.calledOnce).to.be.true;
       expect(onAfterUploadAsyncSpy.calledWith(result)).to.be.true;
+    });
+  });
+
+  describe('#write()', function() {
+    let filesCollection; let fsMock; let collectionMock;
+
+    before(function() {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-write'});
+    });
+
+    beforeEach(function() {
+      fsMock = sinon.mock(require('fs'));
+      collectionMock = sinon.mock(filesCollection.collection);
+    });
+
+    afterEach(function() {
+      fsMock.restore();
+      collectionMock.restore();
+    });
+
+    it('should write buffer to FS and add to FilesCollection Collection', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+      const callback = sinon.spy();
+
+      fsMock.expects('stat').yields(null, { isFile: () => true });
+      fsMock.expects('createWriteStream').returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insert').yields(null, 'file1');
+      collectionMock.expects('findOne').returns({ _id: 'file1' });
+
+      filesCollection.write(buffer, opts, callback, true);
+
+      fsMock.verify();
+      collectionMock.verify();
+      expect(callback.calledOnce).to.be.true;
+      expect(callback.calledWith(null, { _id: 'file1' })).to.be.true;
+
+      done();
+    });
+
+    it('should make all directories if not present, then write buffer to FS and then add to FilesCollection Collection', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+      const callback = sinon.spy();
+
+      fsMock.expects('stat').yields(null, { isFile: () => false });
+      fsMock.expects('mkdirSync').once();
+      fsMock.expects('writeFileSync').once();
+      fsMock.expects('createWriteStream').returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insert').yields(null, 'file1');
+      collectionMock.expects('findOne').returns({ _id: 'file1' });
+
+      filesCollection.write(buffer, opts, callback, true);
+
+      fsMock.verify();
+      collectionMock.verify();
+      expect(callback.calledOnce).to.be.true;
+      expect(callback.calledWith(null, { _id: 'file1' })).to.be.true;
+
+      done();
+    });
+
+    it('should call callback with error if file could not be written to FS', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+      const callback = sinon.spy();
+
+      fsMock.expects('stat').yields(null, { isFile: () => true });
+      fsMock.expects('createWriteStream').returns({
+        end: (_buffer, cb) => cb(new Error('Test Error'))
+      });
+
+      filesCollection.write(buffer, opts, callback, true);
+
+      fsMock.verify();
+      expect(callback.calledOnce).to.be.true;
+      expect(callback.calledWith(sinon.match.instanceOf(Error))).to.be.true;
+
+      done();
+    });
+
+    it('should call callback with error if file could not be added to FilesCollection Collection', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+      const callback = sinon.spy();
+
+      fsMock.expects('stat').yields(null, { isFile: () => true });
+      fsMock.expects('createWriteStream').returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insert').yields(new Error('Test Error'));
+
+      filesCollection.write(buffer, opts, callback, true);
+
+      fsMock.verify();
+      collectionMock.verify();
+      expect(callback.calledOnce).to.be.true;
+      expect(callback.calledWith(sinon.match.instanceOf(Error))).to.be.true;
+
+      done();
+    });
+  });
+
+  describe('#writeAsync()', function() {
+    let filesCollection; let collectionMock;
+    let fsPromiseStatStub; let fsPromisesMkdirStub; let fsPromiseWriteFileStub; let fsCreateWriteStreamStub;
+
+    before(function() {
+      filesCollection = new FilesCollection({ collectionName: 'testserver-writeAsync'});
+    });
+
+    beforeEach(function() {
+      fsPromiseStatStub = sinon.stub(fs.promises, 'stat');
+      fsPromisesMkdirStub = sinon.stub(fs.promises, 'mkdir');
+      fsPromiseWriteFileStub = sinon.stub(fs.promises, 'writeFile');
+      fsCreateWriteStreamStub = sinon.stub(fs, 'createWriteStream');
+      collectionMock = sinon.mock(filesCollection.collection);
+    });
+
+    afterEach(function() {
+      fsPromiseStatStub.restore();
+      fsPromisesMkdirStub.restore();
+      fsPromiseWriteFileStub.restore();
+      fsCreateWriteStreamStub.restore();
+      collectionMock.restore();
+    });
+
+    it('should write buffer to FS and add to FilesCollection Collection', async function() {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+
+      fsPromiseStatStub.resolves({ isFile: () => true });
+      fsPromiseWriteFileStub.resolves();
+      fsCreateWriteStreamStub.returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insertAsync').resolves('file1');
+      collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
+
+      const result = await filesCollection.writeAsync(buffer, opts, true);
+
+      collectionMock.verify();
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('_id', 'file1');
+    });
+
+    it('should make all directories if not present, then write buffer to FS and then add to FilesCollection Collection', async function() {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+
+      fsPromiseStatStub.resolves({ isFile: () => true });
+      fsPromiseWriteFileStub.resolves();
+      fsCreateWriteStreamStub.returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insertAsync').resolves('file1');
+      collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
+
+      const result = await filesCollection.writeAsync(buffer, opts, true);
+
+      collectionMock.verify();
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('_id', 'file1');
+    });
+
+    it('should call callback with error if file could not be written to FS', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+
+      fsPromiseStatStub.resolves({ isFile: () => true });
+      fsCreateWriteStreamStub.returns({
+        end: (_buffer, cb) => cb(new Error('Test Error'))
+      });
+
+      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
+        expect(e).to.be.instanceOf(Error);
+        done();
+      });
+    });
+
+    it('should call callback with error if file could not be added to FilesCollection Collection', function(done) {
+      const buffer = Buffer.from('test data');
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+
+      fsPromiseStatStub.resolves({ isFile: () => true });
+      fsCreateWriteStreamStub.returns({
+        end: (_buffer, cb) => cb(null)
+      });
+
+      collectionMock.expects('insertAsync').rejects(new Error('Test Error'));
+
+      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
+        expect(e).to.be.instanceOf(Error);
+        done();
+      });
     });
   });
 

@@ -1558,6 +1558,110 @@ class FilesCollection extends FilesCollectionCore {
     return this;
   }
 
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name writeAsync
+   * @param {Buffer} buffer - Binary File's Buffer
+   * @param {Object} opts - Object with file-data
+   * @param {String} opts.name - File name, alias: `fileName`
+   * @param {String} opts.type - File mime-type
+   * @param {Object} opts.meta - File additional meta-data
+   * @param {String} opts.userId - UserId, default *null*
+   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
+   * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
+   * @summary Write buffer to FS and add to FilesCollection Collection
+   * @throws {Meteor.Error} If there is an error writing the file or inserting the document
+   * @returns {Promise<FileRef>} Instance
+   */
+  async writeAsync(buffer, _opts = {}, _proceedAfterUpload) {
+    this._debug('[FilesCollection] [writeAsync()]');
+    let opts = _opts;
+    let proceedAfterUpload = _proceedAfterUpload;
+
+    check(opts, Match.Optional(Object));
+    check(proceedAfterUpload, Match.Optional(Boolean));
+
+    opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, 'a');
+    const fileId = opts.fileId || Random.id();
+    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
+
+    const {extension, extensionWithDot} = this._getExt(fileName);
+
+    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+    opts.type = this._getMimeType(opts);
+    if (!helpers.isObject(opts.meta)) {
+      opts.meta = {};
+    }
+
+    if (!helpers.isNumber(opts.size)) {
+      opts.size = buffer.length;
+    }
+
+    const result = this._dataToSchema({
+      name: fileName,
+      path: opts.path,
+      meta: opts.meta,
+      type: opts.type,
+      size: opts.size,
+      userId: opts.userId,
+      extension
+    });
+
+    result._id = fileId;
+
+    let fileRef;
+
+    let mustCreateFileFirst = false;
+    try {
+      const stats = await fs.promises.stat(opts.path);
+      if (!stats.isFile()) {
+        mustCreateFileFirst = true;
+      }
+    } catch (statError) {
+      mustCreateFileFirst = true;
+    }
+
+    if (mustCreateFileFirst) {
+      const paths = opts.path.split('/');
+      paths.pop();
+      await fs.promises.mkdir(paths.join('/'), { recursive: true });
+      await fs.promises.writeFile(opts.path, '');
+    }
+
+    const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
+
+    await new Promise((resolve, reject) => {
+      stream.end(buffer, (streamErr) => {
+        if (streamErr) {
+          reject(streamErr);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    try {
+      const _id = await this.collection.insertAsync(result);
+      fileRef = await this.collection.findOneAsync(_id);
+
+      if (proceedAfterUpload === true) {
+        if (this.onAfterUploadAsync){
+          await this.onAfterUploadAsync.call(this, fileRef);
+        }
+        this.emit('afterUpload', fileRef);
+      }
+      this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
+    } catch (insertErr) {
+      this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+      throw new Meteor.Error('writeAsync', insertErr);
+    }
+
+    return fileRef;
+  }
+
   /**
    * @locus Server
    * @memberOf FilesCollection
