@@ -8,6 +8,7 @@
     "node": true,
     "browser": false
   },
+  "ignorePatterns": ["worker*.js"],
   "globals": {
     "Package": true,
     "Tinytest": true,

@@ -1,7 +1,9 @@
 {
     "scripts": {
         "test:tiny": "meteor test-packages ./",
-        "test:mocha": "meteor test-packages ./ --driver-package meteortesting:mocha"
+        "test:mocha": "meteor test-packages ./ --driver-package meteortesting:mocha",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
     },
     "dependencies": {
         "chai": "^4.3.10",
