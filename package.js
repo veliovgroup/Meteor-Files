@@ -28,8 +28,6 @@ Package.onTest((api) => {
 Npm.depends({
   'chai': '4.2.0',
   'sinon': '7.5.0',
-  '@sinonjs/fake-timers': '10.3.0',
-  'supports-color': '6.1.0',
   'diff': '4.0.1',
   'fs-extra': '8.1.0',
   eventemitter3: '4.0.7',

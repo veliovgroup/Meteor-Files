@@ -203,8 +203,7 @@ export default class FilesCollectionCore extends EventEmitter {
     }
 
     this._updateFileTypes(ds);
-    ds._storagePath =
-      data._storagePath || this.storagePath(Object.assign({}, data, ds));
+    ds._storagePath = data._storagePath || this.storagePath(Object.assign({}, data, ds));
     return ds;
   }
 
@@ -218,15 +217,8 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {FileCursor} Instance
    */
   findOne(selector = {}, options) {
-    this._debug(
-      `[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(
-        options
-      )})]`
-    );
-    check(
-      selector,
-      Match.Optional(Match.OneOf(Object, String, Boolean, Number, null))
-    );
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
 
     const doc = this.collection.findOne(selector, options);
@@ -274,15 +266,8 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {FilesCursor} Instance
    */
   find(selector = {}, options) {
-    this._debug(
-      `[FilesCollection] [find(${JSON.stringify(selector)}, ${JSON.stringify(
-        options
-      )})]`
-    );
-    check(
-      selector,
-      Match.Optional(Match.OneOf(Object, String, Boolean, Number, null))
-    );
+    this._debug(`[FilesCollection] [find(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
 
     return new FilesCursor(selector, options, this);
@@ -325,11 +310,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {String} Empty string returned in case if file not found in DB
    */
   link(fileRef, version = 'original', uriBase) {
-    this._debug(
-      `[FilesCollection] [link(${
-        helpers.isObject(fileRef) ? fileRef._id : void 0
-      }, ${version})]`
-    );
+    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
     check(fileRef, Object);
 
     if (!fileRef) {

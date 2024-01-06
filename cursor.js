@@ -61,9 +61,7 @@ export class FileCursor {
    * @returns {String}
    */
   link(version = 'original', uriBase) {
-    this._collection._debug(
-      `[FilesCollection] [FileCursor] [link(${version})]`
-    );
+    this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef) {
       return this._collection.link(this._fileRef, version, uriBase);
     }
@@ -109,25 +107,7 @@ export class FileCursor {
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
-    return Object.assign(
-      this,
-      this._collection.collection.findOne(this._fileRef._id)
-    );
-  }
-
-  /*
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name with
-   * @summary Returns reactive version of current FileCursor, useful to use with `{{#with}}...{{/with}}` block template helper
-   * @returns {Promise<[Object]>}
-   */
-  async withAsync() {
-    this._collection._debug('[FilesCollection] [FileCursor] [withAsync()]');
-    return Object.assign(
-      this,
-      await this._collection.collection.findOneAsync(this._fileRef._id)
-    );
+    return Object.assign(this, this._collection.collection.findOne(this._fileRef._id));
   }
 }
 
@@ -181,7 +161,7 @@ export class FilesCursor {
    */
   hasNext() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    return this._current < this.cursor.count() - 1;
+    return this._current < (this.cursor.count() - 1);
   }
 
   /*
@@ -509,9 +489,7 @@ export class FilesCursor {
    * @returns {Object} - live query handle
    */
   observeChanges(callbacks) {
-    this._collection._debug(
-      '[FilesCollection] [FilesCursor] [observeChanges()]'
-    );
+    this._collection._debug('[FilesCollection] [FilesCursor] [observeChanges()]');
     return this.cursor.observeChanges(callbacks);
   }
 }
