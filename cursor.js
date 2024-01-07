@@ -230,9 +230,7 @@ export class FilesCursor {
    * @returns {Promise<Object|undefined>}
    */
   async previousAsync() {
-    this._collection._debug(
-      '[FilesCollection] [FilesCursor] [previousAsync()]'
-    );
+    this._collection._debug('[FilesCollection] [FilesCursor] [previousAsync()]');
     return (this.cursor.fetchAsync())[--this._current];
   }
 
