@@ -46,7 +46,7 @@ export class FileCursor {
     if (this._fileRef) {
       await this._collection.removeAsync(this._fileRef._id);
     } else {
-      throw (new Meteor.Error(404, 'No such file'));
+      throw new Meteor.Error(404, 'No such file');
     }
     return this;
   }
@@ -77,9 +77,7 @@ export class FileCursor {
    * @returns {Object|mix}
    */
   get(property) {
-    this._collection._debug(
-      `[FilesCollection] [FileCursor] [get(${property})]`
-    );
+    this._collection._debug(`[FilesCollection] [FileCursor] [get(${property})]`);
     if (property) {
       return this._fileRef[property];
     }
@@ -149,7 +147,7 @@ export class FilesCursor {
    */
   async getAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
-    return await this.cursor.fetchAsync();
+    return this.cursor.fetchAsync();
   }
 
   /*
@@ -335,7 +333,7 @@ export class FilesCursor {
    */
   async countAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
-    return await this.cursor.countAsync();
+    return this.cursor.countAsync();
   }
 
   /*
@@ -432,7 +430,7 @@ export class FilesCursor {
    */
   async mapAsync(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [mapAsync()]');
-    return await this.cursor.mapAsync(callback, context);
+    return this.cursor.mapAsync(callback, context);
   }
 
   /*

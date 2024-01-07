@@ -1165,11 +1165,7 @@ class FilesCollection extends FilesCollectionCore {
       opts.FSName = opts.fileId;
     }
 
-    this._debug(
-      `[FilesCollection] [Upload] [${transport}] Got #${opts.chunkId}/${
-        opts.fileLength
-      } chunks, dst: ${opts.file.name || opts.file.fileName}`
-    );
+    this._debug(`[FilesCollection] [Upload] [${transport}] Got #${opts.chunkId}/${opts.fileLength} chunks, dst: ${opts.file.name || opts.file.fileName}`);
 
     const fileName = this._getFileName(opts.file);
     const { extension, extensionWithDot } = this._getExt(fileName);
@@ -1206,7 +1202,7 @@ class FilesCollection extends FilesCollectionCore {
           userId: result.userId,
           async userAsync() {
             if (Meteor.users && result.userId) {
-              return await Meteor.users.findOne(result.userId);
+              return Meteor.users.findOneAsync(result.userId);
             }
             return null;
           },

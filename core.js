@@ -232,15 +232,8 @@ export default class FilesCollectionCore extends EventEmitter {
    * @returns {Promise<FileCursor>} Instance
    */
   async findOneAsync(selector = {}, options) {
-    this._debug(
-      `[FilesCollection] [findOneAsync(${JSON.stringify(
-        selector
-      )}, ${JSON.stringify(options)})]`
-    );
-    check(
-      selector,
-      Match.Optional(Match.OneOf(Object, String, Boolean, Number, null))
-    );
+    this._debug(`[FilesCollection] [findOneAsync(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
 
     const doc = await this.collection.findOneAsync(selector, options);
