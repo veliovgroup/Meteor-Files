@@ -274,8 +274,8 @@ describe('FilesCursor', function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       cursor._current = 1;
       sandbox.stub(cursor.cursor, 'fetch').returns(documents);
-      cursor.previous();
-      expect(cursor._current).to.equal(0);
+      const prev = cursor.previous();
+      expect(prev).to.equal(documents[0]);
     });
   });
 
