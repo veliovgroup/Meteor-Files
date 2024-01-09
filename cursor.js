@@ -219,7 +219,7 @@ export class FilesCursor {
    */
   previous() {
     this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
-    this.cursor.fetch()[--this._current];
+    return this.cursor.fetch()[--this._current];
   }
 
   /*
