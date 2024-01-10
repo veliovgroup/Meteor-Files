@@ -145,7 +145,7 @@ export class FilesCursor {
    * @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
    * @returns {Promise<[Object]>}
    */
-  async getAsync() {
+  getAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
     return this.cursor.fetchAsync();
   }
