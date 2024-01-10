@@ -122,8 +122,9 @@ describe('FilesCollection', () => {
     });
 
     it('should return the same result and opts as the sync version', async () => {
-      const { result, opts: newOpts } = await filesCollection._prepareUploadAsync(opts, userId, transport);
+      // Should be fine to use the sync version of the onBeforeUpload hook in both the sync and async version of the method
       filesCollection.onBeforeUpload = () => true;
+      const { result, opts: newOpts } = await filesCollection._prepareUploadAsync(opts, userId, transport);
       const { result: resultSync, opts: newOptsSync } = filesCollection._prepareUpload(opts, userId, transport);
 
       expect(result).to.deep.equal(resultSync);
