@@ -28,7 +28,7 @@ describe('FilesCollection', () => {
     let onInitiateUploadStub;
 
     before(() =>{
-      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUpload', namingFunction: () => {}, onBeforeUpload: () => {}, onInitiateUpload: () => {}});
+      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUpload', namingFunction: () => {}, onBeforeUpload: () => true, onInitiateUpload: () => {}});
     });
 
     beforeEach(() => {
@@ -80,7 +80,7 @@ describe('FilesCollection', () => {
     let onInitiateUploadStub;
 
     before(() =>{
-      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUploadAsync', namingFunction: () => {}, onBeforeUploadAsync: async () => {}, onInitiateUpload: async () => {}});
+      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUploadAsync', namingFunction: () => {}, onBeforeUpload: async () => true, onInitiateUpload: async () => {}});
     });
 
     beforeEach(() => {
@@ -99,7 +99,7 @@ describe('FilesCollection', () => {
       namingFunctionStub.returns('newName');
 
       // Stubbing the onBeforeUpload method
-      onBeforeUploadAsyncStub = sinon.stub(filesCollection, 'onBeforeUploadAsync');
+      onBeforeUploadAsyncStub = sinon.stub(filesCollection, 'onBeforeUpload');
       onBeforeUploadAsyncStub.resolves(true);
 
       // Stubbing the onInitiateUpload method
@@ -122,7 +122,8 @@ describe('FilesCollection', () => {
     });
 
     it('should return the same result and opts as the sync version', async () => {
-      const { result, opts: newOpts } = await  filesCollection._prepareUploadAsync(opts, userId, transport);
+      const { result, opts: newOpts } = await filesCollection._prepareUploadAsync(opts, userId, transport);
+      filesCollection.onBeforeUpload = () => true;
       const { result: resultSync, opts: newOptsSync } = filesCollection._prepareUpload(opts, userId, transport);
 
       expect(result).to.deep.equal(resultSync);

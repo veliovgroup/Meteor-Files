@@ -109,11 +109,8 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.onAfterRemoveAsync  {Function} - [Server] Called right after file is removed by the removeAsync method. Removed objects is passed to the function
  * @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
  * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
- *  - return `true` to continue
- *  - return `false` or `String` to abort upload
-* @param config.onBeforeUploadAsync {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
- *  - return a Promise resolving to `true` to continue
- *  - return a Promise resolving to`false` or `String` to abort upload
+ *  - return or resolve `true` to continue
+ *  - return or resolve `false` or `String` to abort upload
  * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, usefull when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
  * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
  * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
@@ -166,7 +163,6 @@ class FilesCollection extends FilesCollectionCore {
         onAfterUploadAsync: this.onAfterUploadAsync,
         onBeforeRemove: this.onBeforeRemove,
         onBeforeUpload: this.onBeforeUpload,
-        onBeforeUploadAsync: this.onBeforeUploadAsync,
         onInitiateUpload: this.onInitiateUpload,
         parentDirPermissions: this.parentDirPermissions,
         permissions: this.permissions,
@@ -234,10 +230,6 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
-    }
-
-    if (!helpers.isFunction(this.onBeforeUploadAsync)) {
-      this.onBeforeUploadAsync = false;
     }
 
     if (!helpers.isFunction(this.getUser)) {
@@ -511,7 +503,6 @@ class FilesCollection extends FilesCollectionCore {
     check(this.downloadRoute, String);
     check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
-    check(this.onBeforeUploadAsync, Match.OneOf(false, Function));
     check(this.onInitiateUpload, Match.OneOf(false, Function));
     check(this.allowClientCode, Boolean);
 
@@ -1192,7 +1183,7 @@ class FilesCollection extends FilesCollectionCore {
     }${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
-    if (this.onBeforeUploadAsync && helpers.isFunction(this.onBeforeUploadAsync)) {
+    if (this.onBeforeUpload && helpers.isFunction(this.onBeforeUpload)) {
       ctx = Object.assign(
         {
           file: opts.file,
@@ -1209,7 +1200,7 @@ class FilesCollection extends FilesCollectionCore {
           eof: opts.eof,
         }
       );
-      const isUploadAllowed = await this.onBeforeUploadAsync.call(ctx, result);
+      const isUploadAllowed = await this.onBeforeUpload.call(ctx, result);
 
       if (isUploadAllowed !== true) {
         throw new Meteor.Error(
