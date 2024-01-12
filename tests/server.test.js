@@ -59,76 +59,14 @@ describe('FilesCollection', () => {
       sinon.restore();
     });
 
-    it('should prepare upload successfully', () => {
-      const { result, opts: newOpts } = filesCollection._prepareUpload(opts, userId, transport);
+    it('should prepare upload successfully', async () => {
+      const { result, opts: newOpts } = await filesCollection._prepareUpload(opts, userId, transport);
 
       expect(result).to.be.an('object');
       expect(newOpts).to.be.an('object');
       expect(namingFunctionStub.calledOnce).to.be.true;
       expect(onBeforeUploadStub.calledOnce).to.be.true;
       expect(onInitiateUploadStub.called).to.be.false;
-    });
-  });
-
-  describe('#_prepareUploadAsync', () => {
-    let filesCollection;
-    let opts;
-    let userId;
-    let transport;
-    let namingFunctionStub;
-    let onBeforeUploadAsyncStub;
-    let onInitiateUploadStub;
-
-    before(() =>{
-      filesCollection = new FilesCollection({ collectionName: 'testserver-prepareUploadAsync', namingFunction: () => {}, onBeforeUpload: async () => true, onInitiateUpload: async () => {}});
-    });
-
-    beforeEach(() => {
-      opts = {
-        file: {
-          name: 'testFile',
-          meta: {},
-        },
-        fileId: '123',
-      };
-      userId = 'user1';
-      transport = 'http';
-
-      // Stubbing the namingFunction method
-      namingFunctionStub = sinon.stub(filesCollection, 'namingFunction');
-      namingFunctionStub.returns('newName');
-
-      // Stubbing the onBeforeUpload method
-      onBeforeUploadAsyncStub = sinon.stub(filesCollection, 'onBeforeUpload');
-      onBeforeUploadAsyncStub.resolves(true);
-
-      // Stubbing the onInitiateUpload method
-      onInitiateUploadStub = sinon.stub(filesCollection, 'onInitiateUpload');
-    });
-
-    afterEach(() => {
-      // Restore the stubbed methods after each test
-      sinon.restore();
-    });
-
-    it('should prepare upload successfully', async () => {
-      const { result, opts: newOpts } = await  filesCollection._prepareUploadAsync(opts, userId, transport);
-
-      expect(result).to.be.an('object');
-      expect(newOpts).to.be.an('object');
-      expect(namingFunctionStub.calledOnce).to.be.true;
-      expect(onBeforeUploadAsyncStub.calledOnce).to.be.true;
-      expect(onInitiateUploadStub.called).to.be.false;
-    });
-
-    it('should return the same result and opts as the sync version', async () => {
-      // Should be fine to use the sync version of the onBeforeUpload hook in both the sync and async version of the method
-      filesCollection.onBeforeUpload = () => true;
-      const { result, opts: newOpts } = await filesCollection._prepareUploadAsync(opts, userId, transport);
-      const { result: resultSync, opts: newOptsSync } = filesCollection._prepareUpload(opts, userId, transport);
-
-      expect(result).to.deep.equal(resultSync);
-      expect(newOpts).to.deep.equal(newOptsSync);
     });
   });
 
@@ -224,7 +162,7 @@ describe('FilesCollection', () => {
     let chmodStub;
     let insertStub;
     let updateStub;
-    let onAfterUploadAsyncSpy;
+    let onAfterUploadSpy;
 
     before(() => {
       filesCollection = new FilesCollection({ collectionName: 'testserver-finishUploadAsync'});
@@ -247,8 +185,8 @@ describe('FilesCollection', () => {
       updateStub.resolves();
 
       // Creating a spy for the onAfterUpload hook
-      onAfterUploadAsyncSpy = sinon.spy();
-      filesCollection.onAfterUploadAsync = onAfterUploadAsyncSpy;
+      onAfterUploadSpy = sinon.spy();
+      filesCollection.onAfterUpload = onAfterUploadSpy;
     });
 
     afterEach(() => {
@@ -301,8 +239,8 @@ describe('FilesCollection', () => {
     it('should call onAfterUpload hook if it is a function', async () => {
       await filesCollection._finishUploadAsync(result, opts);
 
-      expect(onAfterUploadAsyncSpy.calledOnce).to.be.true;
-      expect(onAfterUploadAsyncSpy.calledWith(result)).to.be.true;
+      expect(onAfterUploadSpy.calledOnce).to.be.true;
+      expect(onAfterUploadSpy.calledWith(result)).to.be.true;
     });
   });
 
@@ -911,17 +849,17 @@ describe('FilesCollection', () => {
     });
 
     it('should call downloadCallbackAsync if it is a function', async () => {
-      const downloadCallbackAsync = sinon.stub().returns(new Promise((resolve) => resolve(true)));
-      filesCollection.downloadCallbackAsync = downloadCallbackAsync;
+      const downloadCallback = sinon.stub().returns(new Promise((resolve) => resolve(true)));
+      filesCollection.downloadCallback = downloadCallback;
       await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
       expect(serveStub.calledOnce).to.be.true;
-      expect(downloadCallbackAsync.calledOnce).to.be.true;
+      expect(downloadCallback.calledOnce).to.be.true;
     });
 
-    it('should not call downloadCallbackAsync if it is not a function', async () => {
+    it('should not call downloadCallback if it is not a function', async () => {
       filesCollection.downloadCallbackAsync = null;
       await filesCollection.downloadAsync(httpObj, version, fileRef);
 
@@ -931,41 +869,41 @@ describe('FilesCollection', () => {
     });
 
     it('should return 404 if downloadCallbackAsync returns false', async () => {
-      const downloadCallbackAsync = sinon.stub().returns(new Promise((resolve) => resolve(false)));
-      filesCollection.downloadCallbackAsync = downloadCallbackAsync;
+      const downloadCallback = sinon.stub().returns(new Promise((resolve) => resolve(false)));
+      filesCollection.downloadCallback = downloadCallback;
       await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.calledOnce).to.be.true;
       expect(serveStub.called).to.be.false;
 
-      filesCollection.downloadCallbackAsync = null;
+      filesCollection.downloadCallback = null;
     });
 
-    it('should call interceptDownloadAsync if it is a function, that returns true', async () => {
-      const interceptDownloadAsync = sinon.stub().resolves(true);
-      filesCollection.interceptDownloadAsync = interceptDownloadAsync;
+    it('should call interceptDownload if it is a function, that resolves true', async () => {
+      const interceptDownload = sinon.stub().resolves(true);
+      filesCollection.interceptDownload = interceptDownload;
       await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.called).to.be.false;
       expect(serveStub.calledOnce).to.be.false;
-      expect(interceptDownloadAsync.calledOnce).to.be.true;
+      expect(interceptDownload.calledOnce).to.be.true;
 
-      filesCollection.interceptDownloadAsync = null;
+      filesCollection.interceptDownload = null;
     });
 
     it('should proceed if interceptDownload is a function, that returns false', async () => {
-      const interceptDownloadAsync = sinon.stub().resolves(false);
-      filesCollection.interceptDownloadAsync = interceptDownloadAsync;
+      const interceptDownload = sinon.stub().resolves(false);
+      filesCollection.interceptDownload = interceptDownload;
       await filesCollection.downloadAsync(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
       expect(serveStub.calledOnce).to.be.true;
-      expect(interceptDownloadAsync.calledOnce).to.be.true;
+      expect(interceptDownload.calledOnce).to.be.true;
 
-      filesCollection.interceptDownloadAsync = null;
+      filesCollection.interceptDownload = null;
     });
   });
 
