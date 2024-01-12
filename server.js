@@ -2082,8 +2082,8 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const files = this.collection.find(selector);
-    if (files.count() > 0) {
-      files.forEach((file) => {
+    if (await files.countAsync() > 0) {
+      await files.forEachAsync((file) => {
         this.unlink(file);
       });
     } else {
@@ -2091,7 +2091,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (this.onAfterRemove) {
-      const docs = files.fetch();
+      const docs = await files.fetchAsync();
       await this.collection.removeAsync(selector);
       await this.onAfterRemove(docs);
     } else {
