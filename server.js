@@ -1132,23 +1132,23 @@ class FilesCollection extends FilesCollectionCore {
     let _id;
     try {
       _id = await this.collection.insertAsync(helpers.clone(result));
-    } catch(colInsert){
+      try {
+        await this._preCollection.updateAsync({_id: opts.fileId}, {$set: {isFinished: true}});
+        if (_id) result._id = _id;
+        this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
+        if (this.onAfterUpload && helpers.isFunction(this.onAfterUpload)) {
+          await this.onAfterUpload.call(this, result);
+        }
+        this.emit('afterUpload', result);
+        cb(null, result);
+      } catch (prrUpdateError) {
+        cb(prrUpdateError);
+        this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', prrUpdateError);
+      }
+    } catch (colInsert){
       cb(colInsert);
       this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
     }
-    try {
-      await this._preCollection.updateAsync({_id: opts.fileId}, {$set: {isFinished: true}});
-    } catch (prrUpdateError) {
-      cb(prrUpdateError);
-      this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', prrUpdateError);
-    }
-    if (_id) result._id = _id;
-    this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
-    if (this.onAfterUpload && helpers.isFunction(this.onAfterUpload)) {
-      await this.onAfterUpload.call(this, result);
-    }
-    this.emit('afterUpload', result);
-    cb(null, result);
   }
 
   /**
