@@ -414,10 +414,14 @@ class FilesCollection extends FilesCollectionCore {
       });
 
       _preCollectionCursor.observe({
-        changed(doc) {
+        async changed(doc) {
           if (doc.isFinished) {
             self._debug(`[FilesCollection] [_preCollectionCursor.observe] [changed]: ${doc._id}`);
-            self._preCollection.remove({_id: doc._id}, noop);
+            if (self._asyncMethodsAvailable){
+              await self._preCollection.removeAsync({_id: doc._id});
+            } else {
+              self._preCollection.remove({_id: doc._id}, noop);
+            }
           }
         },
         removed(doc) {
@@ -898,15 +902,21 @@ class FilesCollection extends FilesCollectionCore {
         opts.___s = true;
         const { result } = await self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
 
-        if (self.collection.findOne(result._id)) {
-          throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
+        if (self._asyncMethodsAvailable){
+          if (await self.collection.findOneAsync(result._id)) {
+            throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
+          }
+        } else {
+          if (self.collection.findOne(result._id)) {
+            throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
+          }
         }
 
         opts._id = opts.fileId;
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
         try {
-          if (!this._asyncMethodsAvailable){
+          if (!self._asyncMethodsAvailable){
             self._preCollection.insert(helpers.omit(opts, '___s'));
           } else {
             await self._preCollection.insertAsync(helpers.omit(opts, '___s'));
@@ -986,10 +996,12 @@ class FilesCollection extends FilesCollectionCore {
         if (_continueUpload) {
           if (!self._asyncMethodsAvailable){
             self._preCollection.remove({_id});
+            self.remove({_id});
           } else {
-            await  self._preCollection.removeAsync({_id});
+            await self._preCollection.removeAsync({_id});
+            await self.removeAsync({_id});
           }
-          self.remove({_id});
+
           if (helpers.isObject(_continueUpload.file) && _continueUpload.file.path) {
             self.unlink({_id, path: _continueUpload.file.path});
           }
@@ -1108,86 +1120,35 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _finishUpload
    * @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
-   * @returns {undefined}
+   * @returns {Promise<undefined>}
    */
-  _finishUpload(result, opts, cb) {
+  async _finishUpload(result, opts, cb) {
     this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
     fs.chmod(result.path, this.permissions, noop);
     result.type = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
 
-    this.collection.insert(helpers.clone(result), (colInsert, _id) => {
-      if (colInsert) {
-        cb && cb(colInsert);
-        this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
-      } else {
-        this._preCollection.update({_id: opts.fileId}, {$set: {isFinished: true}}, (preUpdateError) => {
-          if (preUpdateError) {
-            cb && cb(preUpdateError);
-            this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', preUpdateError);
-          } else {
-            result._id = _id;
-            this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
-            this.onAfterUpload && this.onAfterUpload.call(this, result);
-            this.emit('afterUpload', result);
-            cb && cb(null, result);
-          }
-        });
-      }
-    });
-  }
-
-  /**
-   * @locus Server
-   * @memberOf FilesCollection
-   * @name _finishUploadAsync
-   * @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
-   * @returns {Promise<undefined>}
-   */
-  async _finishUploadAsync(result, opts) {
-    this._debug(
-      `[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`
-    );
-    await fs.promises.chmod(result.path, this.permissions);
-    result.type = this._getMimeType(opts.file);
-    result.public = this.public;
-    this._updateFileTypes(result);
-
     let _id;
     try {
-      _id =  await this.collection.insertAsync(helpers.clone(result));
-    } catch (colInsert) {
-      this._debug(
-        '[FilesCollection] [Upload] [_finishUpload] [insert] Error:',
-        colInsert
-      );
-      throw colInsert;
+      _id = await this.collection.insertAsync(helpers.clone(result));
+    } catch(colInsert){
+      cb(colInsert);
+      this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
     }
-
     try {
-      await this._preCollection.updateAsync(
-        { _id: opts.fileId },
-        { $set: { isFinished: true } });
-    } catch (preUpdateError) {
-      if (preUpdateError) {
-        this._debug(
-          '[FilesCollection] [Upload] [_finishUpload] [update] Error:',
-          preUpdateError
-        );
-        throw preUpdateError;
-      }
+      await this._preCollection.updateAsync({_id: opts.fileId}, {$set: {isFinished: true}});
+    } catch (prrUpdateError) {
+      cb(prrUpdateError);
+      this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', prrUpdateError);
     }
-
-    result._id = _id;
-
-    this._debug(
-      `[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`
-    );
-
-    this.onAfterUpload && (await this.onAfterUpload.call(this, result));
-
+    if (_id) result._id = _id;
+    this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
+    if (this.onAfterUpload && helpers.isFunction(this.onAfterUpload)) {
+      await this.onAfterUpload.call(this, result);
+    }
     this.emit('afterUpload', result);
+    cb(null, result);
   }
 
   /**
