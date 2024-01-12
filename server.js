@@ -832,7 +832,7 @@ class FilesCollection extends FilesCollectionCore {
 
       // Method used to remove file
       // from Client side
-      _methods[this._methodNames._Remove] = function (selector) {
+      _methods[this._methodNames._Remove] = async function (selector) {
         check(selector, Match.OneOf(String, Object));
         self._debug(`[FilesCollection] [Unlink Method] [.remove(${selector})]`);
 
@@ -841,6 +841,12 @@ class FilesCollection extends FilesCollectionCore {
             const userId = this.userId;
             const userFuncs = {
               userId: this.userId,
+              userAsync(){
+                if (Meteor.users) {
+                  return Meteor.users.findOneAsync(userId);
+                }
+                return null;
+              },
               user() {
                 if (Meteor.users) {
                   return Meteor.users.findOne(userId);
@@ -849,13 +855,16 @@ class FilesCollection extends FilesCollectionCore {
               }
             };
 
-            if (!self.onBeforeRemove.call(userFuncs, (self.find(selector) || null))) {
+            if (!(await self.onBeforeRemove.call(userFuncs, (self.find(selector) || null)))) {
               throw new Meteor.Error(403, '[FilesCollection] [remove] Not permitted!');
             }
           }
 
           const cursor = self.find(selector);
-          if (cursor.count() > 0) {
+          if (typeof cursor.countAsync === 'function' && await cursor.countAsync() > 0) {
+            self.remove(selector);
+            return true;
+          } else if (cursor.count() > 0) {
             self.remove(selector);
             return true;
           }
@@ -872,7 +881,7 @@ class FilesCollection extends FilesCollectionCore {
       // Basically it prepares everything
       // So user can pause/disconnect and
       // continue upload later, during `continueUploadTTL`
-      _methods[this._methodNames._Start] = function (opts, returnMeta) {
+      _methods[this._methodNames._Start] = async function (opts, returnMeta) {
         check(opts, {
           file: Object,
           fileId: String,
@@ -887,7 +896,7 @@ class FilesCollection extends FilesCollectionCore {
 
         self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
         opts.___s = true;
-        const { result } = self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
+        const { result } = await self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
 
         if (self.collection.findOne(result._id)) {
           throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
@@ -897,7 +906,11 @@ class FilesCollection extends FilesCollectionCore {
         opts.createdAt = new Date();
         opts.maxLength = opts.fileLength;
         try {
-          self._preCollection.insert(helpers.omit(opts, '___s'));
+          if (!this._asyncMethodsAvailable){
+            self._preCollection.insert(helpers.omit(opts, '___s'));
+          } else {
+            await self._preCollection.insertAsync(helpers.omit(opts, '___s'));
+          }
           self._createStream(result._id, result.path, helpers.omit(opts, '___s'));
         } catch (e) {
           self._debug(`[FilesCollection] [File Start Method] [EXCEPTION:] ${opts.file.name} - ${opts.fileId}`, e);
@@ -917,7 +930,7 @@ class FilesCollection extends FilesCollectionCore {
       // Method used to write file chunks
       // it receives very limited amount of meta-data
       // This method also responsible for EOF
-      _methods[this._methodNames._Write] = function (_opts) {
+      _methods[this._methodNames._Write] = async function (_opts) {
         let opts = _opts;
         let result;
         check(opts, {
@@ -939,7 +952,7 @@ class FilesCollection extends FilesCollectionCore {
         }
 
         this.unblock();
-        ({result, opts} = self._prepareUpload(Object.assign(opts, _continueUpload), this.userId, 'DDP'));
+        ({result, opts} = await self._prepareUpload(Object.assign(opts, _continueUpload), this.userId, 'DDP'));
 
         if (opts.eof) {
           try {
@@ -959,7 +972,7 @@ class FilesCollection extends FilesCollectionCore {
       // - Removing temporary record from @_preCollection
       // - Removing record from @collection
       // - .unlink()ing chunks from FS
-      _methods[this._methodNames._Abort] = function (_id) {
+      _methods[this._methodNames._Abort] = async function (_id) {
         check(_id, String);
 
         const _continueUpload = self._continueUpload(_id);
@@ -971,7 +984,11 @@ class FilesCollection extends FilesCollectionCore {
         }
 
         if (_continueUpload) {
-          self._preCollection.remove({_id});
+          if (!self._asyncMethodsAvailable){
+            self._preCollection.remove({_id});
+          } else {
+            await  self._preCollection.removeAsync({_id});
+          }
           self.remove({_id});
           if (helpers.isObject(_continueUpload.file) && _continueUpload.file.path) {
             self.unlink({_id, path: _continueUpload.file.path});
