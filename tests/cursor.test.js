@@ -29,35 +29,6 @@ describe('FileCursor', function() {
     sinon.restore();
   });
 
-  describe('#remove()', function() {
-    let sandbox;
-    beforeEach(function() {
-      sandbox = sinon.createSandbox();
-    });
-    afterEach(function() {
-      sandbox.restore();
-    });
-    it('should call the collection.remove method with the file ID', function() {
-      const fileRef = { _id: 'test' };
-
-      // Mock the collection.remove method to check the arguments
-      const remove = sandbox.stub(filesCollection, 'remove').returns('test');
-
-      const cursor = new FileCursor(fileRef, filesCollection);
-      cursor.remove(() => {
-        expect(remove.calledWith(fileRef._id)).to.be.true;
-      });
-    });
-
-    it('should call the callback with an error if no file reference is provided', function() {
-      const cursor = new FileCursor(null, filesCollection);
-      cursor.remove((err) => {
-        expect(err).to.be.instanceOf(Meteor.Error);
-        expect(err.reason).to.equal('No such file');
-      });
-    });
-  });
-
   describe('#removeAsync()', function() {
     let sandbox;
     beforeEach(function() {
@@ -154,49 +125,12 @@ describe('FilesCursor', function() {
       await filesCollection.collection.rawCollection().insertMany(documents);
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const fetched = cursor.get();
-      expect(fetched).to.deep.equal(documents);
-    });
-  });
-
-  describe('#getAsync()', function() {
-    it('should return all matching documents as an array', async function() {
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
-      const cursor = new FilesCursor({}, {}, filesCollection);
       const fetched = await cursor.getAsync();
       expect(fetched).to.deep.equal(documents);
     });
   });
 
   describe('#hasNext()', function() {
-    it('should return true if there is a next item available on the cursor', function() {
-      // Mock the collection.find method to return a cursor with a count method
-      sandbox.stub(filesCollection.collection, 'find').returns({
-        count: () => 2,
-      });
-
-
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = cursor.hasNext();
-      expect(hasNext).to.be.true;
-    });
-
-    it('should return false if there is no next item available on the cursor', function() {
-      // Mock the collection.find method to return a cursor with a count method
-      sandbox.stub(filesCollection.collection, 'find').returns({
-        count: () => 0,
-      });
-
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = cursor.hasNext();
-      expect(hasNext).to.be.false;
-    });
-  });
-
-  describe('#hasNextAsync()', function() {
     it('should return true if there is a next item available on the cursor', async function() {
       // Mock the collection.find method to return a cursor with a countAsync method
       sandbox.stub(filesCollection.collection, 'find').returns({
@@ -222,22 +156,6 @@ describe('FilesCursor', function() {
   });
 
   describe('#next()', function() {
-    it('should return the next item on the cursor', async function() {
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
-      const cursor = new FilesCursor({}, {}, filesCollection);
-
-      let next = cursor.next();
-      expect(next, 'Cursor is right before position 0 on initialization').to.deep.equal(documents[0]);
-
-
-      next = cursor.next();
-      expect(next).to.deep.equal(documents[1]);
-    });
-  });
-
-  describe('#nextAsync()', function() {
     it('should return the next item on the cursor', async function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
@@ -273,37 +191,9 @@ describe('FilesCursor', function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       cursor._current = 1;
-      sandbox.stub(cursor.cursor, 'fetch').returns(documents);
-      const prev = cursor.previous();
-      expect(prev).to.equal(documents[0]);
-    });
-  });
-
-  describe('#previousAsync()', function() {
-    it('should return the previous item on the cursor', function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      cursor._current = 1;
       sandbox.stub(cursor.cursor, 'fetchAsync').resolves(documents);
       cursor.previous();
       expect(cursor._current).to.equal(0);
-    });
-  });
-
-  describe('#fetch()', function() {
-    it('should return all matching documents as an array', function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      sandbox.stub(cursor.cursor, 'fetch').returns(documents);
-      const result = cursor.fetch();
-      expect(result).to.deep.equal(documents);
-    });
-
-    it('should return an empty array if no matching documents are found', function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      sandbox.stub(cursor.cursor, 'fetch').returns(null);
-      const result = cursor.fetch();
-      expect(result).to.deep.equal([]);
     });
   });
 
@@ -330,28 +220,8 @@ describe('FilesCursor', function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
-      const last = cursor.last();
-      expect(last).to.deep.equal(documents[1]);
-    });
-  });
-
-  describe('#lastAsync()', function() {
-    it('should return the last item on the cursor', async function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
       const last = await cursor.lastAsync();
       expect(last).to.deep.equal(documents[1]);
-    });
-  });
-
-  describe('#count()', function() {
-    it('should return the number of documents that match a query', function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      sandbox.stub(cursor.cursor, 'count').returns(2);
-      const count = cursor.count();
-      expect(count).to.equal(2);
     });
   });
 
@@ -361,29 +231,6 @@ describe('FilesCursor', function() {
       sandbox.stub(cursor.cursor, 'countAsync').returns(Promise.resolve(2));
       const count = await cursor.countAsync();
       expect(count).to.equal(2);
-    });
-  });
-
-  describe('#remove()', function() {
-    it('should remove all matching documents', async function() {
-      const documents = [{ _id: 'test1', path: '/tmp/randomfile123.txt' }, { _id: 'test2', path: '/tmp/randomfile456' }];
-      fs.writeFileSync('/tmp/randomfile123.txt', 'file contents');
-      fs.writeFileSync('/tmp/randomfile123.txt', 'file contents');
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
-      const cursor = new FilesCursor({_id: 'test1'}, {}, filesCollection);
-
-      await new Promise((resolve, reject) => {
-        cursor.remove((err, res) => {
-          if (err) {
-            reject(err);
-          }
-          resolve(res);
-        });
-      });
-
-      const result = await filesCollection.collection.rawCollection().find().toArray();
-      expect(result).to.have.lengthOf(1);
     });
   });
 
@@ -397,20 +244,6 @@ describe('FilesCursor', function() {
 
       const result = await filesCollection.collection.rawCollection().find().toArray();
       expect(result).to.have.lengthOf(1);
-    });
-  });
-
-  describe('#forEach()', function() {
-    it('should call the callback for each matching document', async function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
-      let count = 0;
-      cursor.forEach(() => {
-        count++;
-      });
-      expect(count).to.equal(documents.length);
     });
   });
 
@@ -443,17 +276,6 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#map()', function() {
-    it('should map callback over all matching documents', async function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      await filesCollection.collection.rawCollection().insertMany(documents);
-
-      const result = cursor.map((doc) => doc._id);
-      expect(result).to.deep.equal(documents.map((doc) => doc._id));
-    });
-  });
-
   describe('#mapAsync()', function() {
     it('should map callback over all matching documents', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
@@ -466,16 +288,6 @@ describe('FilesCursor', function() {
   });
 
   describe('#current()', function() {
-    it('should return the current item on the cursor', function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      sandbox.stub(cursor, 'fetch').returns(documents);
-      const current = cursor.current();
-      expect(current).to.deep.equal(documents[0]);
-    });
-  });
-
-  describe('#currentAsync()', function() {
     it('should return the current item on the cursor', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];

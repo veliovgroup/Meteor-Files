@@ -88,45 +88,6 @@ describe('FilesCollectionCore', function() {
     });
   });
 
-  describe('#findOne()', function() {
-    it('should find and return a FileCursor for matching document Object', function() {
-      const core = new FilesCollectionCore();
-      const selector = { name: 'test' };
-      const options = {};
-
-      // Mock the collection.findOne method to return a dummy document
-      core.collection = {
-        findOne: (sel, opts) => {
-          expect(sel).to.deep.equal(selector);
-          expect(opts).to.deep.equal(options);
-          return { name: 'test' };
-        }
-      };
-
-      const doc = core.findOne(selector, options);
-      expect(doc).to.be.an.instanceof(FileCursor);
-      expect(doc).to.deep.equal(new FileCursor({ name: 'test' }, core));
-    });
-
-    it('should return null if no document is found', function() {
-      const core = new FilesCollectionCore();
-      const selector = { name: 'nonexistent' };
-      const options = {};
-
-      // Mock the collection.findOne method to return null
-      core.collection = {
-        findOne: (sel, opts) => {
-          expect(sel).to.deep.equal(selector);
-          expect(opts).to.deep.equal(options);
-          return null;
-        }
-      };
-
-      const doc = core.findOne(selector, options);
-      expect(doc).to.be.null;
-    });
-  });
-
   describe('#findOneAsync()', function() {
     it('should find and return a FileCursor for matching document Object', async function() {
       const core = new FilesCollectionCore();
@@ -177,24 +138,6 @@ describe('FilesCollectionCore', function() {
 
       const cursor = collection.find(selector, options);
       expect(cursor).to.be.an.instanceof(FilesCursor);
-    });
-  });
-
-  describe('#update()', function() {
-    it('should call the collection.update method with the given arguments', function() {
-      const core = new FilesCollectionCore();
-      const selector = { name: 'test' };
-      const modifier = { $set: { name: 'newTest' } };
-
-      // Mock the collection.update method to check the arguments
-      core.collection = {
-        update: (sel, mod) => {
-          expect(sel).to.deep.equal(selector);
-          expect(mod).to.deep.equal(modifier);
-        }
-      };
-
-      core.update(selector, modifier);
     });
   });
 

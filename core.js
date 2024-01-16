@@ -204,27 +204,6 @@ export default class FilesCollectionCore extends EventEmitter {
   /*
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name findOne
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching document Object
-   * @returns {FileCursor} Instance
-   */
-  findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
-    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
-    check(options, Match.Optional(Object));
-
-    const doc = this.collection.findOne(selector, options);
-    if (doc) {
-      return new FileCursor(doc, this);
-    }
-    return doc;
-  }
-
-  /*
-   * @locus Anywhere
-   * @memberOf FilesCollectionCore
    * @name findOneAsync
    * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
    * @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
@@ -258,19 +237,6 @@ export default class FilesCollectionCore extends EventEmitter {
     check(options, Match.Optional(Object));
 
     return new FilesCursor(selector, options, this);
-  }
-
-  /*
-   * @locus Anywhere
-   * @memberOf FilesCollectionCore
-   * @name update
-   * @see http://docs.meteor.com/#/full/update
-   * @summary link Mongo.Collection update method
-   * @returns {Mongo.Collection} Instance
-   */
-  update() {
-    this.collection.update.apply(this.collection, arguments);
-    return this.collection;
   }
 
   /*
