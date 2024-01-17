@@ -56,7 +56,7 @@ describe('FileCursor', function() {
       const cursor = new FileCursor(null, core);
       fs.writeFileSync('/tmp/test.txt', 'test');
       const opts = { _id: 'test' };
-      await filesCollection.addFileAsync('/tmp/test.txt', opts);
+      await filesCollection.addFile('/tmp/test.txt', opts);
       let error;
       try {
         await cursor.removeAsync();
@@ -125,7 +125,7 @@ describe('FilesCursor', function() {
       await filesCollection.collection.rawCollection().insertMany(documents);
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const fetched = await cursor.getAsync();
+      const fetched = await cursor.get();
       expect(fetched).to.deep.equal(documents);
     });
   });
@@ -138,7 +138,7 @@ describe('FilesCursor', function() {
       });
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = await cursor.hasNextAsync();
+      const hasNext = await cursor.hasNext();
       expect(hasNext).to.be.true;
     });
 
@@ -150,7 +150,7 @@ describe('FilesCursor', function() {
 
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = await cursor.hasNextAsync();
+      const hasNext = await cursor.hasNext();
       expect(hasNext).to.be.false;
     });
   });
@@ -162,10 +162,10 @@ describe('FilesCursor', function() {
 
       const cursor = new FilesCursor({}, {}, filesCollection);
 
-      let next = await cursor.nextAsync();
+      let next = await cursor.next();
       expect(next).to.deep.equal(documents[0]);
 
-      next = await cursor.nextAsync();
+      next = await cursor.next();
       expect(next).to.deep.equal(documents[1]);
     });
   });
@@ -220,7 +220,7 @@ describe('FilesCursor', function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
-      const last = await cursor.lastAsync();
+      const last = await cursor.last();
       expect(last).to.deep.equal(documents[1]);
     });
   });
@@ -266,7 +266,7 @@ describe('FilesCursor', function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
-      const result = cursor.each();
+      const result = await cursor.each();
 
       expect(result).to.be.an('array');
       result.forEach((fileCursor, index) => {
@@ -292,7 +292,7 @@ describe('FilesCursor', function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       sandbox.stub(cursor, 'fetchAsync').returns(Promise.resolve(documents));
-      const current = await cursor.currentAsync();
+      const current = await cursor.current();
       expect(current).to.deep.equal(documents[0]);
     });
   });

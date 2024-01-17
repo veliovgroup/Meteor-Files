@@ -253,8 +253,8 @@ export class FilesCursor {
    *          Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
    * @returns {[FileCursor]}
    */
-  each() {
-    return this.map((file) => {
+  async each() {
+    return this.mapAsync((file) => {
       return new FileCursor(file, this._collection);
     });
   }

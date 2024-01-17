@@ -154,113 +154,6 @@ describe('FilesCollection', () => {
   });
 
   describe('#write()', function() {
-    let filesCollection; let fsMock; let collectionMock;
-
-    before(function() {
-      filesCollection = new FilesCollection({ collectionName: 'testserver-write'});
-    });
-
-    beforeEach(function() {
-      fsMock = sinon.mock(require('fs'));
-      collectionMock = sinon.mock(filesCollection.collection);
-    });
-
-    afterEach(function() {
-      fsMock.restore();
-      collectionMock.restore();
-    });
-
-    it('should write buffer to FS and add to FilesCollection Collection', function(done) {
-      const buffer = Buffer.from('test data');
-      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
-      const callback = sinon.spy();
-
-      fsMock.expects('stat').yields(null, { isFile: () => true });
-      fsMock.expects('createWriteStream').returns({
-        end: (_buffer, cb) => cb(null)
-      });
-
-      collectionMock.expects('insert').yields(null, 'file1');
-      collectionMock.expects('findOne').returns({ _id: 'file1' });
-
-      filesCollection.write(buffer, opts, callback, true);
-
-      fsMock.verify();
-      collectionMock.verify();
-      expect(callback.calledOnce).to.be.true;
-      expect(callback.calledWith(null, { _id: 'file1' })).to.be.true;
-
-      done();
-    });
-
-    it('should make all directories if not present, then write buffer to FS and then add to FilesCollection Collection', function(done) {
-      const buffer = Buffer.from('test data');
-      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
-      const callback = sinon.spy();
-
-      fsMock.expects('stat').yields(null, { isFile: () => false });
-      fsMock.expects('mkdirSync').once();
-      fsMock.expects('writeFileSync').once();
-      fsMock.expects('createWriteStream').returns({
-        end: (_buffer, cb) => cb(null)
-      });
-
-      collectionMock.expects('insert').yields(null, 'file1');
-      collectionMock.expects('findOne').returns({ _id: 'file1' });
-
-      filesCollection.write(buffer, opts, callback, true);
-
-      fsMock.verify();
-      collectionMock.verify();
-      expect(callback.calledOnce).to.be.true;
-      expect(callback.calledWith(null, { _id: 'file1' })).to.be.true;
-
-      done();
-    });
-
-    it('should call callback with error if file could not be written to FS', function(done) {
-      const buffer = Buffer.from('test data');
-      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
-      const callback = sinon.spy();
-
-      fsMock.expects('stat').yields(null, { isFile: () => true });
-      fsMock.expects('createWriteStream').returns({
-        end: (_buffer, cb) => cb(new Error('Test Error'))
-      });
-
-      filesCollection.write(buffer, opts, callback, true);
-
-      fsMock.verify();
-      expect(callback.calledOnce).to.be.true;
-      expect(callback.calledWith(sinon.match.instanceOf(Error))).to.be.true;
-
-      done();
-    });
-
-    it('should call callback with error if file could not be added to FilesCollection Collection', function(done) {
-      const buffer = Buffer.from('test data');
-      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
-      const callback = sinon.spy();
-
-      fsMock.expects('stat').yields(null, { isFile: () => true });
-      fsMock.expects('createWriteStream').returns({
-        end: (_buffer, cb) => cb(null)
-      });
-
-      collectionMock.expects('insert').yields(new Error('Test Error'));
-
-      filesCollection.write(buffer, opts, callback, true);
-
-      fsMock.verify();
-      collectionMock.verify();
-      expect(callback.calledOnce).to.be.true;
-      expect(callback.calledWith(sinon.match.instanceOf(Error))).to.be.true;
-
-      done();
-    });
-  });
-
-  describe('#writeAsync()', function() {
     let filesCollection; let collectionMock;
     let fsPromiseStatStub; let fsPromisesMkdirStub; let fsPromiseWriteFileStub; let fsCreateWriteStreamStub;
 
@@ -298,7 +191,7 @@ describe('FilesCollection', () => {
       collectionMock.expects('insertAsync').resolves('file1');
       collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
 
-      const result = await filesCollection.writeAsync(buffer, opts, true);
+      const result = await filesCollection.write(buffer, opts, true);
 
       collectionMock.verify();
       expect(result).to.be.an('object');
@@ -318,7 +211,7 @@ describe('FilesCollection', () => {
       collectionMock.expects('insertAsync').resolves('file1');
       collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
 
-      const result = await filesCollection.writeAsync(buffer, opts, true);
+      const result = await filesCollection.write(buffer, opts, true);
 
       collectionMock.verify();
       expect(result).to.be.an('object');
@@ -334,7 +227,7 @@ describe('FilesCollection', () => {
         end: (_buffer, cb) => cb(new Error('Test Error'))
       });
 
-      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
+      filesCollection.write(buffer, opts, true).catch((e) => {
         expect(e).to.be.instanceOf(Error);
         done();
       });
@@ -351,7 +244,7 @@ describe('FilesCollection', () => {
 
       collectionMock.expects('insertAsync').rejects(new Error('Test Error'));
 
-      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
+      filesCollection.write(buffer, opts, true).catch((e) => {
         expect(e).to.be.instanceOf(Error);
         done();
       });
@@ -369,7 +262,7 @@ describe('FilesCollection', () => {
       fsCreateWriteStreamStub.restore();
       fsPromisesMkdirStub.restore();
 
-      const result = await filesCollection.writeAsync(buffer, opts, true);
+      const result = await filesCollection.write(buffer, opts, true);
 
       const file = await filesCollection.collection.findOneAsync({ _id: 'file1' });
       expect(file).to.be.an('object');
@@ -403,44 +296,6 @@ describe('FilesCollection', () => {
     let port;
 
     before(function() {
-      filesCollection = new FilesCollection({ collectionName: 'testserver-load'});
-
-      const server = http.createServer((req, res) => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
-        res.end(testdata);
-      });
-
-      server.listen(undefined, '127.0.0.1', () => {
-        port = server.address().port;
-      });
-    });
-
-    beforeEach(function() {
-    });
-
-    afterEach(async function() {
-      await filesCollection.collection.removeAsync({});
-    });
-
-    it('should download file over HTTP, write stream to FS, and add to FilesCollection Collection', function(done) {
-      const url = 'http://127.0.0.1:' + port;
-      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1', timeout: 360000 };
-
-      filesCollection.load(url, opts, () => {
-        const file = filesCollection.collection.findOne({ _id: 'file1' });
-        expect(file).to.be.an('object');
-        done();
-      }, true);
-    });
-  });
-
-  describe('#loadAsync()', function() {
-    let filesCollection;
-    const testdata = 'test data';
-    let port;
-
-    before(function() {
       filesCollection = new FilesCollection({ collectionName: 'testserver-loadAsync'});
 
       const server = http.createServer((req, res) => {
@@ -465,7 +320,7 @@ describe('FilesCollection', () => {
       const url = 'http://127.0.0.1:' + port;
       const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1', timeout: 360000 };
 
-      const result = await filesCollection.loadAsync(url, opts, true);
+      const result = await filesCollection.load(url, opts, true);
 
       expect(result).to.be.an('object');
 
@@ -494,7 +349,7 @@ describe('FilesCollection', () => {
     });
 
     it('should add a file successfully', async () => {
-      const result = await filesCollection.addFileAsync(path, opts, proceedAfterUpload);
+      const result = await filesCollection.addFile(path, opts, proceedAfterUpload);
 
       // Check if the result is correct
       expect(result).to.be.an('object');
@@ -522,7 +377,7 @@ describe('FilesCollection', () => {
       // Stub the `onAfterUpload` method
       sinon.stub(filesCollection, 'onAfterUpload');
 
-      await filesCollection.addFileAsync(path, opts, true);
+      await filesCollection.addFile(path, opts, true);
 
       expect(filesCollection.onAfterUpload.calledWith()).to.be.true;
     });
@@ -531,7 +386,7 @@ describe('FilesCollection', () => {
       // Stub the `onAfterUpload` method
       sinon.stub(filesCollection, 'onAfterUpload');
 
-      await filesCollection.addFileAsync(path, opts, false);
+      await filesCollection.addFile(path, opts, false);
 
       expect(filesCollection.onAfterUpload.calledWith()).to.be.false;
     });
@@ -539,7 +394,7 @@ describe('FilesCollection', () => {
     it('should throw an error if file does not exist', async () => {
       const nonExistingPath = '/tmp/meteor-test-file-non-existing.txt';
       try {
-        await filesCollection.addFileAsync(nonExistingPath, opts, proceedAfterUpload);
+        await filesCollection.addFile(nonExistingPath, opts, proceedAfterUpload);
       } catch (e) {
         expect(e).to.be.instanceOf(Meteor.Error);
         expect(e.error).to.equal(400);
@@ -552,7 +407,7 @@ describe('FilesCollection', () => {
       fs.writeFileSync(nonReadablePath, 'test');
       fs.chmodSync(nonReadablePath, 0o200);
       try {
-        await filesCollection.addFileAsync(nonReadablePath, opts, proceedAfterUpload);
+        await filesCollection.addFile(nonReadablePath, opts, proceedAfterUpload);
       } catch (e) {
         expect(e).to.be.instanceOf(Meteor.Error);
         expect(e.error).to.equal(400);
@@ -562,7 +417,7 @@ describe('FilesCollection', () => {
     it('should throw an error, if path is not a file', async () => {
       const nonFile = '/tmp';
       try {
-        await filesCollection.addFileAsync(nonFile, opts, proceedAfterUpload);
+        await filesCollection.addFile(nonFile, opts, proceedAfterUpload);
       } catch (e) {
         expect(e).to.be.instanceOf(Meteor.Error);
         expect(e.error).to.equal(400);
@@ -572,7 +427,7 @@ describe('FilesCollection', () => {
     it('should throw an error, if file is added to a public collection', async () => {
       const publicFilesCollection = new FilesCollection({ collectionName: 'testserver-pub', public: true, storagePath: '/tmp', downloadRoute: '/public' });
       try {
-        await publicFilesCollection.addFileAsync(path, opts, proceedAfterUpload);
+        await publicFilesCollection.addFile(path, opts, proceedAfterUpload);
       } catch (e) {
         expect(e).to.be.instanceOf(Meteor.Error);
         expect(e.error).to.equal(403);
@@ -581,124 +436,6 @@ describe('FilesCollection', () => {
   });
 
   describe('#download', () => {
-    let filesCollection;
-    let httpObj;
-    let version;
-    let fileRef;
-    let statStub;
-    let _404Stub;
-    let serveStub;
-
-    before(() => {
-      filesCollection = new FilesCollection({collectionName: 'testserver-download'});
-    });
-
-    beforeEach(() => {
-      httpObj = { request: { originalUrl: '/path/to/file', headers: { 'x-mtok': 'token'} }, response: { writeHead: () => {}, end: () => {}} };
-
-      version = 'original';
-      fileRef = {
-        versions: {
-          original: {
-            path: '/path/to/file',
-            size: 100,
-          },
-        },
-      };
-
-      // Stubbing the fs.stat method
-      statStub = sinon.stub(fs, 'stat');
-      statStub.yields(null, { isFile: () => true, size: 100 });
-
-      // Stubbing the _404 method
-      _404Stub = sinon.stub(filesCollection, '_404');
-
-      // Stubbing the serve method
-      serveStub = sinon.stub(filesCollection, 'serve');
-    });
-
-    afterEach(() => {
-      // Restore the stubbed methods after each test
-      sinon.restore();
-    });
-
-    it('should download a file successfully', () => {
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.true;
-      expect(_404Stub.called).to.be.false;
-      expect(serveStub.calledOnce).to.be.true;
-    });
-
-    it('should return 404 if file does not exist', () => {
-      statStub.yields(null, { isFile: () => false });
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.true;
-      expect(_404Stub.calledOnce).to.be.true;
-      expect(serveStub.called).to.be.false;
-    });
-
-    it('should call downloadCallback if it is a function', () => {
-      const downloadCallback = sinon.stub().returns(true);
-      filesCollection.downloadCallback = downloadCallback;
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.true;
-      expect(_404Stub.called).to.be.false;
-      expect(serveStub.calledOnce).to.be.true;
-      expect(downloadCallback.calledOnce).to.be.true;
-    });
-
-    it('should not call downloadCallback if it is not a function', () => {
-      filesCollection.downloadCallback = null;
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.true;
-      expect(_404Stub.called).to.be.false;
-      expect(serveStub.calledOnce).to.be.true;
-    });
-
-    it('should return 404 if downloadCallback returns false', () => {
-      const downloadCallback = sinon.stub().returns(false);
-      filesCollection.downloadCallback = downloadCallback;
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.false;
-      expect(_404Stub.calledOnce).to.be.true;
-      expect(serveStub.called).to.be.false;
-
-      filesCollection.downloadCallback = null;
-    });
-
-    it('should call interceptDownload if it is a function, that returns true', () => {
-      const interceptDownload = sinon.stub().returns(true);
-      filesCollection.interceptDownload = interceptDownload;
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.false;
-      expect(_404Stub.called).to.be.false;
-      expect(serveStub.calledOnce).to.be.false;
-      expect(interceptDownload.calledOnce).to.be.true;
-
-      filesCollection.interceptDownload = null;
-    });
-
-    it('should proceed if interceptDownload xis a function, that returns false', () => {
-      const interceptDownload = sinon.stub().returns(false);
-      filesCollection.interceptDownload = interceptDownload;
-      filesCollection.download(httpObj, version, fileRef);
-
-      expect(statStub.calledOnce).to.be.true;
-      expect(_404Stub.called).to.be.false;
-      expect(serveStub.calledOnce).to.be.true;
-      expect(interceptDownload.calledOnce).to.be.true;
-
-      filesCollection.interceptDownload = null;
-    });
-  });
-
-  describe('#downloadAsync', () => {
     let filesCollection;
     let httpObj;
     let version;
@@ -741,7 +478,7 @@ describe('FilesCollection', () => {
     });
 
     it('should download a file successfully', async () => {
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -750,7 +487,7 @@ describe('FilesCollection', () => {
 
     it('should return 404 if file does not exist', async () => {
       statStub.resolves({ isFile: () => false });
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.calledOnce).to.be.true;
@@ -760,7 +497,7 @@ describe('FilesCollection', () => {
     it('should call downloadCallbackAsync if it is a function', async () => {
       const downloadCallback = sinon.stub().returns(new Promise((resolve) => resolve(true)));
       filesCollection.downloadCallback = downloadCallback;
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -770,7 +507,7 @@ describe('FilesCollection', () => {
 
     it('should not call downloadCallback if it is not a function', async () => {
       filesCollection.downloadCallbackAsync = null;
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
@@ -780,7 +517,7 @@ describe('FilesCollection', () => {
     it('should return 404 if downloadCallbackAsync returns false', async () => {
       const downloadCallback = sinon.stub().returns(new Promise((resolve) => resolve(false)));
       filesCollection.downloadCallback = downloadCallback;
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.calledOnce).to.be.true;
@@ -792,7 +529,7 @@ describe('FilesCollection', () => {
     it('should call interceptDownload if it is a function, that resolves true', async () => {
       const interceptDownload = sinon.stub().resolves(true);
       filesCollection.interceptDownload = interceptDownload;
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.false;
       expect(_404Stub.called).to.be.false;
@@ -805,7 +542,7 @@ describe('FilesCollection', () => {
     it('should proceed if interceptDownload is a function, that returns false', async () => {
       const interceptDownload = sinon.stub().resolves(false);
       filesCollection.interceptDownload = interceptDownload;
-      await filesCollection.downloadAsync(httpObj, version, fileRef);
+      await filesCollection.download(httpObj, version, fileRef);
 
       expect(statStub.calledOnce).to.be.true;
       expect(_404Stub.called).to.be.false;
