@@ -198,7 +198,7 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name last
    * @summary Returns last item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
   async last() {
     this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
@@ -251,7 +251,7 @@ export class FilesCursor {
    * @name each
    * @summary Returns an Array of FileCursor made for each document on current cursor
    *          Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
-   * @returns {[FileCursor]}
+   * @returns {Promise<[FileCursor]>}
    */
   async each() {
     return this.mapAsync((file) => {

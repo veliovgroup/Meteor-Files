@@ -481,7 +481,7 @@ class FilesCollection extends FilesCollectionCore {
     this._checkAccess = async (http) => {
       if (this.protected) {
         let result;
-        const {userAsync, user, userId} = this._getUser(http);
+        const {userAsync, userId} = this._getUser(http);
 
         if (helpers.isFunction(this.protected)) {
           let fileRef;
@@ -489,7 +489,7 @@ class FilesCollection extends FilesCollectionCore {
             fileRef = await this.collection.findOneAsync(http.params._id);
           }
 
-          result = http ? await this.protected.call(Object.assign(http, {userAsync, user, userId}), (fileRef || null)) : await this.protected.call({user, userId}, (fileRef || null));
+          result = http ? await this.protected.call(Object.assign(http, {userAsync, userId}), (fileRef || null)) : await this.protected.call({userAsync, userId}, (fileRef || null));
         } else {
           result = !!userId;
         }
