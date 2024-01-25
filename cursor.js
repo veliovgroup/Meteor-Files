@@ -295,9 +295,9 @@ export class FilesCursor {
    * @param callbacks {Object} - Functions to call to deliver the result set as it changes
    * @summary Watch a query. Receive callbacks as the result set changes.
    * @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observe
-   * @returns {Object} - live query handle
+   * @returns {Promise<Object>} - live query handle
    */
-  observe(callbacks) {
+  async observe(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observe()]');
     return this.cursor.observe(callbacks);
   }
