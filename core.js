@@ -105,7 +105,8 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _debug() {
     if (this.debug) {
-      (console.info || console.log || function () { }).apply(void 0, arguments);
+      // eslint-disable-next-line no-console
+      (console.info || console.log || function () {}).apply(void 0, arguments);
     }
   }
 
@@ -203,18 +204,18 @@ export default class FilesCollectionCore extends EventEmitter {
   /*
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name findOne
+   * @name findOneAsync
    * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
    * @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
    * @summary Find and return Cursor for matching document Object
-   * @returns {FileCursor} Instance
+   * @returns {Promise<FileCursor>} Instance
    */
-  findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+  async findOneAsync(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOneAsync(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
 
-    const doc = this.collection.findOne(selector, options);
+    const doc = await this.collection.findOneAsync(selector, options);
     if (doc) {
       return new FileCursor(doc, this);
     }
@@ -241,13 +242,13 @@ export default class FilesCollectionCore extends EventEmitter {
   /*
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name update
+   * @name updateAsync
    * @see http://docs.meteor.com/#/full/update
    * @summary link Mongo.Collection update method
-   * @returns {Mongo.Collection} Instance
+   * @returns {Promise<Mongo.Collection>} Instance
    */
-  update() {
-    this.collection.update.apply(this.collection, arguments);
+  async updateAsync() {
+    await this.collection.updateAsync.apply(this.collection, arguments);
     return this.collection;
   }
 

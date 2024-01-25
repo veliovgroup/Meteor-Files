@@ -184,12 +184,14 @@ const fixJSONStringify = function(obj) {
  * @summary Returns formatted URL for file
  * @returns {String} Downloadable link
  */
+// eslint-disable-next-line camelcase, no-undef
 const formatFleURL = (fileRef, version = 'original', _uriBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
   check(fileRef, Object);
   check(version, String);
   let uriBase = _uriBase;
 
   if (!helpers.isString(uriBase)) {
+    // eslint-disable-next-line camelcase, no-undef
     uriBase = (__meteor_runtime_config__ || {}).ROOT_URL || '/';
   }
 
