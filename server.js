@@ -923,7 +923,8 @@ class FilesCollection extends FilesCollectionCore {
 
         if (opts.eof) {
           try {
-            return self._handleUploadSync(result, opts);
+            self._handleUploadSync(result, opts);
+            return result;
           } catch (handleUploadErr) {
             self._debug('[FilesCollection] [Write Method] [DDP] Exception:', handleUploadErr);
             throw handleUploadErr;
