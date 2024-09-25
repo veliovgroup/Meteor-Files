@@ -1,0 +1,1 @@
+For full package history see [releases on GitHub](https://github.com/veliovgroup/Meteor-Files/releases)

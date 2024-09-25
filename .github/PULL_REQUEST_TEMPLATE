@@ -1,0 +1,13 @@
+PRs ONLY ACCEPTED TO `dev` BRANCH! MAKE SURE YOU'RE SENDING A PR TO `dev` BRANCH!
+
+Thank you for contribution. Before you go:
+  1. Make sure you're using `spaces` for indentation
+  2. Make sure all new code is documented in-code-docs
+  3. Make sure new features, or changes in behavior is documented in README.md
+  4. Make sure this PR was previously discussed, if not create new issue ticket for your PR
+  5. Make sure you're sending PR to `dev` branch
+  6. Give an expressive description what you have changed/added and why
+  
+Thank you for making this package better :)
+
+## Do not forget to get rid of this default message

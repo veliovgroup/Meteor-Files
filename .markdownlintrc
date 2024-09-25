@@ -1,0 +1,8 @@
+{
+  "default": true,
+  "line_length": false,
+  "no-trailing-punctuation": false,
+  "ul-start-left": false,
+  "no-inline-html": false,
+  "first-line-h1": false
+}
