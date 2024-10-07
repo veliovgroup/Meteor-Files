@@ -670,64 +670,73 @@ export class UploadInstance extends EventEmitter {
     return this;
   }
 
-  start() {
+  async start() {
     let isUploadAllowed;
     if (this.fileData.size <= 0) {
       this.end(new Meteor.Error(400, 'Can\'t upload empty file'));
       return this.result;
     }
 
-    if (this.config.onBeforeUpload && helpers.isFunction(this.config.onBeforeUpload)) {
-      isUploadAllowed = this.config.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData);
-      if (isUploadAllowed !== true) {
-        return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
-      }
-    }
-
-    if (this.collection.onBeforeUpload && helpers.isFunction(this.collection.onBeforeUpload)) {
-      isUploadAllowed = this.collection.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData);
-      if (isUploadAllowed !== true) {
-        return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
-      }
-    }
-
-    Tracker.autorun((computation) => {
-      this.trackerComp = computation;
-      if (!this.result.onPause.curValue && !Meteor.status().connected) {
-        this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
-        this.result.pause();
-      } else if (this.result.onPause.curValue && Meteor.status().connected) {
-        this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
-        this.result.continue();
-      }
-    });
-
-    if (this.worker) {
-      this.collection._debug('[FilesCollection] [insert] using WebWorkers');
-      this.worker.onmessage = (evt) => {
-        if (evt.data.error) {
-          this.collection._debug('[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error);
-          this.emit('proceedChunk', evt.data.chunkId);
-        } else {
-          this.emit('sendChunk', evt);
+    try {
+      if (this.config.onBeforeUpload && helpers.isFunction(this.config.onBeforeUpload)) {
+        isUploadAllowed = await Promise.resolve(this.config.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData));
+        if (isUploadAllowed !== true) {
+          return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
         }
-      };
+      }
 
-      this.worker.onerror = (e) => {
-        this.collection._debug('[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e);
-        this.emit('end', e.message);
-      };
-    } else {
-      this.collection._debug('[FilesCollection] [insert] using MainThread');
+      if (this.collection.onBeforeUpload && helpers.isFunction(this.collection.onBeforeUpload)) {
+        isUploadAllowed = await Promise.resolve(this.collection.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData));
+        if (isUploadAllowed !== true) {
+          return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
+        }
+      }
+
+      Tracker.autorun((computation) => {
+        this.trackerComp = computation;
+        if (!this.result.onPause.curValue && !Meteor.status().connected) {
+          this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
+          this.result.pause();
+        } else if (this.result.onPause.curValue && Meteor.status().connected) {
+          this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
+          this.result.continue();
+        }
+      });
+
+      if (this.worker) {
+        this.collection._debug('[FilesCollection] [insert] using WebWorkers');
+        this.worker.onmessage = (evt) => {
+          if (evt.data.error) {
+            this.collection._debug('[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error);
+            this.emit('proceedChunk', evt.data.chunkId);
+          } else {
+            this.emit('sendChunk', evt);
+          }
+        };
+
+        this.worker.onerror = (e) => {
+          this.collection._debug('[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e);
+          this.emit('end', e.message);
+        };
+      } else {
+        this.collection._debug('[FilesCollection] [insert] using MainThread');
+      }
+
+      this.emit('prepare');
+      return this.result;
+    } catch (error) {
+      return this.end(new Meteor.Error(500, `Error in onBeforeUpload: ${error.message}`));
     }
-
-    this.emit('prepare');
-    return this.result;
   }
 
   manual() {
-    this.result.start = () => {
-      this.emit('start');
+    this.result.start = async () => {
+      try {
+        await this.start();
+        this.emit('start');
+      } catch (error) {
+        this.emit('end', error);
+      }
     };
 
     const self = this;
