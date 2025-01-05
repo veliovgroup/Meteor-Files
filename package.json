@@ -7,12 +7,12 @@
         "lint:fix": "eslint . --fix"
     },
     "dependencies": {
-        "chai": "^4.3.10",
+        "chai": "^4.5.0",
         "sinon": "^17.0.1"
     },
     "devDependencies": {
-        "@babel/core": "^7.23.6",
-        "@babel/eslint-parser": "^7.23.3",
-        "eslint": "^8.56.0"
+        "@babel/core": "^7.26.0",
+        "@babel/eslint-parser": "^7.25.9",
+        "eslint": "^8.57.1"
     }
 }
