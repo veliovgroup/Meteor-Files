@@ -18,17 +18,17 @@ export class FileCursor {
   /*
    * @locus Anywhere
    * @memberOf FileCursor
-   * @name remove
-   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+   * @name removeAsync
+   * @throws {Meteor.Error} - If no file reference is provided
    * @summary Remove document
-   * @returns {FileCursor}
+   * @returns {Promise<FileCursor>}
    */
-  remove(callback) {
-    this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
+  async removeAsync() {
+    this._collection._debug('[FilesCollection] [FileCursor] [removeAsync()]');
     if (this._fileRef) {
-      this._collection.remove(this._fileRef._id, callback);
+      await this._collection.removeAsync(this._fileRef._id);
     } else {
-      callback && callback(new Meteor.Error(404, 'No such file'));
+      throw new Meteor.Error(404, 'No such file');
     }
     return this;
   }
@@ -113,11 +113,11 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name get
    * @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
-   * @returns {[Object]}
+   * @returns {Promise<[Object]>}
    */
-  get() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [get()]');
-    return this.cursor.fetch();
+  async get() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
+    return this.cursor.fetchAsync();
   }
 
   /*
@@ -127,9 +127,9 @@ export class FilesCursor {
    * @summary Returns `true` if there is next item available on Cursor
    * @returns {Boolean}
    */
-  hasNext() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    return this._current < (this.cursor.count() - 1);
+  async hasNext() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [hasNextAsync()]');
+    return this._current < (await this.cursor.countAsync()) - 1;
   }
 
   /*
@@ -137,11 +137,11 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name next
    * @summary Returns next item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
-  next() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [next()]');
-    this.cursor.fetch()[++this._current];
+  async next() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [nextAsync()]');
+    return (await this.cursor.fetchAsync())[++this._current];
   }
 
   /*
@@ -161,23 +161,23 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name previous
    * @summary Returns previous item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
-  previous() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
-    this.cursor.fetch()[--this._current];
+  async previous() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [previousAsync()]');
+    return (this.cursor.fetchAsync())[--this._current];
   }
 
   /*
    * @locus Anywhere
    * @memberOf FilesCursor
-   * @name fetch
+   * @name fetchAsync
    * @summary Returns all matching document(s) as an Array.
-   * @returns {[Object]}
+   * @returns {Promise<[Object]>}
    */
-  fetch() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [fetch()]');
-    return this.cursor.fetch() || [];
+  async fetchAsync() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [fetchAsync()]');
+    return (await this.cursor.fetchAsync()) || [];
   }
 
   /*
@@ -185,12 +185,12 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name first
    * @summary Returns first item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
-  first() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [first()]');
+  async first() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [firstAsync()]');
     this._current = 0;
-    return this.fetch()[this._current];
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
@@ -198,52 +198,51 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name last
    * @summary Returns last item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
-  last() {
+  async last() {
     this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
-    this._current = this.count() - 1;
-    return this.fetch()[this._current];
+    this._current = (await this.countAsync()) - 1;
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
    * @locus Anywhere
    * @memberOf FilesCursor
-   * @name count
+   * @name countAsync
    * @summary Returns the number of documents that match a query
-   * @returns {Number}
+   * @returns {Promise<Number>}
    */
-  count() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [count()]');
-    return this.cursor.count();
+  async countAsync() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
+    return this.cursor.countAsync();
   }
 
   /*
    * @locus Anywhere
    * @memberOf FilesCursor
-   * @name remove
-   * @param callback {Function} - Triggered asynchronously after item is removed or failed to be removed
+   * @name removeAsync
    * @summary Removes all documents that match a query
-   * @returns {FilesCursor}
+   * @returns {Promise<FilesCursor>}
    */
-  remove(callback) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
-    this._collection.remove(this._selector, callback);
+  async removeAsync() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [removeAsync()]');
+    await this._collection.removeAsync(this._selector);
     return this;
   }
 
   /*
    * @locus Anywhere
    * @memberOf FilesCursor
-   * @name forEach
+   * @name forEachAsync
    * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
    * @param context {Object} - An object which will be the value of `this` inside `callback`
    * @summary Call `callback` once for each matching document, sequentially and synchronously.
-   * @returns {undefined}
+   * @returns {Promise<undefined>}
    */
-  forEach(callback, context = {}) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [forEach()]');
-    this.cursor.forEach(callback, context);
+  async forEachAsync(callback, context = {}) {
+    this._collection._debug('[FilesCollection] [FilesCursor] [forEachAsync()]');
+    await this.cursor.forEachAsync(callback, context);
   }
 
   /*
@@ -252,10 +251,10 @@ export class FilesCursor {
    * @name each
    * @summary Returns an Array of FileCursor made for each document on current cursor
    *          Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
-   * @returns {[FileCursor]}
+   * @returns {Promise<[FileCursor]>}
    */
-  each() {
-    return this.map((file) => {
+  async each() {
+    return this.mapAsync((file) => {
       return new FileCursor(file, this._collection);
     });
   }
@@ -263,15 +262,15 @@ export class FilesCursor {
   /*
    * @locus Anywhere
    * @memberOf FilesCursor
-   * @name map
+   * @name mapAsync
    * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
    * @param context {Object} - An object which will be the value of `this` inside `callback`
    * @summary Map `callback` over all matching documents. Returns an Array.
-   * @returns {Array}
+   * @returns {Promise<Array>}
    */
-  map(callback, context = {}) {
-    this._collection._debug('[FilesCollection] [FilesCursor] [map()]');
-    return this.cursor.map(callback, context);
+  async mapAsync(callback, context = {}) {
+    this._collection._debug('[FilesCollection] [FilesCursor] [mapAsync()]');
+    return this.cursor.mapAsync(callback, context);
   }
 
   /*
@@ -279,14 +278,14 @@ export class FilesCursor {
    * @memberOf FilesCursor
    * @name current
    * @summary Returns current item on Cursor, if available
-   * @returns {Object|undefined}
+   * @returns {Promise<Object|undefined>}
    */
-  current() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [current()]');
+  async current() {
+    this._collection._debug('[FilesCollection] [FilesCursor] [currentAsync()]');
     if (this._current < 0) {
       this._current = 0;
     }
-    return this.fetch()[this._current];
+    return (await this.fetchAsync())[this._current];
   }
 
   /*
@@ -296,9 +295,9 @@ export class FilesCursor {
    * @param callbacks {Object} - Functions to call to deliver the result set as it changes
    * @summary Watch a query. Receive callbacks as the result set changes.
    * @url http://docs.meteor.com/api/collections.html#Mongo-Cursor-observe
-   * @returns {Object} - live query handle
+   * @returns {Promise<Object>} - live query handle
    */
-  observe(callbacks) {
+  async observe(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observe()]');
     return this.cursor.observe(callbacks);
   }
