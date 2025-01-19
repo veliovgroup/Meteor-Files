@@ -255,7 +255,13 @@ class FilesCollection extends FilesCollectionCore {
       Meteor._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
       return {};
     }
-    return (new UploadInstance(config, this))[autoStart ? 'start' : 'manual']();
+    const uploadInstance = new UploadInstance(config, this);
+    if (autoStart) {
+      uploadInstance.start().catch((error) => {
+        console.error('[FilesCollection] [insert] Error starting upload:', error);
+      });
+    }
+    return uploadInstance;
   }
 
   /**
