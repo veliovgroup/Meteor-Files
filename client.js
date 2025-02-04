@@ -268,6 +268,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Client
    * @memberOf FilesCollection
    * @name insertAsync
+   * @returns {Promise<UploadInstance>}
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
