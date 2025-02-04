@@ -265,11 +265,11 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
-   * @locus Anywhere
+   * @locus Client
    * @memberOf FilesCollection
    * @name remove
    * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Function} callback - Callback with one `error` argument
+   * @param {Function} callback - Callback with `error` and `number` arguments
    * @summary Remove documents from the collection
    * @returns {FilesCollection} Instance
    */
@@ -286,6 +286,26 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     return this;
+  }
+
+  /**
+   * @locus Anywhere
+   * @memberOf FilesCollection
+   * @name removeAsync
+   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @summary Remove documents from the collection
+   * @returns {Promise<number>} number of matched and removed files/records
+   */
+  async removeAsync(selector = {}) {
+    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
+    check(selector, Match.OneOf(Object, String));
+
+    if (this.allowClientCode) {
+      return await this.ddp.callAsync(this._methodNames._Remove, selector);
+    }
+
+    this._debug('[FilesCollection] [removeAsync] Run code from client is not allowed!');
+    return 0;
   }
 }
 

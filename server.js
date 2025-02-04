@@ -836,14 +836,14 @@ class FilesCollection extends FilesCollectionCore {
           }
 
           const cursor = self.find(selector);
-          if ((await cursor.countAsync()) > 0) {
-            self.removeAsync(selector);
-            return true;
+          const count = await cursor.countAsync();
+          if (count > 0) {
+            await self.removeAsync(selector);
           }
-          throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
-        } else {
-          throw new Meteor.Error(405, '[FilesCollection] [remove] Running code on a client is not allowed!');
+          return count;
         }
+
+        throw new Meteor.Error(405, '[FilesCollection] [remove] Running code on a client is not allowed!');
       };
 
 
@@ -1585,7 +1585,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
    * @throws {Meteor.Error} If cursor is empty
    * @summary Remove documents from the collection
-   * @returns {Promise<FilesCollection>} Instance
+   * @returns {Promise<Number>} number of matched and removed files/records
    */
   async removeAsync(selector) {
     this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
@@ -1594,22 +1594,22 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const files = this.collection.find(selector);
-    if (await files.countAsync() > 0) {
+    const count = await files.countAsync();
+    if (count > 0) {
       await files.forEachAsync((file) => {
         this.unlink(file);
       });
-    } else {
-      throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
+
+      if (this.onAfterRemove) {
+        const docs = await files.fetchAsync();
+        await this.collection.removeAsync(selector);
+        await this.onAfterRemove(docs);
+      } else {
+        await this.collection.removeAsync(selector);
+      }
     }
 
-    if (this.onAfterRemove) {
-      const docs = await files.fetchAsync();
-      await this.collection.removeAsync(selector);
-      await this.onAfterRemove(docs);
-    } else {
-      await this.collection.removeAsync(selector);
-    }
-    return this;
+    return count;
   }
 
   /**
