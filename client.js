@@ -231,8 +231,8 @@ class FilesCollection extends FilesCollectionCore {
    *   {Number|dynamic} chunkSize   - Chunk size for upload
    *   {String}      transport      - Upload transport `http` or `ddp`
    *   {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
-   *   {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileRef`
-   *   {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileRef`
+   *   {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileObj`
+   *   {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileObj`
    *   {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
    *   {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
    *   {Function}    onBeforeUpload - Callback triggered right before upload is started:
@@ -272,7 +272,15 @@ class FilesCollection extends FilesCollectionCore {
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
-    return this.insert(config, autoStart);
+     if (this.disableUpload) {
+      this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
+      return {};
+    }
+    const uploadInstance = new UploadInstance(config, this);
+    if (autoStart) {
+      await uploadInstance.start();
+    }
+    return uploadInstance;
   }
 
   /**
@@ -320,28 +328,28 @@ class FilesCollection extends FilesCollectionCore {
   }
 }
 
-/*
+/**
  * @locus Client
  * @TemplateHelper
  * @name fileURL
- * @param {Object} fileRef - File reference object
- * @param {String} version - [Optional] Version of file you would like to request
- * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
- * @summary Get download URL for file by fileRef, even without subscription
- * @example {{fileURL fileRef}}
- * @returns {String}
+ * @param fileObj  {FileObj} - File reference object
+ * @param version? {string}  - Version of file you would like to request
+ * @param uriBase? {string}  - URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
+ * @summary Get download URL for file by fileObj, even without subscription
+ * @example {{fileURL fileObj}}
+ * @returns {string}
  */
 Meteor.startup(() => {
   const _template = (Package && Package.templating && Package.templating.Template) ? Package.templating.Template : undefined;
   if (_template) {
-    _template.registerHelper('fileURL', (fileRef, _version = 'original', _uriBase) => {
-      if (!helpers.isObject(fileRef)) {
+    _template.registerHelper('fileURL', (fileObj, _version = 'original', _uriBase) => {
+      if (!helpers.isObject(fileObj)) {
         return '';
       }
 
       const version = (!helpers.isString(_version)) ? 'original' : _version;
       const uriBase = (!helpers.isString(_uriBase)) ? void 0 : _uriBase;
-      return formatFleURL(fileRef, version, uriBase);
+      return formatFleURL(fileObj, version, uriBase);
     });
   }
 });
