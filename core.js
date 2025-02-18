@@ -96,7 +96,7 @@ export default class FilesCollectionCore extends EventEmitter {
     }
   };
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name _debug
@@ -110,13 +110,13 @@ export default class FilesCollectionCore extends EventEmitter {
     }
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name _getFileName
-   * @param {Object} fileData - File Object
+   * @param {FileData} fileData - File Object
    * @summary Returns file's name
-   * @returns {String}
+   * @returns {string}
    */
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
@@ -126,13 +126,13 @@ export default class FilesCollectionCore extends EventEmitter {
     return '';
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name _getExt
-   * @param {String} FileName - File name
+   * @param {string} FileName - File name
    * @summary Get extension from FileName
-   * @returns {Object}
+   * @returns {Partial<FileData>}
    */
   _getExt(fileName) {
     if (fileName.includes('.')) {
@@ -142,12 +142,13 @@ export default class FilesCollectionCore extends EventEmitter {
     return { ext: '', extension: '', extensionWithDot: '' };
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name _updateFileTypes
-   * @param {Object} data - File data
+   * @param {FileData} data - File data
    * @summary Internal method. Classify file based on 'type' field
+   * @returns {void}
    */
   _updateFileTypes(data) {
     data.isVideo = /^video\//i.test(data.type);
@@ -158,13 +159,13 @@ export default class FilesCollectionCore extends EventEmitter {
     data.isPDF = /^application\/(x-)?pdf$/i.test(data.type);
   }
 
-  /*
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name _dataToSchema
-   * @param {Object} data - File data
+   * @param {FileData & Partial<FielObj>} data - File data
    * @summary Internal method. Build object in accordance with default schema from File data
-   * @returns {Object}
+   * @returns {Partial<FileObj>}
    */
   _dataToSchema(data) {
     const ds = {
@@ -201,12 +202,12 @@ export default class FilesCollectionCore extends EventEmitter {
     return ds;
   }
 
-  /*
+  /***
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name findOneAsync
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
    * @summary Find and return Cursor for matching document Object
    * @returns {Promise<FileCursor>} Instance
    */
@@ -222,12 +223,36 @@ export default class FilesCollectionCore extends EventEmitter {
     return doc;
   }
 
-  /*
+  /***
+   * @locus Client
+   * @memberOf FilesCollectionCore
+   * @name findOne
+   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+   * @summary Find and return Cursor for matching document Object
+   * @returns {FileCursor} Instance
+   */
+  findOne(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    if (Meteor.isServer) {
+      throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
+    }
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(options, Match.Optional(Object));
+
+    const doc = this.collection.findOne(selector, options);
+    if (doc) {
+      return new FileCursor(doc, this);
+    }
+    return doc;
+  }
+
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name find
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
    * @summary Find and return Cursor for matching documents
    * @returns {FilesCursor} Instance
    */
@@ -239,28 +264,57 @@ export default class FilesCollectionCore extends EventEmitter {
     return new FilesCursor(selector, options, this);
   }
 
-  /*
-   * @locus Anywhere
+  /**
+   * @locus Client
    * @memberOf FilesCollectionCore
-   * @name updateAsync
-   * @see http://docs.meteor.com/#/full/update
+   * @name update
+   * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-update
    * @summary link Mongo.Collection update method
    * @returns {Promise<Mongo.Collection>} Instance
    */
-  async updateAsync() {
-    await this.collection.updateAsync.apply(this.collection, arguments);
+  update(...args) {
+    this.collection.update.apply(this.collection, args);
     return this.collection;
   }
 
-  /*
+  /**
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
+   * @name updateAsync
+   * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-updateAsync
+   * @summary link Mongo.Collection updateAsync method
+   * @returns {Promise<number>} Number of updated records
+   */
+  async updateAsync(...args) {
+    return await this.collection.updateAsync.apply(this.collection, args);
+  }
+
+  /***
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
+   * @name countDocuments
+   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
+   * @summary Count records for matching document Object
+   * @returns {Promise<number>} Number of matching records
+   */
+  async findOneAsync(selector = {}, options) {
+    this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(options, Match.Optional(Object));
+
+    return await this.collection.countDocuments(selector, options);
+  }
+
+  /**
    * @locus Anywhere
    * @memberOf FilesCollectionCore
    * @name link
-   * @param {Object} fileRef - File reference object
-   * @param {String} version - Version of file you would like to request
-   * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
+   * @param {Partial<FileObj>} fileRef - File reference object
+   * @param {string} [version] - Version of file you would like to request
+   * @param {string} [uriBase] - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
    * @summary Returns downloadable URL
-   * @returns {String} Empty string returned in case if file not found in DB
+   * @returns {string} URL or empty string if file not found in DB
    */
   link(fileRef, version = 'original', uriBase) {
     this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
