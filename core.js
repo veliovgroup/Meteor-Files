@@ -102,10 +102,10 @@ export default class FilesCollectionCore extends EventEmitter {
    * @memberOf FilesCollectionCore
    * @returns {void}
    */
-  _debug() {
+  _debug(...args) {
     if (this.debug) {
       // eslint-disable-next-line no-console
-      (console.info || console.log || function () {}).apply(undefined, arguments);
+      (console.info || console.log || function () {}).apply(undefined, args);
     }
   }
 
@@ -229,6 +229,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
    * @param {MeteorFilesOptions} [options] - Mongo query options
    * @returns {FileCursor|null} A FileCursor instance, or null if not found
+   * @throws {Meteor.Error} If called on the server
    */
   findOne(selector = {}, options) {
     this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
@@ -266,7 +267,7 @@ export default class FilesCollectionCore extends EventEmitter {
   }
 
   /**
-   * Links to the underlying Mongo.Collection update method
+   * Links to the underlying Mongo.Collection update method.
    * @locus Client
    * @memberOf FilesCollectionCore
    * @param {...*} args - Update method arguments
