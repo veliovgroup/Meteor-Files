@@ -1,31 +1,33 @@
 import { Meteor } from 'meteor/meteor';
 
 /**
+ * @template MetadataType = Record<string, unknown>
+ * @class FileCursor
  * @private
  * @locus Anywhere
- * @class FileCursor
- * @param _fileRef {Mongo.Selector | Mongo.ObjectID | string} - Mongo-Style selector (https://docs.meteor.com/api/collections.html#selectors)
- * @param _collection {FilesCollection} - FilesCollection Instance
- * @summary Internal class, represents each record in `FilesCursor.each()` or document returned from `.findOne()` method
+ * @param {import("meteor/ostrio:files").FileObj<MetadataType>} _fileRef - Mongo–style file document or selector.
+ * @param {FilesCollection} _collection - FilesCollection instance.
+ * @summary Internal class representing a single file document (as returned from `.findOne()` or iterated via `.each()`).
  */
 export class FileCursor {
   constructor(_fileRef, _collection) {
+    if (!_fileRef) {
+      throw new Meteor.Error(404, 'No file reference provided');
+    }
     this._fileRef = _fileRef;
     this._collection = _collection;
+    // Merge file document properties into this instance.
     Object.assign(this, _fileRef);
   }
 
   /**
-   * @locus Client
-   * @memberOf FileCursor
-   * @name remove
-   * @throws {Meteor.Error} - If no file reference is provided
-   * @summary Remove document
-   * @returns {FileCursor}
+   * Remove document.
+   * @returns {FileCursor<MetadataType>}
+   * @throws {Meteor.Error} If no file reference is provided.
    */
   remove() {
     this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
-    if (this._fileRef) {
+    if (this._fileRef && this._fileRef._id) {
       this._collection.remove(this._fileRef._id);
     } else {
       throw new Meteor.Error(404, 'No such file');
@@ -34,16 +36,13 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name removeAsync
-   * @throws {Meteor.Error} - If no file reference is provided
-   * @summary Remove document
-   * @returns {Promise<FileCursor>}
+   * Remove document asynchronously.
+   * @returns {Promise<FileCursor<MetadataType>>}
+   * @throws {Meteor.Error} If no file reference is provided.
    */
   async removeAsync() {
     this._collection._debug('[FilesCollection] [FileCursor] [removeAsync()]');
-    if (this._fileRef) {
+    if (this._fileRef && this._fileRef._id) {
       await this._collection.removeAsync(this._fileRef._id);
     } else {
       throw new Meteor.Error(404, 'No such file');
@@ -52,13 +51,10 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name link
-   * @param version? {string} - Name of file's subversion
-   * @param uriBase? {string} - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
-   * @summary Returns downloadable URL to File
-   * @returns {String}
+   * Returns a downloadable URL to the file.
+   * @param {string} [version='original'] - Name of the file’s subversion.
+   * @param {string} [uriBase] - Optional URI base.
+   * @returns {string}
    */
   link(version = 'original', uriBase) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
@@ -69,12 +65,9 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name get
-   * @param property? {string} - Name of sub-object property
-   * @summary Returns current document as a plain Object, if `property` is specified - returns value of sub-object property
-   * @returns {FileObj|any}
+   * Returns the underlying file document (or the value of a specified property).
+   * @param {string} [property] - Name of the property to return.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | any}
    */
   get(property) {
     this._collection._debug(`[FilesCollection] [FileCursor] [get(${property})]`);
@@ -85,11 +78,8 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name fetch
-   * @summary Returns document as plain Object in Array
-   * @returns {FileObj[]}
+   * Returns the file document wrapped in an array.
+   * @returns {Array<import("meteor/ostrio:files").FileObj<MetadataType>>}
    */
   fetch() {
     this._collection._debug('[FilesCollection] [FileCursor] [fetch()]');
@@ -97,11 +87,8 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name fetchAsync
-   * @summary Returns document as plain Object in Array
-   * @returns {Promise<FileObj[]>}
+   * Asynchronously returns the file document wrapped in an array.
+   * @returns {Promise<Array<import("meteor/ostrio:files").FileObj<MetadataType>>>}
    */
   async fetchAsync() {
     this._collection._debug('[FilesCollection] [FileCursor] [fetchAsync()]');
@@ -109,161 +96,140 @@ export class FileCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FileCursor
-   * @name with
-   * @summary Returns reactive version of current FileCursor, useful to use with `{{#with}}...{{/with}}` block template helper
-   * @returns {FileObj[]}
+   * Returns a reactive version of the current FileCursor by merging in reactive fields.
+   * Useful for Blaze template helpers (e.g. `{{#with}}`).
+   * @returns {FileCursor<MetadataType>}
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
-    return Object.assign(this, this._collection.collection.findOne(this._fileRef._id));
+    const reactiveProps = this._collection.collection.findOne(this._fileRef._id);
+    Object.assign(this, reactiveProps);
+    return this;
   }
 }
 
 /**
+ * @template MetadataType = Record<string, unknown>
+ * @class FilesCursor
  * @private
  * @locus Anywhere
- * @class FilesCursor
- * @param _selector {Mongo.Selector | Mongo.ObjectID | string} - Mongo-Style selector (https://docs.meteor.com/api/collections.html#selectors)
- * @param options {Mongo.Options} - Mongo-Style selector Options (https://docs.meteor.com/api/collections.html#selectors)
- * @param _collection {FilesCollection} - FilesCollection Instance
- * @summary Implementation of Cursor for FilesCollection
+ * @param {Mongo.Selector | Mongo.ObjectID | string} _selector - Mongo–style selector for the query.
+ * @param {Mongo.Options} options - Query options.
+ * @param {FilesCollection} _collection - FilesCollection instance.
+ * @summary Implementation of a cursor for FilesCollection.
  */
 export class FilesCursor {
-  constructor(_selector = {}, options, _collection) {
+  constructor(_selector = {}, options = {}, _collection) {
     this._collection = _collection;
     this._selector = _selector;
+    // Initialize the current index for iteration.
     this._current = -1;
+    // Underlying Mongo cursor.
     this.cursor = this._collection.collection.find(this._selector, options);
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name get
-   * @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
-   * @returns {FileObj[]}
+   * Returns all matching file documents as an array.
+   * Alias of `.fetch()`.
+   * @returns {Array<import("meteor/ostrio:files").FileObj<MetadataType>>}
    */
   get() {
     this._collection._debug('[FilesCollection] [FilesCursor] [get()]');
-    return this.cursor.fetch();
+    return this.fetch();
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name getAsync
-   * @summary Returns all matching document(s) as an Array. Alias of `.fetch()`
-   * @returns {Promise<FileObj[]>}
+   * Asynchronously returns all matching file documents as an array.
+   * @returns {Promise<Array<import("meteor/ostrio:files").FileObj<MetadataType>>>}
    */
   async getAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
-    return await this.cursor.fetchAsync();
+    return await this.fetchAsync();
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name hasNext
-   * @summary Returns `true` if there is next item available on Cursor
+   * Returns `true` if there is a next item available.
    * @returns {boolean}
    */
   hasNext() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    return this._current < (this.cursor.count()) - 1;
+    return this._current < this.count() - 1;
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name hasNextAsync
-   * @summary Returns `true` if there is next item available on Cursor
+   * Asynchronously returns `true` if there is a next item available.
    * @returns {Promise<boolean>}
    */
   async hasNextAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNextAsync()]');
-    return this._current < (await this.cursor.countAsync()) - 1;
+    const count = await this.countAsync();
+    return this._current < count - 1;
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name next
-   * @summary Returns next item on Cursor, if available
-   * @returns {FileObj|undefined}
+   * Returns the next file document, if available.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | undefined}
    */
   next() {
     this._collection._debug('[FilesCollection] [FilesCursor] [next()]');
-    return this.cursor.fetch()[++this._current];
+    const allFiles = this.fetch();
+    this._current++;
+    return allFiles[this._current];
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name nextAsync
-   * @summary Returns next item on Cursor, if available
-   * @returns {Promise<FileObj|undefined>}
+   * Asynchronously returns the next file document, if available.
+   * @returns {Promise<import("meteor/ostrio:files").FileObj<MetadataType> | undefined>}
    */
   async nextAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [nextAsync()]');
-    return (await this.cursor.fetchAsync())[++this._current];
+    const allFiles = await this.fetchAsync();
+    this._current++;
+    return allFiles[this._current];
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name hasPrevious
-   * @summary Returns `true` if there is previous item available on Cursor
+   * Returns `true` if there is a previous item available.
    * @returns {boolean}
    */
   hasPrevious() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasPrevious()]');
-    return this._current !== -1;
+    return this._current > 0;
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name hasPreviousAsync
-   * @summary Returns `true` if there is previous item available on Cursor
+   * Asynchronously returns `true` if there is a previous item available.
    * @returns {Promise<boolean>}
    */
   async hasPreviousAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasPreviousAsync()]');
-    return this._current !== -1;
+    return this._current > 0;
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name previous
-   * @summary Returns previous item on Cursor, if available
-   * @returns {FileObj|undefined}
+   * Returns the previous file document, if available.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | undefined}
    */
   previous() {
     this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
-    return this.cursor.fetch()[--this._current];
+    this._current = Math.max(this._current - 1, 0);
+    return this.fetch()[this._current];
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name previousAsync
-   * @summary Returns previous item on Cursor, if available
-   * @returns {Promise<FileObj|undefined>}
+   * Asynchronously returns the previous file document, if available.
+   * @returns {Promise<import("meteor/ostrio:files").FileObj<MetadataType> | undefined>}
    */
   async previousAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [previousAsync()]');
-    return (await this.cursor.fetchAsync())[--this._current];
+    this._current = Math.max(this._current - 1, 0);
+    const allFiles = await this.fetchAsync();
+    return allFiles[this._current];
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name fetch
-   * @summary Returns all matching document(s) as an Array.
-   * @returns {FileObj[]}
+   * Returns all matching file documents as an array.
+   * @returns {Array<import("meteor/ostrio:files").FileObj<MetadataType>>}
    */
   fetch() {
     this._collection._debug('[FilesCollection] [FilesCursor] [fetch()]');
@@ -271,11 +237,8 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name fetchAsync
-   * @summary Returns all matching document(s) as an Array.
-   * @returns {Promise<FileObj[]>}
+   * Asynchronously returns all matching file documents as an array.
+   * @returns {Promise<Array<import("meteor/ostrio:files").FileObj<MetadataType>>>}
    */
   async fetchAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [fetchAsync()]');
@@ -283,65 +246,53 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name first
-   * @summary Returns first item on Cursor, if available
-   * @returns {FileObj|undefined}
+   * Returns the first file document, if available.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | undefined}
    */
   first() {
     this._collection._debug('[FilesCollection] [FilesCursor] [first()]');
     this._current = 0;
-    return this.fetch()[this._current];
+    const allFiles = this.fetch();
+    return allFiles[this._current];
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name firstAsync
-   * @summary Returns first item on Cursor, if available
-   * @returns {Promise<FileObj|undefined>}
+   * Asynchronously returns the first file document, if available.
+   * @returns {Promise<import("meteor/ostrio:files").FileObj<MetadataType> | undefined>}
    */
   async firstAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [firstAsync()]');
     this._current = 0;
-    return (await this.fetchAsync())[this._current];
+    const allFiles = await this.fetchAsync();
+    return allFiles[this._current];
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name last
-   * @summary Returns last item on Cursor, if available
-   * @returns {FileObj|undefined}
+   * Returns the last file document, if available.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | undefined}
    */
   last() {
     this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
-    this._current = this.count() - 1;
-    if (this._current >= 0) {
-      return this.fetch()[this._current];
-    }
-    return void 0;
+    const count = this.count();
+    this._current = count - 1;
+    const allFiles = this.fetch();
+    return count > 0 ? allFiles[this._current] : undefined;
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name lastAsync
-   * @summary Returns last item on Cursor, if available
-   * @returns {Promise<FileObj|undefined>}
+   * Asynchronously returns the last file document, if available.
+   * @returns {Promise<import("meteor/ostrio:files").FileObj<MetadataType> | undefined>}
    */
   async lastAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [lastAsync()]');
-    this._current = (await this.countAsync()) - 1;
-    return (await this.fetchAsync())[this._current];
+    const count = await this.countAsync();
+    this._current = count - 1;
+    const allFiles = await this.fetchAsync();
+    return count > 0 ? allFiles[this._current] : undefined;
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name count
-   * @summary Returns the number of documents that match a query
+   * Returns the number of file documents that match the query.
    * @returns {number}
    */
   count() {
@@ -350,10 +301,7 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name countAsync
-   * @summary Returns the number of documents that match a query
+   * Asynchronously returns the number of file documents that match the query.
    * @returns {Promise<number>}
    */
   async countAsync() {
@@ -362,11 +310,9 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name remove
-   * @summary Removes all documents that match a query; Callback has two arguments: `error` and `number` of removed records
-   * @returns {FilesCursor}
+   * Removes all file documents that match the query.
+   * @param {Function} [callback=() => {}] - Callback with error and number of removed records.
+   * @returns {FilesCursor<MetadataType>}
    */
   remove(callback = () => {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
@@ -375,10 +321,7 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name removeAsync
-   * @summary Removes all documents that match a query; Returns number of removed records
+   * Asynchronously removes all file documents that match the query.
    * @returns {Promise<number>}
    */
   async removeAsync() {
@@ -387,13 +330,10 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name forEach
-   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-   * @param context? {object} - An object which will be the value of `this` inside `callback`
-   * @summary Call `callback` once for each matching document, sequentially and synchronously.
-   * @returns {FilesCursor}
+   * Synchronously iterates over each matching file document.
+   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @param {Object} [context={}] - The context for the callback.
+   * @returns {FilesCursor<MetadataType>}
    */
   forEach(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [forEach()]');
@@ -402,13 +342,10 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name forEachAsync
-   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-   * @param context? {object} - An object which will be the value of `this` inside `callback`
-   * @summary Call `callback` once for each matching document, sequentially and synchronously.
-   * @returns {Promise<FilesCursor>}
+   * Asynchronously iterates over each matching file document.
+   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @param {Object} [context={}] - The context for the callback.
+   * @returns {Promise<FilesCursor<MetadataType>>}
    */
   async forEachAsync(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [forEachAsync()]');
@@ -417,55 +354,40 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name each
-   * @summary Returns an Array of FileCursor made for each document on current cursor
-   *          Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
-   * @returns {FileCursor[]}
+   * Returns an array of FileCursor instances (one per file document).
+   * Useful for Blaze’s `{{#each}}` helper.
+   * @returns {Array<FileCursor<MetadataType>>}
    */
   each() {
-    return this.map((file) => {
-      return new FileCursor(file, this._collection);
-    });
+    this._collection._debug('[FilesCollection] [FilesCursor] [each()]');
+    return this.map((file) => new FileCursor(file, this._collection));
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name eachAsync
-   * @summary Returns an Array of FileCursor made for each document on current cursor
-   *          Useful when using in {{#each FilesCursor#each}}...{{/each}} block template helper
-   * @returns {Promise<FileCursor[]>}
+   * Asynchronously returns an array of FileCursor instances (one per file document).
+   * @returns {Promise<Array<FileCursor<MetadataType>>>}
    */
   async eachAsync() {
-    return await this.mapAsync((file) => {
-      return new FileCursor(file, this._collection);
-    });
+    this._collection._debug('[FilesCollection] [FilesCursor] [eachAsync()]');
+    return await this.mapAsync((file) => new FileCursor(file, this._collection));
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name map
-   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-   * @param context? {object} - An object which will be the value of `this` inside `callback`
-   * @summary Map `callback` over all matching documents. Returns an Array.
-   * @returns {FileObj[]}
+   * Synchronously maps a callback over all matching file documents.
+   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @param {Object} [context={}] - The context for the callback.
+   * @returns {Array<any>}
    */
-  async map(callback, context = {}) {
+  map(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [map()]');
     return this.cursor.map(callback, context);
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name mapAsync
-   * @param callback {Function} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself
-   * @param context {Object} - An object which will be the value of `this` inside `callback`
-   * @summary Map `callback` over all matching documents. Returns an Array.
-   * @returns {Promise<FileObj[]>}
+   * Asynchronously maps a callback over all matching file documents.
+   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @param {Object} [context={}] - The context for the callback.
+   * @returns {Promise<Array<any>>}
    */
   async mapAsync(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [mapAsync()]');
@@ -473,11 +395,8 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name current
-   * @summary Returns current item on Cursor, if available
-   * @returns {FileObj|undefined}
+   * Returns the current file document in the cursor.
+   * @returns {import("meteor/ostrio:files").FileObj<MetadataType> | undefined}
    */
   current() {
     this._collection._debug('[FilesCollection] [FilesCursor] [current()]');
@@ -488,28 +407,22 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name currentAsync
-   * @summary Returns current item on Cursor, if available
-   * @returns {Promise<FileObj|undefined>}
+   * Asynchronously returns the current file document in the cursor.
+   * @returns {Promise<import("meteor/ostrio:files").FileObj<MetadataType> | undefined>}
    */
   async currentAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [currentAsync()]');
     if (this._current < 0) {
       this._current = 0;
     }
-    return (await this.fetchAsync())[this._current];
+    const files = await this.fetchAsync();
+    return files[this._current];
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name observe
-   * @param callbacks {Mongo.ObserveCallbacks} - Functions to call to deliver the result set as it changes
-   * @summary Watch a query. Receive callbacks as the result set changes.
-   * @url https://docs.meteor.com/api/collections.html#Mongo-Cursor-observe
-   * @returns {Meteor.LiveQueryHandle} - live query handle
+   * Watches a query and receives callbacks as the result set changes.
+   * @param {Mongo.ObserveCallbacks} callbacks - The observe callbacks.
+   * @returns {Meteor.LiveQueryHandle}
    */
   observe(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observe()]');
@@ -517,13 +430,9 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name observeAsync
-   * @param callbacks {Mongo.ObserveCallbacks} - Functions to call to deliver the result set as it changes
-   * @summary Watch a query. Receive callbacks as the result set changes.
-   * @url https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeAsync
-   * @returns {Promise<Meteor.LiveQueryHandle>} - live query handle
+   * Asynchronously watches a query and receives callbacks as the result set changes.
+   * @param {Mongo.ObserveCallbacks} callbacks - The observe callbacks.
+   * @returns {Promise<Meteor.LiveQueryHandle>}
    */
   async observeAsync(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observeAsync()]');
@@ -531,13 +440,9 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Client
-   * @memberOf FilesCursor
-   * @name observeChanges
-   * @param callbacks {Mongo.ObserveChangesCallbacks} - Functions to call to deliver the result set as it changes
-   * @summary Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
-   * @url https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges
-   * @returns {Meteor.LiveQueryHandle} - live query handle
+   * Watches a query for changes (only the differences) and receives callbacks.
+   * @param {Mongo.ObserveChangesCallbacks} callbacks - The observeChanges callbacks.
+   * @returns {Meteor.LiveQueryHandle}
    */
   observeChanges(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observeChanges()]');
@@ -545,16 +450,13 @@ export class FilesCursor {
   }
 
   /**
-   * @locus Anywhere
-   * @memberOf FilesCursor
-   * @name observeChangesAsync
-   * @param callbacks {Mongo.ObserveChangesCallbacks} - Functions to call to deliver the result set as it changes
-   * @summary Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
-   * @url https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChangesAsync
-   * @returns {Promise<Meteor.LiveQueryHandle>} - live query handle
+   * Asynchronously watches a query for changes (only the differences) and receives callbacks.
+   * @param {Mongo.ObserveChangesCallbacks} callbacks - The observeChanges callbacks.
+   * @returns {Promise<Meteor.LiveQueryHandle>}
    */
   async observeChangesAsync(callbacks) {
     this._collection._debug('[FilesCollection] [FilesCursor] [observeChangesAsync()]');
     return await this.cursor.observeChangesAsync(callbacks);
   }
 }
+
