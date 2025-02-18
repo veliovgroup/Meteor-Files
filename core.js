@@ -97,57 +97,56 @@ export default class FilesCollectionCore extends EventEmitter {
   };
 
   /**
+   * Print logs in debug mode.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _debug
-   * @summary Print logs in debug mode
    * @returns {void}
    */
   _debug() {
     if (this.debug) {
       // eslint-disable-next-line no-console
-      (console.info || console.log || function () {}).apply(void 0, arguments);
+      (console.info || console.log || function () {}).apply(undefined, arguments);
     }
   }
 
   /**
+   * Returns file's name.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _getFileName
-   * @param {FileData} fileData - File Object
-   * @summary Returns file's name
-   * @returns {string}
+   * @param {FileData} fileData - File data object
+   * @returns {string} The sanitized file name
    */
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
-    if (helpers.isString(fileName) && (fileName.length > 0)) {
-      return (fileData.name || fileData.fileName).replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
+    if (helpers.isString(fileName) && fileName.length > 0) {
+      return fileName.replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
     }
     return '';
   }
 
   /**
+   * Extracts extension information from a file name.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _getExt
-   * @param {string} FileName - File name
-   * @summary Get extension from FileName
-   * @returns {Partial<FileData>}
+   * @param {string} fileName - The file name
+   * @returns {Partial<FileData>} An object with properties: ext, extension, and extensionWithDot
    */
   _getExt(fileName) {
     if (fileName.includes('.')) {
-      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase().replace(/([^a-z0-9\-\_\.]+)/gi, '').substring(0, 20);
+      const extension = (fileName.split('.').pop().split('?')[0] || '')
+        .toLowerCase()
+        .replace(/([^a-z0-9\-\_\.]+)/gi, '')
+        .substring(0, 20);
       return { ext: extension, extension, extensionWithDot: `.${extension}` };
     }
     return { ext: '', extension: '', extensionWithDot: '' };
   }
 
   /**
+   * Classifies the file based on its MIME type.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _updateFileTypes
-   * @param {FileData} data - File data
-   * @summary Internal method. Classify file based on 'type' field
+   * @param {FileData} data - File data object
    * @returns {void}
    */
   _updateFileTypes(data) {
@@ -160,12 +159,11 @@ export default class FilesCollectionCore extends EventEmitter {
   }
 
   /**
+   * Builds an object that conforms to the default schema from file data.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _dataToSchema
-   * @param {FileData & Partial<FielObj>} data - File data
-   * @summary Internal method. Build object in accordance with default schema from File data
-   * @returns {Partial<FileObj>}
+   * @param {FileData & Partial<FileObj>} data - File data combined with optional FileObj properties
+   * @returns {Partial<FileObj>} The schema-compliant file object
    */
   _dataToSchema(data) {
     const ds = {
@@ -192,7 +190,7 @@ export default class FilesCollectionCore extends EventEmitter {
       _collectionName: data._collectionName || this.collectionName
     };
 
-    //Optional fileId
+    // Optional fileId
     if (data.fileId) {
       ds._id = data.fileId;
     }
@@ -202,75 +200,77 @@ export default class FilesCollectionCore extends EventEmitter {
     return ds;
   }
 
-  /***
+  /**
+   * Finds and returns a FileCursor for a matching document asynchronously.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name findOneAsync
-   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching document Object
-   * @returns {Promise<FileCursor>} Instance
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {Promise<FileCursor|null>} A FileCursor instance, or null if not found
    */
   async findOneAsync(selector = {}, options) {
     this._debug(`[FilesCollection] [findOneAsync(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     const doc = await this.collection.findOneAsync(selector, options);
     if (doc) {
       return new FileCursor(doc, this);
     }
-    return doc;
+    return null;
   }
 
-  /***
+  /**
+   * Finds and returns a FileCursor for a matching document (client only).
    * @locus Client
    * @memberOf FilesCollectionCore
-   * @name findOne
-   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching document Object
-   * @returns {FileCursor} Instance
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FileCursor|null} A FileCursor instance, or null if not found
    */
   findOne(selector = {}, options) {
     this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
     if (Meteor.isServer) {
       throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
     }
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     const doc = this.collection.findOne(selector, options);
     if (doc) {
       return new FileCursor(doc, this);
     }
-    return doc;
+    return null;
   }
 
   /**
+   * Finds and returns a FilesCursor for matching documents.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name find
-   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching documents
-   * @returns {FilesCursor} Instance
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FilesCursor} A FilesCursor instance
    */
   find(selector = {}, options) {
     this._debug(`[FilesCollection] [find(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     return new FilesCursor(selector, options, this);
   }
 
   /**
+   * Links to the underlying Mongo.Collection update method
    * @locus Client
    * @memberOf FilesCollectionCore
-   * @name update
-   * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-update
-   * @summary link Mongo.Collection update method
-   * @returns {Promise<Mongo.Collection>} Instance
+   * @param {...*} args - Update method arguments
+   * @returns {Mongo.Collection} The underlying collection
    */
   update(...args) {
     this.collection.update.apply(this.collection, args);
@@ -278,51 +278,50 @@ export default class FilesCollectionCore extends EventEmitter {
   }
 
   /**
+   * Links to the underlying Mongo.Collection updateAsync method.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name updateAsync
-   * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-updateAsync
-   * @summary link Mongo.Collection updateAsync method
-   * @returns {Promise<number>} Number of updated records
+   * @param {...*} args - Update method arguments
+   * @returns {Promise<number>} The number of updated records
    */
   async updateAsync(...args) {
     return await this.collection.updateAsync.apply(this.collection, args);
   }
 
-  /***
+  /**
+   * Counts records matching a selector.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name countDocuments
-   * @param {MeteorFilesSelector} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {MeteorFilesOptions} [options] - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Count records for matching document Object
-   * @returns {Promise<number>} Number of matching records
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {Promise<number>} The number of matching records
    */
-  async findOneAsync(selector = {}, options) {
+  async countDocuments(selector = {}, options) {
     this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     return await this.collection.countDocuments(selector, options);
   }
 
   /**
+   * Returns a downloadable URL for a file.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name link
-   * @param {Partial<FileObj>} fileRef - File reference object
-   * @param {string} [version] - Version of file you would like to request
-   * @param {string} [uriBase] - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
-   * @summary Returns downloadable URL
-   * @returns {string} URL or empty string if file not found in DB
+   * @param {Partial<FileObj>} fileObj - A partial file object reference
+   * @param {string} [version='original'] - The file version
+   * @param {string} [uriBase] - Optional URI base
+   * @returns {string} The download URL, or an empty string if the file is not found
    */
-  link(fileRef, version = 'original', uriBase) {
-    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
-    check(fileRef, Object);
+  link(fileObj, version = 'original', uriBase) {
+    this._debug(`[FilesCollection] [link(${helpers.isObject(fileObj) ? fileObj._id : undefined}, ${version})]`);
+    check(fileObj, Object);
 
-    if (!fileRef) {
+    if (!fileObj) {
       return '';
     }
-    return formatFleURL(fileRef, version, uriBase);
+    return formatFleURL(fileObj, version, uriBase);
   }
 }
