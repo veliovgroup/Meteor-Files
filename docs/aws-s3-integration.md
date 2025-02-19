@@ -58,7 +58,7 @@ Instead of using `settings.json`, - environment variable can be used:
 import { Meteor } from 'meteor/meteor';
 /** env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' **/
 if (process.env.S3) {
-  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
+  Meteor.settings.app.s3 = JSON.parse(process.env.S3).s3;
 }
 ```
 
@@ -81,13 +81,10 @@ import fs from 'fs';
 
 /* Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' meteor */
 if (process.env.S3) {
-  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
+  Meteor.settings.app.s3 = JSON.parse(process.env.S3).s3;
 }
 
-const s3Conf = Meteor.settings.s3 || {};
-const bound  = Meteor.bindEnvironment((callback) => {
-  return callback();
-});
+const s3Conf = Meteor.settings.app.s3 || {};
 
 /* Check settings existence in `Meteor.settings` */
 /* This is the best practice for app security */
@@ -134,26 +131,24 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
           Body: fs.createReadStream(vRef.path),
           ContentType: vRef.type,
         }, (error) => {
-          bound(() => {
-            if (error) {
-              console.error(error);
-            } else {
-              // Update FilesCollection with link to the file at AWS
-              const upd = { $set: {} };
-              upd['$set']['versions.' + version + '.meta.pipePath'] = filePath;
+          if (error) {
+            console.error(error);
+          } else {
+            // Update FilesCollection with link to the file at AWS
+            const upd = { $set: {} };
+            upd['$set'][`versions.${version}.meta.pipePath`] = filePath;
 
-              this.collection.update({
-                _id: fileRef._id
-              }, upd, (updError) => {
-                if (updError) {
-                  console.error(updError);
-                } else {
-                  // Unlink original files from FS after successful upload to AWS:S3
-                  this.unlink(this.collection.findOne(fileRef._id), version);
-                }
-              });
-            }
-          });
+            this.collection.update({
+              _id: fileRef._id
+            }, upd, (updError) => {
+              if (updError) {
+                console.error(updError);
+              } else {
+                // Unlink original files from FS after successful upload to AWS:S3
+                this.unlink(this.collection.findOne(fileRef._id), version);
+              }
+            });
+          }
         });
       });
     },
@@ -238,11 +233,9 @@ if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
             Bucket: s3Conf.bucket,
             Key: vRef.meta.pipePath,
           }, (error) => {
-            bound(() => {
-              if (error) {
-                console.error(error);
-              }
-            });
+            if (error) {
+              console.error(error);
+            }
           });
         }
       });
