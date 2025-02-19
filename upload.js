@@ -10,7 +10,7 @@ import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-/*
+/**
  * @locus Client
  * @name FileUpload
  * @class FileUpload
@@ -83,7 +83,7 @@ export class FileUpload extends EventEmitter {
   }
 }
 
-/*
+/**
  * @locus Client
  * @name UploadInstance
  * @class UploadInstance
@@ -175,142 +175,149 @@ export class UploadInstance extends EventEmitter {
       }
     }
 
-    if (this.config.file) {
-      if (!this.config.isBase64) {
-        try {
-          if (!this.config.file.name || !this.config.file.size) {
-            throw new Meteor.Error(500, 'Not a File!');
-          }
-        } catch (e) {
-          throw new Meteor.Error(500, '[FilesCollection] [insert] Insert method accepts File, not a FileList. You need to provide a real File. File must have `.name` property, and its size must be larger than zero.');
-        }
-
-        this.fileData = {
-          size: this.config.file.size,
-          type: this.config.type || this.config.file.type,
-          name: this.config.fileName || this.config.file.name,
-          meta: this.config.meta
-        };
-      }
-
-      if (this.collection.debug) {
-        console.time(`insert ${this.fileData.name}`);
-        console.time(`loadFile ${this.fileData.name}`);
-      }
-
-      if (this.collection._supportWebWorker && this.config.allowWebWorkers) {
-        try {
-          this.worker = new Worker(this.collection._webWorkerUrl);
-        } catch (wwError) {
-          this.worker = false;
-          this.collection._debug('[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError);
-        }
-      } else {
-        this.worker = null;
-      }
-
-      this.fetchControllers = {};
-      this.config._debug = this.collection._debug;
-      this.config.debug = this.collection.debug;
-      this.transferTime = 0;
-      this.trackerComp = null;
-      this.sentChunks = 0;
-      this.fileLength = 1;
-      this.startTime = {};
-      this.EOFsent = false;
-      this.fileId = this.config.fileId || Random.id();
-      this.FSName = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
-      this.pipes = [];
-
-      this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
-      this.fileData['mime-type'] = this.fileData.mime;
-
-      this.result = new FileUpload(Object.assign({}, this.config, {
-        fileData: this.fileData,
-        fileId: this.fileId,
-        _Abort: this.collection._methodNames._Abort
-      }));
-
-      this.beforeunload = (e) => {
-        const message = helpers.isFunction(this.collection.onbeforeunloadMessage) ? this.collection.onbeforeunloadMessage.call(this.result, this.fileData) : this.collection.onbeforeunloadMessage;
-
-        if (e) {
-          e.returnValue = message;
-        }
-        return message;
-      };
-
-      this.result.config.beforeunload = this.beforeunload;
-      window.addEventListener('beforeunload', this.beforeunload, false);
-
-      this.result.config._onEnd = () => this.emit('_onEnd');
-
-      this._setProgress = (progress) => {
-        if (this.result.progress.get() >= 100) {
-          return;
-        }
-
-        let sentBytes = this.config.chunkSize * this.sentChunks;
-        if (sentBytes > this.fileData.size) {
-          // this case often occurs, when the last chunk
-          // is smaller than chunkSize, so we limit to fileSize
-          sentBytes = this.fileData.size;
-        }
-
-        this.result.progress.set(progress);
-        this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
-        this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
-      };
-
-      this.addListener('end', this.end);
-      this.addListener('start', this.start);
-      this.addListener('upload', this.upload);
-      this.addListener('sendEOF', this.sendEOF);
-      this.addListener('prepare', this.prepare);
-      this.addListener('sendChunk', this.sendChunk);
-      this.addListener('proceedChunk', this.proceedChunk);
-
-      this.addListener('calculateStats', helpers.throttle(() => {
-        if (this.result.progress.get() >= 100) {
-          return;
-        }
-
-        const _t = (this.transferTime / (this.sentChunks || 1));
-        this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
-        this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
-
-        const progress = Math.round((this.sentChunks / this.fileLength) * 100);
-        this._setProgress(progress);
-      }, 250));
-
-      this.addListener('_onEnd', () => {
-        if (this.config.isEnded) {
-          return;
-        }
-        this.config.isEnded = true;
-        for (const uid in this.fetchControllers) {
-          if (this.fetchControllers[uid]) {
-            this.fetchControllers[uid].abort();
-            delete this.fetchControllers[uid];
-          }
-        }
-        if (this.result.estimateTimer) {
-          Meteor.clearInterval(this.result.estimateTimer);
-        }
-        if (this.worker) {
-          this.worker.terminate();
-        }
-        if (this.trackerComp) {
-          this.trackerComp.stop();
-        }
-        if (this.beforeunload) {
-          window.removeEventListener('beforeunload', this.beforeunload, false);
-        }
-        return;
-      });
-    } else {
+    if (!this.config.file) {
       throw new Meteor.Error(500, '[FilesCollection] [insert] Have you forget to pass a File itself?');
     }
+
+    if (!this.config.isBase64) {
+      try {
+        if (!this.config.file.name || !this.config.file.size) {
+          throw new Meteor.Error(500, 'Not a File!');
+        }
+      } catch (err) {
+        throw new Meteor.Error(500, '[FilesCollection] [insert] Insert method accepts File, not a FileList. You need to provide a real File. File must have `.name` property, and its size must be larger than zero.', err);
+      }
+
+      this.fileData = {
+        size: this.config.file.size,
+        type: this.config.type || this.config.file.type,
+        name: this.config.fileName || this.config.file.name,
+        meta: this.config.meta
+      };
+    }
+
+    if (this.collection.debug) {
+      console.time(`insert ${this.fileData.name}`);
+      console.time(`loadFile ${this.fileData.name}`);
+    }
+
+    if (this.collection._supportWebWorker && this.config.allowWebWorkers) {
+      try {
+        this.worker = new Worker(this.collection._webWorkerUrl);
+      } catch (wwError) {
+        this.worker = false;
+        this.collection._debug('[FilesCollection] [insert] [create WebWorker]: Can\'t create WebWorker, fallback to MainThread', wwError);
+      }
+    } else {
+      this.worker = null;
+    }
+
+    this.fetchControllers = {};
+    this.config._debug = this.collection._debug;
+    this.config.debug = this.collection.debug;
+    this.transferTime = 0;
+    this.trackerComp = null;
+    this.sentChunks = 0;
+    this.fileLength = 1;
+    this.startTime = {};
+    this.EOFsent = false;
+    this.fileId = this.config.fileId || Random.id();
+    this.FSName = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
+    this.pipes = [];
+
+    this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
+    this.fileData['mime-type'] = this.fileData.mime;
+
+    this.result = new FileUpload(Object.assign({}, this.config, {
+      fileData: this.fileData,
+      fileId: this.fileId,
+      _Abort: this.collection._methodNames._Abort
+    }));
+
+    this.beforeunload = (e) => {
+      const message = helpers.isFunction(this.collection.onbeforeunloadMessage) ? this.collection.onbeforeunloadMessage.call(this.result, this.fileData) : this.collection.onbeforeunloadMessage;
+
+      if (e) {
+        e.returnValue = message;
+      }
+      return message;
+    };
+
+    this.result.config.beforeunload = this.beforeunload;
+    window.addEventListener('beforeunload', this.beforeunload, false);
+
+    this.result.config._onEnd = () => this.emit('_onEnd');
+
+    this._setProgress = (progress) => {
+      if (this.result.progress.get() >= 100) {
+        return;
+      }
+
+      let sentBytes = this.config.chunkSize * this.sentChunks;
+      if (sentBytes > this.fileData.size) {
+        // this case often occurs, when the last chunk
+        // is smaller than chunkSize, so we limit to fileSize
+        sentBytes = this.fileData.size;
+      }
+
+      this.result.progress.set(progress);
+      this.config.onProgress && this.config.onProgress.call(this.result, progress, this.fileData);
+      this.result.emit('progress', progress, this.fileData, { chunksSent: this.sentChunks, chunksLength: this.fileLength, bytesSent: sentBytes });
+    };
+
+    this.addListener('end', this.end);
+    this.addListener('error', this.error);
+    this.addListener('start', this.start);
+    this.addListener('upload', this.upload);
+    this.addListener('sendEOF', this.sendEOF);
+    this.addListener('prepare', this.prepare);
+    this.addListener('sendChunk', this.sendChunk);
+    this.addListener('proceedChunk', this.proceedChunk);
+
+    this.addListener('calculateStats', helpers.throttle(() => {
+      if (this.result.progress.get() >= 100) {
+        return;
+      }
+
+      const _t = (this.transferTime / (this.sentChunks || 1));
+      this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
+      this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
+
+      const progress = Math.round((this.sentChunks / this.fileLength) * 100);
+      this._setProgress(progress);
+    }, 250));
+
+    this.addListener('_onEnd', () => {
+      if (this.config.isEnded) {
+        return;
+      }
+      this.config.isEnded = true;
+      for (const uid in this.fetchControllers) {
+        if (this.fetchControllers[uid]) {
+          this.fetchControllers[uid].abort();
+          delete this.fetchControllers[uid];
+        }
+      }
+      if (this.result.estimateTimer) {
+        Meteor.clearInterval(this.result.estimateTimer);
+      }
+      if (this.worker) {
+        this.worker.terminate();
+      }
+      if (this.trackerComp) {
+        this.trackerComp.stop();
+      }
+      if (this.beforeunload) {
+        window.removeEventListener('beforeunload', this.beforeunload, false);
+      }
+      return;
+    });
+  }
+
+  error(error, data) {
+    this.collection._debug('[FilesCollection] [UploadInstance] [error]', this.fileData.name);
+    this.end(error, data);
+    return this;
   }
 
   end(error, data) {
@@ -376,7 +383,7 @@ export class UploadInstance extends EventEmitter {
           this.transferTime += Date.now() - this.startTime[opts.chunkId];
           if (error) {
             if (this.result.state.get() !== 'aborted') {
-              this.emit('end', error);
+              this.emit('error', error);
             }
           } else {
             if (++this.sentChunks >= this.fileLength) {
@@ -416,7 +423,7 @@ export class UploadInstance extends EventEmitter {
               }
               this.emit('calculateStats');
             } else {
-              this.emit('end', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
+              this.emit('error', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
             }
           }
         }).catch((error) => {
@@ -428,7 +435,7 @@ export class UploadInstance extends EventEmitter {
               if (!Meteor.status().connected || `${error}` === 'Error: network' || `${error}` === 'Error: Connection lost') {
                 this.result.pause();
               } else if (this.result.state.get() !== 'aborted') {
-                this.emit('end', error);
+                this.emit('error', error);
               }
             }, 512);
           }
@@ -449,7 +456,11 @@ export class UploadInstance extends EventEmitter {
       if (this.config.transport === 'ddp') {
         this.config.ddp.call(this.collection._methodNames._Write, opts, (error, result) => {
           if (!this.config.isEnded) {
-            this.emit('end', error, result);
+            if (error) {
+              this.emit('error', error, result);
+            } else {
+              this.emit('end', error, result);
+            }
           }
         });
       } else {
@@ -485,7 +496,7 @@ export class UploadInstance extends EventEmitter {
                 this.result.pause();
               } else if (this.result.state.get() !== 'aborted') {
                 Meteor._debug('Something went wrong! [sendEOF] method doesn\'t returned JSON! Looks like you\'re on Cordova app or behind proxy, switching to DDP transport is recommended.');
-                this.emit('end', error);
+                this.emit('error', error);
               }
             }, 512);
           }
@@ -519,7 +530,7 @@ export class UploadInstance extends EventEmitter {
         };
 
         fileReader.onerror = (e) => {
-          this.emit('end', (e.target || e.srcElement).error);
+          this.emit('error', (e.target || e.srcElement).error);
         };
 
         fileReader.readAsDataURL(chunk);
@@ -533,7 +544,7 @@ export class UploadInstance extends EventEmitter {
           }
         });
       } else {
-        this.emit('end', 'File API is not supported in this Browser!');
+        this.emit('error', new Meteor.Error(400, 'File API is not supported in this Browser!'));
       }
     }
   }
@@ -616,9 +627,9 @@ export class UploadInstance extends EventEmitter {
               this.result.pause();
             } else if (this.result.state.get() !== 'aborted') {
               this.collection._debug('[FilesCollection] [_Start] Error:', error);
-              this.emit('end', error);
+              this.emit('error', error);
             }
-          }, 512);
+          }, 128);
         } else {
           this.result.continueFunc = () => {
             this.collection._debug('[FilesCollection] [insert] [continueFunc]');
@@ -655,7 +666,7 @@ export class UploadInstance extends EventEmitter {
           if (response.status === 204) {
             handleStart();
           } else {
-            this.emit('end', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
+            this.emit('error', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
           }
         }
       }).catch((error) => {
@@ -673,7 +684,7 @@ export class UploadInstance extends EventEmitter {
   async start() {
     let isUploadAllowed;
     if (this.fileData.size <= 0) {
-      this.end(new Meteor.Error(400, 'Can\'t upload empty file'));
+      this.emit('error', new Meteor.Error(400, 'Can\'t upload empty file'));
       return this.result;
     }
 
@@ -681,62 +692,60 @@ export class UploadInstance extends EventEmitter {
       if (this.config.onBeforeUpload && helpers.isFunction(this.config.onBeforeUpload)) {
         isUploadAllowed = await Promise.resolve(this.config.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData));
         if (isUploadAllowed !== true) {
-          return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
+          this.emit('error', new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'config.onBeforeUpload() returned false'));
+          return this.result;
         }
       }
 
       if (this.collection.onBeforeUpload && helpers.isFunction(this.collection.onBeforeUpload)) {
         isUploadAllowed = await Promise.resolve(this.collection.onBeforeUpload.call(Object.assign({}, this.result, this.collection._getUser()), this.fileData));
         if (isUploadAllowed !== true) {
-          return this.end(new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
+          this.emit('error', new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : 'collection.onBeforeUpload() returned false'));
+          return this.result;
         }
       }
-
-      Tracker.autorun((computation) => {
-        this.trackerComp = computation;
-        if (!this.result.onPause.curValue && !Meteor.status().connected) {
-          this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
-          this.result.pause();
-        } else if (this.result.onPause.curValue && Meteor.status().connected) {
-          this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
-          this.result.continue();
-        }
-      });
-
-      if (this.worker) {
-        this.collection._debug('[FilesCollection] [insert] using WebWorkers');
-        this.worker.onmessage = (evt) => {
-          if (evt.data.error) {
-            this.collection._debug('[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error);
-            this.emit('proceedChunk', evt.data.chunkId);
-          } else {
-            this.emit('sendChunk', evt);
-          }
-        };
-
-        this.worker.onerror = (e) => {
-          this.collection._debug('[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e);
-          this.emit('end', e.message);
-        };
-      } else {
-        this.collection._debug('[FilesCollection] [insert] using MainThread');
-      }
-
-      this.emit('prepare');
-      return this.result;
     } catch (error) {
-      return this.end(new Meteor.Error(500, `Error in onBeforeUpload: ${error.message}`));
+      this.emit('error', new Meteor.Error(500, `Error in onBeforeUpload: ${error.message}`));
+      return this.result;
     }
+
+    Tracker.autorun((computation) => {
+      this.trackerComp = computation;
+      if (!this.result.onPause.curValue && !Meteor.status().connected) {
+        this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]');
+        this.result.pause();
+      } else if (this.result.onPause.curValue && Meteor.status().connected) {
+        this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]');
+        this.result.continue();
+      }
+    });
+
+    if (this.worker) {
+      this.collection._debug('[FilesCollection] [insert] using WebWorkers');
+      this.worker.onmessage = (evt) => {
+        if (evt.data.error) {
+          this.collection._debug('[FilesCollection] [insert] [worker] [onmessage] [ERROR:]', evt.data.error);
+          this.emit('proceedChunk', evt.data.chunkId);
+        } else {
+          this.emit('sendChunk', evt);
+        }
+      };
+
+      this.worker.onerror = (e) => {
+        this.collection._debug('[FilesCollection] [insert] [worker] [onerror] [ERROR:]', e);
+        this.emit('error', new Meteor.Error(500, e.message));
+      };
+    } else {
+      this.collection._debug('[FilesCollection] [insert] using MainThread');
+    }
+
+    this.emit('prepare');
+    return this.result;
   }
 
   manual() {
-    this.result.start = async () => {
-      try {
-        await this.start();
-        this.emit('start');
-      } catch (error) {
-        this.emit('end', error);
-      }
+    this.result.start = () => {
+      this.emit('start');
     };
 
     const self = this;
