@@ -47,7 +47,7 @@ class FilesCollection extends FilesCollectionCore {
 
     const self = this;
     const cookie = new Cookies({
-      allowQueryStringCookies: this.allowQueryStringCookies
+      allowQueryStringCookies: this.allowQueryStringCookies,
     });
     if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
@@ -272,7 +272,7 @@ class FilesCollection extends FilesCollectionCore {
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
-     if (this.disableUpload) {
+    if (this.disableUpload) {
       this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
       return {};
     }
