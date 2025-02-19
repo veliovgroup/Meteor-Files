@@ -668,16 +668,27 @@ export class UploadInstance extends EventEmitter {
           'x-start': '1',
           'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
         }
-      }).then((response) => {
+      }).then(async (response) => {
+        this.collection._debug('[FilesCollection] [UploadInstance] [prepare] [response]', response);
         delete this.fetchControllers[uid];
         if (!this.config.isEnded) {
           if (response.status === 204) {
             handleStart();
+          } else if (response.status === 405) {
+            this.emit('error', new Meteor.Error(405, 'Uploads are disabled'));
+          } else if (response.status === 403) {
+            const jsonData = await response.json();
+            if (jsonData && jsonData.error && jsonData.isClientSafe) {
+              this.emit('error', new Meteor.Error(jsonData.error, jsonData.reason));
+            } else {
+              this.emit('error', new Meteor.Error(500, 'Unexpected error occurred during upload, try again later'));
+            }
           } else {
             this.emit('error', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
           }
         }
       }).catch((error) => {
+        this.collection._debug('[FilesCollection] [UploadInstance] [prepare] [catch error]', error);
         delete this.fetchControllers[uid];
         handleStart(error);
       });
@@ -692,7 +703,7 @@ export class UploadInstance extends EventEmitter {
   async start() {
     let isUploadAllowed;
     if (this.config.disableUpload) {
-      this.emit('error', new Meteor.Error(403, 'Uploads are disabled via { disableUpload: true }'));
+      this.emit('error', new Meteor.Error(403, 'Uploads are disabled'), this);
       return this.result;
     }
 

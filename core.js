@@ -232,7 +232,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * @throws {Meteor.Error} If called on the server
    */
   findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`, Meteor.isServer);
     if (Meteor.isServer) {
       throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
     }
@@ -297,13 +297,13 @@ export default class FilesCollectionCore extends EventEmitter {
    * @param {MeteorFilesOptions} [options] - Mongo query options
    * @returns {Promise<number>} The number of matching records
    */
-  async countDocuments(selector = {}, options) {
-    this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+  async countDocuments(_selector = {}, options) {
+    this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(_selector)}, ${JSON.stringify(options)})]`);
     /* eslint-disable new-cap */
-    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(_selector, Match.Optional(Match.OneOf(Object, String)));
     check(options, Match.Optional(Object));
     /* eslint-enable new-cap */
-
+    const selector = typeof _selector === 'string' && _selector.length ? { _id: _selector } : _selector;
     return await this.collection.countDocuments(selector, options);
   }
 
