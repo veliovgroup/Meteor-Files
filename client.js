@@ -23,7 +23,7 @@ const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize'
  * @param config.collection {Mongo.Collection} - [anywhere] mongo collection instance
  * @param config.collectionName {string} - [anywhere] collection name
  * @param config.namingFunction {function} - [anywhere] function that returns a string
- * @param config.onBeforeUpload {function} - [anywhere] function executed on server after receiving each chunk and on client before starting upload; return `true`` to continue, `false`` or `string` (error message) to abort
+ * @param config.onBeforeUpload {function} - [anywhere] function executed on server after receiving each chunk and on client before starting upload; return `true` to continue, `false` or `string` (error message) to abort
  * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client
  * @param config.onbeforeunloadMessage {string|function} - [client] message shown to user when closing window/tab during upload
  * @param config.disableUpload {boolean} - disable file upload; useful for server-only solutions
@@ -47,6 +47,7 @@ class FilesCollection extends FilesCollectionCore {
     const cookie = new Cookies({
       allowQueryStringCookies: this.allowQueryStringCookies,
     });
+
     if (!helpers.isBoolean(this.debug)) {
       this.debug = false;
     }
