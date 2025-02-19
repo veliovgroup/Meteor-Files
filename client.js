@@ -13,24 +13,23 @@ const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize'
 /**
  * @locus Anywhere
  * @class FilesCollection
- * @param config           {Object}   - [Both]   Configuration object with next properties:
- * @param config.debug     {Boolean}  - [Both]   Turn on/of debugging and extra logging
- * @param config.ddp       {Object}   - [Client] Custom DDP connection. Object returned form `DDP.connect()`
- * @param config.schema    {Object}   - [Both]   Collection Schema
- * @param config.public    {Boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs`
- * @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
- * @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
- * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
- * @param config.collectionName {String}  - [Both]   Collection name
- * @param config.namingFunction {Function}- [Both]   Function which returns `String`
- * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.
- * return `true` to continue
- * return `false` or `String` to abort upload
- * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
- * @param config.onbeforeunloadMessage {String|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
- * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
- * @param config.disableSetTokenCookie {Boolean} - Disable cookie setting. Useful when you use multiple file collections or when you want to implement your own authorization.
- * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
+ * @param config {FilesCollectionConfig} - [Anywhere] Configuration object with next properties:
+ * @param config.debug {Boolean} - [Anywhere] Turn on/off debugging and extra logging
+ * @param config.ddp {DDP.DDPStatic} - [Client] Custom DDP connection. Object returned from `DDP.connect()`
+ * @param config.schema {object} - [Anywhere] Collection Schema
+ * @param config.public {boolean}  - [Anywhere] Store files in folder accessible for proxy servers, for limits, and more - read docs
+ * @param config.chunkSize {number} - [Anywhere] Upload chunk size, default: 524288 bytes (0.5 Mb)
+ * @param config.downloadRoute {string} - [Anywhere] Server Route used to retrieve files
+ * @param config.collection {Mongo.Collection} - [Anywhere] Mongo Collection Instance
+ * @param config.collectionName {string} - [Anywhere] Collection name
+ * @param config.namingFunction {Function} - [Anywhere] Function which returns a string
+ * @param config.onBeforeUpload {Function} - [Anywhere] Function which executes on server after receiving each chunk and on client right before beginning upload.
+ *        Return `true` to continue, `false` or `String` to abort upload.
+ * @param config.allowClientCode {boolean} - [Anywhere] Allow to run `remove` from client
+ * @param config.onbeforeunloadMessage {string|Function} - [Client] Message shown to user when closing browser's window or tab while upload process is running
+ * @param config.disableUpload {boolean} - Disable file upload, useful for server-only solutions
+ * @param config.disableSetTokenCookie {boolean} - Disable cookie setting. Useful when you use multiple file collections or when you want to implement your own authorization.
+ * @param config.allowQueryStringCookies {boolean} - Allow passing Cookies in a query string (in URL). Use primarily in Cordova. Default: `false`
  * @param config.sanitize {Function} - Override default sanitize function
  * @summary Create new instance of FilesCollection
  */
@@ -133,6 +132,7 @@ class FilesCollection extends FilesCollectionCore {
       }
     }
 
+    // eslint-disable-next-line new-cap
     check(this.onbeforeunloadMessage, Match.OneOf(String, Function));
 
     try {
@@ -161,8 +161,10 @@ class FilesCollection extends FilesCollectionCore {
     check(this.chunkSize, Number);
     check(this.downloadRoute, String);
     check(this.disableUpload, Boolean);
+    /* eslint-disable new-cap */
     check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
+    /* eslint-enable new-cap */
     check(this.allowClientCode, Boolean);
     check(this.ddp, Match.Any);
 
@@ -175,12 +177,12 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * Returns file's mime-type.
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getMimeType
-   * @param {Object} fileData - File Object
-   * @summary Returns file's mime-type
-   * @returns {String}
+   * @param {FileData} fileData - File Object
+   * @returns {string}
    */
   _getMimeType(fileData) {
     let mime;
@@ -188,7 +190,6 @@ class FilesCollection extends FilesCollectionCore {
     if (helpers.isObject(fileData)) {
       mime = fileData.type;
     }
-
     if (!mime || !helpers.isString(mime)) {
       mime = 'application/octet-stream';
     }
@@ -196,11 +197,12 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * Returns an object with user's information.
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
    * @summary Returns object with `userId` and `user()` method which return user's object
-   * @returns {Object}
+   * @returns {ContextUser}
    */
   _getUser() {
     const result = {
@@ -219,38 +221,40 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * Uploads file to server over DDP or HTTP.
    * @locus Client
    * @memberOf FilesCollection
    * @name insert
    * @see https://developer.mozilla.org/en-US/docs/Web/API/FileReader
-   * @param {Object} config - Configuration object with next properties:
-   *   {File|Object} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
-   *   {String}      fileId         - Optional `fileId` used at insert
-   *   {Object}      meta           - Additional data as object, use later for search
-   *   {Boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
+   * @param {InsertOptions} config - Configuration object with next properties:
+   *   {File} file           - HTML5 `files` item, like in change event: `e.currentTarget.files[0]`
+   *   {string}      fileId         - Optional `fileId` used at insert
+   *   {MetadataType}      meta           - Additional data as object, use later for search
+   *   {boolean}     allowWebWorkers- Allow/Deny WebWorkers usage
    *   {Number|dynamic} chunkSize   - Chunk size for upload
-   *   {String}      transport      - Upload transport `http` or `ddp`
-   *   {Object}      ddp            - Custom DDP connection. Object returned form `DDP.connect()`
+   *   {MeteorFilesTransportType}      transport      - Upload transport `http` or `ddp`
+   *   {DDP.DDPStatic}      ddp            - Custom DDP connection. Object returned from `DDP.connect()`
    *   {Function}    onUploaded     - Callback triggered when upload is finished, with two arguments `error` and `fileObj`
    *   {Function}    onStart        - Callback triggered when upload is started after all successful validations, with two arguments `error` (always null) and `fileObj`
    *   {Function}    onError        - Callback triggered on error in upload and/or FileReader, with two arguments `error` and `fileData`
    *   {Function}    onProgress     - Callback triggered when chunk is sent, with only argument `progress`
    *   {Function}    onBeforeUpload - Callback triggered right before upload is started:
    *       return true to continue
-   *       return false to abort upload
-   * @param {Boolean} autoStart     - Start upload immediately. If set to false, you need manually call .start() method on returned class. Useful to set EventListeners.
+   *       return false or String to abort upload
+   * @param {Boolean} autoStart - Start upload immediately. If set to false, you need manually call .start() method on returned instance. Useful to set EventListeners.
    * @summary Upload file to server over DDP or HTTP
    * @returns {UploadInstance} Instance. UploadInstance has next properties:
-   *   {ReactiveVar} onPause  - Is upload process on the pause?
+   *   {ReactiveVar} onPause  - Is upload process paused?
    *   {ReactiveVar} state    - active|paused|aborted|completed
    *   {ReactiveVar} progress - Current progress in percentage
    *   {Function}    pause    - Pause upload process
    *   {Function}    continue - Continue paused upload process
    *   {Function}    toggle   - Toggle continue/pause if upload process
    *   {Function}    abort    - Abort upload
-   *   {Function}    readAsDataURL - Current file as data URL, use to create image preview and etc. Be aware of big files, may lead to browser crash
+   *   {Function}    readAsDataURL - Returns current file as data URL (use for image preview). Note: Big files might cause browser crash
    */
   insert(config, autoStart = true) {
+    this._debug('[FilesCollection] [insert()]', config, {autoStart});
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
       return {};
@@ -258,13 +262,14 @@ class FilesCollection extends FilesCollectionCore {
     const uploadInstance = new UploadInstance(config, this);
     if (autoStart) {
       uploadInstance.start().catch((error) => {
-        console.error('[FilesCollection] [insert] Error starting upload:', error);
+        uploadInstance.emit('error', new Meteor.Error(500, '[FilesCollection] [insert] Error starting upload:', error));
       });
     }
     return uploadInstance;
   }
 
   /**
+   * Asynchronously uploads file to server over DDP or HTTP.
    * @locus Client
    * @memberOf FilesCollection
    * @name insertAsync
@@ -272,6 +277,7 @@ class FilesCollection extends FilesCollectionCore {
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
+    this._debug('[FilesCollection] [insertAsync()]', config, {autoStart});
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
       return {};
@@ -284,18 +290,21 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * Removes documents from the collection.
    * @locus Client
    * @memberOf FilesCollection
    * @name remove
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesSelector} selector - Mongo-style selector (http://docs.meteor.com/api/collections.html#selectors)
    * @param {Function} callback - Callback with `error` and `number` arguments
    * @summary Remove documents from the collection
    * @returns {FilesCollection} Instance
    */
   remove(selector = {}, callback) {
     this._debug(`[FilesCollection] [remove(${JSON.stringify(selector)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.OneOf(Object, String));
     check(callback, Match.Optional(Function));
+    /* eslint-enable new-cap */
 
     if (this.allowClientCode) {
       this.ddp.call(this._methodNames._Remove, selector, (callback || NOOP));
@@ -308,15 +317,17 @@ class FilesCollection extends FilesCollectionCore {
   }
 
   /**
+   * Removes documents from the collection asynchronously.
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name removeAsync
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @param {MeteorFilesSelector} selector - Mongo-style selector (http://docs.meteor.com/api/collections.html#selectors)
    * @summary Remove documents from the collection
-   * @returns {Promise<number>} number of matched and removed files/records
+   * @returns {Promise<number>} Number of matched and removed files/records
    */
   async removeAsync(selector = {}) {
     this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
+    // eslint-disable-next-line new-cap
     check(selector, Match.OneOf(Object, String));
 
     if (this.allowClientCode) {
@@ -328,17 +339,6 @@ class FilesCollection extends FilesCollectionCore {
   }
 }
 
-/**
- * @locus Client
- * @TemplateHelper
- * @name fileURL
- * @param fileObj  {FileObj} - File reference object
- * @param version? {string}  - Version of file you would like to request
- * @param uriBase? {string}  - URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
- * @summary Get download URL for file by fileObj, even without subscription
- * @example {{fileURL fileObj}}
- * @returns {string}
- */
 Meteor.startup(() => {
   const _template = (Package && Package.templating && Package.templating.Template) ? Package.templating.Template : undefined;
   if (_template) {
