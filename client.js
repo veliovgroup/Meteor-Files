@@ -11,7 +11,7 @@ const NOOP = () => { };
 const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
 
 /**
- * @locus Anywhere
+ * @locus Client
  * @class FilesCollection
  * @param config {FilesCollectionConfig} - [anywhere] configuration object with the following properties:
  * @param config.debug {boolean} - [anywhere] turn on/off debugging and extra logging
