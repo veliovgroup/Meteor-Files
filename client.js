@@ -255,7 +255,7 @@ class FilesCollection extends FilesCollectionCore {
     this._debug('[FilesCollection] [insert()]', config, { autoStart });
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
-      return {};
+      return new UploadInstance({ disableUpload: true }, this);
     }
     const uploadInstance = new UploadInstance(config, this);
     if (autoStart) {
@@ -278,7 +278,7 @@ class FilesCollection extends FilesCollectionCore {
     this._debug('[FilesCollection] [insertAsync()]', config, { autoStart });
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
-      return {};
+      return new UploadInstance({ disableUpload: true }, this);
     }
     const uploadInstance = new UploadInstance(config, this);
     if (autoStart) {

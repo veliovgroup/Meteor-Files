@@ -76,6 +76,7 @@ export class FileUpload extends EventEmitter {
     this.config.onAbort && this.config.onAbort.call(this, this.file);
     this.emit('abort', this.file);
     if (this.config.debug) {
+      // eslint-disable-next-line no-console
       console.timeEnd(`insert ${this.config.fileData.name}`);
     }
 
@@ -122,6 +123,7 @@ export class UploadInstance extends EventEmitter {
       this.config.allowWebWorkers = true;
     }
 
+    /* eslint-disable new-cap */
     check(this.config, {
       ddp: Match.Any,
       file: Match.Any,
@@ -136,10 +138,12 @@ export class UploadInstance extends EventEmitter {
       transport: Match.OneOf('http', 'ddp'),
       chunkSize: Match.OneOf('dynamic', Number),
       onUploaded: Match.Optional(Function),
+      disableUpload: Match.Optional(Boolean),
       onProgress: Match.Optional(Function),
       onBeforeUpload: Match.Optional(Function),
       allowWebWorkers: Boolean
     });
+    /* eslint-enable new-cap */
 
     this.config.isEnded = false;
 
@@ -197,7 +201,9 @@ export class UploadInstance extends EventEmitter {
     }
 
     if (this.collection.debug) {
+      // eslint-disable-next-line no-console
       console.time(`insert ${this.fileData.name}`);
+      // eslint-disable-next-line no-console
       console.time(`loadFile ${this.fileData.name}`);
     }
 
@@ -323,13 +329,12 @@ export class UploadInstance extends EventEmitter {
   end(error, data) {
     this.collection._debug('[FilesCollection] [UploadInstance] [end]', this.fileData.name);
     if (this.collection.debug) {
+      // eslint-disable-next-line no-console
       console.timeEnd(`insert ${this.fileData.name}`);
     }
 
     this._setProgress(100);
     this.emit('_onEnd');
-    this.result.emit('uploaded', error, data);
-    this.config.onUploaded && this.config.onUploaded.call(this.result, error, data);
 
     if (error) {
       this.collection._debug('[FilesCollection] [insert] [end] Error:', error);
@@ -338,6 +343,8 @@ export class UploadInstance extends EventEmitter {
       this.result.emit('error', error, this.fileData);
       this.config.onError && this.config.onError.call(this.result, error, this.fileData);
     } else {
+      this.result.emit('uploaded', error, data);
+      this.config.onUploaded && this.config.onUploaded.call(this.result, error, data);
       this.result.state.set('completed');
       this.collection.emit('afterUpload', data);
     }
@@ -372,6 +379,7 @@ export class UploadInstance extends EventEmitter {
 
     if (this.fileLength === evt.data.chunkId) {
       if (this.collection.debug) {
+        // eslint-disable-next-line no-console
         console.timeEnd(`loadFile ${this.fileData.name}`);
       }
       this.emit('readEnd');
@@ -683,6 +691,11 @@ export class UploadInstance extends EventEmitter {
 
   async start() {
     let isUploadAllowed;
+    if (this.config.disableUpload) {
+      this.emit('error', new Meteor.Error(403, 'Uploads are disabled via { disableUpload: true }'));
+      return this.result;
+    }
+
     if (this.fileData.size <= 0) {
       this.emit('error', new Meteor.Error(400, 'Can\'t upload empty file'));
       return this.result;
@@ -744,7 +757,7 @@ export class UploadInstance extends EventEmitter {
   }
 
   manual() {
-    this.result.start = () => {
+    this.result.start = async () => {
       this.emit('start');
     };
 
