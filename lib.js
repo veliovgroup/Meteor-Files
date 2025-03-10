@@ -8,7 +8,7 @@ const helpers = {
     return obj === void 0;
   },
   isObject(obj) {
-    if (this.isArray(obj) || this.isFunction(obj)) {
+    if (obj === null || this.isArray(obj) || this.isFunction(obj)) {
       return false;
     }
     return obj === Object(obj);
