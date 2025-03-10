@@ -177,7 +177,7 @@ const fixJSONStringify = function(obj) {
 /*
  * @locus Anywhere
  * @private
- * @name formatFleURL
+ * @name formatFileURL
  * @param {Object} fileRef - File reference object
  * @param {String} version - [Optional] Version of file you would like build URL for
  * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
@@ -185,7 +185,7 @@ const fixJSONStringify = function(obj) {
  * @returns {String} Downloadable link
  */
 // eslint-disable-next-line camelcase, no-undef
-const formatFleURL = (fileRef, version = 'original', _uriBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
+const formatFileURL = (fileRef, version = 'original', _uriBase = (__meteor_runtime_config__ || {}).ROOT_URL) => {
   check(fileRef, Object);
   check(version, String);
   let uriBase = _uriBase;
@@ -211,4 +211,4 @@ const formatFleURL = (fileRef, version = 'original', _uriBase = (__meteor_runtim
   return `${_root}${fileRef._downloadRoute}/${fileRef._collectionName}/${fileRef._id}/${version}/${fileRef._id}${ext}`;
 };
 
-export { fixJSONParse, fixJSONStringify, formatFleURL, helpers };
+export { fixJSONParse, fixJSONStringify, formatFileURL, helpers };

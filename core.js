@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { formatFleURL, helpers } from './lib.js';
+import { formatFileURL, helpers } from './lib.js';
 import { FilesCursor, FileCursor } from './cursor.js';
 
 export default class FilesCollectionCore extends EventEmitter {
@@ -323,6 +323,6 @@ export default class FilesCollectionCore extends EventEmitter {
     if (!fileObj) {
       return '';
     }
-    return formatFleURL(fileObj, version, uriBase);
+    return formatFileURL(fileObj, version, uriBase);
   }
 }

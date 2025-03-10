@@ -5,7 +5,7 @@ import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 import { UploadInstance } from './upload.js';
 import FilesCollectionCore from './core.js';
-import { formatFleURL, helpers } from './lib.js';
+import { formatFileURL, helpers } from './lib.js';
 
 const NOOP = () => { };
 const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
@@ -355,7 +355,7 @@ Meteor.startup(() => {
 
       const version = (!helpers.isString(_version)) ? 'original' : _version;
       const uriBase = (!helpers.isString(_uriBase)) ? void 0 : _uriBase;
-      return formatFleURL(fileObj, version, uriBase);
+      return formatFileURL(fileObj, version, uriBase);
     });
   }
 });
