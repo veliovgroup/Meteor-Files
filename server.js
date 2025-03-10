@@ -1910,7 +1910,7 @@ class FilesCollection extends FilesCollectionCore {
    * @returns {undefined}
    */
   serve(http, fileRef, vRef, version = 'original', readableStream = null, _responseType = '200', force200 = false) {
-    let partiral = false;
+    let partial = false;
     let reqRange = false;
     let dispositionType = '';
     let start;
@@ -1932,7 +1932,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (http.request.headers.range && !force200) {
-      partiral = true;
+      partial = true;
       const array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
       start = parseInt(array[1]);
       end = parseInt(array[2]);
@@ -1946,7 +1946,7 @@ class FilesCollection extends FilesCollectionCore {
       take = vRef.size;
     }
 
-    if (partiral || (http.params?.query?.play && (http.params.query.play === 'true'))) {
+    if (partial || (http.params?.query?.play && (http.params.query.play === 'true'))) {
       reqRange = {start, end};
       if (isNaN(start) && !isNaN(end)) {
         reqRange.start = end - take;
