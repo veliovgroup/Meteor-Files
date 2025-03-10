@@ -2,8 +2,8 @@
 
 __Insert and upload are available only from a *Client*/*Browser*/*Cordova*/etc.__
 
-```js
-FilesCollection#insert(settings, autoStart); //[*Client*]
+```ts
+const upload: UploadInstance = FilesCollection#insert(settings: InsertOptions, autoStart: boolean); //[*Client*]
 ```
 
 Upload file to a Server via DDP or HTTP.
@@ -25,7 +25,7 @@ Upload file to a Server via DDP or HTTP.
   <tbody>
     <tr>
       <td align="right">
-        `settings` {*Object*}
+        `settings` {*InsertOptions*}
       </td>
       <td>
         [REQUIRED]
@@ -55,7 +55,7 @@ Upload file to a Server via DDP or HTTP.
         Explicitly set the fileId for the file
       </td>
       <td>
-        This is an optionnal parameters `Random.id()` will be used otherwise
+        This is an optional parameters `Random.id()` will be used otherwise
       </td>
     </tr>
     <tr>
@@ -74,7 +74,7 @@ Upload file to a Server via DDP or HTTP.
         `settings.isBase64` {*Boolean*}
       </td>
       <td>
-        Upload as base64 string, useful for data taken from `canvas`
+        Upload as `base64` string. For example when image data read from `canvas`
       </td>
       <td>
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#upload-base64-string">See Examples</a>
@@ -125,7 +125,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error` - *Always* `null`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -139,7 +139,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
-          <li>`fileRef` {*Object*} - File record from DB</li>
+          <li>`FileObj` {*FileObj*} - File record from DB</li>
         </ul>
       </td>
       <td></td>
@@ -152,7 +152,7 @@ Upload file to a Server via DDP or HTTP.
         Callback, triggered when `abort()` method is called<br />
         <strong>Arguments</strong>:
         <ul>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -166,7 +166,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -180,7 +180,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`progress` {*Number*} - Current progress from `0` to `100`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -193,7 +193,7 @@ Upload file to a Server via DDP or HTTP.
         Callback, triggered right before upload is started<br />
         <strong>Arguments</strong>:
         <ul>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td>
@@ -234,13 +234,15 @@ Upload file to a Server via DDP or HTTP.
         Start upload immediately
       </td>
       <td>
-        If set to `false`, you need manually call `.start()` method on returned class. Useful to set EventListeners, before starting upload. Default: `true`
+        If set to `false` `.insert()` method will return `FileUpload` class instance with `.start()` method that needs to get called to actually start an upload.<br>
+        Set to `false` to set *EventListeners* before starting and upload. Default: `true`<br>
+        When set to `true` (*default*) `.insert()` method will return `UploadInstance` class instance, where `UploadInstance.result` will be `FileUpload` class instance
       </td>
     </tr>
   </tbody>
 </table>
 
-`FilesCollection#insert()` method returns `FileUpload` class instance. __Note__: same instance is used *context* in all callback functions (*see above*)
+`FilesCollection#insert().start()` method returns `FileUpload` class instance. __Note__: same instance is used *context* in all callback functions (*see above*)
 
 ## `FileUpload`
 
@@ -317,7 +319,7 @@ Upload file to a Server via DDP or HTTP.
     </tr>
     <tr>
       <td align="right">
-        `abort()` {*Function*}
+        `async abort()` {*AsyncFunction*}
       </td>
       <td>
         Abort current upload, then trigger `onAbort` callback
@@ -400,7 +402,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error` - *Always* `null`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -414,7 +416,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>
-            `data` {*String*} - Base64 encoded chunk (DataURL)
+            `data` {*string*} - Base64 encoded chunk (DataURL)
           </li>
         </ul>
       </td>
@@ -442,7 +444,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`progress` {*Number*} - Current progress from `0` to `100`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -455,7 +457,7 @@ Upload file to a Server via DDP or HTTP.
         Triggered after upload process set to pause.<br />
         <strong>Arguments</strong>:
         <ul>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -468,7 +470,7 @@ Upload file to a Server via DDP or HTTP.
         Triggered after upload process is continued from pause.<br />
         <strong>Arguments</strong>:
         <ul>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -481,7 +483,7 @@ Upload file to a Server via DDP or HTTP.
         Triggered after upload is aborted.<br />
         <strong>Arguments</strong>:
         <ul>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -495,7 +497,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
-          <li>`fileRef` {*Object*} - File record from DB</li>
+          <li>`FileObj` {*FileObj*} - File record from DB</li>
         </ul>
       </td>
       <td></td>
@@ -509,7 +511,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
-          <li>`fileData` {*Object*}</li>
+          <li>`fileData` {*FileData*}</li>
         </ul>
       </td>
       <td></td>
@@ -524,7 +526,7 @@ Upload file to a Server via DDP or HTTP.
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
-          <li>`fileRef` {*Object*} - File record from DB</li>
+          <li>`FileObj` {*FileObj*} - File record from DB</li>
         </ul>
       </td>
       <td></td>
@@ -575,8 +577,8 @@ Client's code:
 
 ```js
 import { ReactiveVar } from 'meteor/reactive-var';
-import { Template }    from 'meteor/templating';
-import { imagesCollection }      from '/imports/collections/images.js';
+import { Template } from 'meteor/templating';
+import { imagesCollection } from '/imports/collections/images.js';
 
 Template.uploadForm.onCreated(function () {
   this.currentFile = new ReactiveVar(false);
@@ -621,7 +623,7 @@ Events-driven upload
 
 ```js
 import { Template } from 'meteor/templating';
-import { imagesCollection }   from '/imports/collections/images.js';
+import { imagesCollection } from '/imports/collections/images.js';
 
 Template.uploadForm.events({
   'change #fileInput'(e, template) {
@@ -652,7 +654,7 @@ Another way to upload using events:
 
 ```js
 import { Template } from 'meteor/templating';
-import { imagesCollection }   from '/imports/collections/images.js';
+import { imagesCollection } from '/imports/collections/images.js';
 
 Template.uploadForm.events({
   'change #fileInput'(e, template) {
@@ -720,14 +722,14 @@ Note: data flow in `ddp` and `http` uses dataURI (e.g. *Base64*)
 
 ```js
 import { Template } from 'meteor/templating';
-import { imagesCollection }   from '/imports/collections/images.js';
+import { imagesCollection } from '/imports/collections/images.js';
 
 const encrypt = function encrypt(data) {
-  return someHowEncryptAndReturnAsBase64(data);
+  return encryptAndReturnAsBase64(data);
 };
 
 const zip = function zip(data) {
-  return someHowZipAndReturnAsBase64(data);
+  return zipAndReturnAsBase64(data);
 };
 
 Template.uploadForm.events({
