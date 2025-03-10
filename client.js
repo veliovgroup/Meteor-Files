@@ -257,13 +257,16 @@ class FilesCollection extends FilesCollectionCore {
       this._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
       config.disableUpload = true;
     }
+
     const uploadInstance = new UploadInstance(config, this);
     if (autoStart) {
       uploadInstance.start().catch((error) => {
         uploadInstance.emit('error', new Meteor.Error(500, '[FilesCollection] [insert] Error starting upload:', error));
       });
+      return uploadInstance;
     }
-    return uploadInstance;
+
+    return uploadInstance.manual();
   }
 
   /**
@@ -280,11 +283,14 @@ class FilesCollection extends FilesCollectionCore {
       this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
       config.disableUpload = true;
     }
+
     const uploadInstance = new UploadInstance(config, this);
     if (autoStart) {
       await uploadInstance.start();
+      return uploadInstance;
     }
-    return uploadInstance;
+
+    return uploadInstance.manual();
   }
 
   /**
