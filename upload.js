@@ -17,6 +17,10 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
  * @summary Internal Class, instance of this class is returned from `.insert()` method
  */
 export class FileUpload extends EventEmitter {
+  /**
+   * Constructs a FileUpload instance.
+   * @param {FileUploadConfig} config - The configuration for the file upload.
+   */
   constructor(config) {
     super();
     this.config = config;
@@ -43,6 +47,11 @@ export class FileUpload extends EventEmitter {
       }
     }, 1000);
   }
+
+  /**
+   * Pauses the file upload.
+   * @returns {void}
+   */
   pause() {
     this.config._debug('[FilesCollection] [insert] [.pause()]');
     if (!this.onPause.get()) {
@@ -51,6 +60,11 @@ export class FileUpload extends EventEmitter {
       this.emit('pause', this.file);
     }
   }
+
+  /**
+   * Resumes the file upload if paused.
+   * @returns {void}
+   */
   continue() {
     this.config._debug('[FilesCollection] [insert] [.continue()]');
     if (this.onPause.get() && Meteor.status().connected) {
@@ -60,6 +74,11 @@ export class FileUpload extends EventEmitter {
       this.continueFunc();
     }
   }
+
+  /**
+   * Toggles the file upload state between paused and active.
+   * @returns {void}
+   */
   toggle() {
     this.config._debug('[FilesCollection] [insert] [.toggle()]');
     if (this.onPause.get()) {
@@ -68,12 +87,19 @@ export class FileUpload extends EventEmitter {
       this.pause();
     }
   }
+
+  /**
+   * Aborts the file upload.
+   * @returns {Promise<void>} A promise that resolves when the abort process is complete.
+   */
   async abort() {
     this.config._debug('[FilesCollection] [insert] [.abort()]');
     this.pause();
     this.config._onEnd();
     this.state.set('aborted');
-    this.config.onAbort && this.config.onAbort.call(this, this.file);
+    if (this.config.onAbort) {
+      this.config.onAbort.call(this, this.file);
+    }
     this.emit('abort', this.file);
     if (this.config.debug) {
       // eslint-disable-next-line no-console
@@ -91,6 +117,11 @@ export class FileUpload extends EventEmitter {
  * @summary Internal Class, used for file upload
  */
 export class UploadInstance extends EventEmitter {
+  /**
+   * Constructs an UploadInstance.
+   * @param {UploadInstanceConfig} config - The upload instance configuration.
+   * @param {FilesCollection} collection - The FilesCollection instance.
+   */
   constructor(config, collection) {
     super();
     this.config = config;
@@ -234,7 +265,7 @@ export class UploadInstance extends EventEmitter {
     this.FSName = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
     this.pipes = [];
 
-    this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), {mime: this.collection._getMimeType(this.fileData)});
+    this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), { mime: this.collection._getMimeType(this.fileData) });
     this.fileData['mime-type'] = this.fileData.mime;
 
     this.result = new FileUpload(Object.assign({}, this.config, {
@@ -336,12 +367,24 @@ export class UploadInstance extends EventEmitter {
     });
   }
 
+  /**
+   * Handles an error during the upload process.
+   * @param {Meteor.Error} error - The error that occurred.
+   * @param {*} data - Additional error data.
+   * @returns {UploadInstance} Returns the current UploadInstance.
+   */
   _error(error, data) {
     this.collection._debug('[FilesCollection] [UploadInstance] [error]', this.fileId, { error, data });
     this._end(error, data);
     return this;
   }
 
+  /**
+   * Finalizes the upload process.
+   * @param {Meteor.Error} [error] - An optional error if the upload failed.
+   * @param {*} [data] - Additional data associated with the upload.
+   * @returns {FileUpload} Returns the FileUpload result.
+   */
   _end(error, data) {
     this.collection._debug('[FilesCollection] [UploadInstance] [end]', this.fileId, { error, data });
     if (this.collection.debug) {
@@ -357,10 +400,14 @@ export class UploadInstance extends EventEmitter {
       this.result.abort();
       this.result.state.set('aborted');
       this.result.emit('error', error, this.fileData);
-      this.config.onError && this.config.onError.call(this.result, error, this.fileData);
+      if (this.config.onError) {
+        this.config.onError.call(this.result, error, this.fileData);
+      }
     } else {
       this.result.emit('uploaded', error, data);
-      this.config.onUploaded && this.config.onUploaded.call(this.result, error, data);
+      if (this.config.onUploaded) {
+        this.config.onUploaded.call(this.result, error, data);
+      }
       this.result.state.set('completed');
       this.collection.emit('afterUpload', data);
     }
@@ -368,6 +415,14 @@ export class UploadInstance extends EventEmitter {
     return this.result;
   }
 
+  /**
+   * Sends a file chunk to the server.
+   * @param {Object} evt - The event containing chunk data.
+   * @param {Object} evt.data - Data related to the chunk.
+   * @param {string} evt.data.bin - The binary data of the chunk.
+   * @param {number} evt.data.chunkId - The chunk identifier.
+   * @returns {Promise<void>}
+   */
   async _sendChunk(evt) {
     this.collection._debug('[FilesCollection] [UploadInstance] [sendChunk]', this.fileId, evt.data.chunkId);
     const opts = {
@@ -424,6 +479,10 @@ export class UploadInstance extends EventEmitter {
     }
   }
 
+  /**
+   * Sends an EOF (end-of-file) marker to the server.
+   * @returns {Promise<void>}
+   */
   async _sendEOF() {
     this.collection._debug('[FilesCollection] [UploadInstance] [sendEOF]', this.fileId, this.EOFsent, this.config.isEnded);
     if (this.EOFsent) {
@@ -453,8 +512,17 @@ export class UploadInstance extends EventEmitter {
     }
   }
 
+  /**
+   * Sends a network request for file upload.
+   * @param {Object} conf - The configuration for the network request.
+   * @param {string} conf.methodName - The method name to call.
+   * @param {Object} conf.payload - The payload to send.
+   * @param {number} [conf.timeout=25000] - Request timeout in milliseconds.
+   * @param {Object} conf.headers - Request headers.
+   * @returns {Promise<any>} Resolves with the response.
+   */
   async _sendRequest(conf) {
-    this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest]', this.fileId, {conf});
+    this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest]', this.fileId, { conf });
     let result = false;
     try {
       if (this.config.transport === 'ddp') {
@@ -538,6 +606,11 @@ export class UploadInstance extends EventEmitter {
     return result;
   }
 
+  /**
+   * Reads and sends a specific chunk from the file.
+   * @param {number} chunkId - The 1-indexed chunk number to process.
+   * @returns {Promise<void>}
+   */
   async _proceedChunk(chunkId) {
     this.collection._debug('[FilesCollection] [UploadInstance] [proceedChunk]', this.fileId, chunkId);
     const chunk = this.config.file.slice((this.config.chunkSize * (chunkId - 1)), (this.config.chunkSize * chunkId));
@@ -588,6 +661,10 @@ export class UploadInstance extends EventEmitter {
     });
   }
 
+  /**
+   * Initiates or continues the upload process by processing the next chunk.
+   * @returns {Promise<UploadInstance>} Resolves with the current UploadInstance.
+   */
   async _upload() {
     if (this.result.onPause.get()) {
       return this;
@@ -615,10 +692,16 @@ export class UploadInstance extends EventEmitter {
     return this;
   }
 
+  /**
+   * Prepares the file upload by setting chunk sizes and initiating the upload process.
+   * @returns {Promise<void>}
+   */
   async _prepare() {
     let _len;
 
-    this.config.onStart && this.config.onStart.call(this.result, null, this.fileData);
+    if (this.config.onStart) {
+      this.config.onStart.call(this.result, null, this.fileData);
+    }
     this.result.emit('start', null, this.fileData);
 
     if (this.config.chunkSize === 'dynamic') {
@@ -677,11 +760,20 @@ export class UploadInstance extends EventEmitter {
     }
   }
 
+  /**
+   * Adds a transformation function to the upload pipeline.
+   * @param {function(string): string} func - A function to process the binary data.
+   * @returns {UploadInstance} Returns the current UploadInstance for chaining.
+   */
   pipe(func) {
     this.pipes.push(func);
     return this;
   }
 
+  /**
+   * Starts the file upload process.
+   * @returns {Promise<FileUpload>} Resolves with the FileUpload instance.
+   */
   async start() {
     let isUploadAllowed;
     if (this.config.disableUpload) {
@@ -764,6 +856,10 @@ export class UploadInstance extends EventEmitter {
     return this.result;
   }
 
+  /**
+   * Configures the upload instance for manual control.
+   * @returns {FileUpload} Returns the FileUpload instance.
+   */
   manual() {
     this.result.start = async () => {
       this.emit('start');
