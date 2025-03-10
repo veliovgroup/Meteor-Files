@@ -95,7 +95,7 @@ export class UploadInstance extends EventEmitter {
     super();
     this.config = config;
     this.collection = collection;
-    this.collection._debug('[FilesCollection] [insert()]');
+    this.collection._debug('[FilesCollection] [new UploadInstance()]');
 
     if (!this.config.ddp) {
       this.config.ddp = this.collection.ddp;
@@ -220,11 +220,13 @@ export class UploadInstance extends EventEmitter {
 
     this.disonnectRe = /network|connection|fetch/i;
     this.fetchControllers = {};
+    this.fetchTimeouts = {};
     this.config._debug = this.collection._debug;
     this.config.debug = this.collection.debug;
     this.transferTime = 0;
-    this.trackerComp = null;
-    this.sentChunks = 0;
+    this.trackerCompConnection = null;
+    this.trackerCompPause = null;
+    this.sentChunks = -1;
     this.fileLength = 1;
     this.startTime = {};
     this.EOFsent = false;
@@ -310,6 +312,10 @@ export class UploadInstance extends EventEmitter {
           this.fetchControllers[uid].abort(new Meteor.Error(200, 'Upload has finished'));
           delete this.fetchControllers[uid];
         }
+        if (this.fetchTimeouts[uid]) {
+          clearTimeout(this.fetchTimeouts[uid]);
+          delete this.fetchTimeouts[uid];
+        }
       }
       if (this.result.estimateTimer) {
         Meteor.clearInterval(this.result.estimateTimer);
@@ -317,8 +323,11 @@ export class UploadInstance extends EventEmitter {
       if (this.worker) {
         this.worker.terminate();
       }
-      if (this.trackerComp) {
-        this.trackerComp.stop();
+      if (this.trackerCompConnection) {
+        this.trackerCompConnection.stop();
+      }
+      if (this.trackerCompPause) {
+        this.trackerCompPause.stop();
       }
       if (this.beforeunload) {
         window.removeEventListener('beforeunload', this.beforeunload, false);
@@ -398,42 +407,18 @@ export class UploadInstance extends EventEmitter {
       return;
     }
 
-    try {
-      const response = await this._sendRequest({
-        methodName: this.collection._methodNames._Write,
-        payload: opts,
-        timeout: 25000,
-        headers: {
-          'x-fileid': opts.fileId,
-          'x-chunkid': opts.chunkId,
-          'content-type': 'text/plain'
-        }
-      });
+    const response = await this._sendRequest({
+      methodName: this.collection._methodNames._Write,
+      payload: opts,
+      timeout: 25000,
+      headers: {
+        'x-fileid': opts.fileId,
+        'x-chunkid': opts.chunkId,
+        'content-type': 'text/plain'
+      }
+    });
 
-      if (!this.config.isEnded) {
-        if (response.status === 204) {
-          this.collection._debug('[FilesCollection] [sendChunk] chunk successfully sent', this.fileId);
-          if (++this.sentChunks >= this.fileLength) {
-            await this._sendEOF();
-          } else {
-            await this._upload();
-          }
-        } else if (response.status === 408) {
-          this.emit('error', new Meteor.Error(response.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
-        } else if (response.status === 503) {
-          await this._upload();
-        } else {
-          this.result.pause();
-        }
-      }
-    } catch(error) {
-      if (!this.config.isEnded) {
-        this.collection._debug('[FilesCollection] [sendChunk] [error] EXCEPTION while sending chunk', this.fileId, error);
-        setTimeout(() => {
-          this._handleNetworkError(error);
-        }, 512);
-      }
-    } finally {
+    if (response?.status === 204) {
       this.transferTime += Date.now() - this.startTime[opts.chunkId];
       this.emit('calculateStats');
     }
@@ -452,76 +437,105 @@ export class UploadInstance extends EventEmitter {
       binData: '',
     };
 
-    try {
-      const response = await this._sendRequest({
-        methodName: this.collection._methodNames._Write,
-        payload: opts,
-        timeout: 10000,
-        headers: {
-          'x-eof': '1',
-          'x-fileId': opts.fileId,
-          'content-type': 'text/plain',
-        }
-      });
+    const response = await this._sendRequest({
+      methodName: this.collection._methodNames._Write,
+      payload: opts,
+      timeout: 10000,
+      headers: {
+        'x-eof': '1',
+        'x-fileId': opts.fileId,
+        'content-type': 'text/plain',
+      }
+    });
 
-      if (!this.config.isEnded) {
-        this.emit('end', response.error, response);
-      }
-    } catch (error) {
-      if (!this.config.isEnded) {
-        setTimeout(() => {
-          this._handleNetworkError(error);
-        }, 512);
-      }
+    if (response && !this.config.isEnded) {
+      this.emit('end', response.error, response);
     }
   }
 
   async _sendRequest(conf) {
     this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest]', this.fileId, {conf});
-    if (this.config.transport === 'ddp') {
-      return await this.config.ddp.callAsync(conf.methodName, conf.payload);
-    }
-
-    const payload = helpers.clone(conf.payload?.binData || conf.payload || '');
-    if (helpers.isObject(payload?.file?.meta)) {
-      payload.file.meta = fixJSONStringify(payload.file.meta);
-    }
-
-    const uid = Random.id();
-    this.fetchControllers[uid] = new AbortController();
-    const fetchTimeout = setTimeout(() => {
-      this.fetchControllers[uid].abort(new Meteor.Error(503, 'Send Request Timeout'));
-    }, conf.timeout || 25000);
-
-    let response = await fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
-      method: 'POST',
-      signal: this.fetchControllers[uid].signal,
-      body: helpers.isObject(payload) ? JSON.stringify(payload) : payload,
-      cache: 'no-cache',
-      credentials: 'include',
-      type: 'cors',
-      headers: {
-        ...conf.headers,
-        'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
-      }
-    });
-
-    clearTimeout(fetchTimeout);
-    delete this.fetchControllers[uid];
-
-    if (response.headers.get('content-type') === 'application/json') {
-      try {
-        const jsonData = await response.json();
-        if (jsonData.meta) {
-          jsonData.meta = fixJSONParse(jsonData.meta);
+    let result = false;
+    try {
+      if (this.config.transport === 'ddp') {
+        result = await this.config.ddp.callAsync(conf.methodName, conf.payload);
+      } else {
+        const payload = helpers.clone(conf.payload?.binData || conf.payload || '');
+        if (helpers.isObject(payload?.file?.meta)) {
+          payload.file.meta = fixJSONStringify(payload.file.meta);
         }
-        response = { ...response, ...jsonData };
-      } catch (jsonError) {
-        this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest] [parseJSON] [ERROR:]', this.fileId, jsonError, response);
+
+        const uid = Random.id();
+        this.fetchControllers[uid] = new AbortController();
+        this.fetchTimeouts[uid] = setTimeout(() => {
+          if (this.fetchControllers[uid]) {
+            this.fetchControllers[uid].abort(new Meteor.Error(503, 'Send Request Timeout'));
+          }
+        }, conf.timeout || 25000);
+
+        const response = await fetch(`${_rootUrl}${this.collection.downloadRoute}/${this.collection.collectionName}/__upload`, {
+          method: 'POST',
+          signal: this.fetchControllers[uid].signal,
+          body: helpers.isObject(payload) ? JSON.stringify(payload) : payload,
+          cache: 'no-cache',
+          credentials: 'include',
+          type: 'cors',
+          headers: {
+            ...conf.headers,
+            'x-mtok': (helpers.isObject(Meteor.connection) ? Meteor.connection._lastSessionId : void 0) || null
+          }
+        });
+
+        clearTimeout(this.fetchTimeouts[uid]);
+        delete this.fetchControllers[uid];
+        delete this.fetchTimeouts[uid];
+        result = response;
+
+        if (response.headers.get('content-type') === 'application/json') {
+          try {
+            const jsonData = await response.json();
+            if (jsonData.meta) {
+              jsonData.meta = fixJSONParse(jsonData.meta);
+            }
+            result = { status: response.status, ...jsonData };
+          } catch (jsonError) {
+            this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest] [parseJSON] [ERROR:]', this.fileId, jsonError, response);
+          }
+        }
       }
+
+      if (!this.config.isEnded) {
+        if (result.status === 200) {
+          return result;
+        }
+
+        if (result.status === 204) {
+          ++this.sentChunks;
+          this._upload();
+        } else if (result.status === 503) {
+          this._upload();
+        } else if (result.status === 408) {
+          this.emit('error', new Meteor.Error(result.status, 'Can\'t continue upload, session expired. Please, start upload again.'));
+        } else if (result.status === 405) {
+          this.emit('error', new Meteor.Error(405, 'Uploads are disabled'));
+        } else if (result.status === 403) {
+          if (result.error && result.isClientSafe) {
+            this.emit('error', new Meteor.Error(result.error, result.reason));
+          } else {
+            this.emit('error', new Meteor.Error(500, 'Unexpected error occurred during upload, try again later'));
+          }
+        } else {
+          this._handleNetworkError(new Meteor.Error(500, 'Unexpected error occurred during upload, make sure you\'re connected to the Internet. Reload the page or try again later.', result));
+        }
+      }
+    } catch (requestError) {
+      this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest] [CAUGHT ERROR:]', this.fileId, requestError);
+      setTimeout(() => {
+        this._handleNetworkError(requestError);
+      }, 128);
     }
 
-    return response;
+    return result;
   }
 
   async _proceedChunk(chunkId) {
@@ -644,52 +658,22 @@ export class UploadInstance extends EventEmitter {
       opts.FSName = this.FSName;
     }
 
-    const handleStart = async (error) => {
-      if (!this.config.isEnded) {
-        if (error) {
-          setTimeout(() => {
-            this._handleNetworkError(error);
-          }, 128);
-        } else {
-          this.result.continueFunc = () => {
-            this.collection._debug('[FilesCollection] [insert] [continueFunc]', this.fileId);
-            this._upload();
-          };
-          await this._upload();
-        }
+    const response = await this._sendRequest({
+      methodName: this.collection._methodNames._Start,
+      payload: opts,
+      timeout: 10000,
+      headers: {
+        'x-start': '1',
+        'content-type': 'application/json',
       }
-    };
+    });
 
-    try {
-      const response = await this._sendRequest({
-        methodName: this.collection._methodNames._Start,
-        payload: opts,
-        timeout: 10000,
-        headers: {
-          'x-start': '1',
-          'content-type': 'application/json',
-        }
-      });
-
-      this.collection._debug('[FilesCollection] [UploadInstance] [prepare] [response]', this.fileId, response);
-      if (!this.config.isEnded) {
-        if (response.status === 204) {
-          await handleStart();
-        } else if (response.status === 405) {
-          this.emit('error', new Meteor.Error(405, 'Uploads are disabled'));
-        } else if (response.status === 403) {
-          if (response.error && response.isClientSafe) {
-            this.emit('error', new Meteor.Error(response.error, response.reason));
-          } else {
-            this.emit('error', new Meteor.Error(500, 'Unexpected error occurred during upload, try again later'));
-          }
-        } else {
-          this.emit('error', new Meteor.Error(response.status, 'Can\'t start upload, make sure you\'re connected to the Internet. Reload the page or try again later.'));
-        }
-      }
-    } catch(error) {
-      this.collection._debug('[FilesCollection] [UploadInstance] [prepare] [catch error]', this.fileId, error);
-      await handleStart(error);
+    this.collection._debug('[FilesCollection] [UploadInstance] [prepare] [response]', this.fileId, response);
+    if (!this.config.isEnded && response?.status === 204) {
+      this.result.continueFunc = () => {
+        this.collection._debug('[FilesCollection] [insert] [continueFunc]', this.fileId);
+        this._upload();
+      };
     }
   }
 
@@ -731,14 +715,29 @@ export class UploadInstance extends EventEmitter {
       return this.result;
     }
 
-    Tracker.autorun((computation) => {
-      this.trackerComp = computation;
+    this.trackerCompConnection = Tracker.autorun(() => {
       if (!this.result.onPause.curValue && !Meteor.status().connected) {
-        this.collection._debug('[FilesCollection] [insert] [Tracker] [pause]', this.fileId);
+        this.collection._debug('[FilesCollection] [insert] [Tracker connection] [pause]', this.fileId);
         this.result.pause();
       } else if (this.result.onPause.curValue && Meteor.status().connected) {
-        this.collection._debug('[FilesCollection] [insert] [Tracker] [continue]', this.fileId);
+        this.collection._debug('[FilesCollection] [insert] [Tracker connection] [continue]', this.fileId);
         this.result.continue();
+      }
+    });
+
+    this.trackerCompPause = Tracker.autorun(() => {
+      if (this.result.onPause.get() === true) {
+        this.collection._debug('[FilesCollection] [insert] [Tracker pause] [abort]', this.fileId);
+        for (const uid in this.fetchControllers) {
+          if (this.fetchControllers[uid]) {
+            this.fetchControllers[uid].abort(new Meteor.Error(412, 'Upload set to pause'));
+            delete this.fetchControllers[uid];
+          }
+          if (this.fetchTimeouts[uid]) {
+            clearTimeout(this.fetchTimeouts[uid]);
+            delete this.fetchTimeouts[uid];
+          }
+        }
       }
     });
 
