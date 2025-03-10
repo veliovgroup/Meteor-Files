@@ -17,8 +17,6 @@ import nodePath from 'path';
 // in Node.js 14, there is no promises version of stream
 import { pipeline as pipelineCallback } from 'stream';
 import { promisify } from 'util';
-// change to this in "loadAsync" when Meteor supports Node.js 15 upwards
-//import nodeStream from 'stream/promises';
 
 const pipeline = promisify(pipelineCallback);
 
@@ -1119,7 +1117,7 @@ class FilesCollection extends FilesCollectionCore {
    */
   async _finishUpload(result, opts) {
     this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
-    fs.chmod(result.path, this.permissions, noop);
+    await fs.promises.chmod(result.path, this.permissions, noop);
     result.type = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
@@ -1460,11 +1458,12 @@ class FilesCollection extends FilesCollectionCore {
     } catch (_statError) {
       mustCreateFileFirst = true;
     }
+
     if(mustCreateFileFirst) {
       const paths = opts.path.split('/');
       paths.pop();
-      fs.mkdirSync(paths.join('/'), { recursive: true });
-      fs.writeFileSync(opts.path, '');
+      await fs.promises.mkdir(paths.join('/'), { recursive: true });
+      await fs.promises.writeFile(opts.path, '');
     }
 
     const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
@@ -1574,62 +1573,63 @@ class FilesCollection extends FilesCollectionCore {
       }
       throw new Meteor.Error(statErr.code, statErr.message);
     }
-    if (stats.isFile()) {
-      if (!helpers.isObject(opts)) {
-        opts = {};
-      }
-      opts.path = path;
 
-      if (!opts.fileName) {
-        const pathParts = path.split(nodePath.sep);
-        opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
-      }
-
-      const { extension } = this._getExt(opts.fileName);
-
-      if (!helpers.isString(opts.type)) {
-        opts.type = this._getMimeType(opts);
-      }
-
-      if (!helpers.isObject(opts.meta)) {
-        opts.meta = {};
-      }
-
-      if (!helpers.isNumber(opts.size)) {
-        opts.size = stats.size;
-      }
-
-      const result = this._dataToSchema({
-        name: opts.fileName,
-        path,
-        meta: opts.meta,
-        type: opts.type,
-        size: opts.size,
-        userId: opts.userId,
-        extension,
-        _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-        fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
-      });
-
-      let _id;
-      try {
-        _id = await this.collection.insertAsync(result);
-      } catch (insertErr) {
-        this._debug(`[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`, insertErr);
-        throw new Meteor.Error(insertErr.code, insertErr.message);
-      }
-
-      const fileRef = await this.collection.findOneAsync(_id);
-
-      if (proceedAfterUpload === true) {
-        this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-        this.emit('afterUpload', fileRef);
-      }
-      this._debug(`[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`);
-      return fileRef;
+    if (!stats.isFile()) {
+      throw new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`);
     }
 
-    throw new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`);
+    if (!helpers.isObject(opts)) {
+      opts = {};
+    }
+    opts.path = path;
+
+    if (!opts.fileName) {
+      const pathParts = path.split(nodePath.sep);
+      opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
+    }
+
+    const { extension } = this._getExt(opts.fileName);
+
+    if (!helpers.isString(opts.type)) {
+      opts.type = this._getMimeType(opts);
+    }
+
+    if (!helpers.isObject(opts.meta)) {
+      opts.meta = {};
+    }
+
+    if (!helpers.isNumber(opts.size)) {
+      opts.size = stats.size;
+    }
+
+    const result = this._dataToSchema({
+      name: opts.fileName,
+      path,
+      meta: opts.meta,
+      type: opts.type,
+      size: opts.size,
+      userId: opts.userId,
+      extension,
+      _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
+      fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
+    });
+
+    let _id;
+    try {
+      _id = await this.collection.insertAsync(result);
+    } catch (insertErr) {
+      this._debug(`[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`, insertErr);
+      throw new Meteor.Error(insertErr.code, insertErr.message);
+    }
+
+    const fileRef = await this.collection.findOneAsync(_id);
+
+    if (proceedAfterUpload === true) {
+      this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
+      this.emit('afterUpload', fileRef);
+    }
+    this._debug(`[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`);
+    return fileRef;
   }
 
   /**
@@ -2051,7 +2051,7 @@ class FilesCollection extends FilesCollectionCore {
     switch (responseType) {
     case '400':
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [400] Content-Length mismatch!`);
-      var text = 'Content-Length mismatch!';
+      const text = 'Content-Length mismatch!';
 
       if (!http.response.headersSent) {
         http.response.writeHead(400, {
