@@ -1,30 +1,34 @@
-declare module "meteor/ostrio:files" {
-  import { Meteor } from 'meteor/meteor';
-  import { Mongo } from 'meteor/mongo';
-  import { ReactiveVar } from 'meteor/reactive-var';
-  import { SimpleSchemaDefinition } from 'simpl-schema';
-  import * as http from 'http';
-  import { IncomingMessage } from 'connect';
+declare module 'meteor/ostrio:files' {
+  import { EventEmitter } from 'eventemitter3';
+  import type { Meteor } from 'meteor/meteor';
+  import type { Mongo } from 'meteor/mongo';
+  import type { ReactiveVar } from 'meteor/reactive-var';
+  import type { SimpleSchemaDefinition } from 'simpl-schema';
+  import type * as http from 'http';
+  import type { IncomingMessage } from 'connect';
+  import type { DDP } from 'meteor/ddp';
 
-  interface Params {
+  export interface ParamsHTTP {
     _id: string;
-    query: { [key: string]: string };
+    query: {
+      [key: string]: string
+    };
     name: string;
     version: string;
   }
 
-  interface ContextHTTP {
+  export interface ContextHTTP {
     request: IncomingMessage;
     response: http.ServerResponse;
-    params: Params;
+    params: ParamsHTTP;
   }
 
-  interface ContextUser {
+  export interface ContextUser {
     userId: string;
     user: () => Meteor.User;
   }
 
-  interface ContextUpload {
+  export interface ContextUpload {
     file: object;
     /** On server only. */
     chunkId?: number;
@@ -32,7 +36,13 @@ declare module "meteor/ostrio:files" {
     eof?: boolean;
   }
 
-  interface Version<MetadataType> {
+  export type MeteorFilesTransportType = 'http' | 'ddp';
+  export type MetadataType = Record<string, unknown> | {};
+  export type MeteorFilesSelector<S> = Mongo.Selector<S> | Mongo.ObjectID | string;
+  export type MeteorFilesOptions<O> = Mongo.Options<O>;
+  export type FileHandleCache = Map<string, WriteStream>;
+
+  export interface Version {
     extension: string;
     meta: MetadataType;
     path: string;
@@ -40,7 +50,7 @@ declare module "meteor/ostrio:files" {
     type: string;
   }
 
-  class FileObj<MetadataType> {
+  export interface FileObj {
     _id: string;
     size: number;
     name: string;
@@ -54,6 +64,7 @@ declare module "meteor/ostrio:files" {
     isPDF: boolean;
     ext?: string;
     extension?: string;
+    chunkSize?: number;
     extensionWithDot: string;
     _storagePath: string;
     _downloadRoute: string;
@@ -63,182 +74,420 @@ declare module "meteor/ostrio:files" {
     userId?: string;
     updatedAt?: Date;
     versions: {
-      [propName: string]: Version<MetadataType>;
+      [propName: string]: Version;
     };
     mime: string;
-    "mime-type": string;
+    'mime-type': string;
   }
 
-  class FileRef<MetadataType> extends FileObj<MetadataType> {
-    remove: (callback?: (error: Meteor.Error) => void) => void;
-    link: (version?: string, location?: string) => string;
-    get: (property?: string) => any;
-    fetch: () => Array<FileObj<MetadataType>>;
-    with: () => FileCursor<MetadataType>;
-  }
-
-  interface FileData<MetadataType> {
+  export interface FileData {
     size: number;
     type: string;
     mime: string;
-    "mime-type": string;
+    'mime-type': string;
     ext: string;
     extension: string;
     name: string;
     meta: MetadataType;
   }
 
-  interface FilesCollectionConfig<MetadataType> {
-    storagePath?: string | ((fileObj: FileObj<MetadataType>) => string);
-    collection?: Mongo.Collection<FileObj<MetadataType>>;
+  /**
+   * A writable stream wrapper that ensures chunks are written in the correct order.
+   */
+  export class WriteStream {
+    /**
+     * Creates a new WriteStream instance.
+     * @param path - The file system path where the file will be written.
+     * @param maxLength - The maximum number of chunks expected.
+     * @param file - An object containing file properties such as `size` and `chunkSize`.
+     * @param permissions - The file permissions (octal string) to use when opening the file (e.g., '611' or '0o777').
+     */
+    constructor(path: string, maxLength: number, file: FileObj, permissions: string);
+
+    /**
+     * Initializes the WriteStream by ensuring the directory exists, creating the file,
+     * preallocating the file size, and caching the file handle.
+     * @returns A promise that resolves with this WriteStream instance.
+     */
+    init(): Promise<this>;
+
+    /**
+     * Writes a chunk to the file at the specified chunk position.
+     * @param num - The 1-indexed position of the chunk.
+     * @param chunk - The buffer containing the chunk data.
+     * @returns A promise that resolves to true if the chunk was successfully written, or false if not.
+     */
+    write(num: number, chunk: Buffer): Promise<boolean>;
+
+    /**
+     * Waits for all chunks to be written, polling for completion up to a timeout.
+     * @returns A promise that resolves to true if the file was fully written, or false if writing was aborted.
+     */
+    waitForCompletion(): Promise<boolean>;
+
+    /**
+     * Finishes writing to the stream after ensuring that all chunks are written.
+     * @returns A promise that resolves to true if the stream is fully written, or false if it is still in progress.
+     */
+    end(): Promise<boolean>;
+
+    /**
+     * Aborts the writing process and removes the created file.
+     * @returns A promise that resolves to true once the abort process is complete.
+     */
+    abort(): Promise<boolean>;
+
+    /**
+     * Stops the writing process.
+     * @param isAborted - Indicates whether the stop is due to an abort.
+     * @returns A promise that resolves to true once the stream is stopped.
+     */
+    stop(isAborted?: boolean): Promise<boolean>;
+  }
+
+  /**
+   * Core class for FilesCollection. Most other classes extend and build on this one.
+   */
+  export default class FilesCollectionCore extends EventEmitter {
+    // Instance properties that are used in the class:
+    collection: Mongo.Collection<FileObj>;
+    debug?: boolean;
+    downloadRoute?: string;
+    collectionName?: string;
+    storagePath: (data: Partial<FileObj>) => string;
+
+    constructor();
+
+    /** Helper functions available as a static property */
+    static __helpers: unknown;
+
+    /** Default schema definition */
+    static schema: {
+      _id: { type: string };
+      size: { type: number };
+      name: { type: string };
+      type: { type: string };
+      path: { type: string };
+      isVideo: { type: boolean };
+      isAudio: { type: boolean };
+      isImage: { type: boolean };
+      isText: { type: boolean };
+      isJSON: { type: boolean };
+      isPDF: { type: boolean };
+      extension: { type: string; optional: true };
+      ext: { type: string; optional: true };
+      extensionWithDot: { type: string; optional: true };
+      mime: { type: string; optional: true };
+      'mime-type': { type: string; optional: true };
+      _storagePath: { type: string };
+      _downloadRoute: { type: string };
+      _collectionName: { type: string };
+      public: { type: boolean; optional: true };
+      meta: { type: Object; blackbox: true; optional: true };
+      userId: { type: string; optional: true };
+      updatedAt: { type: Date; optional: true };
+      versions: { type: Object; blackbox: true };
+    };
+
+    /**
+     * Print logs in debug mode.
+     * @param args - Arguments to log.
+     * @returns {void}
+     */
+    _debug(...args: unknown[]): void;
+
+    /**
+     * Get file name from file data.
+     * @param fileData - File data object.
+     * @returns {string} The sanitized file name.
+     */
+    _getFileName(fileData: FileData): string;
+
+    /**
+     * Get extension information from a file name.
+     * @param fileName - The file name.
+     * @returns {Partial<FileData>} An object with ext, extension and extensionWithDot.
+     */
+    _getExt(fileName: string): Partial<FileData>;
+
+    /**
+     * Update file type booleans based on the file's MIME type.
+     * @param data - File data object.
+     * @returns {void}
+     */
+    _updateFileTypes(data: FileData): void;
+
+    /**
+     * Convert raw file data to an object that conforms to the default schema.
+     * @param data - File data combined with partial FileObj properties.
+     * @returns {Partial<FileObj>} The schema-compliant file object.
+     */
+    _dataToSchema(data: FileData & Partial<FileObj>): Partial<FileObj>;
+
+    /**
+     * Find and return a FileCursor for a matching document asynchronously.
+     * @param selector - Mongo-style selector.
+     * @param options - Mongo query options.
+     * @returns {Promise<FileCursor | null>} The FileCursor instance or null if not found.
+     */
+    findOneAsync<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): Promise<FileCursor | null>;
+
+    /**
+     * Find and return a FileCursor for a matching document (client only).
+     * @param selector - Mongo-style selector.
+     * @param options - Mongo query options.
+     * @returns {FileCursor | null} The FileCursor instance or null if not found.
+     * @throws {Meteor.Error} If called on the server.
+     */
+    findOne<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): FileCursor | null;
+
+    /**
+     * Find and return a FilesCursor for matching documents.
+     * @param selector - Mongo-style selector.
+     * @param options - Mongo query options.
+     * @returns {FilesCursor} The FilesCursor instance.
+     */
+    find<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): FilesCursor<S, O>;
+
+    /**
+     * Update documents in the underlying collection.
+     * @param args - Arguments to pass to Mongo.Collection.update.
+     * @returns {Mongo.Collection<FileObj>} The collection instance.
+     */
+    update(...args: unknown[]): Mongo.Collection<FileObj>;
+
+    /**
+     * Asynchronously update documents in the underlying collection.
+     * @param args - Arguments to pass to Mongo.Collection.updateAsync.
+     * @returns {Promise<number>} The number of updated records.
+     */
+    updateAsync(...args: unknown[]): Promise<number>;
+
+    /**
+     * Count records matching a selector.
+     * @param selector - Mongo-style selector.
+     * @param options - Mongo query options.
+     * @returns {Promise<number>} The number of matching records.
+     */
+    countDocuments<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): Promise<number>;
+
+    /**
+     * Return a downloadable URL for the given file.
+     * @param fileRef - Partial file object reference.
+     * @param version - File version (default is 'original').
+     * @param uriBase - Optional URI base.
+     * @returns {string} The download URL, or an empty string if the file is invalid.
+     */
+    link(fileRef: Partial<FileObj>, version?: string, uriBase?: string): string;
+  }
+
+  export interface FilesCollectionConfig {
+    storagePath?: string | ((fileObj: FileObj) => string);
+    collection?: Mongo.Collection<FileObj>;
     collectionName?: string;
     continueUploadTTL?: string;
-    ddp?: object;
+    ddp?: DDP.DDPStatic;
     cacheControl?: string;
-    responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileRef?: FileRef<MetadataType>, versionRef?: Version<MetadataType>, version?: string) => { [x: string]: string });
+    responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string });
     throttle?: number | boolean;
     downloadRoute?: string;
     schema?: SimpleSchemaDefinition;
-    chunkSize?: number;
-    namingFunction?: (fileObj: FileObj<MetadataType>) => string;
+    chunkSize?: number | 'dynamic';
+    namingFunction?: (fileObj: FileObj) => string;
     permissions?: number;
     parentDirPermissions?: number;
     integrityCheck?: boolean;
     strict?: boolean;
-    downloadCallback?: (this: ContextHTTP & ContextUser, fileObj: FileObj<MetadataType>) => boolean;
-    protected?: boolean | ((this: ContextHTTP & ContextUser, fileObj: FileObj<MetadataType>) => boolean | number);
+    downloadCallback?: (this: ContextHTTP & ContextUser, fileObj: FileObj) => boolean;
+    protected?: boolean | ((this: ContextHTTP & ContextUser, fileObj: FileObj) => boolean | number);
     public?: boolean;
-    onBeforeUpload?: (this: ContextUpload & ContextUser, fileData: FileData<MetadataType>) => boolean | string;
-    onBeforeRemove?: (this: ContextUser, cursor: Mongo.Cursor<FileObj<MetadataType>>) => boolean;
-    onInitiateUpload?: (this: ContextUpload & ContextUser, fileData: FileData<MetadataType>) => void;
-    onAfterUpload?: (fileRef: FileRef<MetadataType>) => any;
-    onAfterRemove?: (files: ReadonlyArray<FileObj<MetadataType>>) => any;
+    onBeforeUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => boolean | string;
+    onBeforeRemove?: (this: ContextUser, cursor: Mongo.Cursor<FileObj>) => boolean;
+    onInitiateUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => void;
+    onAfterUpload?: (fileObj: FileObj) => void;
+    onAfterRemove?: (files: ReadonlyArray<FileObj>) => void;
     onbeforeunloadMessage?: string | (() => string);
     allowClientCode?: boolean;
     debug?: boolean;
-    interceptDownload?: (http: object, fileRef: FileRef<MetadataType>, version: string) => boolean;
+    interceptDownload?: (http: object, fileObj: FileObj, version: string) => boolean;
   }
 
-  interface SearchOptions<MetadataType, TransformAdditions> {
-    sort?: Mongo.SortSpecifier;
-    skip?: number;
-    limit?: number;
-    fields?: Mongo.FieldSpecifier;
-    reactive?: boolean;
-    transform?: (fileObj: FileObj<MetadataType>) => FileObj<MetadataType> & TransformAdditions;
-  }
-
-  interface InsertOptions<MetadataType> {
-    file: File | object | string;
+  export interface InsertOptions {
+    file: File | String;
     fileId?: string;
     fileName?: string;
     isBase64?: boolean;
     meta?: MetadataType;
-    transport?: 'ddp' | 'http';
-    ddp?: object;
-    onStart?: (error: Meteor.Error, fileData: FileData<MetadataType>) => any;
-    onUploaded?: (error: Meteor.Error, fileRef: FileRef<MetadataType>) => any;
-    onAbort?: (fileData: FileData<MetadataType>) => any;
-    onError?: (error: Meteor.Error, fileData: FileData<MetadataType>) => any;
-    onProgress?: (progress: number, fileData: FileData<MetadataType>) => any;
-    onBeforeUpload?: (fileData: FileData<MetadataType>) => any;
+    transport?: MeteorFilesTransportType;
+    ddp?: DDP.DDPStatic;
+    onStart?: (error: Meteor.Error, fileData: FileData) => void;
+    onUploaded?: (error: Meteor.Error, fileObj: FileObj) => void;
+    onAbort?: (fileData: FileData) => void;
+    onError?: (error: Meteor.Error, fileData: FileData) => void;
+    onProgress?: (progress: number, fileData: FileData) => void;
+    onBeforeUpload?: (fileData: FileData) => boolean;
     chunkSize?: number | 'dynamic';
     allowWebWorkers?: boolean;
     type?: string;
   }
 
-  interface LoadOptions<MetadataType> {
-    fileName: string;
-    meta?: MetadataType;
-    type?: string;
-    size?: number;
-    userId?: string;
+  export interface FileUploadConfig {
+    _debug: (...args: unknown[]) => void;
+    file: File;
+    fileData: FileData;
+    isBase64?: boolean;
+    onAbort?: (this: FileUpload, file: FileData & Partial<File>) => void;
+    beforeunload?: (e: BeforeUnloadEvent | Event) => string;
+    _onEnd?: () => void;
     fileId?: string;
+    debug?: boolean;
+    ddp?: DDP.DDPStatic;
+    chunkSize?: number | 'dynamic';
   }
 
-  class FileUpload {
-    file: File;
+  /**
+   * FileUpload – an internal class returned by the .insert() method.
+   */
+  export class FileUpload extends EventEmitter {
+    config: FileUploadConfig;
+    file: FileData & Partial<File>;
+    state: ReactiveVar<string>;
     onPause: ReactiveVar<boolean>;
     progress: ReactiveVar<number>;
+    continueFunc: () => void;
     estimateTime: ReactiveVar<number>;
     estimateSpeed: ReactiveVar<number>;
-    state: ReactiveVar<'active' | 'paused' | 'aborted' | 'completed'>;
+    estimateTimer: number;
+    constructor(config: FileUploadConfig);
     pause(): void;
     continue(): void;
     toggle(): void;
-    pipe(): void;
-    start(): void;
-    on(event: string, callback: () => void): void;
+    abort(): void;
   }
 
-  class FileCursor<MetadataType> extends FileRef<MetadataType> { }
 
-  class FilesCursor<MetadataType, TransformAdditions> extends Mongo.Cursor<FileObj<MetadataType>> {
-    cursor: Mongo.Cursor<FileObj<MetadataType>>; // Refers to base cursor? Why is this existing?
+  export interface UploadInstanceConfig {
+    ddp?: DDP.DDPStatic;
+    file: File;
+    fileId?: string;
+    meta?: MetadataType;
+    type?: string;
+    onError?: (this: FileUpload, error: Meteor.Error, fileData: FileData) => void;
+    onAbort?: (this: FileUpload, file: FileData) => void;
+    onStart?: (this: FileUpload, error: Meteor.Error | null, fileData: FileData) => void;
+    fileName?: string;
+    isBase64?: boolean;
+    transport: MeteorFilesTransportType;
+    chunkSize: number | 'dynamic';
+    onUploaded?: (this: FileUpload, error: Meteor.Error | null, data: FileObj) => void;
+    onProgress?: (
+      this: FileUpload,
+      progress: number,
+      fileData: FileData,
+      info?: { chunksSent: number; chunksLength: number; bytesSent: number }
+    ) => void;
+    onBeforeUpload?: (this: FileUpload, fileData: FileData) => boolean | string | Promise<boolean | string>;
+    allowWebWorkers: boolean;
+    disableUpload?: boolean;
+    _debug?: (...args: unknown[]) => void;
+    debug?: boolean;
+  }
 
-    get(): Array<FileCursor<MetadataType> & TransformAdditions>;
+  /**
+   * UploadInstance – internal class used for handling file uploads.
+   */
+  export class UploadInstance extends EventEmitter {
+    config: UploadInstanceConfig;
+    collection: FilesCollection;
+    worker: Worker | null | false;
+    fetchControllers: { [uid: string]: AbortController };
+    transferTime: number;
+    trackerComp: Tracker.Computation | null;
+    sentChunks: number;
+    fileLength: number;
+    startTime: { [chunkId: number]: number };
+    EOFsent: boolean;
+    fileId: string;
+    FSName: string;
+    pipes: Array<(data: string) => string>;
+    fileData: FileData;
+    result: FileUpload;
+    beforeunload: (e: BeforeUnloadEvent | Event) => string;
+    _setProgress: (progress: number) => void;
+    constructor(config: UploadInstanceConfig, collection: FilesCollection);
+    error(error: Meteor.Error, data?: unknown): this;
+    end(error?: Meteor.Error, data?: unknown): FileUpload;
+    sendChunk(evt: { data: { bin: string; chunkId: number } }): void;
+    sendEOF(): void;
+    proceedChunk(chunkId: number): void;
+    upload(): this;
+    prepare(): void;
+    pipe(func: (data: string) => string): this;
+    start(): Promise<FileUpload> | FileUpload;
+    manual(): FileUpload;
+  }
+
+  /**
+   * FileCursor – internal class representing a single file document.
+   * Instances are returned from methods such as `.findOne()` or via iteration over a FilesCursor.
+   */
+  export class FileCursor {
+    constructor(_fileRef: FileObj, _collection: FilesCollection);
+    _fileRef: FileObj;
+    _collection: FilesCollection;
+    remove(): FileCursor;
+    removeAsync(): Promise<FileCursor>;
+    link(version?: string, uriBase?: string): string;
+    get(property?: string): FileObj | unknown;
+    fetch(): FileObj[];
+    fetchAsync(): Promise<FileObj[]>;
+    with(): FileCursor;
+  }
+
+  /**
+   * FilesCursor – internal class representing a cursor over file documents.
+   */
+  export class FilesCursor<S, O> {
+    constructor(
+      _selector: MeteorFilesSelector<S>,
+      options: MeteorFilesOptions<O>,
+      _collection: FilesCollection
+    );
+    _collection: FilesCollection;
+    _selector: MeteorFilesSelector<S>;
+    _current: number;
+    cursor: Mongo.Cursor<FileObj>;
+    get(): FileObj[];
+    getAsync(): Promise<FileObj[]>;
     hasNext(): boolean;
-    next(): FileCursor<MetadataType> & TransformAdditions;
+    hasNextAsync(): Promise<boolean>;
+    next(): FileObj | undefined;
+    nextAsync(): Promise<FileObj | undefined>;
     hasPrevious(): boolean;
-    previous(): FileCursor<MetadataType> & TransformAdditions;
-    first(): FileCursor<MetadataType> & TransformAdditions;
-    last(): FileCursor<MetadataType> & TransformAdditions;
-    remove(callback?: (err: object) => void): void;
-    each(callback: (cursor: FileCursor<MetadataType> & TransformAdditions) => void): void;
-    current(): object | undefined;
-  }
-
-  class FilesCollection<MetadataType = { [x: string]: any }> {
-    collection: Mongo.Collection<FileObj<MetadataType>>;
-    schema: SimpleSchemaDefinition;
-
-    constructor(config: FilesCollectionConfig<MetadataType>)
-
-    /**
-     * Find and return Cursor for matching documents.
-     *
-     * @param selector [[http://docs.meteor.com/api/collections.html#selectors | Mongo-Style selector]]
-     * @param options [[http://docs.meteor.com/api/collections.html#sortspecifiers | Mongo-Style selector Options]]
-     *
-     * @template TransformAdditions Additional properties provided by transforming a document with options.tranform().
-     *                        Note that removing fields with a transform function is not currently supported as this may break
-     *                        functions defined on a FileRef or FileCursor.
-     */
-    find<TransformAdditions = {}>(
-      selector?: Mongo.Selector<Partial<FileObj<MetadataType>>>,
-      options?: SearchOptions<MetadataType, TransformAdditions>
-    ): FilesCursor<MetadataType, TransformAdditions>;
-
-    /**
-     * Finds the first document that matches the selector, as ordered by sort and skip options.
-     *
-     * @param selector [[http://docs.meteor.com/api/collections.html#selectors | Mongo-Style selector]]
-     * @param options [[http://docs.meteor.com/api/collections.html#sortspecifiers | Mongo-Style selector Options]]
-     *
-     * @template TransformAdditions Additional properties provided by transforming a document with options.tranform().
-     *                        Note that removing fields with a transform function is not currently supported as this may break
-     *                        functions defined on a FileRef or FileCursor.
-     */
-    findOne<TransformAdditions = {}>(
-      selector?: Mongo.Selector<Partial<FileObj<MetadataType>>> | string,
-      options?: SearchOptions<MetadataType, TransformAdditions>
-    ): FileCursor<MetadataType> & TransformAdditions;
-
-    insert(settings: InsertOptions<MetadataType>, autoStart?: boolean): FileUpload;
-    remove(select: Mongo.Selector<FileObj<MetadataType>> | string, callback?: (error: Meteor.Error) => void): FilesCollection<MetadataType>;
-    update(select: Mongo.Selector<FileObj<MetadataType>> | string, modifier: Mongo.Modifier<FileObj<MetadataType>>, options?: {
-      multi?: boolean;
-      upsert?: boolean;
-      arrayFilters?: Array<{ [identifier: string]: any }>;
-    }, callback?: (error: Meteor.Error, insertedCount: number) => void): FilesCollection<MetadataType>;
-    link(fileRef: FileRef<MetadataType>, version?: string): string;
-    allow(options: Mongo.AllowDenyOptions): void;
-    deny(options: Mongo.AllowDenyOptions): void;
-    denyClient(): void;
-    on(event: string, callback: (fileRef: FileRef<MetadataType>) => void): void;
-    unlink(fileRef: FileRef<MetadataType>, version?: string): FilesCollection<MetadataType>;
-    addFile(path: string, opts: LoadOptions<MetadataType>, callback?: (err: any, fileRef: FileRef<MetadataType>) => any, proceedAfterUpload?: boolean): FilesCollection<MetadataType>;
-    load(url: string, opts: LoadOptions<MetadataType>, callback?: (err: object, fileRef: FileRef<MetadataType>) => any, proceedAfterUpload?: boolean): FilesCollection<MetadataType>;
-    write(buffer: Buffer, opts: LoadOptions<MetadataType>, callback?: (err: object, fileRef: FileRef<MetadataType>) => any, proceedAfterUpload?: boolean): FilesCollection<MetadataType>;
+    hasPreviousAsync(): Promise<boolean>;
+    previous(): FileObj | undefined;
+    previousAsync(): Promise<FileObj | undefined>;
+    fetch(): FileObj[];
+    fetchAsync(): Promise<FileObj[]>;
+    first(): FileObj | undefined;
+    firstAsync(): Promise<FileObj | undefined>;
+    last(): FileObj | undefined;
+    lastAsync(): Promise<FileObj | undefined>;
+    count(): number;
+    countAsync(): Promise<number>;
+    remove(callback?: Function): FilesCursor<S, O>
+    removeAsync(): Promise<number>;
+    forEach(callback: Function, context?: object): FilesCursor<S, O>;
+    forEachAsync(callback: Function, context?: object): Promise<FilesCursor<S, O>>;
+    each(): FileCursor[];
+    eachAsync(): Promise<FileCursor[]>;
+    map(callback: Function, context?: object): FileObj[];
+    mapAsync(callback: Function, context?: object): Promise<FileObj[]>;
+    current(): FileObj | undefined;
+    currentAsync(): Promise<FileObj | undefined>;
+    observe(callbacks: Mongo.ObserveCallbacks<FileObj>): Meteor.LiveQueryHandle;
+    observeAsync(callbacks: Mongo.ObserveCallbacks<FileObj>): Promise<Meteor.LiveQueryHandle>;
+    observeChanges(callbacks: Mongo.ObserveChangesCallbacks<FileObj>): Meteor.LiveQueryHandle;
+    observeChangesAsync(callbacks: Mongo.ObserveChangesCallbacks<FileObj>): Promise<Meteor.LiveQueryHandle>;
   }
 }
