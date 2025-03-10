@@ -418,7 +418,7 @@ export class UploadInstance extends EventEmitter {
       }
     });
 
-    if (response?.status === 204) {
+    if (!this.config.isEnded && response?.status === 204) {
       this.transferTime += Date.now() - this.startTime[opts.chunkId];
       this.emit('calculateStats');
     }
@@ -529,7 +529,7 @@ export class UploadInstance extends EventEmitter {
         }
       }
     } catch (requestError) {
-      this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest] [CAUGHT ERROR:]', this.fileId, requestError);
+      this.collection._debug('[FilesCollection] [UploadInstance] [sendRequest] [CAUGHT ERROR:]', this.fileId, requestError, conf);
       setTimeout(() => {
         this._handleNetworkError(requestError);
       }, 128);
