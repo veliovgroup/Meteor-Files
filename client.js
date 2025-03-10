@@ -239,9 +239,9 @@ class FilesCollection extends FilesCollectionCore {
    *   {function} onError - callback triggered on error during upload/FileReader; receives (error, fileData)
    *   {function} onProgress - callback triggered when a chunk is sent; receives (progress)
    *   {function} onBeforeUpload - callback triggered before upload starts; return true to continue, false or string to abort
-   * @param {boolean} autoStart - whether to start upload immediately (if false, call .start() manually)
+   * @param {boolean} [autoStart=true] - whether to start upload immediately (if false, call .start() manually)
    * @summary Uploads a file to the server over DDP or HTTP
-   * @returns {UploadInstance} An instance with properties:
+   * @returns {FileUpload|UploadInstance} An instance with properties:
    *   {ReactiveVar} onPause - whether the upload is paused
    *   {ReactiveVar} state - 'active' | 'paused' | 'aborted' | 'completed'
    *   {ReactiveVar} progress - upload progress (percentage)
@@ -274,7 +274,9 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Client
    * @memberOf FilesCollection
    * @name insertAsync
-   * @returns {Promise<UploadInstance>}
+   * @param {InsertOptions} config - configuration object with properties:
+   * @param {boolean} [autoStart=true] - whether to start upload immediately (if false, call .start() manually)
+   * @returns {Promise<FileUpload|UploadInstance>}
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
