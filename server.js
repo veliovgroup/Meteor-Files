@@ -77,7 +77,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.schema    {Object}   - [Both]   Collection Schema
  * @param config.public    {boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
  * @param config.strict    {boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
- * @param config.protected {Function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
+ * @param config.protected {function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
  *  - `request`
  *  - `response`
  *  - `user()`
@@ -85,33 +85,33 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
  * @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
  * @param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
- * @param config.storagePath    {String|Function}  - [Server] Storage path on file system
+ * @param config.storagePath    {string|function}  - [Server] Storage path on file system
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
- * @param config.responseHeaders {Object|Function} - [Server] Custom response headers, if function is passed, must return Object
+ * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
  * @param config.throttle       {Number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
  * @param config.collectionName {string}  - [Both]   Collection name
- * @param config.namingFunction {Function}- [Both]   Function which returns `String`
+ * @param config.namingFunction {function}- [Both]   Function which returns `String`
  * @param config.integrityCheck {boolean} - [Server] Check file's integrity before serving to users
- * @param config.onAfterUpload  {Function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
+ * @param config.onAfterUpload  {function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
  * @param config.onAfterRemove  {function(fileObj[]): boolean} - [Server] Called with single argument with array of removed `fileObj[]` right after file(s) is removed. Return `true` to intercept `.unlinkAsync` method; return `false` to continue default behavior
  * @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
- * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
+ * @param config.onBeforeUpload {function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return or resolve `true` to continue
  *  - return or resolve `false` or `String` to abort upload
- * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, useful when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
- * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
- * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow physical file removal and `false` to deny.
+ * @param config.getUser        {function} - [Server] Replace default way of recognizing user, useful when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
+ * @param config.onInitiateUpload {function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
+ * @param config.onBeforeRemove {function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow physical file removal and `false` to deny.
  * @param config.allowClientCode  {boolean}  - [Both]   Allow to run `remove` from client
- * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
- * @param config.interceptRequest {Function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
- * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
+ * @param config.downloadCallback {function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
+ * @param config.interceptRequest {function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
+ * @param config.interceptDownload {function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
  * @param config.disableUpload {boolean} - Disable file upload, useful for server only solutions
  * @param config.disableDownload {boolean} - Disable file download (serving), useful for file management only solutions
- * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
+ * @param config.allowedOrigins  {Regex|boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
  * @param config.allowQueryStringCookies {boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
- * @param config.sanitize {Function} - Override default sanitize function
+ * @param config.sanitize {function} - Override default sanitize function
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
  * @param config._preCollectionName {string}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
@@ -416,7 +416,7 @@ class FilesCollection extends FilesCollectionCore {
 
             // We can be unlucky to run into a race condition where another server removed this document before the change of `isFinished` is registered on this server.
             // Therefore it's better to double-check with the main collection if the file is referenced there. Issue: https://github.com/veliovgroup/Meteor-Files/issues/672
-            if (!doc.isFinished && (await self.collection.find({ _id: doc._id }).countAsync()) === 0) {
+            if (!doc.isFinished && (await self.collection.countDocuments({ _id: doc._id })) === 0) {
               self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: ${doc._id}`);
               await self._currentUploads[doc._id].abort();
             }
@@ -426,7 +426,7 @@ class FilesCollection extends FilesCollectionCore {
       });
 
       this._createStream = async (_id, path, opts) => {
-        const stream = new WriteStream(path, opts.fileLength, opts, this.permissions);
+        const stream = new WriteStream(path, opts.fileLength, opts, this.permissions, this.parentDirPermissions);
         this._currentUploads[_id] = await stream.init();
       };
 
@@ -478,12 +478,12 @@ class FilesCollection extends FilesCollectionCore {
         const {userAsync, userId} = this._getUser(http);
 
         if (helpers.isFunction(this.protected)) {
-          let fileRef;
+          let fileObj;
           if (helpers.isObject(http.params) &&  http.params._id) {
-            fileRef = await this.collection.findOneAsync(http.params._id);
+            fileObj = await this.collection.findOneAsync(http.params._id);
           }
 
-          result = http ? await this.protected.call(Object.assign(http, {userAsync, userId}), (fileRef || null)) : await this.protected.call({userAsync, userId}, (fileRef || null));
+          result = http ? await this.protected.call(Object.assign(http, {userAsync, userId}), (fileObj || null)) : await this.protected.call({userAsync, userId}, (fileObj || null));
         } else {
           result = !!userId;
         }
@@ -852,7 +852,7 @@ class FilesCollection extends FilesCollectionCore {
       self._debug(`[FilesCollection] [Unlink Method] [.removeAsync(${selector})]`);
 
       if (self.allowClientCode) {
-        if (self.onBeforeRemove && helpers.isFunction(self.onBeforeRemove)) {
+        if (self.onBeforeRemove) {
           const userId = this.userId;
           const userFuncs = {
             userId: this.userId,
@@ -1053,13 +1053,13 @@ class FilesCollection extends FilesCollectionCore {
     opts.FSName = this.sanitize(opts.FSName);
 
     if (this.namingFunction) {
-      opts.FSName = this.namingFunction(opts);
+      opts.FSName = await this.namingFunction(opts);
     }
 
     result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
-    if (this.onBeforeUpload && helpers.isFunction(this.onBeforeUpload)) {
+    if (this.onBeforeUpload) {
       ctx = Object.assign({
         file: opts.file
       }, {
@@ -1078,11 +1078,11 @@ class FilesCollection extends FilesCollectionCore {
       if (isUploadAllowed !== true) {
         throw new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : '@onBeforeUpload() returned false');
       } else {
-        if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
+        if ((opts.___s === true) && this.onInitiateUpload) {
           await this.onInitiateUpload.call(ctx, result);
         }
       }
-    } else if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
+    } else if ((opts.___s === true) && this.onInitiateUpload) {
       ctx = Object.assign({
         file: opts.file
       }, {
@@ -1126,7 +1126,7 @@ class FilesCollection extends FilesCollectionCore {
         }
 
         this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
-        if (this.onAfterUpload && helpers.isFunction(this.onAfterUpload)) {
+        if (this.onAfterUpload) {
           await this.onAfterUpload.call(this, result);
         }
         this.emit('afterUpload', result);
@@ -1189,7 +1189,9 @@ class FilesCollection extends FilesCollectionCore {
    * @returns {string}
    */
   _getUserId(xmtok) {
-    if (!xmtok) return null;
+    if (!xmtok) {
+      return null;
+    }
 
     // throw an error upon an unexpected type of Meteor.server.sessions in order to identify breaking changes
     if (!Meteor.server.sessions instanceof Map || !helpers.isObject(Meteor.server.sessions)) {
@@ -1215,8 +1217,7 @@ class FilesCollection extends FilesCollectionCore {
    * @returns {Object}
    */
   _getUser() {
-    return this.getUser ?
-      this.getUser(...arguments) : this._getUserDefault(...arguments);
+    return this.getUser ? this.getUser(...arguments) : this._getUserDefault(...arguments);
   }
 
   /**
@@ -1276,7 +1277,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Write buffer to FS and add to FilesCollection Collection
    * @throws {Meteor.Error} If there is an error writing the file or inserting the document
-   * @returns {Promise<FileObj>} Instance
+   * @returns {Promise<FileObj>} File Object from DB
    */
   async writeAsync(buffer, _opts = {}, _proceedAfterUpload) {
     this._debug('[FilesCollection] [writeAsync()]');
@@ -1294,7 +1295,7 @@ class FilesCollection extends FilesCollectionCore {
 
     opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
-    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fsName = this.namingFunction ? await this.namingFunction(opts) : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
@@ -1321,7 +1322,7 @@ class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    let fileRef;
+    let fileObj;
 
     let mustCreateFileFirst = false;
     try {
@@ -1336,24 +1337,29 @@ class FilesCollection extends FilesCollectionCore {
     if (mustCreateFileFirst) {
       const paths = opts.path.split('/');
       paths.pop();
-      await fs.promises.mkdir(paths.join('/'), { recursive: true });
-      await fs.promises.writeFile(opts.path, '');
+      await fs.promises.mkdir(paths.join('/'), { recursive: true, mode: this.parentDirPermissions, });
+      await fs.promises.writeFile(opts.path, '', { mode: this.permissions, });
     }
 
-    const fh = await fs.promises.open(opts.path, fs.constants.O_WRONLY, this.permissions);
-    await fh.write(buffer);
-    await fh.datasync();
-    await fh.close();
+    try {
+      const fh = await fs.promises.open(opts.path, fs.constants.O_WRONLY | fs.constants.O_CREAT, this.permissions);
+      await fh.write(buffer);
+      await fh.datasync();
+      await fh.close();
+    } catch (openWriteErr) {
+      this._debug(`[FilesCollection] [writeAsync] [open] [write] Error: ${fileName} -> ${this.collectionName}`, openWriteErr);
+      throw new Meteor.Error('writeAsync', openWriteErr);
+    }
 
     try {
       const _id = await this.collection.insertAsync(result);
-      fileRef = await this.collection.findOneAsync(_id);
+      fileObj = await this.collection.findOneAsync(_id);
 
       if (proceedAfterUpload === true) {
         if (this.onAfterUpload){
-          await this.onAfterUpload.call(this, fileRef);
+          await this.onAfterUpload.call(this, fileObj);
         }
-        this.emit('afterUploadAsync', fileRef);
+        this.emit('afterUploadAsync', fileObj);
       }
       this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
     } catch (insertErr) {
@@ -1361,7 +1367,7 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error('writeAsync', insertErr);
     }
 
-    return fileRef;
+    return fileObj;
   }
 
   /**
@@ -1380,7 +1386,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {Function} callback - function(error, fileObj){...}
    * @param {boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
    * @summary Download file over HTTP, write stream to FS, and add to FilesCollection Collection
-   * @returns {Promise<fileObj>} File Object
+   * @returns {Promise<FileObj>} File Object from DB
    */
   async loadAsync(url, _opts = {}, _proceedAfterUpload = false) {
     this._debug(`[FilesCollection] [loadAsync(${url}, ${JSON.stringify(_opts)}, callback)]`);
@@ -1409,15 +1415,15 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const fileId = (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || Random.id();
-    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fsName = this.namingFunction ? await this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
     opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
 
-    // this will be the resolved fileRef
-    let fileRef;
+    // this will be the resolved fileObj
+    let fileObj;
 
     // storeResult is a function that will be called after the file is downloaded and stored in the database
     // this might throw an error from collection.insertAsync or collection.findOneAsync
@@ -1425,12 +1431,12 @@ class FilesCollection extends FilesCollectionCore {
       result._id = fileId;
       const _id  = await this.collection.insertAsync(result);
 
-      fileRef = await this.collection.findOneAsync(_id);
+      fileObj = await this.collection.findOneAsync(_id);
       if (proceedAfterUpload === true) {
         if (this.onAfterUpload){
-          await this.onAfterUpload.call(this, fileRef);
+          await this.onAfterUpload.call(this, fileObj);
         }
-        this.emit('afterUploadAsync', fileRef);
+        this.emit('afterUploadAsync', fileObj);
       }
       this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
     };
@@ -1449,11 +1455,11 @@ class FilesCollection extends FilesCollectionCore {
     if (mustCreateFileFirst) {
       const paths = opts.path.split('/');
       paths.pop();
-      await fs.promises.mkdir(paths.join('/'), { recursive: true });
-      await fs.promises.writeFile(opts.path, '');
+      await fs.promises.mkdir(paths.join('/'), { recursive: true, mode: this.parentDirPermissions, });
+      await fs.promises.writeFile(opts.path, '', { mode: this.permissions, });
     }
 
-    const wStream = fs.createWriteStream(opts.path, { flags: fs.constants.O_WRONLY, mode: this.permissions, autoClose: true, emitClose: false });
+    const wStream = fs.createWriteStream(opts.path, { flags: fs.constants.O_WRONLY | fs.constants.O_CREAT, mode: this.permissions, autoClose: true, emitClose: false });
     const controller = new AbortController();
 
     try {
@@ -1511,7 +1517,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
 
-    return fileRef;
+    return fileObj;
   }
 
   /**
@@ -1528,7 +1534,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Add file from FS to FilesCollection
    * @throws {Meteor.Error} If file does not exist (400) or collection is public (403)
-   * @returns {Promise<FilesCollection>} Instance
+   * @returns {Promise<FileObj>} Instance
    */
   async addFile(path, _opts = {}, _proceedAfterUpload) {
     this._debug(`[FilesCollection] [addFile(${path})]`);
@@ -1603,14 +1609,14 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(insertErr.code, insertErr.message);
     }
 
-    const fileRef = await this.collection.findOneAsync(_id);
+    const fileObj = await this.collection.findOneAsync(_id);
 
     if (proceedAfterUpload === true) {
-      this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-      this.emit('afterUpload', fileRef);
+      this.onAfterUpload && await this.onAfterUpload.call(this, fileObj);
+      this.emit('afterUpload', fileObj);
     }
     this._debug(`[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`);
-    return fileRef;
+    return fileObj;
   }
 
   /**
@@ -1629,8 +1635,8 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     let docs = false;
-    const files = this.collection.find(selector);
-    const count = await files.countAsync();
+    const files = this.find(selector);
+    const count = await files.countDocuments();
     if (count > 0) {
       let interceptUnlink = false;
       if (this.onAfterRemove) {
