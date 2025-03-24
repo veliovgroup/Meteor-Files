@@ -15,11 +15,12 @@ const fhCache = new Map();
  * @param path {string} - Path to file on FS
  * @param maxLength {number} - Max amount of chunks in stream
  * @param file {FileObj} - FileObj Object
- * @param permissions {string} - Permissions which will be set to open descriptor (octal), like: `611` or `0o777`. Default: 0755
+ * @param permissions {string} - Permissions which will be set to open descriptor (octal), like: `611` or `0o777`. Default: 0644
+ * @param parentDirPermissions {string} - Permissions which will be set to parent directory (octal), like: `611` or `0o777`. Default: 0755
  * @summary writableStream wrapper class, makes sure chunks is written in given order. Implementation of queue stream.
  */
 export default class WriteStream {
-  constructor(path, maxLength, file, permissions) {
+  constructor(path, maxLength, file, permissions, parentDirPermissions) {
     this.path = path.trim();
     if (!this.path || !helpers.isString(this.path)) {
       throw new Meteor.Error(400, '[FilesCollection] [new WriteStream(path)] [constructor] {path} must be a String!', this.path);
@@ -27,6 +28,7 @@ export default class WriteStream {
     this.maxLength = maxLength;
     this.file = file;
     this.permissions = permissions;
+    this.parentDirPermissions = parentDirPermissions;
 
     this.fh = null;
     this.ended = false;
@@ -59,7 +61,7 @@ export default class WriteStream {
         const paths = this.path.split(nodePath.sep);
         paths.pop();
         try {
-          await fs.promises.mkdir(paths.join(nodePath.sep), { recursive: true, flush: true });
+          await fs.promises.mkdir(paths.join(nodePath.sep), { recursive: true, flush: true, mode: this.parentDirPermissions });
         } catch (mkdirError) {
           throw new Meteor.Error(500, `[FilesCollection] [writeStream] [constructor] [mkdirSync] ERROR: can not make/ensure directory "${paths.join(nodePath.sep)}"`, mkdirError);
         }
