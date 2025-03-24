@@ -1,5 +1,5 @@
-import fs from 'fs';
-import nodePath from 'path';
+import fs from 'node:fs';
+import nodePath from 'node:path';
 import { Meteor } from 'meteor/meteor';
 import { helpers } from './lib.js';
 
@@ -74,8 +74,7 @@ export default class WriteStream {
       }
 
       try {
-        const fh = await fs.promises.open(this.path, 'r+', this.permissions);
-        // await fh.truncate(this.file.size);
+        const fh = await fs.promises.open(this.path, fs.constants.O_RDWR | fs.constants.O_CREAT, this.permissions);
         this.fh = fh;
         fhCache.set(this.path, this);
       } catch (fsOpenError) {
