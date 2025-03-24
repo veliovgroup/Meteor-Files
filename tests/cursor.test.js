@@ -4,7 +4,7 @@ import sinon from 'sinon';
 import FilesCollectionCore from '../core.js';
 import { FileCursor, FilesCursor } from '../cursor.js';
 import { FilesCollection } from '../server.js';
-import fs from 'fs';
+import fs from 'node:fs';
 import { MongoInternals } from 'meteor/mongo';
 
 
@@ -42,7 +42,7 @@ describe('FileCursor', function() {
       await filesCollection.collection.rawCollection().insertOne(fileRef);
 
       const removeAsync = sandbox.stub(filesCollection.collection, 'removeAsync').resolves('test');
-      const unlink = sandbox.stub(fs, 'unlink').resolves('test');
+      const unlink = sandbox.stub(fs.promises, 'unlink').resolves('test');
 
       const cursor = new FileCursor(fileRef, filesCollection);
 
@@ -51,9 +51,9 @@ describe('FileCursor', function() {
       expect(unlink.calledWith(fileRef.path)).to.be.true;
     });
 
-    it('should call the callback with an error if no file reference is provided', async function() {
+    it('should throw an error if no file reference is provided', async function() {
       const core = new FilesCollectionCore();
-      const cursor = new FileCursor(null, core);
+      const cursor = new FileCursor({}, core);
       fs.writeFileSync('/tmp/test.txt', 'test');
       const opts = { _id: 'test' };
       await filesCollection.addFile('/tmp/test.txt', opts);
@@ -79,17 +79,14 @@ describe('FileCursor', function() {
       filesCollection.link = sinon.spy();
 
       const cursor = new FileCursor(fileRef, filesCollection);
-      cursor.link(() => {
-        expect(filesCollection.link.calledWith(fileRef, version, uriBase)).to.be.true;
-      });
+      cursor.link(version, uriBase);
+      expect(filesCollection.link.calledWith(fileRef, version, uriBase)).to.be.true;
     });
 
-    it('should call the callback with an error if no file reference is provided', function() {
-      const cursor = new FileCursor(null, filesCollection);
-      cursor.link((err) => {
-        expect(err).to.be.instanceOf(Meteor.Error);
-        expect(err.reason).to.equal('No such file');
-      });
+    it('should return empty string if no file reference is provided', function() {
+      const cursor = new FileCursor({}, filesCollection);
+      const link = cursor.link();
+      expect(link).to.equal('');
     });
   });
 });
@@ -130,42 +127,50 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#hasNext()', function() {
-    it('should return true if there is a next item available on the cursor', async function() {
-      // Mock the collection.find method to return a cursor with a countAsync method
-      sandbox.stub(filesCollection.collection, 'find').returns({
-        countAsync: async () => 2,
-      });
+  describe('#getAsync()', function() {
+    it('should return all matching documents as an array', async function() {
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+
+      await filesCollection.collection.rawCollection().insertMany(documents);
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = await cursor.hasNext();
+      const fetched = await cursor.getAsync();
+      expect(fetched).to.deep.equal(documents);
+    });
+  });
+
+
+  describe('#hasNextAsync()', function() {
+    it('should return true if there is a next item available on the cursor', async function() {
+      // Mock the collection.find method to return a cursor with a countDocuments method
+      sandbox.stub(filesCollection.collection, 'countDocuments').resolves(2);
+
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const hasNext = await cursor.hasNextAsync();
       expect(hasNext).to.be.true;
     });
 
     it('should return false if there is no next item available on the cursor', async function() {
-      // Mock the collection.find method to return a cursor with a countAsync method
-      sandbox.stub(filesCollection.collection, 'find').returns({
-        countAsync: async () => 0,
-      });
-
+      // Mock the collection.find method to return a cursor with a countDocuments method
+      sandbox.stub(filesCollection.collection, 'countDocuments').resolves(0);
 
       const cursor = new FilesCursor({}, {}, filesCollection);
-      const hasNext = await cursor.hasNext();
+      const hasNext = await cursor.hasNextAsync();
       expect(hasNext).to.be.false;
     });
   });
 
-  describe('#next()', function() {
+  describe('#nextAsync()', function() {
     it('should return the next item on the cursor', async function() {
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
       const cursor = new FilesCursor({}, {}, filesCollection);
 
-      let next = await cursor.next();
+      let next = await cursor.nextAsync();
       expect(next).to.deep.equal(documents[0]);
 
-      next = await cursor.next();
+      next = await cursor.nextAsync();
       expect(next).to.deep.equal(documents[1]);
     });
   });
@@ -214,13 +219,13 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#last()', function() {
+  describe('#lastAsync()', function() {
     it('should return the last item on the cursor', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
-      const last = await cursor.last();
+      const last = await cursor.lastAsync();
       expect(last).to.deep.equal(documents[1]);
     });
   });
@@ -230,6 +235,15 @@ describe('FilesCursor', function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       sandbox.stub(cursor.cursor, 'countAsync').returns(Promise.resolve(2));
       const count = await cursor.countAsync();
+      expect(count).to.equal(2);
+    });
+  });
+
+  describe('#countDocuments()', function() {
+    it('should return the number of documents that match a query', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      sandbox.stub(filesCollection.collection, 'countDocuments').returns(Promise.resolve(2));
+      const count = await cursor.countDocuments();
       expect(count).to.equal(2);
     });
   });
@@ -291,8 +305,18 @@ describe('FilesCursor', function() {
     it('should return the current item on the cursor', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      sandbox.stub(cursor, 'fetchAsync').returns(Promise.resolve(documents));
-      const current = await cursor.current();
+      sandbox.stub(cursor, 'fetch').returns(documents);
+      const current = cursor.current();
+      expect(current).to.deep.equal(documents[0]);
+    });
+  });
+
+  describe('#currentAsync()', function() {
+    it('should return the current item on the cursor', async function() {
+      const cursor = new FilesCursor({}, {}, filesCollection);
+      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+      sandbox.stub(cursor, 'fetchAsync').resolves(documents);
+      const current = await cursor.currentAsync();
       expect(current).to.deep.equal(documents[0]);
     });
   });

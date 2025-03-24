@@ -1,11 +1,11 @@
 /* global describe, beforeEach, it, before, afterEach, Meteor */
 
 import { expect } from 'chai';
-import fs from 'fs';
+import fs from 'node:fs';
 import sinon from 'sinon';
 import { FilesCollection } from '../server';
-import http from 'http';
-import {Readable} from 'stream';
+import http from 'node:http';
+import { Readable } from 'node:stream';
 
 describe('FilesCollection Constructor', function() {
   describe('constructor', function() {
@@ -74,7 +74,6 @@ describe('FilesCollection', () => {
     let filesCollection;
     let result;
     let opts;
-    let cb;
     let chmodStub;
     let insertAsyncStub;
     let updateAsyncStub;
@@ -85,13 +84,14 @@ describe('FilesCollection', () => {
     });
 
     beforeEach(() => {
-      result = { path: '/path/to/file' };
+      result = { path: '~/data/path/to/file' };
       opts = { file: { name: 'testFile', meta: {} } };
-      cb = sinon.stub();
+      fs.mkdirSync(result.path, { recursive: true, flush: true, mode: 0o777 });
+      fs.writeFileSync(result.path + '/' + opts.file.name, '', { mode: 0o777 });
 
       // Stubbing the fs.chmod method
-      chmodStub = sinon.stub(fs, 'chmod');
-      chmodStub.callsFake((path, permissions, callback) => callback());
+      chmodStub = sinon.stub(fs.promises, 'chmod');
+      chmodStub.callsFake((_path, _permissions, callback) => callback());
 
       // Stubbing the collection.insert method
       insertAsyncStub = sinon.stub(filesCollection.collection, 'insertAsync');
@@ -105,67 +105,63 @@ describe('FilesCollection', () => {
     });
 
     afterEach(() => {
+      result = { path: '~/data/path/to/file' };
+      opts = { file: { name: 'testFile', meta: {} } };
       // Restore the stubbed methods after each test
+      fs.unlinkSync(result.path + '/' + opts.file.name);
       sinon.restore();
     });
 
     it('should finish upload successfully', async () => {
-      await filesCollection._finishUpload(result, opts, cb);
+      await filesCollection._finishUpload(result, opts);
 
       expect(chmodStub.calledOnce).to.be.true;
       expect(insertAsyncStub.calledOnce).to.be.true;
       expect(updateAsyncStub.calledOnce).to.be.true;
-      expect(cb.calledOnce).to.be.true;
-      expect(cb.calledWith(null, result)).to.be.true;
     });
 
     it('should call callback with a single error argument if insert fails', async () => {
       const error = new Meteor.Error(500, 'Insert failed');
       insertAsyncStub.throws(error);
 
-      await filesCollection._finishUpload(result, opts, cb);
+      await filesCollection._finishUpload(result, opts);
 
       expect(chmodStub.calledOnce).to.be.true;
       expect(insertAsyncStub.calledOnce).to.be.true;
       expect(updateAsyncStub.called).to.be.false;
-      expect(cb.calledOnce).to.be.true;
-      expect(cb.calledWith(error)).to.be.true;
     });
 
     it('should call callback with a single error argument if update fails', async () => {
       const error = new Meteor.Error(500, 'Update failed');
       updateAsyncStub.throws(error);
 
-      await filesCollection._finishUpload(result, opts, cb);
+      await filesCollection._finishUpload(result, opts);
 
       expect(chmodStub.calledOnce).to.be.true;
       expect(insertAsyncStub.calledOnce).to.be.true;
       expect(updateAsyncStub.calledOnce).to.be.true;
-      expect(cb.calledOnce).to.be.true;
-      expect(cb.calledWith(error)).to.be.true;
     });
 
     it('should call onAfterUpload hook if it is a function', async () => {
-      await filesCollection._finishUpload(result, opts, cb);
+      await filesCollection._finishUpload(result, opts);
 
       expect(onAfterUploadSpy.calledOnce).to.be.true;
       expect(onAfterUploadSpy.calledWith(result)).to.be.true;
     });
   });
 
-  describe('#write()', function() {
+  describe('#writeAsync()', function() {
     let filesCollection; let collectionMock;
-    let fsPromiseStatStub; let fsPromisesMkdirStub; let fsPromiseWriteFileStub; let fsCreateWriteStreamStub;
+    let fsPromiseStatStub; let fsPromisesMkdirStub; let fsPromiseWriteFileStub;
 
     before(function() {
-      filesCollection = new FilesCollection({ collectionName: 'testserver-writeAsync'});
+      filesCollection = new FilesCollection({ collectionName: 'testserver-writeAsync', storagePath: '~/data/write-async'});
     });
 
     beforeEach(function() {
       fsPromiseStatStub = sinon.stub(fs.promises, 'stat');
       fsPromisesMkdirStub = sinon.stub(fs.promises, 'mkdir');
       fsPromiseWriteFileStub = sinon.stub(fs.promises, 'writeFile');
-      fsCreateWriteStreamStub = sinon.stub(fs, 'createWriteStream');
       collectionMock = sinon.mock(filesCollection.collection);
     });
 
@@ -173,7 +169,6 @@ describe('FilesCollection', () => {
       fsPromiseStatStub.restore();
       fsPromisesMkdirStub.restore();
       fsPromiseWriteFileStub.restore();
-      fsCreateWriteStreamStub.restore();
       collectionMock.restore();
       await filesCollection.collection.removeAsync({});
     });
@@ -184,14 +179,11 @@ describe('FilesCollection', () => {
 
       fsPromiseStatStub.resolves({ isFile: () => true });
       fsPromiseWriteFileStub.resolves();
-      fsCreateWriteStreamStub.returns({
-        end: (_buffer, cb) => cb(null)
-      });
 
       collectionMock.expects('insertAsync').resolves('file1');
       collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
 
-      const result = await filesCollection.write(buffer, opts, true);
+      const result = await filesCollection.writeAsync(buffer, opts, true);
 
       collectionMock.verify();
       expect(result).to.be.an('object');
@@ -204,47 +196,38 @@ describe('FilesCollection', () => {
 
       fsPromiseStatStub.resolves({ isFile: () => true });
       fsPromiseWriteFileStub.resolves();
-      fsCreateWriteStreamStub.returns({
-        end: (_buffer, cb) => cb(null)
-      });
 
       collectionMock.expects('insertAsync').resolves('file1');
       collectionMock.expects('findOneAsync').resolves({ _id: 'file1' });
 
-      const result = await filesCollection.write(buffer, opts, true);
+      const result = await filesCollection.writeAsync(buffer, opts, true);
 
       collectionMock.verify();
       expect(result).to.be.an('object');
       expect(result).to.have.property('_id', 'file1');
     });
 
-    it('should call callback with error if file could not be written to FS', function(done) {
+    it('should throw error if file could not be written to FS', function(done) {
       const buffer = Buffer.from('test data');
       const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
 
-      fsPromiseStatStub.resolves({ isFile: () => true });
-      fsCreateWriteStreamStub.returns({
-        end: (_buffer, cb) => cb(new Error('Test Error'))
-      });
+      fsPromiseStatStub.resolves({ isFile: () => false });
+      fsPromiseWriteFileStub.rejects();
 
-      filesCollection.write(buffer, opts, true).catch((e) => {
+      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
         expect(e).to.be.instanceOf(Error);
         done();
       });
     });
 
-    it('should call callback with error if file could not be added to FilesCollection Collection', function(done) {
+    it('should throw an error if file could not be added to FilesCollection Collection', function (done) {
       const buffer = Buffer.from('test data');
       const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
 
       fsPromiseStatStub.resolves({ isFile: () => true });
-      fsCreateWriteStreamStub.returns({
-        end: (_buffer, cb) => cb(null)
-      });
-
       collectionMock.expects('insertAsync').rejects(new Error('Test Error'));
 
-      filesCollection.write(buffer, opts, true).catch((e) => {
+      filesCollection.writeAsync(buffer, opts, true).catch((e) => {
         expect(e).to.be.instanceOf(Error);
         done();
       });
@@ -254,15 +237,14 @@ describe('FilesCollection', () => {
       const testData = 'test data';
       const buffer = Buffer.from(testData);
 
-      const opts = { path: '/tmp/test.txt', name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
+      const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
 
-      sinon.stub(filesCollection, 'storagePath').returns('/tmp');
+      sinon.stub(filesCollection, 'storagePath').returns('~/data');
       fsPromiseStatStub.restore();
       fsPromiseWriteFileStub.restore();
-      fsCreateWriteStreamStub.restore();
       fsPromisesMkdirStub.restore();
 
-      const result = await filesCollection.write(buffer, opts, true);
+      const result = await filesCollection.writeAsync(buffer, opts, true);
 
       const file = await filesCollection.collection.findOneAsync({ _id: 'file1' });
       expect(file).to.be.an('object');
@@ -290,15 +272,15 @@ describe('FilesCollection', () => {
     });
   });
 
-  describe('#load()', function() {
+  describe('#loadAsync()', function() {
     let filesCollection;
     const testdata = 'test data';
     let port;
 
     before(function() {
-      filesCollection = new FilesCollection({ collectionName: 'testserver-loadAsync'});
+      filesCollection = new FilesCollection({ collectionName: 'testserver-loadAsync', storagePath: '~/data/load-async'});
 
-      const server = http.createServer((req, res) => {
+      const server = http.createServer((_req, res) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/plain');
         res.end(testdata);
@@ -320,7 +302,7 @@ describe('FilesCollection', () => {
       const url = 'http://127.0.0.1:' + port;
       const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1', timeout: 360000 };
 
-      const result = await filesCollection.load(url, opts, true);
+      const result = await filesCollection.loadAsync(url, opts, true);
 
       expect(result).to.be.an('object');
 
@@ -329,7 +311,7 @@ describe('FilesCollection', () => {
     });
   });
 
-  describe('#addFileAsync', () => {
+  describe('#addFile', () => {
     let filesCollection;
     let path;
     let opts;
@@ -337,7 +319,7 @@ describe('FilesCollection', () => {
 
     before(() => {
       filesCollection = new FilesCollection({ collectionName: 'testserver', onAfterUpload: () => {}});
-      path = '/tmp/meteor-test-file.txt';
+      path = '~/data/meteor-test-file.txt';
       fs.writeFileSync(path, 'test');
       opts = { type: 'text/plain'};
       proceedAfterUpload = false;
