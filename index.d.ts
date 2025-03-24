@@ -1,13 +1,13 @@
-declare module 'meteor/ostrio:files' {
-  import { EventEmitter } from 'eventemitter3';
-  import type { Meteor } from 'meteor/meteor';
-  import type { Mongo } from 'meteor/mongo';
-  import type { ReactiveVar } from 'meteor/reactive-var';
-  import type { SimpleSchemaDefinition } from 'simpl-schema';
-  import type * as http from 'http';
-  import type { IncomingMessage } from 'connect';
-  import type { DDP } from 'meteor/ddp';
+import { EventEmitter } from 'eventemitter3';
+import type { Meteor } from 'meteor/meteor';
+import type { Mongo } from 'meteor/mongo';
+import type { ReactiveVar } from 'meteor/reactive-var';
+import type SimpleSchema from 'simpl-schema';
+import type * as http from 'node:http';
+import type { IncomingMessage } from 'connect';
+import type { DDP } from 'meteor/ddp';
 
+declare module 'meteor/ostrio:files' {
   export interface ParamsHTTP {
     _id: string;
     query: {
@@ -148,7 +148,7 @@ declare module 'meteor/ostrio:files' {
   /**
    * Core class for FilesCollection. Most other classes extend and build on this one.
    */
-  export default class FilesCollectionCore extends EventEmitter {
+  export class FilesCollectionCore extends EventEmitter {
     // Instance properties that are used in the class:
     collection: Mongo.Collection<FileObj>;
     debug?: boolean;
@@ -291,7 +291,7 @@ declare module 'meteor/ostrio:files' {
     responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string });
     throttle?: number | boolean;
     downloadRoute?: string;
-    schema?: SimpleSchemaDefinition;
+    schema?: SimpleSchema | Record<string, unknown>;
     chunkSize?: number | 'dynamic';
     namingFunction?: (fileObj: FileObj) => string;
     permissions?: number;
@@ -489,5 +489,151 @@ declare module 'meteor/ostrio:files' {
     observeAsync(callbacks: Mongo.ObserveCallbacks<FileObj>): Promise<Meteor.LiveQueryHandle>;
     observeChanges(callbacks: Mongo.ObserveChangesCallbacks<FileObj>): Meteor.LiveQueryHandle;
     observeChangesAsync(callbacks: Mongo.ObserveChangesCallbacks<FileObj>): Promise<Meteor.LiveQueryHandle>;
+  }
+
+  export class FilesCollection extends FilesCollectionCore {
+    constructor(config: FilesCollectionConfig);
+  }
+
+  // --------------------------------------------------------------------------
+  // Client/Browser-specific overloads for FilesCollection
+  // --------------------------------------------------------------------------
+  export interface FilesCollection {
+    /**
+     * Inserts a file into the collection and returns an instance of FileUpload/UploadInstance.
+     * @param config - The insert options.
+     * @param autoStart - Whether to start the upload immediately.
+     */
+    insert(config: InsertOptions, autoStart?: boolean): FileUpload | UploadInstance;
+
+    /**
+     * Asynchronously inserts a file into the collection.
+     * @param config - The insert options.
+     * @param autoStart - Whether to start the upload immediately.
+     */
+    insertAsync(config: InsertOptions, autoStart?: boolean): Promise<FileUpload | UploadInstance>;
+
+    /**
+     * Removes files/documents from the collection.
+     * @param selector - A Mongo-style selector.
+     * @param callback - Optional callback function.
+     */
+    remove<S>(selector: MeteorFilesSelector<S>, callback?: Function): FilesCollection;
+
+    /**
+     * Asynchronously removes files/documents from the collection.
+     * @param selector - A Mongo-style selector.
+     */
+    removeAsync<S>(selector: MeteorFilesSelector<S>): Promise<number>;
+
+    /**
+     * Returns an object with the current user's information.
+     */
+    _getUser(): ContextUser;
+  }
+
+  export interface AddFileOpts {
+    type?: string;
+    meta?: MetadataType;
+    fileId?: string;
+    fileName?: string;
+    userId?: string;
+  }
+
+  export interface WriteOpts {
+    name?: string;
+    type?: string;
+    meta?: MetadataType;
+    userId?: string;
+    fileId?: string;
+  }
+
+  export interface LoadOpts {
+    headers?: Object;
+    name?: string;
+    type?: string;
+    meta?: Object;
+    userId?: string;
+    fileId?: string;
+    timeout?: Number;
+  }
+
+  // --------------------------------------------------------------------------
+  // Server-specific overloads for FilesCollection
+  // --------------------------------------------------------------------------
+  export interface FilesCollection {
+
+    /**
+     * Downloads a file by preparing HTTP response and piping file data.
+     * @param http - HTTP context.
+     * @param version - Requested version (default is 'original').
+     * @param fileRef - The file object.
+     */
+    download(http: ContextHTTP, version?: string, fileRef?: FileObj): Promise<void>;
+
+    /**
+     * Serves a file over HTTP.
+     * @param http - HTTP context.
+     * @param fileRef - The file object.
+     * @param vRef - The file version reference.
+     * @param version - Requested version.
+     * @param readableStream - Optional readable stream.
+     * @param _responseType - Optional response code.
+     * @param force200 - Whether to force a 200 response code.
+     */
+    serve(
+      http: ContextHTTP,
+      fileRef: FileObj,
+      vRef: Partial<FileData & MetadataType>,
+      version?: string,
+      readableStream?: NodeJS.ReadableStream | null,
+      _responseType?: string,
+      force200?: boolean
+    ): void;
+
+    /**
+     * Adds an existing file on disk to the FilesCollection.
+     * @param path - The path to the file.
+     * @param opts - Optional file data options.
+     * @param proceedAfterUpload - Whether to trigger onAfterUpload hook.
+     */
+    addFile(path: string, opts?: AddFileOpts, proceedAfterUpload?: boolean): Promise<FileObj>;
+
+    /**
+     * Writes a file buffer to disk and inserts the file document into the collection.
+     * @param buffer - The file's buffer.
+     * @param opts - Optional file data options.
+     * @param proceedAfterUpload - Whether to trigger onAfterUpload hook.
+     */
+    writeAsync(buffer: Buffer, opts?: WriteOpts, proceedAfterUpload?: boolean): Promise<FileObj>;
+
+    /**
+     * Loads a file from a URL and inserts it into the collection.
+     * @param url - The URL to load.
+     * @param opts - Optional file data options.
+     * @param proceedAfterUpload - Whether to trigger onAfterUpload hook.
+     */
+    loadAsync(url: string, opts?: LoadOpts, proceedAfterUpload?: boolean): Promise<FileObj>;
+
+    /**
+     * Unlinks (removes) a file from the filesystem.
+     * @param fileRef - The file object.
+     * @param version - Optional file version.
+     * @param callback - Optional callback.
+     */
+    unlink(fileRef: FileObj, version?: string, callback?: Function): FilesCollection;
+
+    /**
+     * Asynchronously unlinks (removes) a file from the filesystem.
+     * @param fileRef - The file object.
+     * @param version - Optional file version.
+     */
+    unlinkAsync(fileRef: FileObj, version?: string): Promise<FilesCollection>;
+
+    /**
+     * Asynchronously removes files/documents from the collection.
+     * (Server override.)
+     */
+    removeAsync<S>(selector: MeteorFilesSelector<S>): Promise<number>;
   }
 }
