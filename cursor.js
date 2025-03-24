@@ -58,7 +58,7 @@ export class FileCursor {
    */
   link(version = 'original', uriBase) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
-    if (this._fileRef) {
+    if (this._fileRef && this._fileRef._id) {
       return this._collection.link(this._fileRef, version, uriBase);
     }
     return '';
@@ -149,10 +149,12 @@ export class FilesCursor {
 
   /**
    * Returns `true` if there is a next item available.
+   * @deprecated since v3.0.0. use {@link FilesCursor#hasNextAsync} instead.
    * @returns {boolean}
    */
   hasNext() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
+    Meteor.deprecate('FilesCursor#hasNext() is deprecated! Use `hasNextAsync` instead');
     return this._current < this.count() - 1;
   }
 
@@ -162,7 +164,7 @@ export class FilesCursor {
    */
   async hasNextAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNextAsync()]');
-    const count = await this.countAsync();
+    const count = await this.countDocuments();
     return this._current < count - 1;
   }
 
@@ -285,7 +287,7 @@ export class FilesCursor {
    */
   async lastAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [lastAsync()]');
-    const count = await this.countAsync();
+    const count = await this.countDocuments();
     this._current = count - 1;
     const allFiles = await this.fetchAsync();
     return count > 0 ? allFiles[this._current] : undefined;
@@ -293,20 +295,34 @@ export class FilesCursor {
 
   /**
    * Returns the number of file documents that match the query.
+   * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
    * @returns {number}
    */
   count() {
     this._collection._debug('[FilesCollection] [FilesCursor] [count()]');
+    Meteor.deprecate('FilesCursor#count() is deprecated! Use `countDocuments` instead');
     return this.cursor.count();
   }
 
   /**
    * Asynchronously returns the number of file documents that match the query.
+   * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
    * @returns {Promise<number>}
    */
   async countAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
+    Meteor.deprecate('FilesCursor#countAsync() is deprecated! Use `countDocuments` instead');
     return await this.cursor.countAsync();
+  }
+
+  /**
+   * Asynchronously returns the number of file documents that match the query.
+   * @param {Mongo.CountDocumentsOptions} [options] - CountDocumentsOptions
+   * @returns {Promise<number>}
+   */
+  async countDocuments(options) {
+    this._collection._debug('[FilesCollection] [FilesCursor] [countDocuments()]');
+    return await this._collection.countDocuments(this._selector, options);
   }
 
   /**
