@@ -10,21 +10,15 @@ import WriteStream from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
-import AbortController from 'abort-controller';
-import fs from 'fs';
-import nodeQs from 'querystring';
-import nodePath from 'path';
-// in Node.js 14, there is no promises version of stream
-import { pipeline as pipelineCallback } from 'stream';
-import { promisify } from 'util';
-
-const pipeline = promisify(pipelineCallback);
+import fs from 'node:fs';
+import nodeQs from 'node:querystring';
+import nodePath from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 /**
  * @const {Function} noop - No Operation function, placeholder for required callbacks
  */
 const noop = function noop () {};
-
 
 /**
  * Create (ensure) index on MongoDB collection, catch and log exception if thrown
@@ -1273,7 +1267,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name writAsync
    * @param {Buffer} buffer - Binary File's Buffer
-   * @param {WriteOpts} opts - Object with file-data
+   * @param {WriteOpts} [opts] - Object with file-data
    * @param {string} opts.name - File name, alias: `fileName`
    * @param {string} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
@@ -1346,17 +1340,10 @@ class FilesCollection extends FilesCollectionCore {
       await fs.promises.writeFile(opts.path, '');
     }
 
-    const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
-
-    await new Promise((resolve, reject) => {
-      stream.end(buffer, (streamErr) => {
-        if (streamErr) {
-          reject(streamErr);
-        } else {
-          resolve();
-        }
-      });
-    });
+    const fh = await fs.promises.open(opts.path, fs.constants.O_WRONLY, this.permissions);
+    await fh.write(buffer);
+    await fh.datasync();
+    await fh.close();
 
     try {
       const _id = await this.collection.insertAsync(result);
@@ -1459,20 +1446,20 @@ class FilesCollection extends FilesCollectionCore {
       mustCreateFileFirst = true;
     }
 
-    if(mustCreateFileFirst) {
+    if (mustCreateFileFirst) {
       const paths = opts.path.split('/');
       paths.pop();
       await fs.promises.mkdir(paths.join('/'), { recursive: true });
       await fs.promises.writeFile(opts.path, '');
     }
 
-    const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
+    const wStream = fs.createWriteStream(opts.path, { flags: fs.constants.O_WRONLY, mode: this.permissions, autoClose: true, emitClose: false });
     const controller = new AbortController();
 
     try {
       let timer;
 
-      if (opts.timeout > 0) {
+      if (opts.timeout && opts.timeout > 0) {
         timer = setTimeout(() => {
           controller.abort();
           throw new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`);
@@ -1532,11 +1519,11 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name addFile
    * @param {string} path          - Path to file
-   * @param {AddFileOpts} opts     - [Optional] Object with file-data
+   * @param {AddFileOpts} [opts]   - [Optional] Object with file-data
    * @param {string} opts.type     - [Optional] File mime-type
    * @param {Object} opts.meta     - [Optional] File additional meta-data
-   * @param {string} opts.fileId   - _id, sanitized, max-length: 20 symbols default *null*
-   * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
+   * @param {string} opts.fileId   - [optional] _id, sanitized, max-length: 20 symbols default *null*
+   * @param {string} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
    * @param {string} opts.userId   - [Optional] UserId, default *null*
    * @param {boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Add file from FS to FilesCollection
@@ -1549,10 +1536,7 @@ class FilesCollection extends FilesCollectionCore {
     let proceedAfterUpload = _proceedAfterUpload;
 
     if (this.public) {
-      throw new Meteor.Error(
-        403,
-        'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection'
-      );
+      throw new Meteor.Error(403, 'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection');
     }
 
     check(path, String);
@@ -1566,10 +1550,7 @@ class FilesCollection extends FilesCollectionCore {
       stats = await fs.promises.stat(path);
     } catch (statErr) {
       if (statErr.code === 'ENOENT') {
-        throw new Meteor.Error(
-          400,
-          `[FilesCollection] [addFile(${path})]: File does not exist`
-        );
+        throw new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`);
       }
       throw new Meteor.Error(statErr.code, statErr.message);
     }
@@ -1710,7 +1691,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name denyClient
    * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-deny
-   * @summary Shorthands for Mongo.Collection deny method
+   * @summary Shorthand for Mongo.Collection deny method
    * @returns {Mongo.Collection} Instance
    */
   denyClient() {
@@ -1727,7 +1708,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name allowClient
    * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-allow
-   * @summary Shorthands for Mongo.Collection allow method
+   * @summary Shorthand for Mongo.Collection allow method
    * @returns {Mongo.Collection} Instance
    */
   allowClient() {
@@ -1836,7 +1817,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name download
-   * @param { response: http.ServerResponse, request: IncomingMessage } http - Server HTTP object
+   * @param {ContextHTTP} http - Server HTTP object
    * @param {string} version - Requested file version
    * @param {fileObj} fileRef - Requested file Object
    * @summary Initiates the HTTP response
@@ -1899,9 +1880,9 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name serve
-   * @param { response: http.ServerResponse, request: IncomingMessage } http    - Server HTTP object
+   * @param {ContextHTTP} http - Server HTTP object
    * @param {fileObj} fileRef - Requested file Object
-   * @param {Object} vRef    - Requested file version Object
+   * @param {Object} vRef - Requested file version Object
    * @param {string} version - Requested file version
    * @param {stream.Readable|null} readableStream - Readable stream, which serves binary file data
    * @param {string} responseType - Response code
@@ -2081,7 +2062,7 @@ class FilesCollection extends FilesCollectionCore {
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
       }
-      respond(readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end}), 206);
+      respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
       break;
     default:
       if (!http.response.headersSent) {
@@ -2094,4 +2075,4 @@ class FilesCollection extends FilesCollectionCore {
   }
 }
 
-export { FilesCollection, helpers };
+export { FilesCollection, WriteStream, helpers };
