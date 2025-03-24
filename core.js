@@ -293,8 +293,8 @@ export default class FilesCollectionCore extends EventEmitter {
    * Counts records matching a selector.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
-   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @param {MeteorFilesSelector} [_selector={}] - Mongo-style selector
+   * @param {Mongo.CountDocumentsOptions} [options] - Mongo's CountDocumentsOptions
    * @returns {Promise<number>} The number of matching records
    */
   async countDocuments(_selector = {}, options) {
@@ -305,6 +305,18 @@ export default class FilesCollectionCore extends EventEmitter {
     /* eslint-enable new-cap */
     const selector = typeof _selector === 'string' && _selector.length ? { _id: _selector } : _selector;
     return await this.collection.countDocuments(selector, options);
+  }
+
+  /**
+   * Asynchronously returns the number of estimated documents qty in the Collection
+   * @param {Mongo.EstimatedDocumentCountOptions} [options] - EstimatedDocumentCountOptions
+   * @returns {Promise<number>}
+   */
+  async estimatedDocumentCount(options) {
+    /* eslint-disable-next-line new-cap */
+    check(options, Match.Optional(Object));
+    this._collection._debug('[FilesCollection] [estimatedDocumentCount()]');
+    return await this.collection.estimatedDocumentCount(options);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'eventemitter3';
 import type { Meteor } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
+import type { CountDocumentsOptions, EstimatedDocumentCountOptions } from 'mongodb';
 import type { ReactiveVar } from 'meteor/reactive-var';
 import type SimpleSchema from 'simpl-schema';
 import type * as http from 'node:http';
@@ -266,10 +267,17 @@ declare module 'meteor/ostrio:files' {
     /**
      * Count records matching a selector.
      * @param selector - Mongo-style selector.
-     * @param options - Mongo query options.
+     * @param options - Mongo's CountDocumentsOptions.
      * @returns {Promise<number>} The number of matching records.
      */
-    countDocuments<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): Promise<number>;
+    countDocuments<S>(selector?: MeteorFilesSelector<S>, options?: CountDocumentsOptions): Promise<number>;
+
+    /**
+     * Count all documents in the collection.
+     * @param options - Mongo's EstimatedDocumentCountOptions.
+     * @returns {Promise<number>} The number of matching records.
+     */
+    estimatedDocumentCount(options?: EstimatedDocumentCountOptions): Promise<number>;
 
     /**
      * Return a downloadable URL for the given file.
