@@ -353,6 +353,7 @@ export class UploadInstance extends EventEmitter {
       }
       this.config.isEnded = true;
       this.result.remainingTime.set('00:00:00');
+      // eslint-disable-next-line guard-for-in
       for (const uid in this.fetchControllers) {
         if (this.fetchControllers[uid]) {
           this.fetchControllers[uid].abort(new Meteor.Error(200, 'Upload has finished'));
@@ -835,6 +836,7 @@ export class UploadInstance extends EventEmitter {
     this.trackerCompPause = Tracker.autorun(() => {
       if (this.result.onPause.get() === true) {
         this.collection._debug('[FilesCollection] [insert] [Tracker pause] [abort]', this.fileId);
+        // eslint-disable-next-line guard-for-in
         for (const uid in this.fetchControllers) {
           if (this.fetchControllers[uid]) {
             this.fetchControllers[uid].abort(new Meteor.Error(412, 'Upload set to pause'));

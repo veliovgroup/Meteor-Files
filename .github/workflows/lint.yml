@@ -8,20 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: setup node
-      uses: actions/setup-node@v3
-      with:
-        node-version: '14.x'
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
     - name: cache dependencies
       uses: actions/cache@v3
       with:
         path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.os }}-node-
+          ${{ runner.os }}-node-22-
 
     - run: npm install
     - run: npm run lint
