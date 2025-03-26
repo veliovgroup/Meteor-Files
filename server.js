@@ -1634,21 +1634,15 @@ class FilesCollection extends FilesCollectionCore {
       return 0;
     }
 
-    let docs = false;
     const files = this.find(selector);
     const count = await files.countDocuments();
-    if (count > 0) {
-      let interceptUnlink = false;
-      if (this.onAfterRemove) {
-        docs = await files.fetchAsync();
-        await this.collection.removeAsync(selector);
-        interceptUnlink = await this.onAfterRemove(docs);
-      } else {
-        await this.collection.removeAsync(selector);
-      }
 
+    if (count > 0) {
       if (this.onAfterRemove) {
-        if (!interceptUnlink) {
+        const docs = await files.fetchAsync();
+        await this.collection.removeAsync(selector);
+
+        if (!(await this.onAfterRemove(docs))) {
           let i = 0;
           for (; i < docs.length; i++) {
             await this.unlinkAsync(docs[i]);
@@ -1658,6 +1652,7 @@ class FilesCollection extends FilesCollectionCore {
         await files.forEachAsync(async (file) => {
           await this.unlinkAsync(file);
         });
+        await this.collection.removeAsync(selector);
       }
     }
 
