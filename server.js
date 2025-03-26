@@ -1359,7 +1359,7 @@ class FilesCollection extends FilesCollectionCore {
         if (this.onAfterUpload){
           await this.onAfterUpload.call(this, fileObj);
         }
-        this.emit('afterUploadAsync', fileObj);
+        this.emit('afterUpload', fileObj);
       }
       this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
     } catch (insertErr) {
@@ -1436,7 +1436,7 @@ class FilesCollection extends FilesCollectionCore {
         if (this.onAfterUpload){
           await this.onAfterUpload.call(this, fileObj);
         }
-        this.emit('afterUploadAsync', fileObj);
+        this.emit('afterUpload', fileObj);
       }
       this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
     };
