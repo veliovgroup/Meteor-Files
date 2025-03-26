@@ -35,5 +35,3 @@ jobs:
       - run: |
           meteor npm install
           meteor npm run test:mocha
-
-name: Test suite
