@@ -38,11 +38,16 @@ export class FileUpload extends EventEmitter {
     this.continueFunc = () => {};
     this.estimateTime = new ReactiveVar(1000);
     this.estimateSpeed = new ReactiveVar(0);
+    this.remainingTime = new ReactiveVar('00:00:00');
     this.estimateTimer = Meteor.setInterval(() => {
       if (this.state.get() === 'active') {
         const _currentTime = this.estimateTime.get();
         if (_currentTime > 1000) {
-          this.estimateTime.set(_currentTime - 1000);
+          const ms = _currentTime - 1000;
+          this.estimateTime.set(ms);
+          this.remainingTime.set(this._formatDuration(ms));
+        } else {
+          this.remainingTime.set('00:00:00');
         }
       }
     }, 1000);
@@ -107,6 +112,13 @@ export class FileUpload extends EventEmitter {
     }
 
     await this.config.ddp.callAsync(this.config._Abort, this.config.fileId);
+  }
+
+  _formatDuration(ms) {
+    const hh = `${Math.floor(ms / (1000 * 60 * 60))}`.padStart(2, '0');
+    const mm = `${Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))}`.padStart(2, '0');
+    const ss = `${Math.floor((ms % (1000 * 60)) / 1000)}`.padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
   }
 }
 
@@ -325,9 +337,11 @@ export class UploadInstance extends EventEmitter {
         return;
       }
 
-      const _t = (this.transferTime / (this.sentChunks || 1));
-      this.result.estimateTime.set((_t * (this.fileLength - this.sentChunks)));
-      this.result.estimateSpeed.set((this.config.chunkSize / (_t / 1000)));
+      const t = (this.transferTime / (this.sentChunks || 1));
+      const ms = (t * (this.fileLength - this.sentChunks));
+      this.result.estimateTime.set(ms);
+      this.result.remainingTime.set(this.result._formatDuration(ms));
+      this.result.estimateSpeed.set((this.config.chunkSize / (t / 1000)));
 
       const progress = Math.round((this.sentChunks / this.fileLength) * 100);
       this._setProgress(progress);
@@ -338,6 +352,7 @@ export class UploadInstance extends EventEmitter {
         return;
       }
       this.config.isEnded = true;
+      this.result.remainingTime.set('00:00:00');
       for (const uid in this.fetchControllers) {
         if (this.fetchControllers[uid]) {
           this.fetchControllers[uid].abort(new Meteor.Error(200, 'Upload has finished'));
