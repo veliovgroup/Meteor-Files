@@ -1,4 +1,4 @@
-/* global describe, beforeEach, after, before it, afterEach, Meteor */
+/* global describe, beforeEach, after, before it, afterEach */
 import { expect } from 'chai';
 import sinon from 'sinon';
 import FilesCollectionCore from '../core.js';

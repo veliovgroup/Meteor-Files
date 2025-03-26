@@ -1,4 +1,4 @@
-/* global describe, beforeEach, it, before, afterEach, Meteor */
+/* global describe, beforeEach, it, before, afterEach */
 
 import { expect } from 'chai';
 import fs from 'node:fs';
