@@ -27,7 +27,7 @@ Please note - by default all files will be served with `200` response code, whic
 only with small files, or not planning to serve files back to users (*use only upload and storage*).
 For support of `206` partial content see [this article](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
-## 1. Create a `GridFSBucket` factory
+### 1. Create a `GridFSBucket` factory
 
 Before we can use a bucket, we need to define it with a given name.
 This is similar to creating a collection using a name for documents.
@@ -51,7 +51,7 @@ const imagesBucket = createBucket('allImages');
 
 It will be used as target when moving images to your GridFS.
 
-## 2. Create a Mongo Object Id handler
+### 2. Create a Mongo Object Id handler
 
 For compatibility reasons we need support native Mongo `ObjectId` values. In order to simplify this,
 we also wrap this in a function:
@@ -62,7 +62,7 @@ import { MongoInternals } from 'meteor/mongo';
 export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModules.mongodb.module.ObjectID(gridFsFileId);
 ```
 
-## 3. Create an upload handler for the bucket
+### 3. Create an upload handler for the bucket
 
 Our `FilesCollection` will move the files to the GridFS using the `onAfterUpload` handler.
 In order to stay flexible enough in the choice of the bucket  we use a factory function:
@@ -71,8 +71,8 @@ In order to stay flexible enough in the choice of the bucket  we use a factory f
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createOnAfterUpload = bucket =>
-  function onAfterUpload (file) {
+export const createOnAfterUpload = (bucket) => {
+  return function onAfterUpload (file) {
     const self = this;
 
     // here you could manipulate your file
@@ -80,19 +80,16 @@ export const createOnAfterUpload = bucket =>
     // ...
 
     // then we read all versions we have got so far
-    Object.keys(file.versions).forEach(versionName => {
+    Object.keys(file.versions).forEach((versionName) => {
       const metadata = { ...file.meta, versionName, fileId: file._id };
       fs.createReadStream(file.versions[ versionName ].path)
 
-      // this is where we upload the binary to the bucket using bucket.openUploadStream
-      // see http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openUploadStream 
-        .pipe(bucket.openUploadStream(
-          file.name,
-          {
-            contentType: file.type || 'binary/octet-stream',
-            metadata
-          }
-        ))
+        // this is where we upload the binary to the bucket using bucket.openUploadStream
+        // see http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openUploadStream 
+        .pipe(bucket.openUploadStream(file.name, {
+          contentType: file.type || 'binary/octet-stream',
+          metadata
+        }))
 
         // and we unlink the file from the fs on any error
         // that occurred during the upload to prevent zombie files
@@ -117,9 +114,10 @@ export const createOnAfterUpload = bucket =>
         }));
     });
   };
+};
 ```
 
-## 4. Create download handler
+### 4. Create download handler
 
 We also need to handle to retrieve files from GridFS when a download is initiated. We will use the same
 factory function as in step 3:
@@ -127,8 +125,8 @@ factory function as in step 3:
 ```js
 import { createObjectId } from '../createObjectId';
 
-export const createInterceptDownload = bucket =>
-  function interceptDownload (http, file, versionName) {
+export const createInterceptDownload = (bucket) => {
+  return function interceptDownload (http, file, versionName) {
     const { gridFsFileId } = file.versions[ versionName ].meta || {};
     if (gridFsFileId) {
       // opens the download stream using a given gfs id
@@ -158,10 +156,11 @@ export const createInterceptDownload = bucket =>
       http.response.setHeader('Content-Disposition', dispositionType + dispositionName + dispositionEncoding);
     }
     return Boolean(gridFsFileId); // Serve file from either GridFS or FS if it wasn't uploaded yet
-  }
+  };
+};
 ```
 
-## 5. Create remove handler
+### 5. Create remove handler
 
 Finally we need a handler that removes the chunks from the respective GridFS bucket when the `FilesCollection`
 is removing the file handle:
@@ -169,8 +168,8 @@ is removing the file handle:
 ```js
 import { createObjectId } from '../createObjectId'
 
-export const createOnAfterRemove = bucket =>
-  function onAfterRemove (files) {
+export const createOnAfterRemove = (bucket) => {
+  return function onAfterRemove (files) {
     files.forEach(file => {
       Object.keys(file.versions).forEach(versionName => {
         const gridFsFileId = (file.versions[ versionName ].meta || {}).gridFsFileId;
@@ -182,10 +181,11 @@ export const createOnAfterRemove = bucket =>
         }
       });
     });
-  }
+  };
+};
 ```
 
-## 6. Create `FilesCollection`
+### 6. Create `FilesCollection`
 
 With all our given factories we can flexibly Create a `FilesCollection` instance using a specific bucket.
 Let's use the previously mentioned `allImages` bucket to create our `Images` collection:
@@ -225,18 +225,21 @@ if (Meteor.isClient) {
 }
 ```
 
-## 7. Upload images and Check your mongo shell
+### 7. Upload images and Check your mongo shell
 
-Consider you upload two images to the imagesCollection collection, you can open your mongo shell and check the `fs.` collections:
+To check uploaded images — open MongoDB shell (`mongosh` or `meteor mongo`) and check the `fs.` collections:
 
-```bash
+```shell
 $ meteor mongo
 meteor:PRIMARY> db.Images.find().count()
 2 # should be 2 after images have been uploaded
+
 meteor:PRIMARY> db.fs.files.find().count()
 0 # should be 0 because our bucket is not "fs" but "allImages"
+
 meteor:PRIMARY> db.allImages.files.find().count()
 2 # our bucket has received two images
+
 meteor:PRIMARY> db.allImages.chunks.find().count()
 6 # and some more chunk docs
 ```
