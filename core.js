@@ -309,6 +309,8 @@ export default class FilesCollectionCore extends EventEmitter {
 
   /**
    * Asynchronously returns the number of estimated documents qty in the Collection
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
    * @param {Mongo.EstimatedDocumentCountOptions} [options] - EstimatedDocumentCountOptions
    * @returns {Promise<number>}
    */
