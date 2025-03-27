@@ -326,7 +326,7 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 6. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
 7. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/veliovgroup/Meteor-Files/issues/458)
 8. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/veliovgroup/Meteor-Files/issues/737) for details
-9. When proxying requests to Meteor-Files endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/veliovgroup/Meteor-Files/issues/742) for details
+9. When requests are proxied to `FilesCollection` endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/veliovgroup/Meteor-Files/issues/742) for details
 
 ## Awards:
 
@@ -361,7 +361,7 @@ Other demos:
 ## Support Meteor-Files project:
 
 - 🗃️ Upload and share files using [meteor-files.com](https://meteor-files.com/?ref=github-files-repo-footer) — Continue interrupted file uploads without losing any progress. There is nothing that will stop Meteor from delivering your file to the desired destination
-- 👨‍💻 Use [ostr.io](https://ostr.io?ref=github-files-repo-footer) for [Server Monitoring](https://snmp-monitoring.com), [Web Analytics](https://ostr.io/info/web-analytics?ref=github-files-repo-footer), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [SEO Pre-rendering](https://prerendering.com) of a website
+- 👨‍💻 Improve your project using [ostr.io](https://ostr.io?ref=github-files-repo-footer) for [Server Monitoring](https://snmp-monitoring.com), [Web Analytics](https://ostr.io/info/web-analytics?ref=github-files-repo-footer), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [SEO Pre-rendering](https://prerendering.com)
 - 💵 [Sponsor via GitHub](https://github.com/sponsors/dr-dimitru)
 - 💵 [Support via PayPal](https://paypal.me/veliovgroup)
 - ⭐️ Star on [GitHub](https://github.com/veliovgroup/Meteor-Files)
