@@ -274,7 +274,6 @@ export class UploadInstance extends EventEmitter {
     this.startTime = {};
     this.EOFsent = false;
     this.fileId = this.config.fileId || Random.id();
-    this.FSName = this.collection.namingFunction ? this.collection.namingFunction(this.fileData) : this.fileId;
     this.pipes = [];
 
     this.fileData = Object.assign(this.fileData, this.collection._getExt(this.fileData.name), { mime: this.collection._getMimeType(this.fileData) });
@@ -753,6 +752,7 @@ export class UploadInstance extends EventEmitter {
       fileLength: this.fileLength
     };
 
+    this.FSName = this.collection.namingFunction ? (await this.collection.namingFunction(this.fileData)) : this.fileId;
     if (this.FSName !== this.fileId) {
       opts.FSName = this.FSName;
     }
