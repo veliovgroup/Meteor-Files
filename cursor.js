@@ -20,22 +20,24 @@ export class FileCursor {
   }
 
   /**
-   * Remove document.
+   * Remove document, client only
+   * @locus Client
+   * @param {function} [callback] - Triggered after item is removed or failed to be removed
    * @returns {FileCursor}
-   * @throws {Meteor.Error} If no file reference is provided.
    */
-  remove() {
+  remove(callback) {
     this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
     if (this._fileRef && this._fileRef._id) {
-      this._collection.remove(this._fileRef._id);
+      this._collection.remove(this._fileRef._id, callback);
     } else {
-      throw new Meteor.Error(404, 'No such file');
+      callback && callback(new Meteor.Error(404, 'No such file'));
     }
     return this;
   }
 
   /**
    * Remove document asynchronously.
+   * @locus Anywhere
    * @returns {Promise<FileCursor>}
    * @throws {Meteor.Error} If no file reference is provided.
    */
@@ -51,6 +53,7 @@ export class FileCursor {
 
   /**
    * Returns a downloadable URL to the file.
+   * @locus Anywhere
    * @param {string} [version='original'] - Name of the file’s subversion.
    * @param {string} [uriBase] - Optional URI base.
    * @returns {string}
@@ -65,6 +68,7 @@ export class FileCursor {
 
   /**
    * Returns the underlying file document (or the value of a specified property).
+   * @locus Anywhere
    * @param {string} [property] - Name of the property to return.
    * @returns {FileObj | any}
    */
@@ -78,6 +82,7 @@ export class FileCursor {
 
   /**
    * Returns the file document wrapped in an array.
+   * @locus Anywhere
    * @returns {Array<FileObj>}
    */
   fetch() {
@@ -87,6 +92,7 @@ export class FileCursor {
 
   /**
    * Asynchronously returns the file document wrapped in an array.
+   * @locus Anywhere
    * @returns {Promise<Array<FileObj>>}
    */
   async fetchAsync() {
@@ -97,6 +103,7 @@ export class FileCursor {
   /**
    * Returns a reactive version of the current FileCursor by merging in reactive fields.
    * Useful for Blaze template helpers (e.g. `{{#with}}`).
+   * @locus Anywhere
    * @returns {FileCursor}
    */
   with() {
@@ -129,6 +136,7 @@ export class FilesCursor {
   /**
    * Returns all matching file documents as an array.
    * Alias of `.fetch()`.
+   * @locus Anywhere
    * @returns {Array<FileObj>}
    */
   get() {
@@ -138,6 +146,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns all matching file documents as an array.
+   * @locus Anywhere
    * @returns {Promise<Array<FileObj>>}
    */
   async getAsync() {
@@ -147,6 +156,7 @@ export class FilesCursor {
 
   /**
    * Returns `true` if there is a next item available.
+   * @locus Anywhere
    * @deprecated since v3.0.0. use {@link FilesCursor#hasNextAsync} instead.
    * @returns {boolean}
    */
@@ -158,6 +168,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns `true` if there is a next item available.
+   * @locus Anywhere
    * @returns {Promise<boolean>}
    */
   async hasNextAsync() {
@@ -168,6 +179,7 @@ export class FilesCursor {
 
   /**
    * Returns the next file document, if available.
+   * @locus Anywhere
    * @returns {FileObj | undefined}
    */
   next() {
@@ -179,6 +191,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the next file document, if available.
+   * @locus Anywhere
    * @returns {Promise<FileObj | undefined>}
    */
   async nextAsync() {
@@ -190,6 +203,7 @@ export class FilesCursor {
 
   /**
    * Returns `true` if there is a previous item available.
+   * @locus Anywhere
    * @returns {boolean}
    */
   hasPrevious() {
@@ -199,6 +213,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns `true` if there is a previous item available.
+   * @locus Anywhere
    * @returns {Promise<boolean>}
    */
   async hasPreviousAsync() {
@@ -208,6 +223,7 @@ export class FilesCursor {
 
   /**
    * Returns the previous file document, if available.
+   * @locus Anywhere
    * @returns {FileObj | undefined}
    */
   previous() {
@@ -218,6 +234,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the previous file document, if available.
+   * @locus Anywhere
    * @returns {Promise<FileObj | undefined>}
    */
   async previousAsync() {
@@ -229,6 +246,7 @@ export class FilesCursor {
 
   /**
    * Returns all matching file documents as an array.
+   * @locus Anywhere
    * @returns {Array<FileObj>}
    */
   fetch() {
@@ -238,6 +256,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns all matching file documents as an array.
+   * @locus Anywhere
    * @returns {Promise<Array<FileObj>>}
    */
   async fetchAsync() {
@@ -247,6 +266,7 @@ export class FilesCursor {
 
   /**
    * Returns the first file document, if available.
+   * @locus Anywhere
    * @returns {FileObj | undefined}
    */
   first() {
@@ -258,6 +278,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the first file document, if available.
+   * @locus Anywhere
    * @returns {Promise<FileObj | undefined>}
    */
   async firstAsync() {
@@ -269,6 +290,7 @@ export class FilesCursor {
 
   /**
    * Returns the last file document, if available.
+   * @locus Anywhere
    * @returns {FileObj | undefined}
    */
   last() {
@@ -281,6 +303,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the last file document, if available.
+   * @locus Anywhere
    * @returns {Promise<FileObj | undefined>}
    */
   async lastAsync() {
@@ -293,6 +316,7 @@ export class FilesCursor {
 
   /**
    * Returns the number of file documents that match the query.
+   * @locus Anywhere
    * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
    * @returns {number}
    */
@@ -304,6 +328,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the number of file documents that match the query.
+   * @locus Anywhere
    * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
    * @returns {Promise<number>}
    */
@@ -315,6 +340,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the number of file documents that match the query.
+   * @locus Anywhere
    * @param {Mongo.CountDocumentsOptions} [options] - CountDocumentsOptions
    * @returns {Promise<number>}
    */
@@ -325,7 +351,8 @@ export class FilesCursor {
 
   /**
    * Removes all file documents that match the query.
-   * @param {Function} [callback=() => {}] - Callback with error and number of removed records.
+   * @locus Client
+   * @param {function} [callback=() => {}] - Callback with error and number of removed records.
    * @returns {FilesCursor}
    */
   remove(callback = () => {}) {
@@ -336,6 +363,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously removes all file documents that match the query.
+   * @locus Anywhere
    * @returns {Promise<number>}
    */
   async removeAsync() {
@@ -345,7 +373,8 @@ export class FilesCursor {
 
   /**
    * Synchronously iterates over each matching file document.
-   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @locus Anywhere
+   * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
    * @returns {FilesCursor}
    */
@@ -357,7 +386,8 @@ export class FilesCursor {
 
   /**
    * Asynchronously iterates over each matching file document.
-   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @locus Anywhere
+   * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
    * @returns {Promise<FilesCursor>}
    */
@@ -370,6 +400,7 @@ export class FilesCursor {
   /**
    * Returns an array of FileCursor instances (one per file document).
    * Useful for Blaze’s `{{#each}}` helper.
+   * @locus Anywhere
    * @returns {Array<FileCursor>}
    */
   each() {
@@ -379,6 +410,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns an array of FileCursor instances (one per file document).
+   * @locus Anywhere
    * @returns {Promise<Array<FileCursor>>}
    */
   async eachAsync() {
@@ -388,7 +420,8 @@ export class FilesCursor {
 
   /**
    * Synchronously maps a callback over all matching file documents.
-   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @locus Anywhere
+   * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
    * @returns {Array<any>}
    */
@@ -399,7 +432,8 @@ export class FilesCursor {
 
   /**
    * Asynchronously maps a callback over all matching file documents.
-   * @param {Function} callback - Function invoked with (file, index, cursor).
+   * @locus Anywhere
+   * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
    * @returns {Promise<Array<any>>}
    */
@@ -410,6 +444,7 @@ export class FilesCursor {
 
   /**
    * Returns the current file document in the cursor.
+   * @locus Anywhere
    * @returns {FileObj | undefined}
    */
   current() {
@@ -422,6 +457,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously returns the current file document in the cursor.
+   * @locus Anywhere
    * @returns {Promise<FileObj | undefined>}
    */
   async currentAsync() {
@@ -435,6 +471,7 @@ export class FilesCursor {
 
   /**
    * Watches a query and receives callbacks as the result set changes.
+   * @locus Anywhere
    * @param {Mongo.ObserveCallbacks} callbacks - The observe callbacks.
    * @returns {Meteor.LiveQueryHandle}
    */
@@ -445,6 +482,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously watches a query and receives callbacks as the result set changes.
+   * @locus Anywhere
    * @param {Mongo.ObserveCallbacks} callbacks - The observe callbacks.
    * @returns {Promise<Meteor.LiveQueryHandle>}
    */
@@ -455,6 +493,7 @@ export class FilesCursor {
 
   /**
    * Watches a query for changes (only the differences) and receives callbacks.
+   * @locus Anywhere
    * @param {Mongo.ObserveChangesCallbacks} callbacks - The observeChanges callbacks.
    * @returns {Meteor.LiveQueryHandle}
    */
@@ -465,6 +504,7 @@ export class FilesCursor {
 
   /**
    * Asynchronously watches a query for changes (only the differences) and receives callbacks.
+   * @locus Anywhere
    * @param {Mongo.ObserveChangesCallbacks} callbacks - The observeChanges callbacks.
    * @returns {Promise<Meteor.LiveQueryHandle>}
    */
