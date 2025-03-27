@@ -146,7 +146,7 @@ export default class FilesCollectionCore extends EventEmitter {
    * Classifies the file based on its MIME type.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @param {FileData} data - File data object
+   * @param {Partial<FileObj>} data - File data object
    * @returns {void}
    */
   _updateFileTypes(data) {

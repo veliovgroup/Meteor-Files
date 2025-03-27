@@ -16,7 +16,7 @@ import nodePath from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
 /**
- * @const {Function} noop - No Operation function, placeholder for required callbacks
+ * @const {function} noop - No Operation function, placeholder for required callbacks
  */
 const noop = function noop () {};
 
@@ -82,13 +82,13 @@ const createIndex = async (_collection, keys, opts) => {
  *  - `response`
  *  - `user()`
  *  - `userId`
- * @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
- * @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
- * @param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
+ * @param config.chunkSize      {number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
+ * @param config.permissions    {number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
+ * @param config.parentDirPermissions {number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
  * @param config.storagePath    {string|function}  - [Server] Storage path on file system
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
- * @param config.throttle       {Number}  - [Server] DEPRECATED bps throttle threshold
+ * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
  * @param config.collectionName {string}  - [Both]   Collection name
@@ -96,7 +96,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.integrityCheck {boolean} - [Server] Check file's integrity before serving to users
  * @param config.onAfterUpload  {function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
  * @param config.onAfterRemove  {function(fileObj[]): boolean} - [Server] Called with single argument with array of removed `fileObj[]` right after file(s) is removed. Return `true` to intercept `.unlinkAsync` method; return `false` to continue default behavior
- * @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+ * @param config.continueUploadTTL {number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
  * @param config.onBeforeUpload {function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
  *  - return or resolve `true` to continue
  *  - return or resolve `false` or `String` to abort upload
@@ -1110,8 +1110,8 @@ class FilesCollection extends FilesCollectionCore {
    * @returns {Promise<undefined>}
    */
   async _finishUpload(result, opts) {
-    this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
-    await fs.promises.chmod(result.path, this.permissions, noop);
+    this._debug(`[FilesCollection] [_finishUpload] [finish(ing)Upload] -> ${result.path}`);
+    await fs.promises.chmod(result.path, this.permissions);
     result.type = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
@@ -1125,16 +1125,16 @@ class FilesCollection extends FilesCollectionCore {
           result._id = _id;
         }
 
-        this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
+        this._debug(`[FilesCollection] [_finishUpload] [finish(ed)Upload] -> ${result.path}`);
         if (this.onAfterUpload) {
           await this.onAfterUpload.call(this, result);
         }
         this.emit('afterUpload', result);
       } catch (prrUpdateError) {
-        this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', prrUpdateError);
+        this._debug('[FilesCollection] [_finishUpload] [update] Error:', prrUpdateError);
       }
     } catch (colInsert){
-      this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
+      this._debug('[FilesCollection] [_finishUpload] [insert] Error:', colInsert);
     }
   }
 
@@ -1382,8 +1382,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {Object} opts.meta - File additional meta-data
    * @param {string} opts.userId - UserId, default *null*
    * @param {string} opts.fileId - _id, sanitized, max-length: 20; default *null*
-   * @param {Number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
-   * @param {Function} callback - function(error, fileObj){...}
+   * @param {number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
    * @param {boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
    * @summary Download file over HTTP, write stream to FS, and add to FilesCollection Collection
    * @returns {Promise<FileObj>} File Object from DB
@@ -1728,7 +1727,7 @@ class FilesCollection extends FilesCollectionCore {
    * @name unlink
    * @param {fileObj} fileRef - fileObj
    * @param {string} [version] - [Optional] file's version
-   * @param {Function} [callback] - [Optional] callback function
+   * @param {function} [callback] - [Optional] callback function
    * @summary Unlink files and it's versions from FS
    * @deprecated since v3.0.0. use {@link FilesCollection#unlinkAsync} instead.
    * @returns {FilesCollection} Instance
