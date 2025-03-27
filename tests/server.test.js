@@ -91,7 +91,7 @@ describe('FilesCollection', () => {
 
       // Stubbing the fs.chmod method
       chmodStub = sinon.stub(fs.promises, 'chmod');
-      chmodStub.callsFake((_path, _permissions) => undefined);
+      chmodStub.callsFake(() => undefined);
 
       // Stubbing the collection.insert method
       insertAsyncStub = sinon.stub(filesCollection.collection, 'insertAsync');
