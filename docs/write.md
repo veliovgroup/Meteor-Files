@@ -15,7 +15,7 @@ Write `Buffer` to FS and add record to Files collection. This function is asynch
 - Returns {*Files*} - Current FilesCollection instance
 
 ```js
-import fs from 'fs';
+import fs from 'node:fs';
 import { FilesCollection } from 'meteor/ostrio:files';
 
 const imagesCollection = new FilesCollection({collectionName: 'images'});
