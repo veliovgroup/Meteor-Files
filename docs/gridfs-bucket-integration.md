@@ -59,7 +59,7 @@ we also wrap this in a function:
 ```js
 import { MongoInternals } from 'meteor/mongo';
 
-export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModules.mongodb.module.ObjectID(gridFsFileId);
+export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModules.mongodb.module.ObjectId(gridFsFileId);
 ```
 
 ### 3. Create an upload handler for the bucket
@@ -82,38 +82,39 @@ export const createOnAfterUpload = (bucket) => {
     // then we read all versions we have got so far
     Object.keys(file.versions).forEach((versionName) => {
       const metadata = { ...file.meta, versionName, fileId: file._id };
-      fs.createReadStream(file.versions[ versionName ].path)
+      const readStream = fs.createReadStream(file.versions[versionName].path).on('open', () => {
+        const uploadStream = bucket
+          .openUploadStream(file.name, {
+            contentType: file.type || 'binary/octet-stream',
+            metadata,
+          })
 
-        // this is where we upload the binary to the bucket using bucket.openUploadStream
-        // see http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html#openUploadStream 
-        .pipe(bucket.openUploadStream(file.name, {
-          contentType: file.type || 'binary/octet-stream',
-          metadata
-        }))
+        // this is where we upload the binary to the bucket
 
-        // and we unlink the file from the fs on any error
-        // that occurred during the upload to prevent zombie files
-        .on('error', err => {
-          console.error(err);
-          self.unlink(this.collection.findOne(file._id), versionName); // Unlink files from FS
+        readStream.pipe(
+          uploadStream
+            .on('error', (err) => {
+              console.error(err);
+              self.unlink(await this.collection.findOneAsync(file._id), versionName);
+            })
+            .on('finish', async () => {
+              const property = `versions.${versionName}.meta.gridFsFileId`
+              try {
+                await self.collection.updateAsync(file._id, {
+                  $set: {
+                    [property]: uploadStream.id.toHexString(),
+                  },
+                })
+                self.unlink(await this.collection.findOneAsync(file._id), versionName);
+              } catch (error) {
+                console.error(error);
+              }
+            })
+          })
         })
-
-        // once we are finished, we attach the gridFS Object id on the
-        // FilesCollection document's meta section and finally unlink the
-        // upload file from the filesystem
-        .on('finish', Meteor.bindEnvironment(ver => {
-          const property = `versions.${versionName}.meta.gridFsFileId`;
-          
-          self.collection.update(file._id, {
-            $set: {
-              [ property ]: ver._id.toHexString(),
-            }
-          });
-          
-          self.unlink(this.collection.findOne(file._id), versionName); // Unlink files from FS
-        }));
-    });
-  };
+      })
+    })
+  },
 };
 ```
 
