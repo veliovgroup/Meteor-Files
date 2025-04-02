@@ -71,51 +71,46 @@ In order to stay flexible enough in the choice of the bucket  we use a factory f
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createOnAfterUpload = (bucket) => {
-  return function onAfterUpload (file) {
+export const createOnAfterUpload = bucket =>
+  function onAfterUpload(file) {
     const self = this;
 
-    // here you could manipulate your file
-    // and create a new version, for example a scaled 'thumbnail'
-    // ...
-
-    // then we read all versions we have got so far
-    Object.keys(file.versions).forEach((versionName) => {
+    // Process all versions of the uploaded file
+    Object.keys(file.versions).forEach(versionName => {
       const metadata = { ...file.meta, versionName, fileId: file._id };
-      const readStream = fs.createReadStream(file.versions[versionName].path).on('open', () => {
-        const uploadStream = bucket
+      const uploadStream = bucket
           .openUploadStream(file.name, {
             contentType: file.type || 'binary/octet-stream',
             metadata,
           })
-
-        // this is where we upload the binary to the bucket
-
-        readStream.pipe(
-          uploadStream
-            .on('error', (err) => {
-              console.error(err);
-              self.unlink(await this.collection.findOneAsync(file._id), versionName);
-            })
-            .on('finish', async () => {
-              const property = `versions.${versionName}.meta.gridFsFileId`
-              try {
-                await self.collection.updateAsync(file._id, {
-                  $set: {
-                    [property]: uploadStream.id.toHexString(),
-                  },
-                })
-                self.unlink(await this.collection.findOneAsync(file._id), versionName);
-              } catch (error) {
-                console.error(error);
-              }
-            })
+          .on('finish', async () => {
+            const property = `versions.${versionName}.meta.gridFsFileId`
+            
+            try {
+              await self.collection.updateAsync(file._id, {
+                $set: {
+                  [property]: uploadStream.id.toHexString(),
+                },
+              })
+              await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
+            } catch (error) {
+              console.error(error);
+              await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
+            }
           })
-        })
-      })
-    })
-  },
-};
+          .on('error', async (err) => {
+            console.error(err);
+            await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
+          });
+      const readStream = fs.createReadStream(file.versions[versionName].path).on('open', () => {
+        
+
+          readStream.pipe(
+            uploadStream
+          );
+      });
+    });
+  };
 ```
 
 ### 4. Create download handler
