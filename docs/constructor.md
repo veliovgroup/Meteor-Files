@@ -336,7 +336,7 @@
             <code>this.response</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -376,7 +376,7 @@
             <code>this.response</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -454,7 +454,7 @@
             <code>this.file</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -503,7 +503,7 @@
             <code>this.file</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -538,7 +538,7 @@
         <strong>Context</strong>:
         <ul>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -853,8 +853,8 @@
         Default function recognizing user based on x_mtok cookie.
       </td>
       <td>
-       Usefull when you want to auth user based on custom cookie (or other way).
-       Must return null or {userId: null || String, user: function=> null || user }
+        Useful when you want to auth user based on custom cookie (or other way).
+        Must return <code>null</code> or <code>{userId: null|String, userAsync: function => Promise&lte;null|user&gte; }</code>
       </td>
     </tr>
     <tr>
@@ -1123,9 +1123,9 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
-  onBeforeUpload() {
+  async onBeforeUpload() {
     if (this.userId) {
-      const user = this.user();
+      const user = await this.userAsync();
       if (user.profile.role === 'admin') {
         // Allow upload only if
         // current user is signed-in
@@ -1148,9 +1148,9 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
-  onBeforeRemove() {
+  async onBeforeRemove() {
     if (this.userId) {
-      const user = this.user();
+      const user = await this.userAsync();
       if (user.profile.role === 'admin') {
         // Allow removal only if
         // current user is signed-in
