@@ -16,7 +16,7 @@ is available via [`files-gridfs-autoform-example`](https://github.com/veliovgrou
 The [MongoDB documentation on GridFS](https://docs.mongodb.com/manual/core/gridfs/) defines it as the following:
 
 > GridFS is a specification for storing and retrieving files that exceed the BSON-document size limit of 16 MB.
->  
+>
 > Instead of storing a file in a single document, GridFS divides the file into parts, or chunks [1], and stores each
 chunk as a separate document. By default, GridFS uses a default chunk size of 255 kB; that is, GridFS divides a file
 into chunks of 255 kB with the exception of the last chunk. The last chunk is only as large as necessary.
@@ -40,7 +40,7 @@ import { MongoInternals } from 'meteor/mongo';
 export const createBucket = (bucketName) => {
   const options = bucketName ? {bucketName} : (void 0);
   return new MongoInternals.NpmModules.mongodb.module.GridFSBucket(MongoInternals.defaultRemoteCollectionDriver().mongo.db, options);
-}
+};
 ```
 
 You could later create a bucket, say `allImages`, like so
@@ -53,8 +53,7 @@ It will be used as target when moving images to your GridFS.
 
 ### 2. Create a Mongo Object Id handler
 
-For compatibility reasons we need support native Mongo `ObjectId` values. In order to simplify this,
-we also wrap this in a function:
+For compatibility reasons we need support native Mongo `ObjectId` values. In order to simplify this, we also wrap this in a function:
 
 ```js
 import { MongoInternals } from 'meteor/mongo';
@@ -64,53 +63,47 @@ export const createObjectId = ({ gridFsFileId }) => new MongoInternals.NpmModule
 
 ### 3. Create an upload handler for the bucket
 
-Our `FilesCollection` will move the files to the GridFS using the `onAfterUpload` handler.
-In order to stay flexible enough in the choice of the bucket  we use a factory function:
+Our `FilesCollection` will move the files to the GridFS using the `onAfterUpload` handler. In order to stay flexible enough in the choice of the bucket  we use a factory function:
 
 ```js
 import { Meteor } from 'meteor/meteor';
 import fs from 'fs';
 
-export const createOnAfterUpload = bucket =>
-  function onAfterUpload(file) {
+export const createOnAfterUpload = (bucket) => {
+  return function onAfterUpload(file) {
     const self = this;
 
     // Process all versions of the uploaded file
-    Object.keys(file.versions).forEach(versionName => {
+    Object.keys(file.versions).forEach((versionName) => {
       const metadata = { ...file.meta, versionName, fileId: file._id };
-      const uploadStream = bucket
-          .openUploadStream(file.name, {
-            contentType: file.type || 'binary/octet-stream',
-            metadata,
-          })
-          .on('finish', async () => {
-            const property = `versions.${versionName}.meta.gridFsFileId`
-            
-            try {
-              await self.collection.updateAsync(file._id, {
-                $set: {
-                  [property]: uploadStream.id.toHexString(),
-                },
-              })
-              await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
-            } catch (error) {
-              console.error(error);
-              await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
-            }
-          })
-          .on('error', async (err) => {
-            console.error(err);
-            await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
-          });
-      const readStream = fs.createReadStream(file.versions[versionName].path).on('open', () => {
+      const uploadStream = bucket.openUploadStream(file.name, {
+        contentType: file.type || 'binary/octet-stream',
+        metadata,
+      }).on('finish', async () => {
+        const property = `versions.${versionName}.meta.gridFsFileId`
         
+        try {
+          await self.collection.updateAsync(file._id, {
+            $set: {
+              [property]: uploadStream.id.toHexString(),
+            },
+          })
+        } catch (error) {
+          console.error(error);
+        } finally {
+          await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
+        }
+      }).on('error', async (err) => {
+        console.error(err);
+        await self.unlinkAsync(await this.collection.findOneAsync(file._id), versionName);
+      });
 
-          readStream.pipe(
-            uploadStream
-          );
+      const readStream = fs.createReadStream(file.versions[versionName].path).on('open', () => {
+        readStream.pipe(uploadStream);
       });
     });
   };
+};
 ```
 
 ### 4. Create download handler
@@ -158,21 +151,22 @@ export const createInterceptDownload = (bucket) => {
 
 ### 5. Create remove handler
 
-Finally we need a handler that removes the chunks from the respective GridFS bucket when the `FilesCollection`
-is removing the file handle:
+Finally we need a handler that removes the chunks from the respective GridFS bucket when the `FilesCollection` is removing the file handle:
 
 ```js
 import { createObjectId } from '../createObjectId'
 
 export const createOnAfterRemove = (bucket) => {
   return function onAfterRemove (files) {
-    files.forEach(file => {
-      Object.keys(file.versions).forEach(versionName => {
+    files.forEach((file) => {
+      Object.keys(file.versions).forEach((versionName) => {
         const gridFsFileId = (file.versions[ versionName ].meta || {}).gridFsFileId;
         if (gridFsFileId) {
           const gfsId = createObjectId({ gridFsFileId });
-          bucket.delete(gfsId, err => {
-             if (err) console.error(err);
+          bucket.delete(gfsId, (err) => {
+            if (err) {
+              console.error(err);
+            }
           });
         }
       });
@@ -183,8 +177,7 @@ export const createOnAfterRemove = (bucket) => {
 
 ### 6. Create `FilesCollection`
 
-With all our given factories we can flexibly Create a `FilesCollection` instance using a specific bucket.
-Let's use the previously mentioned `allImages` bucket to create our `Images` collection:
+With all our given factories we can flexibly Create a `FilesCollection` instance using a specific bucket. Let's use the previously mentioned `allImages` bucket to create our `Images` collection:
 
 ```js
 import { Meteor } from 'meteor/meteor';
