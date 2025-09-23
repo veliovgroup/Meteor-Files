@@ -42,12 +42,12 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
-  onBeforeRemove(cursor) {
+  async onBeforeRemove(cursor) {
     const records = cursor.fetch();
 
     if (records && records.length) {
       if (this.userId) {
-        const user = this.user();
+        const user = await this.userAsync();
         // Assuming user.profile.docs is array
         // with file's records _id(s)
 
