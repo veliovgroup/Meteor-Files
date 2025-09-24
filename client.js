@@ -115,7 +115,7 @@ class FilesCollection extends FilesCollectionCore {
     if (!config.disableSetTokenCookie) {
       const setTokenCookie = () => {
         if (Meteor.connection._lastSessionId) {
-          cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax', secure: true, httpOnly: true });
+          cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax', secure: Meteor.isProduction });
           if ((Meteor.isCordova || Meteor.isDesktop) && this.allowQueryStringCookies) {
             cookie.send();
           }
