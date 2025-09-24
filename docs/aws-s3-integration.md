@@ -58,7 +58,7 @@ Instead of using `settings.json`, - environment variable can be used:
 import { Meteor } from 'meteor/meteor';
 /** env.var example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' **/
 if (process.env.S3) {
-  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
+  Meteor.settings.app.s3 = JSON.parse(process.env.S3).s3;
 }
 ```
 
@@ -72,188 +72,208 @@ import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
 import { Random } from 'meteor/random';
 import { FilesCollection } from 'meteor/ostrio:files';
-import stream from 'stream';
+import stream from 'node:stream';
 
 import S3 from 'aws-sdk/clients/s3'; /* http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html */
 /* See fs-extra and graceful-fs NPM packages */
 /* For better i/o performance */
-import fs from 'fs';
+import fs from 'node:fs';
 
 /* Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx""}}' meteor */
 if (process.env.S3) {
-  Meteor.settings.s3 = JSON.parse(process.env.S3).s3;
+  Meteor.settings.app.s3 = JSON.parse(process.env.S3).s3;
 }
 
-const s3Conf = Meteor.settings.s3 || {};
-const bound  = Meteor.bindEnvironment((callback) => {
-  return callback();
-});
+const s3Conf = Meteor.settings.app.s3 || {};
 
 /* Check settings existence in `Meteor.settings` */
 /* This is the best practice for app security */
-if (s3Conf && s3Conf.key && s3Conf.secret && s3Conf.bucket && s3Conf.region) {
-  // Create a new S3 object
-  const s3 = new S3({
-    secretAccessKey: s3Conf.secret,
-    accessKeyId: s3Conf.key,
-    region: s3Conf.region,
-    // sslEnabled: true, // optional
-    httpOptions: {
-      timeout: 6000,
-      agent: false
-    }
-  });
+if (!s3Conf || !s3Conf?.key || !s3Conf?.secret || !s3Conf?.bucket || !s3Conf?.region) {
+  throw new Meteor.Error(401, 'Missing Meteor file settings');
+}
 
-  // Declare the Meteor file collection on the Server
-  const UserFiles = new FilesCollection({
-    debug: false, // Change to `true` for debugging
-    storagePath: 'assets/app/uploads/uploadedFiles',
-    collectionName: 'userFiles',
-    // Disallow Client to execute remove, use the Meteor.method
-    allowClientCode: false,
+// Create a new S3 object
+const s3 = new S3({
+  secretAccessKey: s3Conf.secret,
+  accessKeyId: s3Conf.key,
+  region: s3Conf.region,
+  // sslEnabled: true, // optional
+  httpOptions: {
+    timeout: 6000,
+    agent: false
+  }
+});
 
-    // Start moving files to AWS:S3
-    // after fully received by the Meteor server
-    onAfterUpload(fileRef) {
-      // Run through each of the uploaded file
-      _.each(fileRef.versions, (vRef, version) => {
-        // We use Random.id() instead of real file's _id
-        // to secure files from reverse engineering on the AWS client
-        const filePath = 'files/' + (Random.id()) + '-' + version + '.' + fileRef.extension;
+// Declare the Meteor file collection on the Server
+const UserFiles = new FilesCollection({
+  debug: false, // Change to `true` for debugging
+  storagePath: 'assets/app/uploads/uploadedFiles',
+  collectionName: 'userFiles',
+  // Disallow Client to execute remove, use the Meteor.method
+  allowClientCode: false,
 
-        // Create the AWS:S3 object.
-        // Feel free to change the storage class from, see the documentation,
-        // `STANDARD_IA` is the best deal for low access files.
-        // Key is the file name we are creating on AWS:S3, so it will be like files/XXXXXXXXXXXXXXXXX-original.XXXX
-        // Body is the file stream we are sending to AWS
-        s3.putObject({
-          // ServerSideEncryption: 'AES256', // Optional
-          StorageClass: 'STANDARD',
-          Bucket: s3Conf.bucket,
-          Key: filePath,
-          Body: fs.createReadStream(vRef.path),
-          ContentType: vRef.type,
-        }, (error) => {
-          bound(() => {
-            if (error) {
-              console.error(error);
+  // Start moving files to AWS:S3
+  // after fully received by the Meteor server
+  onAfterUpload(fileRef) {
+    // Run through each of the uploaded file
+    for(let version in fileRef.versions) {
+      if (!fileRef.versions[version]) {
+        continue;
+      }
+
+      // Clone version's object
+      const vRef = _.clone(fileRef.versions[version]);
+
+      // We use Random.id() instead of real file's _id
+      // to secure files from reverse engineering
+      // As after viewing this code it will be easy
+      // to get access to unlisted and protected files
+      const filePath = `files/${Random.id()}-${version}.${fileRef.extension}`;
+      const stream = fs.createReadStream(vRef.path);
+      stream.on('error', (error) => {
+        console.error('[afterUpload] [createReadStream] [ERROR:] File was not uploaded to S3', fileRef._id, error);
+      });
+
+      client.putObject({
+        StorageClass: 'STANDARD',
+        Bucket: s3Conf.bucket,
+        Key: filePath,
+        Body: stream,
+        ContentType: vRef.type,
+      }, async (error) => {
+        if (error) {
+          console.error('[afterUpload] [putObject] Error:', fileRef._id, error);
+          return;
+        }
+
+        try {
+          await this.collection.updateAsync({ _id: fileRef._id }, {
+            $set: {
+              [`versions.${version}.meta.pipePath`]: filePath
+            }
+          });
+          // Unlink original file from FS
+          // after successful upload to AWS:S3
+          await this.unlinkAsync(fileRef, version);
+        } catch (_unlinkError) {
+          // If file was removed before it was fully moved to S3
+          // `.updateAsync()` or `.unlinkAsync()` with throw an error
+          // Then we will need to remove that file from S3
+          client.deleteObject({
+            Bucket: s3Conf.bucket,
+            Key: filePath,
+          }, (deleteError) => {
+            if (deleteError) {
+              console.error('[afterUpload] [deleteObject] Error:', fileRef._id, deleteError);
             } else {
-              // Update FilesCollection with link to the file at AWS
-              const upd = { $set: {} };
-              upd['$set']['versions.' + version + '.meta.pipePath'] = filePath;
+              console.info('[afterUpload] [deleteObject] unlinked file successfully removed from S3', fileRef._id);
+            }
+          });
 
-              this.collection.update({
-                _id: fileRef._id
-              }, upd, (updError) => {
-                if (updError) {
-                  console.error(updError);
+        }
+      });
+    }
+  },
+
+  // Intercept calls to `.remove()` and `.removeAsync()` to remove file from S3
+  // onAfterRemove called right after record is removed from the MongoDB Collection
+  // and before calling `.unlink()` or `.unlinkAsync()`,
+  // return `true` to prevent calling `.unlink()` or `.unlinkAsync()`
+  onAfterRemove(docs) {
+    for (let i = docs.length - 1; i >= 0; i--) {
+      if (docs[i].versions) {
+        for (let version in docs[i].versions) {
+          if (docs[i].versions[version]) {
+            const vRef = docs[i].versions[version];
+            if (vRef?.meta?.pipePath) {
+              client.deleteObject({
+                Bucket: s3Conf.bucket,
+                Key: vRef.meta.pipePath,
+              }, (error) => {
+                if (error) {
+                  console.error('[onAfterRemove] [deleteObject] Error:', error);
                 } else {
-                  // Unlink original files from FS after successful upload to AWS:S3
-                  this.unlink(this.collection.findOne(fileRef._id), version);
+                  console.info('[onAfterRemove] [deleteObject] Successfully removed from S3', vRef.path, vRef.meta.pipePath);
                 }
               });
             }
-          });
-        });
-      });
-    },
-
-
-    // Intercept access to the file
-    // And redirect request to AWS:S3
-    interceptDownload(http, fileRef, version) {
-      let path;
-
-      if (fileRef && fileRef.versions && fileRef.versions[version] && fileRef.versions[version].meta && fileRef.versions[version].meta.pipePath) {
-        path = fileRef.versions[version].meta.pipePath;
-      }
-
-      if (path) {
-        // If file is successfully moved to AWS:S3
-        // We will pipe request to AWS:S3
-        // So, original link will stay always secure
-
-        // To force ?play and ?download parameters
-        // and to keep original file name, content-type,
-        // content-disposition, chunked "streaming" and cache-control
-        // we're using low-level .serve() method
-        const opts = {
-          Bucket: s3Conf.bucket,
-          Key: path
-        };
-
-        if (http.request.headers.range) {
-          const vRef  = fileRef.versions[version];
-          let range   = _.clone(http.request.headers.range);
-          const array = range.split(/bytes=([0-9]*)-([0-9]*)/);
-          const start = parseInt(array[1]);
-          let end     = parseInt(array[2]);
-          if (isNaN(end)) {
-            // Request data from AWS:S3 by small chunks
-            end       = (start + this.chunkSize) - 1;
-            if (end >= vRef.size) {
-              end     = vRef.size - 1;
-            }
           }
-          opts.Range   = `bytes=${start}-${end}`;
-          http.request.headers.range = `bytes=${start}-${end}`;
         }
-
-        const fileColl = this;
-        s3.getObject(opts, function (error) {
-          if (error) {
-            console.error(error);
-            if (!http.response.finished) {
-              http.response.end();
-            }
-          } else {
-            if (http.request.headers.range && this.httpResponse.headers['content-range']) {
-              // Set proper range header in according to what is returned from AWS:S3
-              http.request.headers.range = this.httpResponse.headers['content-range'].split('/')[0].replace('bytes ', 'bytes=');
-            }
-
-            const dataStream = new stream.PassThrough();
-            fileColl.serve(http, fileRef, fileRef.versions[version], version, dataStream);
-            dataStream.end(this.data.Body);
-          }
-        });
-
-        return true;
       }
+    }
+
+    if (docs.length === 1 && docs[0].versions.original?.meta?.pipePath) {
+      // RETURN true TO AVOID UNNECESSARY .unlinkAsync AS FILE WAS ALREADY REMOVED FROM FS AFTER IT WAS UPLOADED TO S3
+      return true;
+    }
+
+    return false;
+  },
+
+  // Intercept access to the file
+  // And redirect request to AWS:S3
+  interceptDownload(http, fileRef, version) {
+    let path;
+
+    if (fileRef && fileRef.versions && fileRef.versions[version] && fileRef.versions[version].meta && fileRef.versions[version].meta.pipePath) {
+      path = fileRef.versions[version].meta.pipePath;
+    }
+
+    if (!path) {
       // While file is not yet uploaded to AWS:S3
       // It will be served file from FS
       return false;
     }
-  });
 
-  // Intercept FilesCollection's remove method to remove file from AWS:S3
-  const _origRemove = UserFiles.remove;
-  UserFiles.remove = function (selector, callback) {
-    const cursor = this.collection.find(selector);
-    cursor.forEach((fileRef) => {
-      _.each(fileRef.versions, (vRef) => {
-        if (vRef && vRef.meta && vRef.meta.pipePath) {
-          // Remove the object from AWS:S3 first, then we will call the original FilesCollection remove
-          s3.deleteObject({
-            Bucket: s3Conf.bucket,
-            Key: vRef.meta.pipePath,
-          }, (error) => {
-            bound(() => {
-              if (error) {
-                console.error(error);
-              }
-            });
-          });
+    // If file is successfully moved to AWS:S3
+    // We will pipe request to AWS:S3
+    // So, original link will stay always secure
+
+    // To force ?play and ?download parameters
+    // and to keep original file name, content-type,
+    // content-disposition, chunked "streaming" and cache-control
+    // we're using low-level .serve() method
+    const opts = {
+      Bucket: s3Conf.bucket,
+      Key: path
+    };
+
+    if (http.request.headers.range) {
+      const vRef = fileRef.versions[version];
+      let range = _.clone(http.request.headers.range);
+      const array = range.split(/bytes=([0-9]*)-([0-9]*)/);
+      const start = parseInt(array[1]);
+      let end = parseInt(array[2]);
+
+      if (isNaN(end)) {
+        // Request data from AWS:S3 by small chunks
+        end = (start + this.chunkSize) - 1;
+        if (end >= vRef.size) {
+          end = vRef.size - 1;
         }
-      });
-    });
+      }
 
-    // Remove original file from database
-    _origRemove.call(this, selector, callback);
-  };
-} else {
-  throw new Meteor.Error(401, 'Missing Meteor file settings');
-}
+      opts.Range = `bytes=${start}-${end}`;
+      http.request.headers.range = `bytes=${start}-${end}`;
+    }
+
+    const responseEnd = (error) => {
+      if (error) {
+        console.error('[interceptDownload] [responseEnd]', error);
+      }
+
+      if (!http.response.finished) {
+        http.response.end();
+      }
+    };
+
+    const awsStream = client.getObject(opts).createReadStream();
+    awsStream.on('error', responseEnd);
+
+    this.serve(http, fileRef, fileRef.versions[version], version, awsStream);
+    return true;
+  }
+});
 ```
 
 ## Further image (JPEG, PNG) processing with AWS Lambda

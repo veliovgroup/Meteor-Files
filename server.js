@@ -10,16 +10,14 @@ import WriteStream from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
-import AbortController from 'abort-controller';
-import fs from 'fs';
-import nodeQs from 'querystring';
-import nodePath from 'path';
+import fs from 'node:fs';
+import nodeQs from 'node:querystring';
+import nodePath from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 /**
- * @const {Object} bound  - Meteor.bindEnvironment (Fiber wrapper)
- * @const {Function} noop - No Operation function, placeholder for required callbacks
+ * @const {function} noop - No Operation function, placeholder for required callbacks
  */
-const bound = Meteor.bindEnvironment(callback => callback());
 const noop = function noop () {};
 
 /**
@@ -72,50 +70,50 @@ const createIndex = async (_collection, keys, opts) => {
 };
 
 /**
- * @locus Anywhere
+ * @locus Server
  * @class FilesCollection
- * @param config           {Object}   - [Both]   Configuration object with next properties:
- * @param config.debug     {Boolean}  - [Both]   Turn on/of debugging and extra logging
+ * @param config           {FilesCollectionConfig}   - [Both]   Configuration object with next properties:
+ * @param config.debug     {boolean}  - [Both]   Turn on/of debugging and extra logging
  * @param config.schema    {Object}   - [Both]   Collection Schema
- * @param config.public    {Boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
- * @param config.strict    {Boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
- * @param config.protected {Function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
+ * @param config.public    {boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
+ * @param config.strict    {boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
+ * @param config.protected {function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
  *  - `request`
  *  - `response`
- *  - `user()`
+ *  - `userAsync()`
  *  - `userId`
- * @param config.chunkSize      {Number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
- * @param config.permissions    {Number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
- * @param config.parentDirPermissions {Number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
- * @param config.storagePath    {String|Function}  - [Server] Storage path on file system
- * @param config.cacheControl   {String}  - [Server] Default `Cache-Control` header
- * @param config.responseHeaders {Object|Function} - [Server] Custom response headers, if function is passed, must return Object
- * @param config.throttle       {Number}  - [Server] DEPRECATED bps throttle threshold
- * @param config.downloadRoute  {String}  - [Both]   Server Route used to retrieve files
+ * @param config.chunkSize      {number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
+ * @param config.permissions    {number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
+ * @param config.parentDirPermissions {number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `611` or `0o777`. Default: 0755
+ * @param config.storagePath    {string|function}  - [Server] Storage path on file system
+ * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
+ * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
+ * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
+ * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
- * @param config.collectionName {String}  - [Both]   Collection name
- * @param config.namingFunction {Function}- [Both]   Function which returns `String`
- * @param config.integrityCheck {Boolean} - [Server] Check file's integrity before serving to users
- * @param config.onAfterUpload  {Function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
- * @param config.onAfterRemove  {Function} - [Server] Called right after file is removed. Removed objects is passed to callback
- * @param config.continueUploadTTL {Number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
- * @param config.onBeforeUpload {Function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
- *  - return `true` to continue
- *  - return `false` or `String` to abort upload
- * @param config.getUser        {Function} - [Server] Replace default way of recognizing user, usefull when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
- * @param config.onInitiateUpload {Function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
- * @param config.onBeforeRemove {Function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow action and `false` to deny.
- * @param config.allowClientCode  {Boolean}  - [Both]   Allow to run `remove` from client
- * @param config.downloadCallback {Function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
-  * @param config.interceptRequest {Function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
- * @param config.interceptDownload {Function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
- * @param config.disableUpload {Boolean} - Disable file upload, useful for server only solutions
- * @param config.disableDownload {Boolean} - Disable file download (serving), useful for file management only solutions
- * @param config.allowedOrigins  {Regex|Boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
- * @param config.allowQueryStringCookies {Boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
- * @param config.sanitize {Function} - Override default sanitize function
+ * @param config.collectionName {string}  - [Both]   Collection name
+ * @param config.namingFunction {function}- [Both]   Function which returns `String`
+ * @param config.integrityCheck {boolean} - [Server] Check file's integrity before serving to users
+ * @param config.onAfterUpload  {function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
+ * @param config.onAfterRemove  {function(fileObj[]): boolean} - [Server] Called with single argument with array of removed `fileObj[]` right after file(s) is removed. Return `true` to intercept `.unlinkAsync` method; return `false` to continue default behavior
+ * @param config.continueUploadTTL {number} - [Server] Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+ * @param config.onBeforeUpload {function}- [Both]   Function which executes on server after receiving each chunk and on client right before beginning upload. Function context is `File` - so you are able to check for extension, mime-type, size and etc.:
+ *  - return or resolve `true` to continue
+ *  - return or resolve `false` or `String` to abort upload
+ * @param config.getUser        {function} - [Server] Replace default way of recognizing user, useful when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, user: Function}
+ * @param config.onInitiateUpload {function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
+ * @param config.onBeforeRemove {function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow physical file removal and `false` to deny.
+ * @param config.allowClientCode  {boolean}  - [Both]   Allow to run `remove` from client
+ * @param config.downloadCallback {function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
+ * @param config.interceptRequest {function} - [Server] Intercept incoming HTTP request, so you can whatever you want, no checks or preprocessing, arguments {http: {request: {...}, response: {...}}, params: {...}}
+ * @param config.interceptDownload {function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
+ * @param config.disableUpload {boolean} - Disable file upload, useful for server only solutions
+ * @param config.disableDownload {boolean} - Disable file download (serving), useful for file management only solutions
+ * @param config.allowedOrigins  {Regex|boolean}  - [Server]   Regex of Origins that are allowed CORS access or `false` to disable completely. Defaults to `/^http:\/\/localhost:12[0-9]{3}$/` for allowing Meteor-Cordova builds access
+ * @param config.allowQueryStringCookies {boolean} - Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Default: `false`
+ * @param config.sanitize {function} - Override default sanitize function
  * @param config._preCollection  {Mongo.Collection} - [Server] Mongo preCollection Instance
- * @param config._preCollectionName {String}  - [Server]  preCollection name
+ * @param config._preCollectionName {string}  - [Server]  preCollection name
  * @summary Create new instance of FilesCollection
  */
 class FilesCollection extends FilesCollectionCore {
@@ -297,7 +295,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isFunction(this.responseHeaders)) {
-      this.responseHeaders = (responseCode, fileRef, versionRef) => {
+      this.responseHeaders = (responseCode, _fileObj, versionRef) => {
         const headers = {};
         switch (responseCode) {
         case '206':
@@ -361,19 +359,21 @@ class FilesCollection extends FilesCollectionCore {
     check(this.permissions, Number);
     check(this.storagePath, Function);
     check(this.cacheControl, String);
-    check(this.onAfterRemove, Match.OneOf(false, Function));
-    check(this.onAfterUpload, Match.OneOf(false, Function));
     check(this.disableUpload, Boolean);
     check(this.integrityCheck, Boolean);
-    check(this.onBeforeRemove, Match.OneOf(false, Function));
     check(this.disableDownload, Boolean);
+    check(this.continueUploadTTL, Number);
+    check(this.allowQueryStringCookies, Boolean);
+    /* eslint-disable new-cap */
+    check(this.onAfterRemove, Match.OneOf(false, Function));
+    check(this.onAfterUpload, Match.OneOf(false, Function));
+    check(this.onBeforeRemove, Match.OneOf(false, Function));
     check(this.downloadCallback, Match.OneOf(false, Function));
     check(this.interceptRequest, Match.OneOf(false, Function));
     check(this.interceptDownload, Match.OneOf(false, Function));
-    check(this.continueUploadTTL, Number);
     check(this.responseHeaders, Match.OneOf(Object, Function));
     check(this.allowedOrigins, Match.OneOf(Boolean, RegExp));
-    check(this.allowQueryStringCookies, Boolean);
+    /* eslint-enable new-cap */
 
     this._cookies = new Cookies({
       allowQueryStringCookies: this.allowQueryStringCookies,
@@ -401,49 +401,49 @@ class FilesCollection extends FilesCollectionCore {
       });
 
       _preCollectionCursor.observe({
-        changed(doc) {
+        async changed(doc) {
           if (doc.isFinished) {
             self._debug(`[FilesCollection] [_preCollectionCursor.observe] [changed]: ${doc._id}`);
-            self._preCollection.remove({_id: doc._id}, noop);
+            await self._preCollection.removeAsync({_id: doc._id});
           }
         },
-        removed(doc) {
+        async removed(doc) {
           // Free memory after upload is done
           // Or if upload is unfinished
           self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removed]: ${doc._id}`);
-          if (helpers.isObject(self._currentUploads[doc._id])) {
-            self._currentUploads[doc._id].stop();
-            self._currentUploads[doc._id].end();
+          if (helpers.isObject(self._currentUploads[doc._id]) && !self._currentUploads[doc._id].ended && !self._currentUploads[doc._id].aborted) {
+            await self._currentUploads[doc._id].end();
 
             // We can be unlucky to run into a race condition where another server removed this document before the change of `isFinished` is registered on this server.
             // Therefore it's better to double-check with the main collection if the file is referenced there. Issue: https://github.com/veliovgroup/Meteor-Files/issues/672
-            if (!doc.isFinished && self.collection.find({ _id: doc._id }).count() === 0) {
+            if (!doc.isFinished && (await self.collection.countDocuments({ _id: doc._id })) === 0) {
               self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: ${doc._id}`);
-              self._currentUploads[doc._id].abort();
+              await self._currentUploads[doc._id].abort();
             }
-
-            delete self._currentUploads[doc._id];
           }
+          delete self._currentUploads[doc._id];
         }
       });
 
-      this._createStream = (_id, path, opts) => {
-        this._currentUploads[_id] = new WriteStream(path, opts.fileLength, opts, this.permissions);
+      this._createStream = async (_id, path, opts) => {
+        const stream = new WriteStream(path, opts.fileLength, opts, this.permissions, this.parentDirPermissions);
+        this._currentUploads[_id] = await stream.init();
       };
 
       // This little function allows to continue upload
       // even after server is restarted (*not on dev-stage*)
-      this._continueUpload = (_id) => {
+      this._continueUpload = async (_id) => {
         if (this._currentUploads[_id] && this._currentUploads[_id].file) {
           if (!this._currentUploads[_id].aborted && !this._currentUploads[_id].ended) {
             return this._currentUploads[_id].file;
           }
-          this._createStream(_id, this._currentUploads[_id].file.file.path, this._currentUploads[_id].file);
+          await this._createStream(_id, this._currentUploads[_id].file.file.path, this._currentUploads[_id].file);
           return this._currentUploads[_id].file;
         }
-        const contUpld = this._preCollection.findOne({_id});
+
+        const contUpld = await this._preCollection.findOneAsync({_id});
         if (contUpld) {
-          this._createStream(_id, contUpld.file.path, contUpld);
+          await this._createStream(_id, contUpld.file.path, contUpld);
           return this._currentUploads[_id].file;
         }
         return false;
@@ -457,31 +457,33 @@ class FilesCollection extends FilesCollectionCore {
     check(this.debug, Boolean);
     check(this.schema, Object);
     check(this.public, Boolean);
-    check(this.getUser, Match.OneOf(false, Function));
-    check(this.protected, Match.OneOf(Boolean, Function));
     check(this.chunkSize, Number);
     check(this.downloadRoute, String);
+    check(this.allowClientCode, Boolean);
+    /* eslint-disable new-cap */
+    check(this.getUser, Match.OneOf(false, Function));
+    check(this.protected, Match.OneOf(Boolean, Function));
     check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
     check(this.onInitiateUpload, Match.OneOf(false, Function));
-    check(this.allowClientCode, Boolean);
+    /* eslint-enable new-cap */
 
     if (this.public && this.protected) {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: Files can not be public and protected at the same time!`);
     }
 
-    this._checkAccess = (http) => {
+    this._checkAccess = async (http) => {
       if (this.protected) {
         let result;
-        const {user, userId} = this._getUser(http);
+        const {userAsync, userId} = this._getUser(http);
 
         if (helpers.isFunction(this.protected)) {
-          let fileRef;
+          let fileObj;
           if (helpers.isObject(http.params) &&  http.params._id) {
-            fileRef = this.collection.findOne(http.params._id);
+            fileObj = await this.collection.findOneAsync(http.params._id);
           }
 
-          result = http ? this.protected.call(Object.assign(http, {user, userId}), (fileRef || null)) : this.protected.call({user, userId}, (fileRef || null));
+          result = http ? await this.protected.call(Object.assign(http, {userAsync, userId}), (fileObj || null)) : await this.protected.call({userAsync, userId}, (fileObj || null));
         } else {
           result = !!userId;
         }
@@ -518,16 +520,12 @@ class FilesCollection extends FilesCollectionCore {
       _Remove: `_FilesCollectionRemove_${this.collectionName}`
     };
 
-    this.on('_handleUpload', this._handleUpload);
-    this.on('_finishUpload', this._finishUpload);
-    this._handleUploadSync = Meteor.wrapAsync(this._handleUpload.bind(this));
-
     if (this.disableUpload && this.disableDownload) {
       return;
     }
-    WebApp.connectHandlers.use((httpReq, httpResp, next) => {
+    WebApp.connectHandlers.use(async (httpReq, httpResp, next) => {
       if (this.allowedOrigins && httpReq._parsedUrl.path.includes(`${this.downloadRoute}/`) && !httpResp.headersSent) {
-        if (this.allowedOrigins.test(httpReq.headers.origin)) {
+        if (httpReq.headers.origin && this.allowedOrigins.test(httpReq.headers.origin)) {
           httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
           httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
         }
@@ -543,7 +541,12 @@ class FilesCollection extends FilesCollectionCore {
         }
       }
 
-      if (!this.disableUpload && httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
+      if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}/__upload`)) {
+        if (this.disableUpload) {
+          next();
+          return;
+        }
+
         if (httpReq.method !== 'POST') {
           next();
           return;
@@ -551,98 +554,42 @@ class FilesCollection extends FilesCollectionCore {
 
         const handleError = (_error) => {
           let error = _error;
-          Meteor._debug('[FilesCollection] [Upload] [HTTP] Exception:', error);
+          let errorCode = 500;
+          this._debug('[FilesCollection] [Upload] [HTTP] [handleError]', error);
 
-          if (!httpResp.headersSent) {
-            httpResp.writeHead(500);
-          }
+          if (helpers.isObject(error)) {
+            if (typeof error?.error === 'number') {
+              errorCode = error.error;
+            }
 
-          if (!httpResp.finished) {
-            if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
+            if (helpers.isFunction(error?.toString)) {
               error = error.toString();
             }
+          }
 
-            if (!helpers.isString(error)) {
-              error = 'Unexpected error!';
-            }
+          if (!helpers.isString(error)) {
+            error = 'Unexpected error!';
+          }
 
+          if (!httpResp.headersSent) {
+            httpResp.writeHead(errorCode, {
+              'Content-Type': 'application/json',
+            });
+          }
+
+          if (!httpResp.finished && !httpResp.writableEnded) {
             httpResp.end(JSON.stringify({ error }));
           }
         };
 
         let body = '';
-        const handleData = () => {
+        const handleData = async () => {
           try {
             let opts;
             let result;
             let user = this._getUser({request: httpReq, response: httpResp});
 
-            if (httpReq.headers['x-start'] !== '1') {
-              // CHUNK UPLOAD SCENARIO:
-              opts = {
-                fileId: this.sanitize(httpReq.headers['x-fileid'], 20, 'a')
-              };
-
-              if (httpReq.headers['x-eof'] === '1') {
-                opts.eof = true;
-              } else {
-                opts.binData = Buffer.from(body, 'base64');
-                opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
-              }
-
-              const _continueUpload = this._continueUpload(opts.fileId);
-              if (!_continueUpload) {
-                throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
-              }
-
-              ({result, opts} = this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
-
-              if (opts.eof) {
-                // FINISH UPLOAD SCENARIO:
-                this._handleUpload(result, opts, (_error) => {
-                  let error = _error;
-                  if (error) {
-                    if (!httpResp.headersSent) {
-                      httpResp.writeHead(500);
-                    }
-
-                    if (!httpResp.finished) {
-                      if (helpers.isObject(error) && helpers.isFunction(error.toString)) {
-                        error = error.toString();
-                      }
-
-                      if (!helpers.isString(error)) {
-                        error = 'Unexpected error!';
-                      }
-
-                      httpResp.end(JSON.stringify({ error }));
-                    }
-                  }
-
-                  if (!httpResp.headersSent) {
-                    httpResp.writeHead(200);
-                  }
-
-                  if (helpers.isObject(result.file) && result.file.meta) {
-                    result.file.meta = fixJSONStringify(result.file.meta);
-                  }
-
-                  if (!httpResp.finished) {
-                    httpResp.end(JSON.stringify(result));
-                  }
-                });
-                return;
-              }
-
-              this.emit('_handleUpload', result, opts, noop);
-
-              if (!httpResp.headersSent) {
-                httpResp.writeHead(204);
-              }
-              if (!httpResp.finished) {
-                httpResp.end();
-              }
-            } else {
+            if (httpReq.headers['x-start'] === '1') {
               // START SCENARIO:
               try {
                 opts = JSON.parse(body);
@@ -665,24 +612,36 @@ class FilesCollection extends FilesCollectionCore {
               }
 
               opts.___s = true;
-              ({result} = this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
 
-              if (this.collection.findOne(result._id)) {
+              try {
+                ({result} = await this._prepareUpload(helpers.clone(opts), user.userId, 'HTTP Start Method'));
+              } catch (prepareError) {
+                handleError(prepareError);
+                return;
+              }
+
+              let res;
+              res = await this.collection.findOneAsync(result._id);
+
+              if (res) {
                 throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
               }
 
               opts._id = opts.fileId;
               opts.createdAt = new Date();
               opts.maxLength = opts.fileLength;
-              this._preCollection.insert(helpers.omit(opts, '___s'));
-              this._createStream(result._id, result.path, helpers.omit(opts, '___s'));
+
+              await this._preCollection.insertAsync(helpers.omit(opts, '___s'));
+              await this._createStream(result._id, result.path, helpers.omit(opts, '___s'));
 
               if (opts.returnMeta) {
                 if (!httpResp.headersSent) {
-                  httpResp.writeHead(200);
+                  httpResp.writeHead(200, {
+                    'Content-Type': 'application/json',
+                  });
                 }
 
-                if (!httpResp.finished) {
+                if (!httpResp.finished && !httpResp.writableEnded) {
                   httpResp.end(JSON.stringify({
                     uploadRoute: `${this.downloadRoute}/${this.collectionName}/__upload`,
                     file: result
@@ -693,263 +652,361 @@ class FilesCollection extends FilesCollectionCore {
                   httpResp.writeHead(204);
                 }
 
-                if (!httpResp.finished) {
+                if (!httpResp.finished && !httpResp.writableEnded) {
                   httpResp.end();
                 }
               }
+              return;
+            }
+
+            // GET FILE'S UPLAOD META-DATA
+            opts = {
+              fileId: this.sanitize(httpReq.headers['x-fileid'], 20, 'a')
+            };
+
+            if (httpReq.headers['x-eof'] === '1') {
+              opts.eof = true;
+            } else {
+              opts.binData = Buffer.from(body, 'base64');
+              opts.chunkId = parseInt(httpReq.headers['x-chunkid']);
+            }
+
+            const _continueUpload = await this._continueUpload(opts.fileId);
+            if (!_continueUpload) {
+              throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
+            }
+
+            try {
+              ({result, opts} = await this._prepareUpload(Object.assign(opts, _continueUpload), user.userId, 'HTTP'));
+            } catch (prepareError) {
+              handleError(prepareError);
+              return;
+            }
+
+            if (opts.eof) {
+              // FINISH UPLOAD SCENARIO:
+              try {
+                const isWritten = await this._handleUpload(result, opts);
+
+                if (!isWritten) {
+                  handleError(new Meteor.Error(503, 'Corrupted chunk. Try again'));
+                  return;
+                }
+
+                if (!httpResp.headersSent) {
+                  httpResp.writeHead(200, {
+                    'Content-Type': 'application/json',
+                  });
+                }
+
+                if (helpers.isObject(result.file) && result.file.meta) {
+                  result.file.meta = fixJSONStringify(result.file.meta);
+                }
+
+                if (!httpResp.finished && !httpResp.writableEnded) {
+                  httpResp.end(JSON.stringify(result));
+                }
+              } catch (handleUploadError) {
+                handleError(handleUploadError);
+              }
+              return;
+            }
+
+            // CHUNK UPLOAD SCENARIO:
+            await self._handleUpload(result, opts);
+
+            if (!httpResp.headersSent) {
+              httpResp.writeHead(204);
+            }
+
+            if (!httpResp.finished && !httpResp.writableEnded) {
+              httpResp.end();
             }
           } catch (httpRespErr) {
             handleError(httpRespErr);
           }
         };
 
-        httpReq.setTimeout(20000, handleError);
+        httpReq.setTimeout(26000, () => {
+          handleError(new Meteor.Error(503, 'Timeout. Try again.'));
+        });
+
+        httpReq.on('error', (error) => {
+          handleError(new Meteor.Error(503, 'Request Error. Try again.', error?.toString?.() || ''));
+        });
+
         if (typeof httpReq.body === 'object' && Object.keys(httpReq.body).length !== 0) {
           body = JSON.stringify(httpReq.body);
           handleData();
         } else {
-          httpReq.on('data', (data) => bound(() => {
+          httpReq.on('data', (data) => {
             body += data;
-          }));
+          });
 
-          httpReq.on('end', () => bound(() => {
+          httpReq.on('end', () => {
             handleData();
-          }));
+          });
         }
         return;
       }
 
-      if (!this.disableDownload) {
-        let uri;
+      if (this.disableDownload) {
+        next();
+        return;
+      }
+      let uri;
 
-        if (!this.public) {
-          if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}`)) {
-            uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}/${this.collectionName}`, '');
-            if (uri.indexOf('/') === 0) {
-              uri = uri.substring(1);
-            }
+      if (this.public) {
+        // HANDLE FILES UPLOADED TO DIRECTORY ACCESSIBLE BY WEB SERVER
+        // AND/OR WITHOUT PERMISSION CONTROL
+        if (!httpReq._parsedUrl.path.includes(`${this.downloadRoute}`)) {
+          next();
+          return;
+        }
+        uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}`, '');
+        if (uri.indexOf('/') === 0) {
+          uri = uri.substring(1);
+        }
 
-            const uris = uri.split('/');
-            if (uris.length === 3) {
-              const params = {
-                _id: uris[0],
-                query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
-                name: uris[2].split('?')[0],
-                version: uris[1]
-              };
-
-              const http = {request: httpReq, response: httpResp, params};
-              if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && this.interceptRequest(http) === true) {
-                return;
-              }
-
-              if (this._checkAccess(http)) {
-                this.download(http, uris[1], this.collection.findOne(uris[0]));
-              }
-            } else {
-              next();
-            }
-          } else {
-            next();
-          }
+        const uris = uri.split('/');
+        let _file = uris[uris.length - 1];
+        if (!_file) {
+          next();
+          return;
+        }
+        let version;
+        if (_file.includes('-')) {
+          version = _file.split('-')[0];
+          _file = _file.split('-')[1].split('?')[0];
         } else {
-          if (httpReq._parsedUrl.path.includes(`${this.downloadRoute}`)) {
-            uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}`, '');
-            if (uri.indexOf('/') === 0) {
-              uri = uri.substring(1);
-            }
-
-            const uris = uri.split('/');
-            let _file = uris[uris.length - 1];
-            if (_file) {
-              let version;
-              if (_file.includes('-')) {
-                version = _file.split('-')[0];
-                _file = _file.split('-')[1].split('?')[0];
-              } else {
-                version = 'original';
-                _file = _file.split('?')[0];
-              }
-
-              const params = {
-                query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
-                file: _file,
-                _id: _file.split('.')[0],
-                version,
-                name: _file
-              };
-              const http = {request: httpReq, response: httpResp, params};
-              if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && this.interceptRequest(http) === true) {
-                return;
-              }
-              this.download(http, version, this.collection.findOne(params._id));
-            } else {
-              next();
-            }
-          } else {
-            next();
-          }
+          version = 'original';
+          _file = _file.split('?')[0];
         }
+
+        const params = {
+          query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
+          file: _file,
+          _id: _file.split('.')[0],
+          version,
+          name: _file
+        };
+        const http = {request: httpReq, response: httpResp, params};
+
+        // CHECK IF SETUP HAS CUSTOM FUNCTION TO SERVE UPLOADED FILES VIA `interceptRequest`
+        if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && (await this.interceptRequest(http)) === true) {
+          return;
+        }
+        await this.download(http, version, await this.collection.findOneAsync(params._id));
         return;
       }
-      next();
+
+      // HANDLE FILES UPLOADED TO OBFUSCATED STORAGE WITH PERMISSION CONTROL
+      if (!httpReq._parsedUrl.path.includes(`${this.downloadRoute}/${this.collectionName}`)) {
+        next();
+        return;
+      }
+
+      uri = httpReq._parsedUrl.path.replace(`${this.downloadRoute}/${this.collectionName}`, '');
+      if (uri.indexOf('/') === 0) {
+        uri = uri.substring(1);
+      }
+
+      const uris = uri.split('/');
+      if (uris.length !== 3) {
+        next();
+        return;
+      }
+
+      const params = {
+        _id: uris[0],
+        query: httpReq._parsedUrl.query ? nodeQs.parse(httpReq._parsedUrl.query) : {},
+        name: uris[2].split('?')[0],
+        version: uris[1]
+      };
+
+      const http = {request: httpReq, response: httpResp, params};
+
+      // CHECK IF SETUP HAS CUSTOM FUNCTION TO SERVE UPLOADED FILES VIA `interceptRequest`
+      if (this.interceptRequest && helpers.isFunction(this.interceptRequest) && (await this.interceptRequest(http)) === true) {
+        return;
+      }
+
+      if (await this._checkAccess(http)) {
+        await this.download(http, uris[1], await this.collection.findOneAsync(uris[0]));
+      }
+      return;
     });
 
-    if (!this.disableUpload) {
-      const _methods = {};
+    this._debug('[FilesCollection] initiated', this);
 
-      // Method used to remove file
-      // from Client side
-      _methods[this._methodNames._Remove] = function (selector) {
-        check(selector, Match.OneOf(String, Object));
-        self._debug(`[FilesCollection] [Unlink Method] [.remove(${selector})]`);
+    if (this.disableUpload) {
+      // SKIP REGISTERING SERVER METHODS WHEN {disableUpload: true}
+      return;
+    }
+    const _methods = {};
+    // Method used to remove file
+    // from Client side
+    _methods[this._methodNames._Remove] = async function (selector) {
+      // eslint-disable-next-line new-cap
+      check(selector, Match.OneOf(String, Object));
+      self._debug(`[FilesCollection] [Unlink Method] [.removeAsync(${selector})]`);
 
-        if (self.allowClientCode) {
-          if (self.onBeforeRemove && helpers.isFunction(self.onBeforeRemove)) {
-            const userId = this.userId;
-            const userFuncs = {
-              userId: this.userId,
-              user() {
-                if (Meteor.users) {
-                  return Meteor.users.findOne(userId);
-                }
-                return null;
+      if (self.allowClientCode) {
+        if (self.onBeforeRemove) {
+          const userId = this.userId;
+          const userFuncs = {
+            userId: this.userId,
+            async userAsync(){
+              if (Meteor.users) {
+                return await Meteor.users.findOneAsync(userId);
               }
-            };
-
-            if (!self.onBeforeRemove.call(userFuncs, (self.find(selector) || null))) {
-              throw new Meteor.Error(403, '[FilesCollection] [remove] Not permitted!');
+              return null;
             }
-          }
-
-          const cursor = self.find(selector);
-          if (cursor.count() > 0) {
-            self.remove(selector);
-            return true;
-          }
-          throw new Meteor.Error(404, 'Cursor is empty, no files is removed');
-        } else {
-          throw new Meteor.Error(405, '[FilesCollection] [remove] Running code on a client is not allowed!');
-        }
-      };
-
-
-      // Method used to receive "first byte" of upload
-      // and all file's meta-data, so
-      // it won't be transferred with every chunk
-      // Basically it prepares everything
-      // So user can pause/disconnect and
-      // continue upload later, during `continueUploadTTL`
-      _methods[this._methodNames._Start] = function (opts, returnMeta) {
-        check(opts, {
-          file: Object,
-          fileId: String,
-          FSName: Match.Optional(String),
-          chunkSize: Number,
-          fileLength: Number
-        });
-
-        check(returnMeta, Match.Optional(Boolean));
-
-        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
-
-        self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
-        opts.___s = true;
-        const { result } = self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
-
-        if (self.collection.findOne(result._id)) {
-          throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
-        }
-
-        opts._id = opts.fileId;
-        opts.createdAt = new Date();
-        opts.maxLength = opts.fileLength;
-        try {
-          self._preCollection.insert(helpers.omit(opts, '___s'));
-          self._createStream(result._id, result.path, helpers.omit(opts, '___s'));
-        } catch (e) {
-          self._debug(`[FilesCollection] [File Start Method] [EXCEPTION:] ${opts.file.name} - ${opts.fileId}`, e);
-          throw new Meteor.Error(500, 'Can\'t start');
-        }
-
-        if (returnMeta) {
-          return {
-            uploadRoute: `${self.downloadRoute}/${self.collectionName}/__upload`,
-            file: result
           };
-        }
-        return true;
-      };
 
-
-      // Method used to write file chunks
-      // it receives very limited amount of meta-data
-      // This method also responsible for EOF
-      _methods[this._methodNames._Write] = function (_opts) {
-        let opts = _opts;
-        let result;
-        check(opts, {
-          eof: Match.Optional(Boolean),
-          fileId: String,
-          binData: Match.Optional(String),
-          chunkId: Match.Optional(Number)
-        });
-
-        opts.fileId = self.sanitize(opts.fileId, 20, 'a');
-
-        if (opts.binData) {
-          opts.binData = Buffer.from(opts.binData, 'base64');
-        }
-
-        const _continueUpload = self._continueUpload(opts.fileId);
-        if (!_continueUpload) {
-          throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
-        }
-
-        this.unblock();
-        ({result, opts} = self._prepareUpload(Object.assign(opts, _continueUpload), this.userId, 'DDP'));
-
-        if (opts.eof) {
-          try {
-            return self._handleUploadSync(result, opts);
-          } catch (handleUploadErr) {
-            self._debug('[FilesCollection] [Write Method] [DDP] Exception:', handleUploadErr);
-            throw handleUploadErr;
+          if (!(await self.onBeforeRemove.call(userFuncs, (self.find(selector) || null)))) {
+            throw new Meteor.Error(403, '[FilesCollection] [remove] Not permitted!');
           }
-        } else {
-          self.emit('_handleUpload', result, opts, noop);
         }
-        return true;
-      };
 
-      // Method used to Abort upload
-      // - Freeing memory by ending writableStreams
-      // - Removing temporary record from @_preCollection
-      // - Removing record from @collection
-      // - .unlink()ing chunks from FS
-      _methods[this._methodNames._Abort] = function (_id) {
-        check(_id, String);
+        const count = await self.countDocuments(selector);
+        if (count > 0) {
+          await self.removeAsync(selector);
+        }
+        return count;
+      }
 
-        const _continueUpload = self._continueUpload(_id);
+      throw new Meteor.Error(405, '[FilesCollection] [remove] Running code on a client is not allowed!');
+    };
+
+
+    // Method used to receive "first byte" of upload
+    // and all file's meta-data, so
+    // it won't be transferred with every chunk
+    // Basically it prepares everything
+    // So user can pause/disconnect and
+    // continue upload later, during `continueUploadTTL`
+    _methods[this._methodNames._Start] = async function (opts, returnMeta) {
+      /* eslint-disable new-cap */
+      check(opts, {
+        file: Object,
+        fileId: String,
+        FSName: Match.Optional(String),
+        chunkSize: Number,
+        fileLength: Number
+      });
+      check(returnMeta, Match.Optional(Boolean));
+      /* eslint-enable new-cap */
+      self._debug(`[FilesCollection] [File Start Method] ${opts.file.name} - ${opts.fileId}`);
+
+      opts.fileId = self.sanitize(opts.fileId, 20, 'a');
+      opts.___s = true;
+      const { result } = await self._prepareUpload(helpers.clone(opts), this.userId, 'DDP Start Method');
+
+      if (await self.collection.findOneAsync(result._id)) {
+        throw new Meteor.Error(400, 'Can\'t start upload, data substitution detected!');
+      }
+
+      opts._id = opts.fileId;
+      opts.createdAt = new Date();
+      opts.maxLength = opts.fileLength;
+      try {
+        await self._preCollection.insertAsync(helpers.omit(opts, '___s'));
+        await self._createStream(result._id, result.path, helpers.omit(opts, '___s'));
+      } catch (e) {
+        self._debug(`[FilesCollection] [File Start Method] [EXCEPTION:] ${opts.file.name} - ${opts.fileId}`, e);
+        throw new Meteor.Error(500, 'Can\'t start');
+      }
+
+      if (returnMeta) {
+        return {
+          status: 204,
+          uploadRoute: `${self.downloadRoute}/${self.collectionName}/__upload`,
+          file: result,
+        };
+      }
+      return { status: 204 };
+    };
+
+
+    // Method used to write file chunks
+    // it receives very limited amount of meta-data
+    // This method also responsible for EOF
+    _methods[this._methodNames._Write] = async function (_opts) {
+      let opts = _opts;
+      let result;
+      /* eslint-disable new-cap */
+      check(opts, {
+        eof: Match.Optional(Boolean),
+        fileId: String,
+        binData: Match.Optional(String),
+        chunkId: Match.Optional(Number)
+      });
+      /* eslint-enable new-cap */
+
+      self._debug('[FilesCollection] [Write Method] Chunk received', opts.fileId);
+
+      opts.fileId = self.sanitize(opts.fileId, 20, 'a');
+      if (opts.binData) {
+        opts.binData = Buffer.from(opts.binData, 'base64');
+      }
+
+      const _continueUpload = await self._continueUpload(opts.fileId);
+      if (!_continueUpload) {
+        throw new Meteor.Error(408, 'Can\'t continue upload, session expired. Start upload again.');
+      }
+
+      ({result, opts} = await self._prepareUpload(Object.assign(opts, _continueUpload), this.userId, 'DDP'));
+      this.unblock();
+      if (opts.eof) {
+        try {
+          const isWritten = await self._handleUpload(result, opts);
+          if (!isWritten) {
+            throw new Meteor.Error(503, 'try again');
+          }
+          result.status = 200;
+          return result;
+        } catch (handleUploadErr) {
+          self._debug('[FilesCollection] [Write Method] [DDP] Exception:', handleUploadErr);
+          throw handleUploadErr;
+        }
+      } else {
+        await self._handleUpload(result, opts);
+      }
+      return { status: 204 };
+    };
+
+    // Method used to Abort upload
+    // - Freeing memory by ending writableStreams
+    // - Removing temporary record from @_preCollection
+    // - Removing record from @collection
+    // - .unlink()ing chunks from FS
+    _methods[this._methodNames._Abort] = async function (_id) {
+      check(_id, String);
+      self._debug(`[FilesCollection] [Abort Method]: ${_id}`, self._currentUploads[_id]);
+      this.unblock();
+
+      if (self._currentUploads) {
+        if (self._currentUploads[_id] && !self._currentUploads[_id].ended && !self._currentUploads[_id].aborted) {
+          await self._currentUploads[_id].abort();
+        }
+      } else {
+        const _continueUpload = await self._continueUpload(_id);
         self._debug(`[FilesCollection] [Abort Method]: ${_id} - ${(helpers.isObject(_continueUpload.file) ? _continueUpload.file.path : '')}`);
 
-        if (self._currentUploads && self._currentUploads[_id]) {
-          self._currentUploads[_id].stop();
-          self._currentUploads[_id].abort();
-        }
-
         if (_continueUpload) {
-          self._preCollection.remove({_id});
-          self.remove({_id});
           if (helpers.isObject(_continueUpload.file) && _continueUpload.file.path) {
-            self.unlink({_id, path: _continueUpload.file.path});
+            await self.unlinkAsync({_id, path: _continueUpload.file.path});
           }
         }
-        return true;
-      };
+      }
 
-      Meteor.methods(_methods);
-    }
+      await self._preCollection.removeAsync({_id});
+      await self.collection.removeAsync({_id});
+      return { status: 499 };
+    };
+
+    Meteor.methods(_methods);
   }
 
   /**
@@ -957,9 +1014,9 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _prepareUpload
    * @summary Internal method. Used to optimize received data and check upload permission
-   * @returns {Object}
+   * @returns {Promise<Object>}
    */
-  _prepareUpload(opts = {}, userId, transport) {
+  async _prepareUpload(opts = {}, userId, transport) {
     let ctx;
     if (!helpers.isBoolean(opts.eof)) {
       opts.eof = false;
@@ -996,53 +1053,53 @@ class FilesCollection extends FilesCollectionCore {
     opts.FSName = this.sanitize(opts.FSName);
 
     if (this.namingFunction) {
-      opts.FSName = this.namingFunction(opts);
+      opts.FSName = await this.namingFunction(opts);
     }
 
     result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
-    if (this.onBeforeUpload && helpers.isFunction(this.onBeforeUpload)) {
+    if (this.onBeforeUpload) {
       ctx = Object.assign({
         file: opts.file
       }, {
         chunkId: opts.chunkId,
         userId: result.userId,
-        user() {
+        async userAsync() {
           if (Meteor.users && result.userId) {
-            return Meteor.users.findOne(result.userId);
+            return await Meteor.users.findOneAsync(result.userId);
           }
           return null;
         },
         eof: opts.eof
       });
-      const isUploadAllowed = this.onBeforeUpload.call(ctx, result);
+      const isUploadAllowed = await this.onBeforeUpload.call(ctx, result);
 
       if (isUploadAllowed !== true) {
         throw new Meteor.Error(403, helpers.isString(isUploadAllowed) ? isUploadAllowed : '@onBeforeUpload() returned false');
       } else {
-        if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
-          this.onInitiateUpload.call(ctx, result);
+        if ((opts.___s === true) && this.onInitiateUpload) {
+          await this.onInitiateUpload.call(ctx, result);
         }
       }
-    } else if ((opts.___s === true) && this.onInitiateUpload && helpers.isFunction(this.onInitiateUpload)) {
+    } else if ((opts.___s === true) && this.onInitiateUpload) {
       ctx = Object.assign({
         file: opts.file
       }, {
         chunkId: opts.chunkId,
         userId: result.userId,
-        user() {
+        async userAsync() {
           if (Meteor.users && result.userId) {
-            return Meteor.users.findOne(result.userId);
+            return await Meteor.users.findOneAsync(result.userId);
           }
           return null;
         },
         eof: opts.eof
       });
-      this.onInitiateUpload.call(ctx, result);
+      await this.onInitiateUpload.call(ctx, result);
     }
 
-    return {result, opts};
+    return { result, opts };
   }
 
   /**
@@ -1050,34 +1107,35 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _finishUpload
    * @summary Internal method. Finish upload, close Writable stream, add record to MongoDB and flush used memory
-   * @returns {undefined}
+   * @returns {Promise<undefined>}
    */
-  _finishUpload(result, opts, cb) {
-    this._debug(`[FilesCollection] [Upload] [finish(ing)Upload] -> ${result.path}`);
-    fs.chmod(result.path, this.permissions, noop);
+  async _finishUpload(result, opts) {
+    this._debug(`[FilesCollection] [_finishUpload] [finish(ing)Upload] -> ${result.path}`);
+    await fs.promises.chmod(result.path, this.permissions);
     result.type = this._getMimeType(opts.file);
     result.public = this.public;
     this._updateFileTypes(result);
 
-    this.collection.insert(helpers.clone(result), (colInsert, _id) => {
-      if (colInsert) {
-        cb && cb(colInsert);
-        this._debug('[FilesCollection] [Upload] [_finishUpload] [insert] Error:', colInsert);
-      } else {
-        this._preCollection.update({_id: opts.fileId}, {$set: {isFinished: true}}, (preUpdateError) => {
-          if (preUpdateError) {
-            cb && cb(preUpdateError);
-            this._debug('[FilesCollection] [Upload] [_finishUpload] [update] Error:', preUpdateError);
-          } else {
-            result._id = _id;
-            this._debug(`[FilesCollection] [Upload] [finish(ed)Upload] -> ${result.path}`);
-            this.onAfterUpload && this.onAfterUpload.call(this, result);
-            this.emit('afterUpload', result);
-            cb && cb(null, result);
-          }
-        });
+    let _id;
+    try {
+      _id = await this.collection.insertAsync(helpers.clone(result));
+      try {
+        await this._preCollection.updateAsync({_id: opts.fileId}, {$set: {isFinished: true}});
+        if (_id) {
+          result._id = _id;
+        }
+
+        this._debug(`[FilesCollection] [_finishUpload] [finish(ed)Upload] -> ${result.path}`);
+        if (this.onAfterUpload) {
+          await this.onAfterUpload.call(this, result);
+        }
+        this.emit('afterUpload', result);
+      } catch (prrUpdateError) {
+        this._debug('[FilesCollection] [_finishUpload] [update] Error:', prrUpdateError);
       }
-    });
+    } catch (colInsert){
+      this._debug('[FilesCollection] [_finishUpload] [insert] Error:', colInsert);
+    }
   }
 
   /**
@@ -1085,21 +1143,20 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _handleUpload
    * @summary Internal method to handle upload process, pipe incoming data to Writable stream
-   * @returns {undefined}
+   * @returns {Promise<boolean>} - `true` if chunk was written as expected
    */
-  _handleUpload(result, opts, cb) {
-    try {
-      if (opts.eof) {
-        this._currentUploads[result._id].end(() => {
-          this.emit('_finishUpload', result, opts, cb);
-        });
-      } else {
-        this._currentUploads[result._id].write(opts.chunkId, opts.binData, cb);
+  async _handleUpload(result, opts) {
+    if (opts.eof) {
+      if (await this._currentUploads[result._id].end()) {
+        await this._finishUpload(result, opts);
+        return true;
       }
-    } catch (e) {
-      this._debug('[_handleUpload] [EXCEPTION:]', e);
-      cb && cb(e);
+    } else {
+      if (await this._currentUploads[result._id].write(opts.chunkId, opts.binData)) {
+        return true;
+      }
     }
+    return false;
   }
 
   /**
@@ -1108,11 +1165,12 @@ class FilesCollection extends FilesCollectionCore {
    * @name _getMimeType
    * @param {Object} fileData - File Object
    * @summary Returns file's mime-type
-   * @returns {String}
+   * @returns {string}
    */
   _getMimeType(fileData) {
     let mime;
     check(fileData, Object);
+
     if (helpers.isObject(fileData) && fileData.type) {
       mime = fileData.type;
     }
@@ -1128,10 +1186,12 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _getUserId
    * @summary Returns `userId` matching the xmtok token derived from Meteor.server.sessions
-   * @returns {String}
+   * @returns {string}
    */
   _getUserId(xmtok) {
-    if (!xmtok) return null;
+    if (!xmtok) {
+      return null;
+    }
 
     // throw an error upon an unexpected type of Meteor.server.sessions in order to identify breaking changes
     if (!Meteor.server.sessions instanceof Map || !helpers.isObject(Meteor.server.sessions)) {
@@ -1153,23 +1213,23 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
-   * @summary Returns object with `userId` and `user()` method which return user's object
+   * @summary Returns object with `userId` and `userAsync()` method which return user's object
    * @returns {Object}
    */
   _getUser() {
-    return this.getUser ?
-      this.getUser(...arguments) : this._getUserDefault(...arguments);
+    return this.getUser ? this.getUser(...arguments) : this._getUserDefault(...arguments);
   }
 
   /**
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUserDefault
-   * @summary Default way of recognising user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defnied. Returns object with `userId` and `user()` method which return user's object
+   * @summary Default way of recognizing user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defined. Returns object with `userId` and `userAsync()` method which return user's object
    * @returns {Object}
    */
   _getUserDefault(http) {
     const result = {
+      async userAsync() { return null; },
       user() { return null; },
       userId: null
     };
@@ -1189,7 +1249,12 @@ class FilesCollection extends FilesCollectionCore {
         const userId = this._getUserId(mtok);
 
         if (userId) {
-          result.user = () => Meteor.users.findOne(userId);
+          result.userAsync = async () => {
+            if (Meteor.users) {
+              return await Meteor.users.findOneAsync(userId);
+            }
+            return null;
+          };
           result.userId = userId;
         }
       }
@@ -1201,42 +1266,36 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
-   * @name write
+   * @name writAsync
    * @param {Buffer} buffer - Binary File's Buffer
-   * @param {Object} opts - Object with file-data
-   * @param {String} opts.name - File name, alias: `fileName`
-   * @param {String} opts.type - File mime-type
+   * @param {WriteOpts} [opts] - Object with file-data
+   * @param {string} opts.name - File name, alias: `fileName`
+   * @param {string} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
-   * @param {String} opts.userId - UserId, default *null*
-   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
-   * @param {Function} callback - function(error, fileObj){...}
-   * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
+   * @param {string} opts.userId - UserId, default *null*
+   * @param {string} opts.fileId - _id, sanitized, max-length: 20; default *null*
+   * @param {boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Write buffer to FS and add to FilesCollection Collection
-   * @returns {FilesCollection} Instance
+   * @throws {Meteor.Error} If there is an error writing the file or inserting the document
+   * @returns {Promise<FileObj>} File Object from DB
    */
-  write(buffer, _opts = {}, _callback, _proceedAfterUpload) {
-    this._debug('[FilesCollection] [write()]');
+  async writeAsync(buffer, _opts = {}, _proceedAfterUpload) {
+    this._debug('[FilesCollection] [writeAsync()]');
     let opts = _opts;
-    let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
 
-    if (helpers.isFunction(opts)) {
-      proceedAfterUpload = callback;
-      callback = opts;
-      opts = {};
-    } else if (helpers.isBoolean(callback)) {
-      proceedAfterUpload = callback;
-    } else if (helpers.isBoolean(opts)) {
+    if (helpers.isBoolean(opts)) {
       proceedAfterUpload = opts;
+      opts = {};
     }
-
+    /* eslint-disable new-cap */
     check(opts, Match.Optional(Object));
-    check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
+    /* eslint-enable new-cap */
 
     opts.fileId = opts.fileId && this.sanitize(opts.fileId, 20, 'a');
     const fileId = opts.fileId || Random.id();
-    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fsName = this.namingFunction ? await this.namingFunction(opts) : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
@@ -1263,81 +1322,86 @@ class FilesCollection extends FilesCollectionCore {
 
     result._id = fileId;
 
-    fs.stat(opts.path, (statError, stats) => {
-      bound(() => {
-        if (statError || !stats.isFile()) {
-          const paths = opts.path.split('/');
-          paths.pop();
-          fs.mkdirSync(paths.join('/'), { recursive: true });
-          fs.writeFileSync(opts.path, '');
-        }
+    let fileObj;
 
-        const stream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions});
-        stream.end(buffer, (streamErr) => {
-          bound(() => {
-            if (streamErr) {
-              callback && callback(streamErr);
-            } else {
-              this.collection.insert(result, (insertErr, _id) => {
-                if (insertErr) {
-                  callback && callback(insertErr);
-                  this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
-                } else {
-                  const fileRef = this.collection.findOne(_id);
-                  callback && callback(null, fileRef);
-                  if (proceedAfterUpload === true) {
-                    this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-                    this.emit('afterUpload', fileRef);
-                  }
-                  this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
-                }
-              });
-            }
-          });
-        });
-      });
-    });
-    return this;
+    let mustCreateFileFirst = false;
+    try {
+      const stats = await fs.promises.stat(opts.path);
+      if (!stats.isFile()) {
+        mustCreateFileFirst = true;
+      }
+    } catch (_statError) {
+      mustCreateFileFirst = true;
+    }
+
+    if (mustCreateFileFirst) {
+      const paths = opts.path.split('/');
+      paths.pop();
+      await fs.promises.mkdir(paths.join('/'), { recursive: true, mode: this.parentDirPermissions, });
+      await fs.promises.writeFile(opts.path, '', { mode: this.permissions, });
+    }
+
+    try {
+      const fh = await fs.promises.open(opts.path, fs.constants.O_WRONLY | fs.constants.O_CREAT, this.permissions);
+      await fh.write(buffer);
+      await fh.datasync();
+      await fh.close();
+    } catch (openWriteErr) {
+      this._debug(`[FilesCollection] [writeAsync] [open] [write] Error: ${fileName} -> ${this.collectionName}`, openWriteErr);
+      throw new Meteor.Error('writeAsync', openWriteErr);
+    }
+
+    try {
+      const _id = await this.collection.insertAsync(result);
+      fileObj = await this.collection.findOneAsync(_id);
+
+      if (proceedAfterUpload === true) {
+        if (this.onAfterUpload){
+          await this.onAfterUpload.call(this, fileObj);
+        }
+        this.emit('afterUpload', fileObj);
+      }
+      this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
+    } catch (insertErr) {
+      this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+      throw new Meteor.Error('writeAsync', insertErr);
+    }
+
+    return fileObj;
   }
 
   /**
    * @locus Server
    * @memberOf FilesCollection
-   * @name load
-   * @param {String} url - URL to file
-   * @param {Object} [opts] - Object with file-data
+   * @name loadAsync
+   * @param {string} url - URL to file
+   * @param {LoadOpts} [opts] - Object with file-data
    * @param {Object} opts.headers - HTTP headers to use when requesting the file
-   * @param {String} opts.name - File name, alias: `fileName`
-   * @param {String} opts.type - File mime-type
+   * @param {string} opts.name - File name, alias: `fileName`
+   * @param {string} opts.type - File mime-type
    * @param {Object} opts.meta - File additional meta-data
-   * @param {String} opts.userId - UserId, default *null*
-   * @param {String} opts.fileId - _id, sanitized, max-length: 20; default *null*
-   * @param {Number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
-   * @param {Function} callback - function(error, fileObj){...}
-   * @param {Boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
+   * @param {string} opts.userId - UserId, default *null*
+   * @param {string} opts.fileId - _id, sanitized, max-length: 20; default *null*
+   * @param {number} opts.timeout - Timeout in milliseconds, default: 360000 (6 mins)
+   * @param {boolean} [proceedAfterUpload] - Proceed onAfterUpload hook
    * @summary Download file over HTTP, write stream to FS, and add to FilesCollection Collection
-   * @returns {FilesCollection} Instance
+   * @returns {Promise<FileObj>} File Object from DB
    */
-  load(url, _opts = {}, _callback, _proceedAfterUpload = false) {
-    this._debug(`[FilesCollection] [load(${url}, ${JSON.stringify(_opts)}, callback)]`);
+  async loadAsync(url, _opts = {}, _proceedAfterUpload = false) {
+    this._debug(`[FilesCollection] [loadAsync(${url}, ${JSON.stringify(_opts)}, callback)]`);
     let opts = _opts;
-    let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
 
-    if (helpers.isFunction(opts)) {
-      proceedAfterUpload = callback;
-      callback = opts;
+    if (helpers.isBoolean(_opts)) {
+      proceedAfterUpload = _opts;
       opts = {};
-    } else if (helpers.isBoolean(callback)) {
-      proceedAfterUpload = callback;
-    } else if (helpers.isBoolean(opts)) {
-      proceedAfterUpload = opts;
     }
 
     check(url, String);
+    /* eslint-disable new-cap */
     check(opts, Match.Optional(Object));
-    check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
+    /* eslint-enable new-cap */
 
     if (!helpers.isObject(opts)) {
       opts = {
@@ -1350,283 +1414,248 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const fileId = (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || Random.id();
-    const fsName = this.namingFunction ? this.namingFunction(opts) : fileId;
+    const fsName = this.namingFunction ? await this.namingFunction(opts) : fileId;
     const pathParts = url.split('/');
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
     opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
 
-    const storeResult = (result, cb) => {
-      result._id = fileId;
+    // this will be the resolved fileObj
+    let fileObj;
 
-      this.collection.insert(result, (error, _id) => {
-        if (error) {
-          cb && cb(error);
-          this._debug(`[FilesCollection] [load] [insert] Error: ${fileName} -> ${this.collectionName}`, error);
-        } else {
-          const fileRef = this.collection.findOne(_id);
-          cb && cb(null, fileRef);
-          if (proceedAfterUpload === true) {
-            this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-            this.emit('afterUpload', fileRef);
-          }
-          this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
+    // storeResult is a function that will be called after the file is downloaded and stored in the database
+    // this might throw an error from collection.insertAsync or collection.findOneAsync
+    const storeResult = async (result) => {
+      result._id = fileId;
+      const _id  = await this.collection.insertAsync(result);
+
+      fileObj = await this.collection.findOneAsync(_id);
+      if (proceedAfterUpload === true) {
+        if (this.onAfterUpload){
+          await this.onAfterUpload.call(this, fileObj);
         }
-      });
+        this.emit('afterUpload', fileObj);
+      }
+      this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
     };
 
-    fs.stat(opts.path, (statError, stats) => {
-      bound(() => {
-        if (statError || !stats.isFile()) {
-          const paths = opts.path.split('/');
-          paths.pop();
-          fs.mkdirSync(paths.join('/'), { recursive: true });
-          fs.writeFileSync(opts.path, '');
-        }
+    // check if the file already exists, otherwise create it
+    let mustCreateFileFirst = false;
+    try {
+      const stats = await fs.promises.stat(opts.path);
+      if (!stats.isFile()) {
+        mustCreateFileFirst = true;
+      }
+    } catch (_statError) {
+      mustCreateFileFirst = true;
+    }
 
-        let isEnded = false;
-        let timer = null;
-        const wStream = fs.createWriteStream(opts.path, {flags: 'w', mode: this.permissions, autoClose: true, emitClose: false });
-        const onEnd = (_error, response) => {
-          if (!isEnded) {
-            if (timer) {
-              Meteor.clearTimeout(timer);
-              timer = null;
-            }
+    if (mustCreateFileFirst) {
+      const paths = opts.path.split('/');
+      paths.pop();
+      await fs.promises.mkdir(paths.join('/'), { recursive: true, mode: this.parentDirPermissions, });
+      await fs.promises.writeFile(opts.path, '', { mode: this.permissions, });
+    }
 
-            isEnded = true;
-            if (response && response.status === 200) {
-              this._debug(`[FilesCollection] [load] Received: ${url}`);
-              const result = this._dataToSchema({
-                name: fileName,
-                path: opts.path,
-                meta: opts.meta,
-                type: opts.type || response.headers.get('content-type') || this._getMimeType({path: opts.path}),
-                size: opts.size || parseInt(response.headers.get('content-length') || 0),
-                userId: opts.userId,
-                extension
-              });
+    const wStream = fs.createWriteStream(opts.path, { flags: fs.constants.O_WRONLY | fs.constants.O_CREAT, mode: this.permissions, autoClose: true, emitClose: false });
+    const controller = new AbortController();
 
-              if (!result.size) {
-                fs.stat(opts.path, (statErrorOnEnd, newStats) => {
-                  bound(() => {
-                    if (statErrorOnEnd) {
-                      callback && callback(statErrorOnEnd);
-                    } else {
-                      result.versions.original.size = (result.size = newStats.size);
-                      storeResult(result, callback);
-                    }
-                  });
-                });
-              } else {
-                storeResult(result, callback);
-              }
-            } else {
-              const error = _error || new Meteor.Error(response?.status || 408, response?.statusText || 'Bad response with empty details');
-              this._debug(`[FilesCollection] [load] [fetch(${url})] Error:`, error);
+    try {
+      let timer;
 
-              if (!wStream.destroyed) {
-                wStream.destroy();
-              }
+      if (opts.timeout && opts.timeout > 0) {
+        timer = setTimeout(() => {
+          controller.abort();
+          throw new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`);
+        }, opts.timeout);
+      }
 
-              fs.unlink(opts.path, (unlinkError) => {
-                bound(() => {
-                  callback && callback(error);
-                  if (unlinkError) {
-                    this._debug(`[FilesCollection] [load] [fetch(${url})] [fs.unlink(${opts.path})] unlinkError:`, unlinkError);
-                  }
-                });
-              });
-            }
-          }
-        };
-
-        let resp = void 0;
-        wStream.on('error', (error) => {
-          bound(() => {
-            onEnd(error);
-          });
-        });
-        wStream.on('close', () => {
-          bound(() => {
-            onEnd(void 0, resp);
-          });
-        });
-        wStream.on('finish', () => {
-          bound(() => {
-            onEnd(void 0, resp);
-          });
-        });
-
-        const controller = new AbortController();
-        fetch(url, {
-          headers: opts.headers || {},
-          signal: controller.signal
-        }).then((res) => {
-          resp = res;
-          res.body.on('error', (error) => {
-            bound(() => {
-              onEnd(error);
-            });
-          });
-          res.body.pipe(wStream);
-        }).catch((fetchError) => {
-          onEnd(fetchError);
-        });
-
-        if (opts.timeout > 0) {
-          timer = Meteor.setTimeout(() => {
-            onEnd(new Meteor.Error(408, `Request timeout after ${opts.timeout}ms`));
-            controller.abort();
-          }, opts.timeout);
-        }
+      const res = await fetch(url, {
+        headers: opts.headers || {},
+        signal: controller.signal
       });
-    });
 
-    return this;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Unexpected response ${res.statusText}`);
+      }
+
+      await pipeline(res.body, wStream);
+
+      const result = this._dataToSchema({
+        name: fileName,
+        path: opts.path,
+        meta: opts.meta,
+        type: opts.type || res.headers.get('content-type') || this._getMimeType({path: opts.path}),
+        size: opts.size || parseInt(res.headers.get('content-length') || 0),
+        userId: opts.userId,
+        extension
+      });
+
+      if (!result.size) {
+        const newStats = await fs.promises.stat(opts.path);
+        result.versions.original.size = (result.size = newStats.size);
+        await storeResult(result);
+      } else {
+        await storeResult(result);
+      }
+      res.body.pipe(wStream);
+    } catch(error){
+      this._debug(`[FilesCollection] [loadAsync] [fetch(${url})] Error:`, error);
+
+      if (fs.existsSync(opts.path)) {
+        await fs.promises.unlink(opts.path);
+      }
+
+      throw error;
+    }
+
+
+    return fileObj;
   }
 
   /**
    * @locus Server
    * @memberOf FilesCollection
    * @name addFile
-   * @param {String} path          - Path to file
-   * @param {String} opts          - [Optional] Object with file-data
-   * @param {String} opts.type     - [Optional] File mime-type
+   * @param {string} path          - Path to file
+   * @param {AddFileOpts} [opts]   - [Optional] Object with file-data
+   * @param {string} opts.type     - [Optional] File mime-type
    * @param {Object} opts.meta     - [Optional] File additional meta-data
-   * @param {String} opts.fileId   - _id, sanitized, max-length: 20 symbols default *null*
-   * @param {Object} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
-   * @param {String} opts.userId   - [Optional] UserId, default *null*
-   * @param {Function} callback    - [Optional] function(error, fileObj){...}
-   * @param {Boolean} proceedAfterUpload - Proceed onAfterUpload hook
+   * @param {string} opts.fileId   - [optional] _id, sanitized, max-length: 20 symbols default *null*
+   * @param {string} opts.fileName - [Optional] File name, if not specified file name and extension will be taken from path
+   * @param {string} opts.userId   - [Optional] UserId, default *null*
+   * @param {boolean} proceedAfterUpload - Proceed onAfterUpload hook
    * @summary Add file from FS to FilesCollection
-   * @returns {FilesCollection} Instance
+   * @throws {Meteor.Error} If file does not exist (400) or collection is public (403)
+   * @returns {Promise<FileObj>} Instance
    */
-  addFile(path, _opts = {}, _callback, _proceedAfterUpload) {
+  async addFile(path, _opts = {}, _proceedAfterUpload) {
     this._debug(`[FilesCollection] [addFile(${path})]`);
     let opts = _opts;
-    let callback = _callback;
     let proceedAfterUpload = _proceedAfterUpload;
-
-    if (helpers.isFunction(opts)) {
-      proceedAfterUpload = callback;
-      callback = opts;
-      opts = {};
-    } else if (helpers.isBoolean(callback)) {
-      proceedAfterUpload = callback;
-    } else if (helpers.isBoolean(opts)) {
-      proceedAfterUpload = opts;
-    }
 
     if (this.public) {
       throw new Meteor.Error(403, 'Can not run [addFile] on public collection! Just Move file to root of your server, then add record to Collection');
     }
 
     check(path, String);
+    /* eslint-disable new-cap */
     check(opts, Match.Optional(Object));
-    check(callback, Match.Optional(Function));
     check(proceedAfterUpload, Match.Optional(Boolean));
+    /* eslint-enable new-cap */
 
-    fs.stat(path, (statErr, stats) => bound(() => {
-      if (statErr) {
-        callback && callback(statErr);
-      } else if (stats.isFile()) {
-        if (!helpers.isObject(opts)) {
-          opts = {};
-        }
-        opts.path = path;
-
-        if (!opts.fileName) {
-          const pathParts = path.split(nodePath.sep);
-          opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
-        }
-
-        const {extension} = this._getExt(opts.fileName);
-
-        if (!helpers.isString(opts.type)) {
-          opts.type = this._getMimeType(opts);
-        }
-
-        if (!helpers.isObject(opts.meta)) {
-          opts.meta = {};
-        }
-
-        if (!helpers.isNumber(opts.size)) {
-          opts.size = stats.size;
-        }
-
-        const result = this._dataToSchema({
-          name: opts.fileName,
-          path,
-          meta: opts.meta,
-          type: opts.type,
-          size: opts.size,
-          userId: opts.userId,
-          extension,
-          _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
-          fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null
-        });
-
-
-        this.collection.insert(result, (insertErr, _id) => {
-          if (insertErr) {
-            callback && callback(insertErr);
-            this._debug(`[FilesCollection] [addFile] [insert] Error: ${result.name} -> ${this.collectionName}`, insertErr);
-          } else {
-            const fileRef = this.collection.findOne(_id);
-            callback && callback(null, fileRef);
-            if (proceedAfterUpload === true) {
-              this.onAfterUpload && this.onAfterUpload.call(this, fileRef);
-              this.emit('afterUpload', fileRef);
-            }
-            this._debug(`[FilesCollection] [addFile]: ${result.name} -> ${this.collectionName}`);
-          }
-        });
-      } else {
-        callback && callback(new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`));
+    let stats;
+    try {
+      stats = await fs.promises.stat(path);
+    } catch (statErr) {
+      if (statErr.code === 'ENOENT') {
+        throw new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`);
       }
-    }));
-    return this;
+      throw new Meteor.Error(statErr.code, statErr.message);
+    }
+
+    if (!stats.isFile()) {
+      throw new Meteor.Error(400, `[FilesCollection] [addFile(${path})]: File does not exist`);
+    }
+
+    if (!helpers.isObject(opts)) {
+      opts = {};
+    }
+    opts.path = path;
+
+    if (!opts.fileName) {
+      const pathParts = path.split(nodePath.sep);
+      opts.fileName = path.split(nodePath.sep)[pathParts.length - 1];
+    }
+
+    const { extension } = this._getExt(opts.fileName);
+
+    if (!helpers.isString(opts.type)) {
+      opts.type = this._getMimeType(opts);
+    }
+
+    if (!helpers.isObject(opts.meta)) {
+      opts.meta = {};
+    }
+
+    if (!helpers.isNumber(opts.size)) {
+      opts.size = stats.size;
+    }
+
+    const result = this._dataToSchema({
+      name: opts.fileName,
+      path,
+      meta: opts.meta,
+      type: opts.type,
+      size: opts.size,
+      userId: opts.userId,
+      extension,
+      _storagePath: path.replace(`${nodePath.sep}${opts.fileName}`, ''),
+      fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
+    });
+
+    let _id;
+    try {
+      _id = await this.collection.insertAsync(result);
+    } catch (insertErr) {
+      this._debug(`[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`, insertErr);
+      throw new Meteor.Error(insertErr.code, insertErr.message);
+    }
+
+    const fileObj = await this.collection.findOneAsync(_id);
+
+    if (proceedAfterUpload === true) {
+      this.onAfterUpload && await this.onAfterUpload.call(this, fileObj);
+      this.emit('afterUpload', fileObj);
+    }
+    this._debug(`[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`);
+    return fileObj;
   }
 
   /**
    * @locus Anywhere
    * @memberOf FilesCollection
-   * @name remove
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Function} callback - Callback with one `error` argument
+   * @name removeAsync
+   * @param {MeteorFilesSelector} [selector] - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
+   * @throws {Meteor.Error} If cursor is empty
    * @summary Remove documents from the collection
-   * @returns {FilesCollection} Instance
+   * @returns {Promise<Number>} number of matched and removed files/records
    */
-  remove(selector, callback) {
-    this._debug(`[FilesCollection] [remove(${JSON.stringify(selector)})]`);
+  async removeAsync(selector) {
+    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
     if (selector === void 0) {
       return 0;
     }
-    check(callback, Match.Optional(Function));
 
-    const files = this.collection.find(selector);
-    if (files.count() > 0) {
-      files.forEach((file) => {
-        this.unlink(file);
-      });
-    } else {
-      callback && callback(new Meteor.Error(404, 'Cursor is empty, no files is removed'));
-      return this;
+    const files = this.find(selector);
+    const count = await files.countDocuments();
+
+    if (count > 0) {
+      if (this.onAfterRemove) {
+        const docs = await files.fetchAsync();
+        await this.collection.removeAsync(selector);
+
+        if (!(await this.onAfterRemove(docs))) {
+          let i = 0;
+          for (; i < docs.length; i++) {
+            await this.unlinkAsync(docs[i]);
+          }
+        }
+      } else {
+        await files.forEachAsync(async (file) => {
+          await this.unlinkAsync(file);
+        });
+        await this.collection.removeAsync(selector);
+      }
     }
 
-    if (this.onAfterRemove) {
-      const docs = files.fetch();
-      const self = this;
-      this.collection.remove(selector, function () {
-        callback && callback.apply(this, arguments);
-        self.onAfterRemove(docs);
-      });
-    } else {
-      this.collection.remove(selector, (callback || noop));
-    }
-    return this;
+    return count;
   }
 
   /**
@@ -1662,7 +1691,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name denyClient
    * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-deny
-   * @summary Shorthands for Mongo.Collection deny method
+   * @summary Shorthand for Mongo.Collection deny method
    * @returns {Mongo.Collection} Instance
    */
   denyClient() {
@@ -1679,7 +1708,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name allowClient
    * @see https://docs.meteor.com/api/collections.html#Mongo-Collection-allow
-   * @summary Shorthands for Mongo.Collection allow method
+   * @summary Shorthand for Mongo.Collection allow method
    * @returns {Mongo.Collection} Instance
    */
   allowClient() {
@@ -1696,14 +1725,16 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name unlink
-   * @param {Object} fileRef - fileObj
-   * @param {String} version - [Optional] file's version
-   * @param {Function} callback - [Optional] callback function
+   * @param {fileObj} fileRef - fileObj
+   * @param {string} [version] - [Optional] file's version
+   * @param {function} [callback] - [Optional] callback function
    * @summary Unlink files and it's versions from FS
+   * @deprecated since v3.0.0. use {@link FilesCollection#unlinkAsync} instead.
    * @returns {FilesCollection} Instance
    */
   unlink(fileRef, version, callback) {
     this._debug(`[FilesCollection] [unlink(${fileRef._id}, ${version})]`);
+    Meteor.deprecate('FilesCollection#unlink() is deprecated! Use `unlinkAsync` instead');
     if (version) {
       if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
         fs.unlink(fileRef.versions[version].path, (callback || noop));
@@ -1717,6 +1748,43 @@ class FilesCollection extends FilesCollectionCore {
         }
       } else {
         fs.unlink(fileRef.path, (callback || noop));
+      }
+    }
+    return this;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name unlinkAsync
+   * @param {fileObj} fileRef - fileObj
+   * @param {string} [version] - file's version
+   * @summary Remove files and all it's versions from FS, or only particular version of `version` param is passed
+   * @returns {Promise<FilesCollection>} Instance
+   */
+  async unlinkAsync(fileRef, version) {
+    this._debug(`[FilesCollection] [unlinkAsync(${fileRef._id}, ${version})]`);
+    if (version) {
+      if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
+        await fs.promises.unlink(fileRef.versions[version].path);
+      }
+    } else {
+      if (helpers.isObject(fileRef.versions)) {
+        for(let vKey in fileRef.versions) {
+          if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
+            try {
+              await fs.promises.unlink(fileRef.versions[vKey].path);
+            } catch (unlinkError) {
+              this._debug('[FilesCollection] [unlinkAsync] [versions] Caught silent error', unlinkError);
+            }
+          }
+        }
+      } else {
+        try {
+          await fs.promises.unlink(fileRef.path);
+        } catch (unlinkError) {
+          this._debug('[FilesCollection] [unlinkAsync] Caught silent error', unlinkError);
+        }
       }
     }
     return this;
@@ -1749,13 +1817,13 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name download
-   * @param {Object} http    - Server HTTP object
-   * @param {String} version - Requested file version
-   * @param {Object} fileRef - Requested file Object
+   * @param {ContextHTTP} http - Server HTTP object
+   * @param {string} version - Requested file version
+   * @param {fileObj} fileRef - Requested file Object
    * @summary Initiates the HTTP response
-   * @returns {undefined}
+   * @returns {Promise<undefined>}
    */
-  download(http, version = 'original', fileRef) {
+  async download(http, version = 'original', fileRef) {
     let vRef;
     this._debug(`[FilesCollection] [download(${http.request.originalUrl}, ${version})]`);
 
@@ -1773,31 +1841,37 @@ class FilesCollection extends FilesCollectionCore {
     if (!vRef || !helpers.isObject(vRef)) {
       return this._404(http);
     } else if (fileRef) {
-      if (helpers.isFunction(this.downloadCallback) && !this.downloadCallback.call(Object.assign(http, this._getUser(http)), fileRef)) {
+      if (helpers.isFunction(this.downloadCallback) && !(await this.downloadCallback(Object.assign(http, this._getUser(http)), fileRef))) {
         return this._404(http);
       }
 
-      if (this.interceptDownload && helpers.isFunction(this.interceptDownload) && this.interceptDownload(http, fileRef, version) === true) {
+      if (this.interceptDownload && helpers.isFunction(this.interceptDownload) && (await this.interceptDownload(http, fileRef, version)) === true) {
         return void 0;
       }
 
-      fs.stat(vRef.path, (statErr, stats) => bound(() => {
-        let responseType;
-        if (statErr || !stats.isFile()) {
+      let stats;
+
+      try {
+        stats = await fs.promises.stat(vRef.path);
+      } catch (statErr){
+        if (statErr) {
           return this._404(http);
         }
+      }
+      if (!stats.isFile()) {
+        return this._404(http);
+      }
+      let responseType;
 
-        if ((stats.size !== vRef.size) && !this.integrityCheck) {
-          vRef.size = stats.size;
-        }
+      if (stats.size !== vRef.size && !this.integrityCheck) {
+        vRef.size = stats.size;
+      }
 
-        if ((stats.size !== vRef.size) && this.integrityCheck) {
-          responseType = '400';
-        }
+      if (stats.size !== vRef.size && this.integrityCheck) {
+        responseType = '400';
+      }
 
-        return this.serve(http, fileRef, vRef, version, null, (responseType || '200'));
-      }));
-      return void 0;
+      return this.serve(http, fileRef, vRef, version, null, responseType || '200');
     }
     return this._404(http);
   }
@@ -1806,18 +1880,18 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name serve
-   * @param {Object} http    - Server HTTP object
-   * @param {Object} fileRef - Requested file Object
-   * @param {Object} vRef    - Requested file version Object
-   * @param {String} version - Requested file version
+   * @param {ContextHTTP} http - Server HTTP object
+   * @param {fileObj} fileRef - Requested file Object
+   * @param {Object} vRef - Requested file version Object
+   * @param {string} version - Requested file version
    * @param {stream.Readable|null} readableStream - Readable stream, which serves binary file data
-   * @param {String} responseType - Response code
-   * @param {Boolean} force200 - Force 200 response code over 206
+   * @param {string} responseType - Response code
+   * @param {boolean} force200 - Force 200 response code over 206
    * @summary Handle and reply to incoming request
    * @returns {undefined}
    */
   serve(http, fileRef, vRef, version = 'original', readableStream = null, _responseType = '200', force200 = false) {
-    let partiral = false;
+    let partial = false;
     let reqRange = false;
     let dispositionType = '';
     let start;
@@ -1825,7 +1899,7 @@ class FilesCollection extends FilesCollectionCore {
     let take;
     let responseType = _responseType;
 
-    if (http.params.query.download && (http.params.query.download === 'true')) {
+    if (http.params?.query?.download && (http.params.query.download === 'true')) {
       dispositionType = 'attachment; ';
     } else {
       dispositionType = 'inline; ';
@@ -1839,7 +1913,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (http.request.headers.range && !force200) {
-      partiral = true;
+      partial = true;
       const array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
       start = parseInt(array[1]);
       end = parseInt(array[2]);
@@ -1853,7 +1927,7 @@ class FilesCollection extends FilesCollectionCore {
       take = vRef.size;
     }
 
-    if (partiral || (http.params.query.play && (http.params.query.play === 'true'))) {
+    if (partial || (http.params?.query?.play && (http.params.query.play === 'true'))) {
       reqRange = {start, end};
       if (isNaN(start) && !isNaN(end)) {
         reqRange.start = end - take;
@@ -1918,7 +1992,7 @@ class FilesCollection extends FilesCollectionCore {
             } else if (typeof stream.destroy === 'function') {
               stream.destroy('Got to close this stream', closeStreamCb);
             }
-          } catch (closeStreamError) {
+          } catch (_closeStreamError) {
             // Perhaps one of the method has thrown an error
             // or stream has been already ended/closed/exhausted
           }
@@ -1958,7 +2032,7 @@ class FilesCollection extends FilesCollectionCore {
     switch (responseType) {
     case '400':
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [400] Content-Length mismatch!`);
-      var text = 'Content-Length mismatch!';
+      const text = 'Content-Length mismatch!';
 
       if (!http.response.headersSent) {
         http.response.writeHead(400, {
@@ -1988,7 +2062,7 @@ class FilesCollection extends FilesCollectionCore {
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
       }
-      respond(readableStream || fs.createReadStream(vRef.path, {start: reqRange.start, end: reqRange.end}), 206);
+      respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
       break;
     default:
       if (!http.response.headersSent) {
@@ -2001,4 +2075,4 @@ class FilesCollection extends FilesCollectionCore {
   }
 }
 
-export { FilesCollection, helpers };
+export { FilesCollection, WriteStream, helpers };

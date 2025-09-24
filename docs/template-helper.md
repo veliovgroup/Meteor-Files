@@ -1,21 +1,21 @@
 ### Template Helper `fileURL` [*Client*]
 
 ```js
-import { Meteor }          from 'meteor/meteor';
-import { Template }        from 'meteor/templating';
+import { Meteor } from 'meteor/meteor';
+import { Template } from 'meteor/templating';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const Files = new FilesCollection({collectionName: 'Files'});
+const files = new FilesCollection({ collectionName: 'Files' });
 
 if (Meteor.isClient) {
   Meteor.subscribe('files.all');
 
   Template.example.helpers({
-    fileRef: Files.collection.findOne({})
+    fileRef: files.collection.findOne({})
   });
 } else {
   Meteor.publish('files.all', function () {
-    return Files.collection.find({});
+    return files.collection.find({});
   });
 }
 ```

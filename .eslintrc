@@ -9,6 +9,7 @@
     "browser": false
   },
   "globals": {
+    "Meteor": true,
     "Package": true,
     "Tinytest": true,
     "Map": true,
@@ -18,6 +19,10 @@
     "Worker": true,
     "navigator": true
   },
+  "ignorePatterns": [
+    "worker.*",
+    "node_modules"
+  ],
   "rules": {
     "strict": [2, "never"],
     "no-shadow": 2,
