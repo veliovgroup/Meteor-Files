@@ -56,18 +56,7 @@ Meteor-Files library features and highlights
 
 ### API:
 
-- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Isomorphic*]
-- [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload file(s) from client to server
-  - [`FileUpload#pipe()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#piping)
-- [`write()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/write.md) [*Server*] - Write `Buffer` to FS and FilesCollection
-- [`load()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/load.md) [*Server*] - Write file to FS and FilesCollection from remote URL
-- [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
-- [`findOne()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md) [*Isomorphic*] - Find one file in FilesCollection; Returns [`FileCursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
-- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Isomorphic*] - Create cursor for FilesCollection; Returns [`File__s__Cursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
-- [`remove()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/remove.md) [*Isomorphic*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
-- [`unlink()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlink.md) [*Server*] - "Unlink" (e.g. remove) file from FS
-- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Isomorphic*] - Generate downloadable link
-- [`collection`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md) [*Isomorphic*] - `Meteor.Collection` instance
+- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Anywhere*]
 - [Template helper `fileURL`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/template-helper.md) [*Client*] - Generate downloadable link in a template
 - Initialize FilesCollection
   - [SimpleSchema Integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#attach-schema-isomorphic)
@@ -77,22 +66,22 @@ Meteor-Files library features and highlights
   - [Control remove access](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeremove-to-avoid-unauthorized-remove)
   - [Custom response headers](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#custom-response-headers) for CORS or anything else
 - [`FileCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) - Instance of this class is returned from [`.findOne()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md) method
-  - `remove(callback)` - {*undefined*} - Remove document
-  - `link()` - {*String*} - Returns downloadable URL to File
-  - `get(property)` - {*Object*|*mix*} - Returns current document as a plain Object
-  - `fetch()` - {[*Object*]}- Returns current document as plain Object in Array
+  - `removeAsync()` - {*Promise<number>*} - Remove document, resolves to number of removed records
+  - `link()` - {*string*} - Returns downloadable URL to File
+  - `get(property)` - {*object*|*mix*} - Returns current document as a plain object
+  - `fetchAsync()` - {*Promise<object[]>*} - Resolves to current document as plain object in Array
   - `with()` - {*FileCursor*} - Returns reactive version of current FileCursor
+  - [__See all *FileCursor* methods__](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
 - [`FilesCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md) - Instance of this class is returned from [`.find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) method
-  - `fetch()` - {*[Object]*} - Returns all matching document(s) as an Array
-  - `count()` - {*Number*} - Returns the number of documents that match a query
-  - `remove(callback)` - {*undefined*} - Removes all documents that match a query
-  - `forEach(callback, context)` - {*undefined*} - Call `callback` once for each matching document
-  - `each()` - {*[FileCursor]*} - Returns an Array of `FileCursor` made for each document on current Cursor
-  - `observe(callbacks)` - {*Object*} - Functions to call to deliver the result set as it changes
-  - `observeChanges(callbacks)` - {*Object*} - Watch a query. Receive callbacks as the result set changes
-  - [See all methods](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+  - `fetchAsync()` - {*Promise<object[]>*} - Returns all matching document(s) as an Array
+  - `countAsync()` - {*Promise<Number>*} - Returns the number of documents that match a query
+  - `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query, resolves to a number of removed records
+  - `forEachAsync(callback, context)` - {*undefined*} - Call `callback` once for each matching document
+  - `eachAsync()` - {*Promise<FileCursor[]>*} - Resolves to Array of `FileCursor` made for each document on current Cursor
+  - `observeAsync(callbacks)` - {*Promise<object>*} - Functions to call to deliver the result set as it changes
+  - `observeChangesAsync(callbacks)` - {*Promise<object>*} - Watch a query. Receive callbacks as the result set changes
+  - [__See all *FilesCursor* methods__](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
 - [Default Collection Schema](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema)
-  - [Attach SimpleSchema and Collection2](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#attach-schema-recommended)
   - [Extend Schema](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#extend-default-schema)
   - [Override Schema](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#pass-your-own-schema-not-recommended)
 
