@@ -103,12 +103,25 @@ export class FileCursor {
   /**
    * Returns a reactive version of the current FileCursor by merging in reactive fields.
    * Useful for Blaze template helpers (e.g. `{{#with}}`).
-   * @locus Anywhere
+   * @locus Client
    * @returns {FileCursor}
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
     const reactiveProps = this._collection.collection.findOne(this._fileRef._id);
+    Object.assign(this, reactiveProps);
+    return this;
+  }
+
+  /**
+   * Returns a reactive version of the current FileCursor by merging in reactive fields.
+   * Useful for Blaze template helpers (e.g. `{{#with}}`).
+   * @locus Anywhere
+   * @returns {Promise<FileCursor>}
+   */
+  async withAsync() {
+    this._collection._debug('[FilesCollection] [FileCursor] [withAsync()]');
+    const reactiveProps = await this._collection.collection.findOneAsync(this._fileRef._id);
     Object.assign(this, reactiveProps);
     return this;
   }
