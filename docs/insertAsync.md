@@ -348,6 +348,15 @@ Configure upload behavior and adjust its settings via *InsertOptions*
     </tr>
     <tr>
       <td align="right">
+        `remainingTime` {*ReactiveVar*}
+      </td>
+      <td>
+        Remaining upload time in human-readable format <strong>hh:mm:ss</strong>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td align="right">
         `estimateTime` {*ReactiveVar*}
       </td>
       <td>
