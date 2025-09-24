@@ -450,6 +450,7 @@ declare module 'meteor/ostrio:files' {
     fetch(): FileObj[];
     fetchAsync(): Promise<FileObj[]>;
     with(): FileCursor;
+    withAsync(): Promise<FileCursor>;
   }
 
   /**
