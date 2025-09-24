@@ -1,12 +1,19 @@
 # Insert; Upload
 
-__Insert and upload are available only from a *Client*/*Browser*/*Cordova*/etc.__
+Upload file to a Server via DDP or HTTP. __Insert and upload are available only from a *Client*/*Browser*/*Cordova*/etc.__
 
 ```ts
-const upload: UploadInstance = FilesCollection#insert(settings: InsertOptions, autoStart: boolean); //[*Client*]
+const upload: UploadInstance = await FilesCollection#insertAsync(settings: InsertOptions, autoStart: boolean); //[*Client*]
 ```
 
-Upload file to a Server via DDP or HTTP.
+- [*InsertOptions* in detail](#insertoptions)
+- [*FileUpload* instance methods and properties](#fileupload)
+- [*FileUpload* events map](#fileupload-events-map)
+- [Examples](#examples)
+
+## InsertOptions
+
+Configure upload behavior and adjust its settings via *InsertOptions*
 
 <table>
   <thead>
@@ -234,17 +241,19 @@ Upload file to a Server via DDP or HTTP.
         Start upload immediately
       </td>
       <td>
-        If set to `false` `.insert()` method will return `FileUpload` class instance with `.start()` method that needs to get called to actually start an upload.<br>
+        If set to `false` `.insertAsync()` method will return `FileUpload` class instance with `.start()` method that needs to get called to actually start an upload.<br>
         Set to `false` to set *EventListeners* before starting and upload. Default: `true`<br>
-        When set to `true` (*default*) `.insert()` method will return `UploadInstance` class instance, where `UploadInstance.result` will be `FileUpload` class instance
+        When set to `true` (*default*) `.insertAsync()` method will return `UploadInstance` class instance, where `UploadInstance.result` will be `FileUpload` class instance
       </td>
     </tr>
   </tbody>
 </table>
 
-`FilesCollection#insert().start()` method returns `FileUpload` class instance. __Note__: same instance is used *context* in all callback functions (*see above*)
+`await FilesCollection#insertAsync().start()` method returns `FileUpload` class instance. __Note__: same instance is used *context* in all callback functions (*see above*)
 
 ## `FileUpload`
+
+*FileUpload* instance properties and methods:
 
 <table>
   <thead>
@@ -266,7 +275,7 @@ Upload file to a Server via DDP or HTTP.
         `file` {*File*}
       </td>
       <td>
-        Source file passed into `insert()` method
+        Source file passed into `insertAsync()` method
       </td>
       <td></td>
     </tr>
@@ -546,7 +555,7 @@ The `fileData` object (*see above*):
 
 ## Examples
 
-Upload form and `.insert()` method examples
+Upload form and `.insertasync()` method examples
 
 ### Upload form:
 
@@ -591,13 +600,13 @@ Template.uploadForm.helpers({
 });
 
 Template.uploadForm.events({
-  'change #fileInput'(e, template) {
+  async 'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // there was multiple files selected
       const file = e.currentTarget.files[0];
 
-      imagesCollection.insert({
+      await imagesCollection.insertAsync({
         file: file,
         onStart() {
           template.currentFile.set(this);
@@ -626,11 +635,11 @@ import { Template } from 'meteor/templating';
 import { imagesCollection } from '/imports/collections/images.js';
 
 Template.uploadForm.events({
-  'change #fileInput'(e, template) {
+ async 'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
-      imagesCollection.insert({
+      const uploader = await imagesCollection.insertAsync({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false).on('start', function () {
@@ -642,7 +651,9 @@ Template.uploadForm.events({
           alert(`File "${fileObj.name}" successfully uploaded`);
         }
         template.currentFile.set(false);
-      }).start();
+      });
+
+      await uploader.start();
     }
   }
 });
@@ -657,9 +668,9 @@ import { Template } from 'meteor/templating';
 import { imagesCollection } from '/imports/collections/images.js';
 
 Template.uploadForm.events({
-  'change #fileInput'(e, template) {
+  async 'change #fileInput'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      const uploader = imagesCollection.insert({
+      const uploader = await imagesCollection.insertAsync({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false);
@@ -682,7 +693,7 @@ Template.uploadForm.events({
         alert('Error during upload: ' + error);
       });
 
-      uploader.start();
+      await uploader.start();
     }
   }
 });
@@ -694,21 +705,21 @@ Template.uploadForm.events({
 import { imagesCollection } from '/imports/collections/images.js';
 
 // As dataURI
-imagesCollection.insert({
+await imagesCollection.insertAsync ({
   file: 'data:image/png,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As base64:
-imagesCollection.insert({
+await imagesCollection.insertAsync({
   file: 'image/png,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As plain base64:
-imagesCollection.insert({
+await imagesCollection.insertAsync({
   file: 'base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png', // <— Mandatory
@@ -733,14 +744,16 @@ const zip = function zip(data) {
 };
 
 Template.uploadForm.events({
-  'change #fileInput'(e) {
+  async 'change #fileInput'(e) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // multiple files were selected
-      imagesCollection.insert({
+      const uploader = await imagesCollection.insertAsync({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
-      }, false).pipe(encrypt).pipe(zip).start();
+      }, false).pipe(encrypt).pipe(zip);
+
+      await uploader.start();
     }
   }
 });

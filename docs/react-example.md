@@ -57,7 +57,7 @@ class FileUploadComponent extends Component {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
       // We upload only one file, in case
       // there was multiple files selected
-      var file = e.currentTarget.files[0];
+      const file = e.currentTarget.files[0];
 
       if (file) {
         let uploadInstance = UserFiles.insert({

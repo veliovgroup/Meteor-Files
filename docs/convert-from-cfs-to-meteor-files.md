@@ -17,18 +17,14 @@ __Note__: this creates copies of the files on your local server, make sure there
 I use docker containers, so the files get wiped out on the next container deployment which is why we don't bother deleting them.
 
 ```js
-let bound = Meteor.bindEnvironment(function (callback) {
-  return callback();
-});
-
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 
 // s3 specific configuration, knox npm must be installed
 let client = knox.createClient({
-  key: Meteor.settings.s3.key,
-  secret: Meteor.settings.s3.secret,
-  bucket: Meteor.settings.s3.bucket,
-  region: Meteor.settings.s3.region
+  key: Meteor.settings.app.s3.key,
+  secret: Meteor.settings.app.s3.secret,
+  bucket: Meteor.settings.app.s3.bucket,
+  region: Meteor.settings.app.s3.region
 });
 
 
@@ -84,34 +80,32 @@ Docs.find().forEach(function (fileObj) {
         let filePath = "files/" + (Random.id()) + "-" + version + "." + fileRef.extension;
 
         client.putFile(fileName, filePath, {"x-amz-server-side-encryption": "AES256"}, function (error, res) {
-          bound(function () {
-            let upd;
+          let upd;
 
-            if (error) {
-              console.error(error);
-            } else {
-              upd = {
-                $set: {}
-              };
+          if (error) {
+            console.error(error);
+          } else {
+            upd = {
+              $set: {}
+            };
 
-              upd['$set']["versions." + version + ".meta.pipeFrom"] = Meteor.settings.s3.cfdomain + '/' + filePath;
-              upd['$set']["versions." + version + ".meta.pipePath"] = filePath;
+            upd['$set'][`versions.${version}.meta.pipeFrom`] = Meteor.settings.app.s3.cfdomain + '/' + filePath;
+            upd['$set'][`versions.${version}.meta.pipePath`] = filePath;
 
-              // Update the location and unlink the file from the FS
-              UserFiles.update({
-                _id: fileRef._id
-              }, upd, function (error) {
+            // Update the location and unlink the file from the FS
+            UserFiles.update({
+              _id: fileRef._id
+            }, upd, function (error) {
 
-                if (error) {
-                  console.error(error);
-                } else {
-                  // Unlink original files from FS
-                  // after successful upload to AWS:S3
-                  UserFiles.unlink(UserFiles.findOne(fileRef._id), version);
-                }
-              });
-            }
-          });
+              if (error) {
+                console.error(error);
+              } else {
+                // Unlink original files from FS
+                // after successful upload to AWS:S3
+                UserFiles.unlink(UserFiles.findOne(fileRef._id), version);
+              }
+            });
+          }
         });
       }
     });

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { formatFleURL, helpers } from './lib.js';
+import { formatFileURL, helpers } from './lib.js';
 import { FilesCursor, FileCursor } from './cursor.js';
 
 export default class FilesCollectionCore extends EventEmitter {
@@ -96,57 +96,58 @@ export default class FilesCollectionCore extends EventEmitter {
     }
   };
 
-  /*
+  /**
+   * Print logs in debug mode.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _debug
-   * @summary Print logs in debug mode
    * @returns {void}
    */
-  _debug() {
+  _debug(...args) {
     if (this.debug) {
-      (console.info || console.log || function () { }).apply(void 0, arguments);
+      // eslint-disable-next-line no-console
+      (console.info || console.log || function () {}).apply(undefined, args);
     }
   }
 
-  /*
+  /**
+   * Returns file's name.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _getFileName
-   * @param {Object} fileData - File Object
-   * @summary Returns file's name
-   * @returns {String}
+   * @param {FileData} fileData - File data object
+   * @returns {string} The sanitized file name
    */
   _getFileName(fileData) {
     const fileName = fileData.name || fileData.fileName;
-    if (helpers.isString(fileName) && (fileName.length > 0)) {
-      return (fileData.name || fileData.fileName).replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
+    if (helpers.isString(fileName) && fileName.length > 0) {
+      return fileName.replace(/^\.\.+/, '').replace(/\.{2,}/g, '.').replace(/\//g, '');
     }
     return '';
   }
 
-  /*
+  /**
+   * Extracts extension information from a file name.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _getExt
-   * @param {String} FileName - File name
-   * @summary Get extension from FileName
-   * @returns {Object}
+   * @param {string} fileName - The file name
+   * @returns {Partial<FileData>} An object with properties: ext, extension, and extensionWithDot
    */
   _getExt(fileName) {
     if (fileName.includes('.')) {
-      const extension = (fileName.split('.').pop().split('?')[0] || '').toLowerCase().replace(/([^a-z0-9\-\_\.]+)/gi, '').substring(0, 20);
+      const extension = (fileName.split('.').pop().split('?')[0] || '')
+        .toLowerCase()
+        .replace(/([^a-z0-9\-\_\.]+)/gi, '')
+        .substring(0, 20);
       return { ext: extension, extension, extensionWithDot: `.${extension}` };
     }
     return { ext: '', extension: '', extensionWithDot: '' };
   }
 
-  /*
+  /**
+   * Classifies the file based on its MIME type.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _updateFileTypes
-   * @param {Object} data - File data
-   * @summary Internal method. Classify file based on 'type' field
+   * @param {Partial<FileObj>} data - File data object
+   * @returns {void}
    */
   _updateFileTypes(data) {
     data.isVideo = /^video\//i.test(data.type);
@@ -157,13 +158,12 @@ export default class FilesCollectionCore extends EventEmitter {
     data.isPDF = /^application\/(x-)?pdf$/i.test(data.type);
   }
 
-  /*
+  /**
+   * Builds an object that conforms to the default schema from file data.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name _dataToSchema
-   * @param {Object} data - File data
-   * @summary Internal method. Build object in accordance with default schema from File data
-   * @returns {Object}
+   * @param {FileData & Partial<FileObj>} data - File data combined with optional FileObj properties
+   * @returns {Partial<FileObj>} The schema-compliant file object
    */
   _dataToSchema(data) {
     const ds = {
@@ -190,7 +190,7 @@ export default class FilesCollectionCore extends EventEmitter {
       _collectionName: data._collectionName || this.collectionName
     };
 
-    //Optional fileId
+    // Optional fileId
     if (data.fileId) {
       ds._id = data.fileId;
     }
@@ -200,74 +200,143 @@ export default class FilesCollectionCore extends EventEmitter {
     return ds;
   }
 
-  /*
+  /**
+   * Finds and returns a FileCursor for a matching document asynchronously.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name findOne
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Object} options - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching document Object
-   * @returns {FileCursor} Instance
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {Promise<FileCursor|null>} A FileCursor instance, or null if not found
    */
-  findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+  async findOneAsync(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOneAsync(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
+
+    const doc = await this.collection.findOneAsync(selector, options);
+    if (doc) {
+      return new FileCursor(doc, this);
+    }
+    return null;
+  }
+
+  /**
+   * Finds and returns a FileCursor for a matching document (client only).
+   * @locus Client
+   * @memberOf FilesCollectionCore
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FileCursor|null} A FileCursor instance, or null if not found
+   * @throws {Meteor.Error} If called on the server
+   */
+  findOne(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`, Meteor.isServer);
+    if (Meteor.isServer) {
+      throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
+    }
+    /* eslint-disable new-cap */
+    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     const doc = this.collection.findOne(selector, options);
     if (doc) {
       return new FileCursor(doc, this);
     }
-    return doc;
+    return null;
   }
 
-  /*
+  /**
+   * Finds and returns a FilesCursor for matching documents.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name find
-   * @param {String|Object} selector - Mongo-Style selector (http://docs.meteor.com/api/collections.html#selectors)
-   * @param {Object}        options  - Mongo-Style selector Options (http://docs.meteor.com/api/collections.html#sortspecifiers)
-   * @summary Find and return Cursor for matching documents
-   * @returns {FilesCursor} Instance
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FilesCursor} A FilesCursor instance
    */
   find(selector = {}, options) {
     this._debug(`[FilesCollection] [find(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
     check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
     check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
 
     return new FilesCursor(selector, options, this);
   }
 
-  /*
-   * @locus Anywhere
+  /**
+   * Links to the underlying Mongo.Collection update method.
+   * @locus Client
    * @memberOf FilesCollectionCore
-   * @name update
-   * @see http://docs.meteor.com/#/full/update
-   * @summary link Mongo.Collection update method
-   * @returns {Mongo.Collection} Instance
+   * @param {...*} args - Update method arguments
+   * @returns {Mongo.Collection} The underlying collection
    */
-  update() {
-    this.collection.update.apply(this.collection, arguments);
+  update(...args) {
+    this.collection.update.apply(this.collection, args);
     return this.collection;
   }
 
-  /*
+  /**
+   * Links to the underlying Mongo.Collection updateAsync method.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @name link
-   * @param {Object} fileRef - File reference object
-   * @param {String} version - Version of file you would like to request
-   * @param {String} uriBase - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
-   * @summary Returns downloadable URL
-   * @returns {String} Empty string returned in case if file not found in DB
+   * @param {...*} args - Update method arguments
+   * @returns {Promise<number>} The number of updated records
    */
-  link(fileRef, version = 'original', uriBase) {
-    this._debug(`[FilesCollection] [link(${(helpers.isObject(fileRef) ? fileRef._id : void 0)}, ${version})]`);
-    check(fileRef, Object);
+  async updateAsync(...args) {
+    return await this.collection.updateAsync.apply(this.collection, args);
+  }
 
-    if (!fileRef) {
+  /**
+   * Counts records matching a selector.
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
+   * @param {MeteorFilesSelector} [_selector={}] - Mongo-style selector
+   * @param {Mongo.CountDocumentsOptions} [options] - Mongo's CountDocumentsOptions
+   * @returns {Promise<number>} The number of matching records
+   */
+  async countDocuments(_selector = {}, options) {
+    this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(_selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
+    check(_selector, Match.Optional(Match.OneOf(Object, String)));
+    check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
+    const selector = typeof _selector === 'string' && _selector.length ? { _id: _selector } : _selector;
+    return await this.collection.countDocuments(selector, options);
+  }
+
+  /**
+   * Asynchronously returns the number of estimated documents qty in the Collection
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
+   * @param {Mongo.EstimatedDocumentCountOptions} [options] - EstimatedDocumentCountOptions
+   * @returns {Promise<number>}
+   */
+  async estimatedDocumentCount(options) {
+    /* eslint-disable-next-line new-cap */
+    check(options, Match.Optional(Object));
+    this._collection._debug('[FilesCollection] [estimatedDocumentCount()]');
+    return await this.collection.estimatedDocumentCount(options);
+  }
+
+  /**
+   * Returns a downloadable URL for a file.
+   * @locus Anywhere
+   * @memberOf FilesCollectionCore
+   * @param {Partial<FileObj>} fileObj - A partial file object reference
+   * @param {string} [version='original'] - The file version
+   * @param {string} [uriBase] - Optional URI base
+   * @returns {string} The download URL, or an empty string if the file is not found
+   */
+  link(fileObj, version = 'original', uriBase) {
+    this._debug(`[FilesCollection] [link(${helpers.isObject(fileObj) ? fileObj._id : undefined}, ${version})]`);
+    check(fileObj, Object);
+
+    if (!fileObj) {
       return '';
     }
-    return formatFleURL(fileRef, version, uriBase);
+    return formatFileURL(fileObj, version, uriBase);
   }
 }

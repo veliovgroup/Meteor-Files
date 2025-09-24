@@ -2,6 +2,9 @@
 
 *Initialize FilesCollection collection.*
 
+- [*FilesCollection* Instance Methods](#methods)
+- [Examples](#examples)
+
 <table valign="top">
   <thead>
     <tr>
@@ -336,7 +339,7 @@
             <code>this.response</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -376,7 +379,7 @@
             <code>this.response</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -454,7 +457,7 @@
             <code>this.file</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -503,7 +506,7 @@
             <code>this.file</code>
           </li>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -538,7 +541,7 @@
         <strong>Context</strong>:
         <ul>
           <li>
-            <code>this.user()</code>
+            <code>this.userAsync()</code>
           </li>
           <li>
             <code>this.userId</code>
@@ -853,8 +856,8 @@
         Default function recognizing user based on x_mtok cookie.
       </td>
       <td>
-       Usefull when you want to auth user based on custom cookie (or other way).
-       Must return null or {userId: null || String, user: function=> null || user }
+        Useful when you want to auth user based on custom cookie (or other way).
+        Must return <code>null</code> or <code>{userId: null|String, userAsync: function => Promise&lte;null|user&gte; }</code>
       </td>
     </tr>
     <tr>
@@ -965,7 +968,29 @@
   </tbody>
 </table>
 
-### Examples:
+### Methods
+
+List of available methods on `FilesCollection` instance:
+
+- [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload file(s) from client to server
+- [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload file(s) from client to server
+  - [`FileUpload#pipe()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#piping)
+- `write()` — [*DEPRECTAED IN `v3.0.0`*]
+- [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
+- `load()` - [*DEPRECATED IN `v3.0.0`*]
+- [`loadAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/loadAsync.md) [*Server*] - Write file to FS and FilesCollection from remote URL
+- [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
+- `findOne()` — [*DEPRECATED IN `v3.0.0`*]
+- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find one file in FilesCollection; Returns [`FileCursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Create cursor for FilesCollection; Returns [`File__s__Cursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+- `remove()` — [*DEPRECATED IN `v3.0.0`*]
+- [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Anywhere*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
+- `unlink()` - [*DEPRECATED IN `v3.0.0`*]
+- [`unlinkASync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlinkAsync.md) [*Server*] - "Unlink" (e.g. remove) file from FS
+- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Anywhere*] - Generate downloadable link
+- [`collection` property](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md) [*Anywhere*] - `Meteor.Collection` instance
+
+### Examples
 
 ```js
 import { FilesCollection, helpers } from 'meteor/ostrio:files';
@@ -1123,9 +1148,9 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
-  onBeforeUpload() {
+  async onBeforeUpload() {
     if (this.userId) {
-      const user = this.user();
+      const user = await this.userAsync();
       if (user.profile.role === 'admin') {
         // Allow upload only if
         // current user is signed-in
@@ -1148,9 +1173,9 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
-  onBeforeRemove() {
+  async onBeforeRemove() {
     if (this.userId) {
-      const user = this.user();
+      const user = await this.userAsync();
       if (user.profile.role === 'admin') {
         // Allow removal only if
         // current user is signed-in

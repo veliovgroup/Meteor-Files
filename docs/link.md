@@ -1,6 +1,6 @@
 # Link; or get downloadable URL
 
-Use [`fileUrl`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/template-helper.md) helper with Blaze to get *downloadable* URL to a file.
+Use [`fileURL`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/template-helper.md) helper with Blaze to get *downloadable* URL to a file.
 
 There are two options to get *downloadable* URL to the uploaded file using `.link()` method:
 
