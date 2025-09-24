@@ -2,7 +2,7 @@
 
 *Initialize FilesCollection collection.*
 
-- [Methods](#methods)
+- [*FilesCollection* Instance Methods](#methods)
 - [Examples](#examples)
 
 <table valign="top">
