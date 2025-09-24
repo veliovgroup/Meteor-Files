@@ -574,7 +574,7 @@ export class UploadInstance extends EventEmitter {
         delete this.fetchTimeouts[uid];
         result = response;
 
-        if (response.headers.get('content-type') === 'application/json') {
+        if ((response.headers.get('content-type') || '').includes('application/json')) {
           try {
             const jsonData = await response.json();
             if (jsonData.meta) {
