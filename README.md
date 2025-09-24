@@ -61,13 +61,12 @@ __Main methods:__
 - [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Anywhere*] - Initialize FilesCollection
 - [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload a file to server, returns `FileUpload` instance
 - [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Anywhere*] - Generate downloadable link
-- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Create cursor for FilesCollection, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Find all files matching selector, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find a single file record matching selector, returns [`FileCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
 - [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Anywhere*] - Asynchronously remove files from FilesCollection and "unlink" (e.g. remove) from Server
-- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find one file in FilesCollection, returns [`FileCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
-- [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
-- [`loadAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/loadAsync.md) [*Server*] - Write file to FS and FilesCollection from remote URL
 - [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
-- [`unlinkAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlinkAsync.md) [*Server*] - Asynchronously "Unlink" (e.g. remove) file from Server's FS
+- [`loadAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/loadAsync.md) [*Server*] - Write file to FS and FilesCollection from remote URL
+- [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
 
 ### Constructor
 
