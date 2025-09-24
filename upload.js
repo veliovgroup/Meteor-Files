@@ -228,7 +228,7 @@ export class UploadInstance extends EventEmitter {
 
     if (!this.config.isBase64) {
       try {
-        if (!this.config.file.name || !this.config.file.size) {
+        if (!this.config.file.name || isNaN(this.config.file.size)) {
           throw new Meteor.Error(500, 'Not a File!');
         }
       } catch (err) {
