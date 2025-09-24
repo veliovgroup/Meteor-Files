@@ -13,13 +13,10 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 
 - [📔 Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/toc.md) - Docs, API, Demos, Examples
 - [✨ Key features](https://github.com/veliovgroup/Meteor-Files#key-features)
+- [📔 API Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
 - __⚡️ Quick start__:
   - [🔧 Installation](https://github.com/veliovgroup/Meteor-Files#installation)
-  - [👨‍💻 API examples](https://github.com/veliovgroup/Meteor-Files#api-overview):
-    - [Initialize Collection](https://github.com/veliovgroup/Meteor-Files#new-filescollectionconfig-isomorphic)
-    - [Upload file](https://github.com/veliovgroup/Meteor-Files#insertsettings-autostart-client)
-    - [Stream files](https://github.com/veliovgroup/Meteor-Files#stream-files)
-    - [Download Button](https://github.com/veliovgroup/Meteor-Files#download-button)
+  - [👨‍💻 Usage example](https://github.com/veliovgroup/Meteor-Files#api-overview)
 - [🤔 FAQ](https://github.com/veliovgroup/Meteor-Files#faq)
 - [🏅 Awards](https://github.com/veliovgroup/Meteor-Files#awards)
 - [🙋‍♂️ Get Help](https://github.com/veliovgroup/Meteor-Files#get-support)
@@ -59,11 +56,12 @@ import { FilesCollection } from 'meteor/ostrio:files';
 
 For detailed docs, examples, and API — read [documentation section](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md).
 
+__Main methods:__
+
 - [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Anywhere*] - Initialize FilesCollection
-- [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload a file to server, returns [`FileUpload` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileUpload.md)
-- [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload a file to server, returns [`FileUpload` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileUpload.md)
+- [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload a file to server, returns `FileUpload` instance
 - [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Anywhere*] - Generate downloadable link
-- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Create cursor for FilesCollection, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Create cursor for FilesCollection, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
 - [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Anywhere*] - Asynchronously remove files from FilesCollection and "unlink" (e.g. remove) from Server
 - [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find one file in FilesCollection, returns [`FileCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
 - [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
@@ -71,13 +69,19 @@ For detailed docs, examples, and API — read [documentation section](https://gi
 - [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
 - [`unlinkAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlinkAsync.md) [*Server*] - Asynchronously "Unlink" (e.g. remove) file from Server's FS
 
-### `new FilesCollection([config])` [*Anywhere*]
+### Constructor
 
-Read full docs for [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)
-
-Shared code:
+__[*Anywhere*]__. Initiate file's collection in the similar way to `Mongo.Collection` with optional settings related to file-uploads. Read full docs for [`FilesCollection` Constructor in the API documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
 
 ```js
+import { FilesCollection } from 'meteor/ostrio:files';
+new FilesCollection(FilesCollectionConfig);
+```
+
+Pass additional options to control upload-flow
+
+```js
+// shared: /imports/lib/collections/images.collection.js
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
@@ -94,17 +98,25 @@ const imagesCollection = new FilesCollection({
 });
 
 if (Meteor.isClient) {
+  // SUBSCRIBE TO ALL UPLOADED FILES ON THE CLIENT
   Meteor.subscribe('files.images.all');
 }
 
 if (Meteor.isServer) {
+  // PUBLISH ALL UPLOADED FILES ON THE SERVER
   Meteor.publish('files.images.all', function () {
-    return imagesCollection.find().cursor;
+    return imagesCollection.collection.find();
   });
 }
 ```
 
-### `insertAsync(settings[, autoStart])` [*Client*]
+### Upload a file
+
+```ts
+import { FilesCollection } from 'meteor/ostrio:files';
+const files = new FilesCollection(FilesCollectionConfig);
+files.insertAsync(config: InsertOptions, autoStart?: boolean): Promise<FileUpload | UploadInstance>;
+```
 
 Read full docs for [`insertAsync()` method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md)
 
@@ -227,21 +239,21 @@ const videosCollection = new FilesCollection({ collectionName: 'videos' });
 
 if (Meteor.isServer) {
   // Upload sample files on server's startup:
-  Meteor.startup(() => {
-    imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+  Meteor.startup(async () => {
+    await imagesCollection.loadAsync('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png'
     });
-    videosCollection.load('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
+    await videosCollection.loadAsync('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
       fileName: 'Big-Buck-Bunny.mp4'
     });
   });
 
   Meteor.publish('files.images.all', function () {
-    return imagesCollection.find().cursor;
+    return imagesCollection.collection.find();
   });
 
   Meteor.publish('files.videos.all', function () {
-    return videosCollection.find().cursor;
+    return videosCollection.collection.find();
   });
 } else {
   // Subscribe to file's collections on Client
@@ -253,6 +265,10 @@ if (Meteor.isServer) {
 Client's code:
 
 ```js
+// imports/client/file/file.js
+import '/imports/client/file/file.html';
+import imagesCollection from '/imports/lib/collections/images.collection.js';
+
 Template.file.helpers({
   imageFile() {
     return imagesCollection.findOne();
@@ -267,34 +283,24 @@ For more expressive example see [Streaming demo app](https://github.com/veliovgr
 
 ### Download button
 
-Template:
-
-```html
-<template name='file'>
-  <a href="{{file.link}}?download=true" download="{{file.name}}" target="_parent">
-    {{file.name}}
-  </a>
-</template>
-```
-
-Shared code:
+Create collection available to Client and Server
 
 ```js
+// imports/lib/collections/images.collection.js
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({ collectionName: 'images' });
 
 if (Meteor.isServer) {
   // Load sample image into FilesCollection on server's startup:
-  Meteor.startup(function () {
-    imagesCollection.load('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
+  Meteor.startup(async () => {
+    await imagesCollection.loadAsync('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png',
-      meta: {}
     });
   });
 
   Meteor.publish('files.images.all', function () {
-    return imagesCollection.find().cursor;
+    return imagesCollection.collection.find();
   });
 } else {
   // Subscribe on the client
@@ -302,9 +308,24 @@ if (Meteor.isServer) {
 }
 ```
 
-Client's code:
+Create template, call `.link` method on the `FileCursor` returned from `file` helper
+
+```html
+<!-- imports/client/file/file.html -->
+<template name='file'>
+  <a href="{{file.link}}?download=true" download="{{file.name}}" target="_parent">
+    {{file.name}}
+  </a>
+</template>
+```
+
+Create controller for `file` template with `file` helper that returns `FileCursor` with `.link()` method
 
 ```js
+// imports/client/file/file.js
+import '/imports/client/file/file.html';
+import imagesCollection from '/imports/lib/collections/images.collection.js';
+
 Template.file.helpers({
   file() {
     return imagesCollection.findOne();
