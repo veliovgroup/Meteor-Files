@@ -80,7 +80,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.protected {function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
  *  - `request`
  *  - `response`
- *  - `user()`
+ *  - `userAsync()`
  *  - `userId`
  * @param config.chunkSize      {number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
  * @param config.permissions    {number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
@@ -525,7 +525,7 @@ class FilesCollection extends FilesCollectionCore {
     }
     WebApp.connectHandlers.use(async (httpReq, httpResp, next) => {
       if (this.allowedOrigins && httpReq._parsedUrl.path.includes(`${this.downloadRoute}/`) && !httpResp.headersSent) {
-        if (this.allowedOrigins.test(httpReq.headers.origin)) {
+        if (httpReq.headers.origin && this.allowedOrigins.test(httpReq.headers.origin)) {
           httpResp.setHeader('Access-Control-Allow-Credentials', 'true');
           httpResp.setHeader('Access-Control-Allow-Origin', httpReq.headers.origin);
         }
@@ -1213,7 +1213,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
-   * @summary Returns object with `userId` and `user()` method which return user's object
+   * @summary Returns object with `userId` and `userAsync()` method which return user's object
    * @returns {Object}
    */
   _getUser() {
@@ -1224,7 +1224,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUserDefault
-   * @summary Default way of recognizing user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defined. Returns object with `userId` and `user()` method which return user's object
+   * @summary Default way of recognizing user based on 'x_mtok' cookie, can be replaced by 'config.getUser' if defined. Returns object with `userId` and `userAsync()` method which return user's object
    * @returns {Object}
    */
   _getUserDefault(http) {
