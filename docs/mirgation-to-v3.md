@@ -41,6 +41,7 @@ __FilesCursor__:
 __FileUpload__:
 
 - ⚠️ `FileUpload#start()` is now *async*!
+- ✨ New `FileUpload#remainingTime` {*ReactiveVar*} with upload remaining time in human-readable format
 
 __Callbacks and hooks__:
 
@@ -63,6 +64,10 @@ __FilesCollection__:
 - ✨ Server: `FilesCollection#unlinkAsync()`
 - ✨ Server: `FilesCollection#writeAsync()`
 - ✨ Server: `FilesCollection#loadAsync()`
+
+__FileUpload__:
+
+- ✨ New `FileUpload#remainingTime` {*ReactiveVar*} with upload remaining time in human-readable format
 
 __FileCursor__:
 
