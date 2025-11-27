@@ -104,8 +104,10 @@ export default class FilesCollectionCore extends EventEmitter {
    */
   _debug(...args) {
     if (this.debug) {
+      // if debug is truthy but not true it should be a function
+      const debugFn = this.debug === true ? null : this.debug;
       // eslint-disable-next-line no-console
-      (console.info || console.log || function () {}).apply(undefined, args);
+      (debugFn || console.info || console.log || function () {}).apply(undefined, args);
     }
   }
 

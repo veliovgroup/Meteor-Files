@@ -14,7 +14,7 @@ const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize'
  * @locus Client
  * @class FilesCollection
  * @param config {FilesCollectionConfig} - [anywhere] configuration object with the following properties:
- * @param config.debug {boolean} - [anywhere] turn on/off debugging and extra logging
+ * @param config.debug {boolean|function} - [anywhere] Turn on/of debugging and extra logging to console, or pass your own function to handle debug messages on your own
  * @param config.ddp {DDP.DDPStatic} - [client] custom DDP connection; object returned from `DDP.connect()`
  * @param config.schema {object} - [anywhere] collection schema
  * @param config.public {boolean} - [anywhere] store files in folder accessible for proxy servers, for limits, etc.
@@ -48,7 +48,7 @@ class FilesCollection extends FilesCollectionCore {
       allowQueryStringCookies: this.allowQueryStringCookies,
     });
 
-    if (!helpers.isBoolean(this.debug)) {
+    if (!helpers.isBoolean(this.debug) && !helpers.isFunction(this.debug)) {
       this.debug = false;
     }
 

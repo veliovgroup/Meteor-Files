@@ -73,7 +73,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @locus Server
  * @class FilesCollection
  * @param config           {FilesCollectionConfig}   - [Both]   Configuration object with next properties:
- * @param config.debug     {boolean}  - [Both]   Turn on/of debugging and extra logging
+ * @param config.debug     {boolean|function}  - [Both]   Turn on/off debugging and extra logging to console, or pass your own function to handle debug messages on your own
  * @param config.schema    {Object}   - [Both]   Collection Schema
  * @param config.public    {boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
  * @param config.strict    {boolean}  - [Server] Strict mode for partial content, if is `true` server will return `416` response code, when `range` is not specified, otherwise server return `206`
@@ -161,7 +161,7 @@ class FilesCollection extends FilesCollectionCore {
 
     const self = this;
 
-    if (!helpers.isBoolean(this.debug)) {
+    if (!helpers.isBoolean(this.debug) && !helpers.isFunction(this.debug)) {
       this.debug = false;
     }
 
