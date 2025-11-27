@@ -330,29 +330,16 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (helpers.isString(storagePath)) {
-      this.storagePath = () => storagePath;
+      this.storagePath = async () => storagePath;
     } else {
-      this.storagePath = function () {
-        let sp = storagePath.apply(self, arguments);
+      this.storagePath = async function () {
+        let sp = await storagePath.apply(self, arguments);
         if (!helpers.isString(sp)) {
           throw new Meteor.Error(400, `[FilesCollection.${self.collectionName}] "storagePath" function must return a String!`);
         }
         sp = sp.replace(/\/$/, '');
         return nodePath.normalize(sp);
       };
-    }
-
-    this._debug('[FilesCollection.storagePath] Set to:', this.storagePath({}));
-
-    try {
-      fs.mkdirSync(this.storagePath({}), {
-        mode: this.parentDirPermissions,
-        recursive: true
-      });
-    } catch (error) {
-      if (error) {
-        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable!`, error);
-      }
     }
 
     check(this.strict, Boolean);
@@ -1056,7 +1043,7 @@ class FilesCollection extends FilesCollectionCore {
       opts.FSName = await this.namingFunction(opts);
     }
 
-    result.path = `${this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
+    result.path = `${await this.storagePath(result)}${nodePath.sep}${opts.FSName}${extensionWithDot}`;
     result = Object.assign(result, this._dataToSchema(result));
 
     if (this.onBeforeUpload) {
@@ -1300,7 +1287,7 @@ class FilesCollection extends FilesCollectionCore {
 
     const {extension, extensionWithDot} = this._getExt(fileName);
 
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+    opts.path = `${await this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
     opts.type = this._getMimeType(opts);
     if (!helpers.isObject(opts.meta)) {
       opts.meta = {};
@@ -1419,7 +1406,7 @@ class FilesCollection extends FilesCollectionCore {
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+    opts.path = `${await this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
 
     // this will be the resolved fileObj
     let fileObj;
@@ -1604,15 +1591,21 @@ class FilesCollection extends FilesCollectionCore {
     try {
       _id = await this.collection.insertAsync(result);
     } catch (insertErr) {
+      if (proceedAfterUpload && helpers.isFunction(proceedAfterUpload)) {
+        await proceedAfterUpload(insertErr);
+      }
       this._debug(`[FilesCollection] [addFileAsync] [insertAsync] Error: ${result.name} -> ${this.collectionName}`, insertErr);
       throw new Meteor.Error(insertErr.code, insertErr.message);
     }
 
     const fileObj = await this.collection.findOneAsync(_id);
 
-    if (proceedAfterUpload === true) {
+    if (proceedAfterUpload) {
       this.onAfterUpload && await this.onAfterUpload.call(this, fileObj);
       this.emit('afterUpload', fileObj);
+      if (helpers.isFunction(proceedAfterUpload)) {
+        await proceedAfterUpload(null, fileObj);
+      }
     }
     this._debug(`[FilesCollection] [addFileAsync]: ${result.name} -> ${this.collectionName}`);
     return fileObj;
@@ -2071,6 +2064,27 @@ class FilesCollection extends FilesCollectionCore {
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
       respond(readableStream || fs.createReadStream(vRef.path), 200);
       break;
+    }
+  }
+
+  /**
+   * Ensure storage path exists with proper permissions
+   *
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _ensureStoragePath() {
+    this._debug('[FilesCollection.storagePath] Set to:', await this.storagePath({}));
+
+    try {
+      fs.mkdirSync(await this.storagePath({}), {
+        mode: this.parentDirPermissions,
+        recursive: true
+      });
+    } catch (error) {
+      if (error) {
+        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${await this.storagePath({})}" is not writable!`, error);
+      }
     }
   }
 }

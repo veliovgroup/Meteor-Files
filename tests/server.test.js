@@ -239,7 +239,7 @@ describe('FilesCollection', () => {
 
       const opts = { name: 'test.txt', type: 'text/plain', meta: {}, userId: 'user1', fileId: 'file1' };
 
-      sinon.stub(filesCollection, 'storagePath').returns('~/data');
+      sinon.stub(filesCollection, 'storagePath').resolves('~/data');
       fsPromiseStatStub.restore();
       fsPromiseWriteFileStub.restore();
       fsPromisesMkdirStub.restore();
