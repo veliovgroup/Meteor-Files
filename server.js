@@ -162,7 +162,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
  * @param config.collectionName {string}  - [Both]   Collection name
- * @param config.namingFunction {function}- [Both]   Function which returns `String`
+ * @param config.namingFunction {function}- [Server] Returns the file name on disk. Called with `{ file, fileId, userId }` on upload Start, in `writeAsync` and `loadAsync`
  * @param config.integrityCheck {boolean} - [Server] Check file's integrity before serving to users
  * @param config.onAfterUpload  {function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
  * @param config.onAfterRemove  {function(fileObj[]): boolean} - [Server] Called with single argument with array of removed `fileObj[]` right after file(s) is removed. Return `true` to intercept `.unlinkAsync` method; return `false` to continue default behavior
@@ -905,6 +905,7 @@ class FilesCollection extends FilesCollectionCore {
       check(opts, {
         file: Object,
         fileId: String,
+        // Accepted from v3 clients and ignored: only the server names files
         FSName: Match.Optional(String),
         chunkSize: Number,
         fileLength: Number
@@ -1066,6 +1067,20 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
+   * @name _namingContext
+   * @param {Object} file - File data known so far
+   * @param {string} fileId - `_id` of the future document
+   * @param {string|null} [userId] - Uploader
+   * @summary Internal method. Argument of `namingFunction`, the same shape in upload Start, `writeAsync()`, and `loadAsync()`
+   * @returns {{file: Object, fileId: string, userId: string|null}}
+   */
+  _namingContext(file, fileId, userId) {
+    return { file: helpers.cloneDeep(file), fileId, userId: userId || null };
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
    * @name _pickClientFileFields
    * @param {Object} file - Client-supplied `file` object
    * @summary Internal method. Deep copy of client `file` object without keys the server computes itself
@@ -1144,9 +1159,10 @@ class FilesCollection extends FilesCollectionCore {
     result.userId = (isStart ? userId : opts.userId) || null;
 
     if (isStart) {
-      let FSName = this.sanitize(helpers.isString(opts.FSName) && opts.FSName ? opts.FSName : opts.fileId);
+      // Only the server names files: a client `FSName` is ignored
+      let FSName = this.sanitize(opts.fileId);
       if (this.namingFunction) {
-        FSName = this._sanitizeFSName(await this.namingFunction(Object.assign({}, opts, { file: result, FSName })), FSName);
+        FSName = this._sanitizeFSName(await this.namingFunction(this._namingContext(result, opts.fileId, result.userId)), FSName);
       }
       opts.FSName = FSName;
 
@@ -1193,7 +1209,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Server
    * @memberOf FilesCollection
    * @name _startUpload
-   * @param {Object} opts - Start request: `{file, fileId, FSName, chunkSize, fileLength}`
+   * @param {Object} opts - Start request: `{file, fileId, chunkSize, fileLength}`. A client `FSName` is accepted and ignored
    * @param {string|null} userId - Caller's userId
    * @param {string} transport - Transport name, used in logs
    * @summary Internal method. Validate start request, create upload record in `_preCollection` and an empty file on FS
@@ -1232,7 +1248,6 @@ class FilesCollection extends FilesCollectionCore {
     const { result, opts: prepared, ctx } = await this._prepareUpload({
       file: opts.file,
       fileId,
-      FSName: opts.FSName,
       chunkSize,
       fileLength,
       ___s: true,
@@ -1733,6 +1748,7 @@ class FilesCollection extends FilesCollectionCore {
         check(opts, {
           file: Object,
           fileId: String,
+          // Accepted from v3 clients and ignored: only the server names files
           FSName: Match.Optional(String),
           chunkSize: Number,
           fileLength: Number,
@@ -1995,7 +2011,9 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(409, `[FilesCollection] [writeAsync] File with _id "${fileId}" already exists`);
     }
 
-    const fsName = this.namingFunction ? this._sanitizeFSName(await this.namingFunction(opts), fileId) : fileId;
+    const fsName = this.namingFunction
+      ? this._sanitizeFSName(await this.namingFunction(this._namingContext({ name: opts.name || opts.fileName, type: opts.type, size: buffer.length, meta: opts.meta }, fileId, opts.userId)), fileId)
+      : fileId;
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
@@ -2110,7 +2128,9 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(409, `[FilesCollection] [loadAsync] File with _id "${fileId}" already exists`);
     }
 
-    const fsName = this.namingFunction ? this._sanitizeFSName(await this.namingFunction(opts), fileId) : fileId;
+    const fsName = this.namingFunction
+      ? this._sanitizeFSName(await this.namingFunction(this._namingContext({ name: opts.name || opts.fileName, type: opts.type, meta: opts.meta }, fileId, opts.userId)), fileId)
+      : fileId;
     const pathParts = url.split('/');
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 

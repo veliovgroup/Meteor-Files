@@ -1,5 +1,6 @@
 /* global describe, it, beforeEach */
 import { expect } from 'chai';
+import sinon from 'sinon';
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from '../client.js';
 import { BROWSER_COLLECTION } from './browser-constants.js';
@@ -178,5 +179,17 @@ describe('client options', function () {
       caught = e;
     }
     expect(caught.error).to.equal(401);
+  });
+
+  it('ignores namingFunction on the client and warns', function () {
+    const warn = sinon.stub(console, 'warn');
+    try {
+      const local = new FilesCollection({ collection: files.collection, namingFunction: () => 'x' });
+      expect(local.namingFunction).to.equal(undefined);
+      expect(warn.calledOnce).to.equal(true);
+      expect(String(warn.firstCall.args[0])).to.include('namingFunction');
+    } finally {
+      warn.restore();
+    }
   });
 });

@@ -53,7 +53,7 @@ The server enforces these rules for in-progress uploads:
 - `chunkSize` must be an integer from 1 byte to 16 MiB. The declared `size` and the chunk count must agree, chunks must be in range, and the total written can not exceed the declared `size`. The stored `size` is the real size of the file on disk
 - HTTP request bodies are limited: 1 MiB for Start (including `meta`), 64 KiB for EOF, and the base64 size of `chunkSize` plus 4 KiB for a chunk. Larger bodies get `413`
 - Start returns `409` if the target file already exists, if the file id is already in use, or if another pending upload claims the same path. The server creates the file exclusively, so it never overwrites an existing file
-- File names from `namingFunction` are sanitized per path segment, and the final path must resolve inside the `storagePath` of the collection. Otherwise Start returns `400`
+- File names from `namingFunction` are sanitized per path segment, and the final path must resolve inside the `storagePath` of the collection. Otherwise Start returns `400`. Only the server names files: the client `namingFunction` option and the `FSName` field are ignored since v4
 - The server remembers the device and inode of the file it created. If the file is removed or replaced before the upload ends, the upload fails with `410` or `409` and the other file is not touched
 - The abort call removes only the unfinished upload, never a finished file
 - A repeated EOF returns the stored file record only to the authenticated user who owns the upload. Anonymous callers get `408`

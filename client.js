@@ -103,7 +103,7 @@ const watchTokenCookie = (connection, setCookie, accounts) => {
   }
 };
 
-const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
+const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
 
 /**
  * @locus Client
@@ -117,7 +117,6 @@ const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQuerySt
  * @param config.downloadRoute {string} - [anywhere] server route used to retrieve files
  * @param config.collection {Mongo.Collection} - [anywhere] mongo collection instance
  * @param config.collectionName {string} - [anywhere] collection name
- * @param config.namingFunction {function} - [anywhere] function that returns a string
  * @param config.onBeforeUpload {function} - [anywhere] function executed on server after receiving each chunk and on client before starting upload; return `true` to continue, `false` or `string` (error message) to abort
  * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client; default: false
  * @param config.onbeforeunloadMessage {string|function} - [client] message shown to user when closing window/tab during upload
@@ -172,6 +171,11 @@ class FilesCollection extends FilesCollectionCore {
     this.collection.filesCollection = this;
     check(this.collectionName, String);
 
+    if (config && config.namingFunction !== undefined) {
+      // eslint-disable-next-line no-console
+      console.warn(`[FilesCollection.${this.collectionName}] "namingFunction" is server-only since v4 and is ignored on the client. Set it in the server constructor.`);
+    }
+
     if (this.public && !this.downloadRoute) {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
@@ -189,10 +193,6 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     this.downloadRoute = this.downloadRoute.replace(/\/$/, '');
-
-    if (!helpers.isFunction(this.namingFunction)) {
-      this.namingFunction = false;
-    }
 
     if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
@@ -245,7 +245,6 @@ class FilesCollection extends FilesCollectionCore {
     check(this.downloadRoute, String);
     check(this.disableUpload, Boolean);
     /* eslint-disable new-cap */
-    check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
     /* eslint-enable new-cap */
     check(this.allowClientCode, Boolean);

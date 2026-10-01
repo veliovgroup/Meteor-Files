@@ -222,18 +222,16 @@
         <code>config.namingFunction</code> {<em>Function</em>}
       </td>
       <td>
-        Isomorphic
+        Server
       </td>
       <td>
-        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>. The server sanitizes each path segment (<code>/</code> separates segments, <code>.</code> and <code>..</code> are dropped) and the result must stay inside <code>storagePath</code>. Upload start returns <code>409</code> if a file already exists at that path
+        Returns the file name on disk, without extension. Called as <code>namingFunction({ file, fileId, userId })</code> with <code>this</code> set to the collection, on upload Start, in <code>writeAsync()</code>, and in <code>loadAsync()</code>. <code>file</code> holds <code>name</code>, <code>type</code>, <code>size</code>, and <code>meta</code> as sent by the uploader, not verified. May return a Promise. <b>Note: file extension appended to returned value</b>. The server sanitizes each path segment (<code>/</code> separates segments, <code>.</code> and <code>..</code> are dropped) and the result must stay inside <code>storagePath</code>. Upload start returns <code>409</code> if a file already exists at that path
       </td>
       <td>
         <code>false</code>
       </td>
       <td>
-        Primarily sets file name on <code>FS</code><br />
-        if <code>namingFunction</code> is not set<br />
-        <code>FS</code>-name is equal to file's record <code>_id</code>
+        Without it, or when it returns an empty value, the name on disk is the file <code>_id</code>. The client ignores this option and logs a warning
       </td>
     </tr>
     <tr>
@@ -1078,10 +1076,9 @@ const imagesCollection = new FilesCollection({
     }
     return false;
   },
-  namingFunction(file) {
-    // MAKE SURE namingFunction IS SET ON Server
-    // OVERWRITE Client's namingFunction FOR SECURITY REASONS AGAINST REVERSE-ENGINEERING ACTIONS
-    return helpers.sanitize(file.fileId);
+  // Server only: the client ignores this option
+  namingFunction({ fileId, userId }) {
+    return `${helpers.sanitize(userId || 'anonymous')}/${fileId}`;
   },
 });
 

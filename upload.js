@@ -1022,7 +1022,7 @@ export class UploadInstance extends EventEmitter {
 
     if (!this.isStarted) {
       if (!this.startOpts) {
-        // `_prepare()` is still running (async `namingFunction`), it sends Start when ready
+        // `_prepare()` has not built the Start payload yet, it sends Start when ready
         return this;
       }
       await this._sendStart();
@@ -1095,11 +1095,6 @@ export class UploadInstance extends EventEmitter {
       chunkSize: this.config.isBase64 ? ((this.config.chunkSize / 4) * 3) : this.config.chunkSize,
       fileLength: this.fileLength
     };
-
-    this.FSName = this.collection.namingFunction ? (await this.collection.namingFunction(this.fileData)) : this.fileId;
-    if (this.FSName !== this.fileId) {
-      opts.FSName = this.FSName;
-    }
 
     this.startOpts = opts;
     await this._upload();

@@ -30,6 +30,8 @@ const createCollection = (config = {}) => {
     },
     // Keeps the S5 warning out of the test output, S5 tests pass `onBeforeRemove: undefined`
     onBeforeRemove: () => true,
+    // Tests pick the file name on disk through `meta.fsName`: since v4 only the server names files
+    namingFunction: ({ file }) => file?.meta?.fsName,
     ...config,
   });
 };
@@ -49,11 +51,10 @@ const startOpts = (overrides = {}) => {
   const size = overrides.size ?? 8;
   const chunkSize = overrides.chunkSize ?? 1024;
   return {
-    file: { name: 'file.txt', type: 'text/plain', size, meta: {}, ...(overrides.file || {}) },
+    file: { name: 'file.txt', type: 'text/plain', size, meta: overrides.FSName ? { fsName: overrides.FSName } : {}, ...(overrides.file || {}) },
     fileId: overrides.fileId || Random.id(),
     chunkSize,
     fileLength: overrides.fileLength ?? Math.max(1, Math.ceil(size / chunkSize)),
-    ...(overrides.FSName ? { FSName: overrides.FSName } : {}),
   };
 };
 
@@ -1443,6 +1444,45 @@ describe('Security', function () {
       const warn = sinon.stub(console, 'warn');
       createCollection({ protected: () => true });
       expect(warn.called).to.equal(false);
+    });
+  });
+
+  describe('naming is server-only', function () {
+    it('ignores FSName sent over DDP', async function () {
+      const fc = createCollection();
+      const opts = { ...startOpts({ size: 4 }), FSName: 'client-chosen' };
+      await call(fc, '_Start', 'userA', opts);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal(`${opts.fileId}.txt`);
+    });
+
+    it('ignores FSName sent over HTTP', async function () {
+      const fc = createCollection();
+      const opts = { ...startOpts({ size: 4 }), FSName: 'client-chosen-http' };
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/__upload`, {
+        method: 'POST',
+        headers: { 'x-start': '1', 'x-test-user': 'userA', 'content-type': 'application/json' },
+        body: JSON.stringify(opts),
+      });
+      expect(res.status).to.equal(204);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal(`${opts.fileId}.txt`);
+    });
+
+    it('calls namingFunction with { file, fileId, userId } on Start', async function () {
+      const naming = sinon.spy(() => 'named');
+      const fc = createCollection({ namingFunction: naming });
+      const opts = startOpts({ size: 4, file: { meta: { a: 1 } } });
+      await call(fc, '_Start', 'userA', opts);
+      const [ctx] = naming.firstCall.args;
+      expect(Object.keys(ctx).sort()).to.deep.equal(['file', 'fileId', 'userId']);
+      expect(ctx.fileId).to.equal(opts.fileId);
+      expect(ctx.userId).to.equal('userA');
+      expect(ctx.file.name).to.equal('file.txt');
+      expect(ctx.file.type).to.equal('text/plain');
+      expect(ctx.file.size).to.equal(4);
+      expect(ctx.file.meta).to.deep.equal({ a: 1 });
+      expect(ctx.file).to.not.have.property('path');
+      expect(naming.firstCall.thisValue).to.equal(fc);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal('named.txt');
     });
   });
 

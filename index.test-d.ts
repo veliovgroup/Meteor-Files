@@ -37,8 +37,10 @@ const config: FilesCollectionConfig = {
     expectType<string>(http.params._id);
     return false;
   },
-  async namingFunction(fileData) {
-    return fileData.name;
+  async namingFunction({ file, fileId, userId }) {
+    expectType<string>(fileId);
+    expectType<string | null>(userId);
+    return file.name;
   },
   async protected(fileObj) {
     expectType<FileObj>(fileObj);

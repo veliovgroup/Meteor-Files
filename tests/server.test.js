@@ -246,6 +246,8 @@ describe('FilesCollection', function() {
       expect(newOpts).to.be.an('object');
       expect(result.path).to.equal(nodePath.join(filesCollection.storagePath({}), 'newName'));
       expect(namingFunctionStub.calledOnce).to.be.true;
+      expect(namingFunctionStub.firstCall.args[0]).to.deep.include({ fileId: '123', userId: 'user1' });
+      expect(namingFunctionStub.firstCall.args[0].file.name).to.equal('testFile');
       expect(onBeforeUploadStub.calledOnce).to.be.true;
       // onInitiateUpload runs in _startUpload, after the upload record is saved
       expect(onInitiateUploadStub.called).to.be.false;
@@ -475,6 +477,15 @@ describe('FilesCollection', function() {
       const fileObj = await fc.writeAsync(Buffer.from('n'), { name: 'n.txt' });
       expect(fileObj.path).to.equal(nodePath.join(fc.storagePath({}), 'sub', 'x-y.txt'));
     });
+
+    it('passes { file, fileId, userId } to namingFunction', async function() {
+      collectionMock.restore();
+      const naming = sinon.spy(() => 'ctx-name');
+      const fc = new FilesCollection({ collectionName: `testserver-naming-${Random.id(4)}`, storagePath: tmpDir('naming-ctx'), namingFunction: naming });
+      const fileObj = await fc.writeAsync(Buffer.from('abc'), { name: 'c.txt', type: 'text/plain', meta: { k: 1 }, userId: 'u9', fileId: 'ctx1' });
+      expect(naming.firstCall.args[0]).to.deep.equal({ file: { name: 'c.txt', type: 'text/plain', size: 3, meta: { k: 1 } }, fileId: 'ctx1', userId: 'u9' });
+      expect(nodePath.basename(fileObj.path)).to.equal('ctx-name.txt');
+    });
   });
 
   describe('#loadAsync()', function() {
@@ -568,6 +579,14 @@ describe('FilesCollection', function() {
       await filesCollection.loadAsync(`http://127.0.0.1:${port}`, { name: 'h.txt', headers: { Authorization: 'Bearer secret-token' } });
       const logged = debugSpy.getCalls().map((c) => c.args.map((a) => (typeof a === 'string' ? a : '')).join(' ')).join('\n');
       expect(logged).to.not.include('secret-token');
+    });
+
+    it('passes { file, fileId, userId } to namingFunction', async function() {
+      const naming = sinon.spy(() => 'load-name');
+      const fc = new FilesCollection({ collectionName: `testserver-loadnaming-${Random.id(4)}`, storagePath: tmpDir('load-naming'), namingFunction: naming });
+      const fileObj = await fc.loadAsync(`http://127.0.0.1:${port}`, { name: 'l.txt', fileId: 'lctx1', userId: 'u8' });
+      expect(naming.firstCall.args[0]).to.deep.equal({ file: { name: 'l.txt', type: undefined, meta: undefined }, fileId: 'lctx1', userId: 'u8' });
+      expect(nodePath.basename(fileObj.path)).to.equal('load-name.txt');
     });
   });
 

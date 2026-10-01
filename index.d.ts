@@ -298,6 +298,13 @@ export class FilesCollectionCore extends EventEmitter {
   link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string): string;
 }
 
+/** Argument of `namingFunction`. `file` values come from the uploader and are not verified. */
+export interface NamingContext {
+  file: Partial<FileObj> & { name?: string; type?: string; size?: number; meta?: MetadataType };
+  fileId: string;
+  userId: string | null;
+}
+
 export interface FilesCollectionConfig {
   storagePath?: string | ((fileObj?: Partial<FileObj>) => MaybePromise<string>);
   collection?: Mongo.Collection<FileObj>;
@@ -313,7 +320,8 @@ export interface FilesCollectionConfig {
   downloadRoute?: string;
   schema?: SimpleSchema | Record<string, unknown>;
   chunkSize?: number | 'dynamic';
-  namingFunction?: (fileData: FileData) => MaybePromise<string>;
+  /** [Server] Name on disk, without extension. The client ignores this option and warns. */
+  namingFunction?: (this: FilesCollection, context: NamingContext) => MaybePromise<string | null | undefined | false>;
   permissions?: number;
   parentDirPermissions?: number;
   integrityCheck?: boolean;
@@ -494,7 +502,7 @@ export class UploadInstance extends EventEmitter {
   /** @internal `true` when a Start request failed without a response, so the server may have the upload. */
   startMaybeReceived: boolean;
   /** @internal */
-  startOpts?: { file: FileData; fileId: string; chunkSize: number; fileLength: number; FSName?: string };
+  startOpts?: { file: FileData; fileId: string; chunkSize: number; fileLength: number };
   /** @internal The one request in flight. */
   inFlight: { kind: 'start' | 'eof' } | { kind: 'chunk'; chunkId: number } | null;
   /** @internal */
@@ -506,7 +514,6 @@ export class UploadInstance extends EventEmitter {
   /** @internal */
   hasTimers: boolean;
   fileId: string;
-  FSName: string;
   pipes: Array<(data: string) => string>;
   fileData: FileData;
   result: FileUpload;
