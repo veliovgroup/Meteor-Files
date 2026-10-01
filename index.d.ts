@@ -22,6 +22,8 @@ export interface ContextHTTP {
   request: IncomingMessage;
   response: http.ServerResponse;
   params: ParamsHTTP;
+  /** Result of the `?token=` check: the token data, `null` without a token or secret, `false` for an invalid token. */
+  downloadToken?: { userId: string | null; exp: number } | null | false;
 }
 
 export interface ContextUser {
@@ -167,6 +169,18 @@ export class WriteStream {
 /**
  * Core class for FilesCollection. Most other classes extend and build on this one.
  */
+export interface LinkOptions {
+  /** Token from the server `createDownloadToken()`, appended as `?token=`. */
+  token?: string;
+}
+
+export interface DownloadTokenOptions {
+  version?: string;
+  userId?: string | null;
+  /** Seconds, a positive integer. Default: 3600. */
+  expiresIn?: number;
+}
+
 export class FilesCollectionCore extends EventEmitter {
   // Instance properties that are used in the class:
   collection: Mongo.Collection<FileObj>;
@@ -295,7 +309,7 @@ export class FilesCollectionCore extends EventEmitter {
    * @param uriBase - Optional URI base.
    * @returns {string} The download URL, or an empty string if the file is invalid.
    */
-  link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string): string;
+  link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string, opts?: LinkOptions): string;
 }
 
 /** Argument of `namingFunction`. `file` values come from the uploader and are not verified. */
@@ -362,6 +376,8 @@ export interface FilesCollectionConfig {
   nosniff?: boolean;
   /** [Server] Store the type the uploader sent instead of the type detected from the file content. Default: `false`. */
   trustClientMimeType?: boolean;
+  /** [Server] HMAC secret for signed download links, at least 32 characters. Without it `?token=` is ignored. */
+  downloadTokenSecret?: string;
   /** [Server] Milliseconds before an idle upload file handle is closed. Default: 900000. */
   uploadIdleTimeout?: number;
   _preCollection?: Mongo.Collection<{ _id?: string }>;
@@ -575,7 +591,7 @@ export class FileCursor {
   /** Client only, throws on server. */
   remove(callback?: (error: Meteor.Error | null, count?: number) => void): FileCursor;
   removeAsync(): Promise<FileCursor>;
-  link(version?: string, uriBase?: string): string;
+  link(version?: string, uriBase?: string, opts?: LinkOptions): string;
   get(): FileObj;
   get<K extends keyof FileObj>(property: K): FileObj[K];
   get(property: string): unknown;
@@ -718,6 +734,9 @@ export interface LoadOpts {
 // Server-specific overloads for FilesCollection
 // --------------------------------------------------------------------------
 export interface FilesCollection {
+
+  /** Signed token for `link(file, version, uriBase, { token })`. Needs `downloadTokenSecret`. */
+  createDownloadToken(fileRef: Partial<FileObj> | FileCursor | string, opts?: DownloadTokenOptions): string;
 
   /**
    * Downloads a file by preparing HTTP response and piping file data.

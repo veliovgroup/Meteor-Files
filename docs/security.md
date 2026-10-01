@@ -103,6 +103,37 @@ HTTP routes identify the user with the `x_mtok` cookie. The client sets it to th
 - The client sets the cookie to the session id of `Meteor.connection`, also when a collection uses a custom `ddp` connection
 - `allowQueryStringCookies` puts the token in URLs, where it can leak to logs, proxies, and `Referer` headers. Enable it only for Cordova and Meteor-Desktop, and set `allowedCordovaOrigins` with it. Do not enable it for web apps
 
+## Signed download links
+
+Set `downloadTokenSecret` on the server to hand out links that work without the `x_mtok` cookie, on any instance:
+
+```js
+const files = new FilesCollection({
+  collectionName: 'files',
+  downloadTokenSecret: Meteor.settings.private.filesTokenSecret,
+  protected(fileObj) {
+    return !!fileObj && fileObj.userId === this.userId;
+  },
+});
+
+Meteor.methods({
+  async 'files.downloadLink'(fileId) {
+    check(fileId, String);
+    const file = await files.findOneAsync({ _id: fileId, userId: this.userId });
+    if (!file) {
+      throw new Meteor.Error(404, 'Not found');
+    }
+    const token = files.createDownloadToken(file, { userId: this.userId, expiresIn: 600 });
+    return files.link(file, 'original', undefined, { token });
+  },
+});
+```
+
+- The token opens one `_id` and one version until it expires. Anyone who has the URL can use it, so keep `expiresIn` short
+- URLs end up in logs, proxies, and `Referer` headers
+- The token carries its `userId` in base64url, readable by whoever holds the link
+- An invalid or expired token gets `403`. Public collections ignore tokens
+
 ## Content-Type and downloads
 
 Since v4 the server detects the type from the first 4100 bytes of the file and stores it, unless `trustClientMimeType` is `true`. Text files are stored as `text/plain` unless the uploader said `text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, or `application/json`. An SVG, HTML, XML, CSS, or JavaScript file labeled as an image or as `text/html`, `text/xml`, `text/css`, or `text/javascript` is stored as `text/plain`, so the browser does not run it. `onBeforeUpload` still sees the uploader's type. Reduce the risk further:

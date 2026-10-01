@@ -12,12 +12,14 @@ There are two options to get *downloadable* URL to the uploaded file using `.lin
 Use `.link()` method of *FilesCollection* instance to create *downloadable* link from *file's* plain object. To get an *Object* use `await FilesCollection#collection.findOneAsync({})`, for example inside [`end` event](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) on the *Client* and [`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) on the *Server*
 
 ```js
-FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
+FilesCollection#link(fileRef, version, URIBase, opts); // [*Isomorphic*]
 ```
 
 - `fileRef` {*Object*} - Object returned from MongoDB collection or [after upload](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L194-L205)
 - `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
 - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
+- `opts` {*Object*} - [OPTIONAL]
+  - `opts.token` {*String*} - Token from the server `createDownloadToken()`, appended as `?token=`. See [Signed download links](#signed-download-links)
 - Returns {*String*} - Absolute URL to file. Returns an empty string for `null`/`undefined`, for a file object without `_id` (for example the file of a rejected upload), and when no safe route is available
 
 ## How the URL is built
@@ -31,11 +33,12 @@ FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
 Use `.link()` method of [*FileCursor* instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) to create *downloadable* link from a cursor returned for example from [`FilesCollection#findOneAsync({})`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md)
 
 ```js
-FileCursor#link(version, URIBase); // [*Isomorphic*]
+FileCursor#link(version, URIBase, opts); // [*Isomorphic*]
 ```
 
 - `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
 - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
+- `opts` {*Object*} - [OPTIONAL] same as `FilesCollection#link`, `{ token }`
 - Returns {*String*} - Full URL to file
 
 ## Required fields:
@@ -80,4 +83,30 @@ imagesCollection.link(fileRef);
 imagesCollection.link(fileRef, 'original', 'https://other-domain.com/');
 // Relative path to domain:
 imagesCollection.link(fileRef, 'original', '/');
+```
+
+## Signed download links
+
+With `downloadTokenSecret` set on the server, `createDownloadToken()` returns a token that opens one `_id` and one version until it expires. Pass it as `{ token }` to get a link that works without the `x_mtok` cookie and on any server instance with the same secret. The token's `userId` becomes `this.userId` in `protected` and `http.userId` in `downloadCallback`. An invalid or expired token gets `403`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links).
+
+```js
+const files = new FilesCollection({
+  collectionName: 'files',
+  downloadTokenSecret: Meteor.settings.private.filesTokenSecret,
+  protected(fileObj) {
+    return !!fileObj && fileObj.userId === this.userId;
+  },
+});
+
+Meteor.methods({
+  async 'files.downloadLink'(fileId) {
+    check(fileId, String);
+    const file = await files.findOneAsync({ _id: fileId, userId: this.userId });
+    if (!file) {
+      throw new Meteor.Error(404, 'Not found');
+    }
+    const token = files.createDownloadToken(file, { userId: this.userId, expiresIn: 600 });
+    return files.link(file, 'original', undefined, { token });
+  },
+});
 ```

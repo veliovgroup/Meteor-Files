@@ -72,12 +72,13 @@ export class FileCursor {
    * @locus Anywhere
    * @param {string} [version='original'] - Name of the file’s subversion.
    * @param {string} [uriBase] - Optional URI base.
+   * @param {{token?: string}} [opts] - `token` from the server `createDownloadToken()`
    * @returns {string}
    */
-  link(version = 'original', uriBase) {
+  link(version = 'original', uriBase, opts) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef && this._fileRef._id) {
-      return this._collection.link(this._fileRef, version, uriBase);
+      return this._collection.link(this._fileRef, version, uriBase, opts);
     }
     return '';
   }

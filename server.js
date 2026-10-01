@@ -10,6 +10,7 @@ import WriteStream, { fileIdentity, isSameFile } from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 import { SNIFF_BYTES, resolveMimeType, sniffFile } from './mime.js';
+import { MIN_SECRET_LENGTH, createDownloadToken as signDownloadToken, verifyDownloadToken } from './download-token.js';
 
 import fs from 'node:fs';
 import nodeQs from 'node:querystring';
@@ -159,6 +160,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
  * @param config.trustClientMimeType {boolean} - [Server] Store the type the uploader sent. When `false` (default) the stored type comes from the file content
+ * @param config.downloadTokenSecret {string} - [Server] HMAC secret for signed download links (`createDownloadToken()`), at least 32 characters. Without it `?token=` is ignored
  * @param config.uploadIdleTimeout {number} - [Server] Close file handle of an upload after this many ms without new chunks, it is reopened on the next chunk. Default: 900000 (15 minutes)
  * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
@@ -193,6 +195,7 @@ class FilesCollection extends FilesCollectionCore {
   constructor(config) {
     super();
     let storagePath;
+    let downloadTokenSecret;
     if (config) {
       ({
         _preCollection: this._preCollection,
@@ -211,6 +214,7 @@ class FilesCollection extends FilesCollectionCore {
         disableUpload: this.disableUpload,
         downloadCallback: this.downloadCallback,
         downloadRoute: this.downloadRoute,
+        downloadTokenSecret,
         getUser: this.getUser,
         integrityCheck: this.integrityCheck,
         interceptDownload: this.interceptDownload,
@@ -487,6 +491,12 @@ class FilesCollection extends FilesCollectionCore {
     check(this.allowedCordovaOrigins, Match.Optional(Match.OneOf(Boolean, RegExp, String)));
     /* eslint-enable new-cap */
 
+    /* eslint-disable new-cap */
+    check(downloadTokenSecret, Match.Optional(Match.Where((secret) => helpers.isString(secret) && secret.length >= MIN_SECRET_LENGTH)));
+    /* eslint-enable new-cap */
+    // Not enumerable: debug mode logs the collection object
+    Object.defineProperty(this, 'downloadTokenSecret', { value: downloadTokenSecret || null, enumerable: false, writable: false, configurable: false });
+
     this._cookies = new Cookies({
       allowQueryStringCookies: this.allowQueryStringCookies,
       allowedCordovaOrigins: this.allowedCordovaOrigins ?? this.allowedOrigins
@@ -666,6 +676,11 @@ class FilesCollection extends FilesCollectionCore {
     // Returns `false` after it sent the denial, otherwise `{ fileRef }`:
     // the document the protected function received (`null` when not found), or `undefined` when nothing was read
     this._checkAccess = async (http) => {
+      if (helpers.isObject(http) && this._readDownloadToken(http) === false) {
+        this._denyAccess(http, 403);
+        return false;
+      }
+
       if (!this.protected) {
         return { fileRef: undefined };
       }
@@ -677,7 +692,7 @@ class FilesCollection extends FilesCollectionCore {
 
       let result;
       let fileRef;
-      const { userAsync, userId } = this._getUser(http);
+      const { userAsync, userId } = this._getHttpUser(http);
 
       if (helpers.isFunction(this.protected)) {
         fileRef = null;
@@ -2006,6 +2021,82 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
+   * @name createDownloadToken
+   * @param {FileObj|FileCursor|string} fileRef - File, or its `_id`
+   * @param {Object} [opts]
+   * @param {string} [opts.version='original'] - Version the token opens
+   * @param {string|null} [opts.userId=null] - User the download acts as, for `protected` and `downloadCallback`
+   * @param {number} [opts.expiresIn=3600] - Lifetime in seconds, a positive integer
+   * @summary Signed token for `link(fileRef, version, uriBase, { token })`. Needs `downloadTokenSecret`. Works on any instance with the same secret
+   * @throws {Meteor.Error} 500 without `downloadTokenSecret`, `Match.Error` on invalid input
+   * @returns {string}
+   */
+  createDownloadToken(fileRef, { version = 'original', userId = null, expiresIn = 3600 } = {}) {
+    if (!this.downloadTokenSecret) {
+      throw new Meteor.Error(500, '[FilesCollection] [createDownloadToken] "downloadTokenSecret" is not set');
+    }
+
+    const _id = helpers.isString(fileRef) ? fileRef : fileRef?._id;
+    /* eslint-disable new-cap */
+    check(_id, Match.Where((id) => helpers.isString(id) && id.length > 0));
+    check(version, String);
+    check(userId, Match.OneOf(String, null));
+    check(expiresIn, Match.Where((n) => Number.isInteger(n) && n > 0));
+    /* eslint-enable new-cap */
+
+    return signDownloadToken(this.downloadTokenSecret, { _id, version, userId, exp: Math.floor(Date.now() / 1000) + expiresIn });
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _readDownloadToken
+   * @param {ContextHTTP} http - Server HTTP object, `params` hold `_id`, `version`, and `query`
+   * @summary Internal method. Verify `?token=` once per request and keep the result in `http.downloadToken`
+   * @returns {{userId: string|null, exp: number}|null|false} `null` without token or secret, `false` for an invalid token
+   */
+  _readDownloadToken(http) {
+    if (http.downloadToken !== undefined) {
+      return http.downloadToken;
+    }
+
+    const token = http.params?.query?.token;
+    // Public collections never check tokens
+    if (this.public || !this.downloadTokenSecret || token === undefined) {
+      http.downloadToken = null;
+      return null;
+    }
+
+    http.downloadToken = verifyDownloadToken(this.downloadTokenSecret, token, { _id: http.params._id, version: http.params.version }) || false;
+    return http.downloadToken;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _getHttpUser
+   * @param {ContextHTTP} http - Server HTTP object
+   * @summary Internal method. The user of a download: the token user for a valid token, otherwise `_getUser(http)`
+   * @returns {ContextUser}
+   */
+  _getHttpUser(http) {
+    const token = helpers.isObject(http) ? this._readDownloadToken(http) : null;
+    if (!token) {
+      return this._getUser(http);
+    }
+
+    const userId = token.userId;
+    return {
+      userId,
+      async userAsync() {
+        return (userId && Meteor.users) ? await Meteor.users.findOneAsync(userId) : null;
+      },
+    };
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
    * @name writeAsync
    * @param {Buffer} buffer - Binary File's Buffer
    * @param {WriteOpts} [opts] - Object with file-data
@@ -2614,7 +2705,7 @@ class FilesCollection extends FilesCollectionCore {
     if (!vRef || !helpers.isObject(vRef)) {
       return this._404(http);
     } else if (fileRef) {
-      if (helpers.isFunction(this.downloadCallback) && !(await this.downloadCallback(Object.assign(http, this._getUser(http)), fileRef))) {
+      if (helpers.isFunction(this.downloadCallback) && !(await this.downloadCallback(Object.assign(http, this._getHttpUser(http)), fileRef))) {
         return this._404(http);
       }
 

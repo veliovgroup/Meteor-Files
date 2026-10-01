@@ -23,6 +23,7 @@ const config: FilesCollectionConfig = {
   allowedCordovaOrigins: /^https:\/\/localhost:12[0-9]{3}$/,
   nosniff: true,
   trustClientMimeType: false,
+  downloadTokenSecret: 'x'.repeat(32),
   uploadIdleTimeout: 900000,
   allowedOrigins: false,
   disableUpload: false,
@@ -80,6 +81,7 @@ expectAssignable<FilesCollectionConfig>({ allowedCordovaOrigins: 'https://exampl
 expectError<FilesCollectionConfig>({ allowedCordovaOrigins: 1 });
 expectError<FilesCollectionConfig>({ nosniff: 'yes' });
 expectError<FilesCollectionConfig>({ trustClientMimeType: 'yes' });
+expectError<FilesCollectionConfig>({ downloadTokenSecret: 32 });
 expectError<FilesCollectionConfig>({ uploadIdleTimeout: '900000' });
 
 const files = new FilesCollection(config);
@@ -152,6 +154,8 @@ async function findFile() {
     expectType<string>(file._id);
     expectType<string>(file.link());
     expectType<string>(files.link(file));
+    expectType<string>(files.link(file, 'original', undefined, { token: files.createDownloadToken(file, { userId: null, expiresIn: 60 }) }));
+    expectType<string>(file.link('original', undefined, { token: 't' }));
   }
   expectType<FilesCursor<unknown, unknown>>(files.find({}));
   expectType<Promise<number>>(files.countDocuments({}));

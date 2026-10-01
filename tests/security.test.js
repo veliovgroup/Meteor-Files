@@ -10,6 +10,7 @@ import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
 import { FilesCollection } from '../server.js';
 import { fixJSONParse } from '../lib.js';
+import { createDownloadToken as signToken } from '../download-token.js';
 
 const TMP_ROOT = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-security-'));
 let counter = 0;
@@ -1551,6 +1552,97 @@ describe('Security', function () {
     it('validates trustClientMimeType', function () {
       expect(createCollection().trustClientMimeType).to.equal(false);
       expect(() => createCollection({ trustClientMimeType: 'yes' })).to.throw();
+    });
+  });
+
+  describe('signed download tokens', function () {
+    const SECRET = 'k'.repeat(40);
+    const ownerOnly = function (fileObj) {
+      return !!fileObj && fileObj.userId === this.userId;
+    };
+
+    const setup = async (config = {}) => {
+      const fc = createCollection({ downloadTokenSecret: SECRET, protected: ownerOnly, ...config });
+      const _id = `tok${Random.id(6)}`;
+      const path = nodePath.join(fc.storagePath({}), `${_id}.txt`);
+      fs.writeFileSync(path, 'secret');
+      await fc.collection.insertAsync({ _id, name: `${_id}.txt`, size: 6, type: 'text/plain', extension: 'txt', userId: 'owner', path, _downloadRoute: fc.downloadRoute, _collectionName: fc.collectionName, versions: { original: { path, size: 6, type: 'text/plain', extension: 'txt' } } });
+      const doc = await fc.collection.findOneAsync(_id);
+      return { fc, doc, url: (token) => fc.link(doc, 'original', '/', { token }) };
+    };
+
+    it('serves the file to the token user without a session', async function () {
+      const { fc, doc, url } = await setup();
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner', expiresIn: 60 })));
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal('secret');
+    });
+
+    it('passes the token user to protected as this.userId and this.downloadToken', async function () {
+      const seen = [];
+      const { fc, doc, url } = await setup({
+        protected(fileObj) {
+          seen.push({ userId: this.userId, token: this.downloadToken });
+          return !!fileObj && fileObj.userId === this.userId;
+        },
+      });
+      const res = await httpRequest(url(fc.createDownloadToken(doc._id, { userId: 'intruder' })));
+      expect(res.status).to.equal(401);
+      expect(seen[0].userId).to.equal('intruder');
+      expect(seen[0].token.userId).to.equal('intruder');
+    });
+
+    it('lets protected: true accept a token with a userId', async function () {
+      const { fc, doc, url } = await setup({ protected: true });
+      expect((await httpRequest(url(fc.createDownloadToken(doc, { userId: 'someone' })))).status).to.equal(200);
+      expect((await httpRequest(url(fc.createDownloadToken(doc)))).status).to.equal(401);
+    });
+
+    it('answers 403 for a tampered, expired, or foreign token', async function () {
+      const { fc, doc, url } = await setup();
+      const good = fc.createDownloadToken(doc, { userId: 'owner' });
+      const [goodExp, goodUser, goodSig] = good.split('.');
+      const tampered = `${goodExp}.${goodUser}.${goodSig[0] === 'A' ? 'B' : 'A'}${goodSig.slice(1)}`;
+      const expired = signToken(SECRET, { _id: doc._id, version: 'original', userId: 'owner', exp: Math.floor(Date.now() / 1000) - 5 });
+      const otherFile = fc.createDownloadToken('another1', { userId: 'owner' });
+      const otherVersion = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
+      for (const token of [tampered, expired, otherFile, otherVersion, 'garbage']) {
+        const res = await httpRequest(url(token));
+        expect(res.status, token).to.equal(403);
+        expect(res.body).to.equal('Access denied!');
+      }
+    });
+
+    it('ignores the token when no secret is set', async function () {
+      const { doc, url } = await setup({ downloadTokenSecret: undefined });
+      expect(doc).to.be.an('object');
+      expect((await httpRequest(url('garbage'))).status).to.equal(401);
+    });
+
+    it('ignores the token on public collections', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET, public: true, downloadRoute: `/pub${Random.id(6)}` });
+      const httpObj = { params: { _id: 'id1', version: 'original', query: { token: 'garbage' } } };
+      expect(fc._readDownloadToken(httpObj)).to.equal(null);
+      expect(fc._getHttpUser({ ...httpObj, request: { headers: { 'x-test-user': 'u1' } } }).userId).to.equal('u1');
+    });
+
+    it('validates the secret and createDownloadToken() input', function () {
+      expect(() => createCollection({ downloadTokenSecret: 'short' })).to.throw();
+      expect(() => createCollection({ downloadTokenSecret: 42 })).to.throw();
+      const noSecret = createCollection();
+      expect(() => noSecret.createDownloadToken('id1')).to.throw(Meteor.Error);
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      expect(() => fc.createDownloadToken('id1', { expiresIn: 0 })).to.throw();
+      expect(() => fc.createDownloadToken('id1', { expiresIn: 1.5 })).to.throw();
+      expect(() => fc.createDownloadToken({})).to.throw();
+      expect(fc.createDownloadToken('id1')).to.match(/^\d+\.\.[A-Za-z0-9_-]+$/);
+    });
+
+    it('keeps the secret out of enumerable properties', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      expect(Object.keys(fc)).to.not.include('downloadTokenSecret');
+      expect(Object.values(fc).includes(SECRET)).to.equal(false);
+      expect(fc.downloadTokenSecret).to.equal(SECRET);
     });
   });
 

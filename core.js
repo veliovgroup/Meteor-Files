@@ -336,18 +336,25 @@ export default class FilesCollectionCore extends EventEmitter {
    * @param {Partial<FileObj>|FileCursor|null} fileObj - A file object reference, or a FileCursor
    * @param {string} [version='original'] - The file version
    * @param {string} [uriBase] - Optional URI base
+   * @param {{token?: string}} [opts] - `token` from the server `createDownloadToken()`, appended as `?token=`
    * @summary Uses the document's stored `_downloadRoute` and `_collectionName` when they are safe, otherwise this collection's values
    * @returns {string} The download URL, or an empty string if the file is not found
    */
-  link(fileObj, version = 'original', uriBase) {
+  link(fileObj, version = 'original', uriBase, opts) {
     if (!fileObj) {
       return '';
     }
 
     const fileRef = (fileObj instanceof FileCursor) ? fileObj._fileRef : fileObj;
     this._debug(`[FilesCollection] [link(${helpers.isObject(fileRef) ? fileRef._id : undefined}, ${version})]`);
-    // eslint-disable-next-line new-cap
+    /* eslint-disable new-cap */
     check(fileRef, Match.Where((obj) => helpers.isObject(obj)));
-    return formatFileURL(fileRef, version, uriBase, this);
+    check(opts, Match.Optional(Match.ObjectIncluding({ token: Match.Optional(String) })));
+    /* eslint-enable new-cap */
+    const url = formatFileURL(fileRef, version, uriBase, this);
+    if (!url || !helpers.isString(opts?.token) || !opts.token) {
+      return url;
+    }
+    return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(opts.token)}`;
   }
 }

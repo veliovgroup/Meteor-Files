@@ -857,6 +857,23 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.downloadTokenSecret</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Secret for signed download links, at least 32 characters. <code>createDownloadToken(fileRef, { version, userId, expiresIn })</code> returns a token for <code>link(fileRef, version, uriBase, { token })</code>. A valid token sets the request user to its <code>userId</code> for <code>protected</code> and <code>downloadCallback</code>. An invalid or expired token gets <code>403</code>
+      </td>
+      <td>
+        Not set: <code>?token=</code> is ignored
+      </td>
+      <td>
+        Load it from <code>Meteor.settings</code>. Every instance with the same secret accepts the token, so it works without sticky sessions
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.uploadIdleTimeout</code> {<em>Number</em>}
       </td>
       <td>
