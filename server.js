@@ -154,7 +154,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.getUser        {function} - [Server] Replace default way of recognizing user, useful when you want to auth user based on custom cookie (or other way). arguments {http: {request: {...}, response: {...}}}, need to return {userId: String, userAsync: Function}
  * @param config.onInitiateUpload {function} - [Server] Function which executes on server right before upload is begin and right after `onBeforeUpload` hook. This hook is fully asynchronous.
  * @param config.onBeforeRemove {function} - [Server] Executes before removing file on server, so you can check permissions. Return `true` to allow physical file removal and `false` to deny.
- * @param config.allowClientCode  {boolean}  - [Both]   Allow to run `remove` from client
+ * @param config.allowClientCode  {boolean}  - [Both]   Allow to run `remove` from client. Default: `false`
  * @param config.downloadCallback {function} - [Server] Callback triggered each time file is requested, return truthy value to continue download, or falsy to abort
  * @param config.interceptRequest {function} - [Server] Intercept incoming HTTP request, so you can do whatever you want, no checks or preprocessing, argument: http {request, response, params}
  * @param config.interceptDownload {function} - [Server] Intercept download request, so you can serve file from third-party resource, arguments {http: {request: {...}, response: {...}}, fileRef: {...}}
@@ -270,7 +270,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isBoolean(this.allowClientCode)) {
-      this.allowClientCode = true;
+      this.allowClientCode = false;
     }
 
     if (!helpers.isFunction(this.onInitiateUpload)) {
@@ -628,7 +628,7 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!this.disableUpload && this.allowClientCode && !this.onBeforeRemove) {
       // eslint-disable-next-line no-console
-      console.warn(`[FilesCollection.${this.collectionName}] "allowClientCode" is on and "onBeforeRemove" is not set: any client can remove files. Set "onBeforeRemove" or "allowClientCode: false" (the default changes to false in v4).`);
+      console.warn(`[FilesCollection.${this.collectionName}] "allowClientCode" is on and "onBeforeRemove" is not set: any client can remove files. Set "onBeforeRemove" or remove "allowClientCode: true".`);
     }
 
     this._checkAccess = async (http) => {

@@ -329,6 +329,7 @@ export interface FilesCollectionConfig {
   onAfterRemove?: (files: ReadonlyArray<FileObj>) => MaybePromise<boolean | void>;
   /** [Client] Message shown when closing the tab during upload. */
   onbeforeunloadMessage?: string | ((this: FileUpload, fileData: FileData) => string);
+  /** Allow clients to call `remove()` and `removeAsync()` with an `_id`. Set `onBeforeRemove` too. Default: `false`. */
   allowClientCode?: boolean;
   debug?: boolean | ((...args: unknown[]) => void);
   /** [Server] Serve the file from a custom source. Return `true` when the request is handled. */

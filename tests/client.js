@@ -166,3 +166,17 @@ describe('remove from the client', function () {
     handle.stop();
   });
 });
+
+describe('client options', function () {
+  it('allowClientCode defaults to false and removeAsync rejects with 401', async function () {
+    const local = new FilesCollection({ collection: files.collection });
+    expect(local.allowClientCode).to.equal(false);
+    let caught;
+    try {
+      await local.removeAsync('anyId');
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught.error).to.equal(401);
+  });
+});

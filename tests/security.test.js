@@ -890,18 +890,25 @@ describe('Security', function () {
     });
   });
 
-  describe('S5: allowClientCode warning', function () {
-    it('warns once when allowClientCode is on and onBeforeRemove is missing', function () {
-      const warn = sinon.stub(console, 'warn');
-      createCollection({ onBeforeRemove: undefined });
-      expect(warn.calledOnce).to.equal(true);
-      expect(String(warn.firstCall.args[0])).to.include('onBeforeRemove');
+  describe('S5: allowClientCode', function () {
+    it('defaults to false and the remove method answers 405', async function () {
+      const fc = createCollection({ allowClientCode: undefined });
+      expect(fc.allowClientCode).to.equal(false);
+      await expectMeteorError(call(fc, '_Remove', 'userA', 'someId'), 405);
     });
 
-    it('does not warn when onBeforeRemove is set or allowClientCode is false', function () {
+    it('warns once when allowClientCode is true and onBeforeRemove is missing', function () {
       const warn = sinon.stub(console, 'warn');
-      createCollection({ onBeforeRemove: () => true });
-      createCollection({ onBeforeRemove: undefined, allowClientCode: false });
+      createCollection({ allowClientCode: true, onBeforeRemove: undefined });
+      expect(warn.calledOnce).to.equal(true);
+      expect(String(warn.firstCall.args[0])).to.include('onBeforeRemove');
+      expect(String(warn.firstCall.args[0])).to.not.include('v4');
+    });
+
+    it('does not warn when onBeforeRemove is set or allowClientCode is not true', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ allowClientCode: true, onBeforeRemove: () => true });
+      createCollection({ onBeforeRemove: undefined });
       expect(warn.called).to.equal(false);
     });
   });

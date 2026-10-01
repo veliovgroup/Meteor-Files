@@ -10,3 +10,4 @@ ostrio:files 4.0.0 requires Meteor 3.2 or newer, like 3.1.0. This page lists eve
 - The default `x_mtok` lookup supports only a `Map` in `Meteor.server.sessions` (Meteor 3).
 - `FileUpload#pipe()` functions run in the order they were added (first `pipe()` call runs first). v3 ran the last added pipe first. Reverse your `pipe()` calls if you chain more than one.
 - Client `remove()` and `removeAsync()` accept only a String `_id`, and the `_FilesCollectionRemove_<name>` method rejects anything else. `FilesCursor#remove()` and `#removeAsync()` on the client remove the matching files one `_id` at a time.
+- `allowClientCode` defaults to `false` on the server and the client. Set `allowClientCode: true` on both sides, together with a server `onBeforeRemove`, if clients remove files.

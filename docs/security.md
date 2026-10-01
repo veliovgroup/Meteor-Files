@@ -64,18 +64,18 @@ Client-supplied values such as `type`, `name`, and `meta` are still untrusted. V
 
 ## Protect removal
 
-`allowClientCode` is `true` by default. Without `onBeforeRemove`, any client can call `removeAsync()` and delete any file. Do one of these:
+`allowClientCode` defaults to `false` since v4, so clients can not remove files. If you set `allowClientCode: true` without `onBeforeRemove`, any client can call `removeAsync()` and delete any file. Pick one of these:
 
 ```js
-// Option 1: no remove from client code at all
+// Option 1: no remove from client code at all (the default)
 const files = new FilesCollection({
   collectionName: 'files',
-  allowClientCode: false,
 });
 
 // Option 2: allow removal and check the owner
 const files2 = new FilesCollection({
   collectionName: 'files2',
+  allowClientCode: true,
   async onBeforeRemove(cursor) {
     if (!this.userId) {
       return false;
@@ -86,7 +86,7 @@ const files2 = new FilesCollection({
 });
 ```
 
-When `allowClientCode` is `true` and `onBeforeRemove` is not set, the server prints a warning at start. The default changes to `false` in v4.
+When `allowClientCode` is `true` and `onBeforeRemove` is not set, the server prints a warning at start. Set `allowClientCode: true` on the client constructor too.
 
 Also call `denyClient()` on the server, or define your own `allow`/`deny` rules, so clients can not write to the underlying `Mongo.Collection` directly.
 

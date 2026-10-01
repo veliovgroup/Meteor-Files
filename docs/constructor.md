@@ -616,10 +616,10 @@
         Isomorphic
       </td>
       <td>
-        Allow use <code>remove()</code> method on client
+        Allow clients to call <code>remove()</code> and <code>removeAsync()</code> with one file <code>_id</code>. Set <code>onBeforeRemove</code> when you turn it on
       </td>
       <td>
-        <code>true</code>
+        <code>false</code>
       </td>
       <td></td>
     </tr>

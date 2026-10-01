@@ -119,7 +119,7 @@ const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQuerySt
  * @param config.collectionName {string} - [anywhere] collection name
  * @param config.namingFunction {function} - [anywhere] function that returns a string
  * @param config.onBeforeUpload {function} - [anywhere] function executed on server after receiving each chunk and on client before starting upload; return `true` to continue, `false` or `string` (error message) to abort
- * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client
+ * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client; default: false
  * @param config.onbeforeunloadMessage {string|function} - [client] message shown to user when closing window/tab during upload
  * @param config.disableUpload {boolean} - disable file upload; useful for server-only solutions
  * @param config.disableSetTokenCookie {boolean} - disable cookie setting; useful when using multiple file collections or custom authorization
@@ -199,7 +199,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isBoolean(this.allowClientCode)) {
-      this.allowClientCode = true;
+      this.allowClientCode = false;
     }
 
     if (!this.ddp) {
