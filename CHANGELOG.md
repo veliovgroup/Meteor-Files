@@ -1,1 +1,118 @@
-For full changelog see [releases on GitHub](https://github.com/veliovgroup/Meteor-Files/releases)
+# 3.1.0
+
+## What's new
+
+This release closes several upload and download security holes, fixes the client upload state machine, and supports Meteor 3.2 to 3.5. Read "Major changes" before you upgrade. See the new [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md).
+
+## Major changes
+
+- ⚠️ Require Meteor 3.2 or newer. `ostrio:cookies` 3.0.0 needs `fetch@0.1.6`, which first ships with Meteor 3.2.
+- ⚠️ Restart uploads that were in progress during the upgrade from 3.0.x. The server answers `403` or `410` for upload records created by 3.0.x.
+- ⚠️ Return HTTP upload errors as `{ error: <status code>, reason, isClientSafe? }` instead of `{ error: "<text>" }`. `5xx` responses have a generic `reason`.
+- ⚠️ Limit upload sizes. `chunkSize` is at most 16 MiB. HTTP Start bodies, including `meta`, are at most 1 MiB. HTTP EOF bodies are at most 64 KiB. HTTP chunk bodies are at most the Base64 size of `chunkSize` plus 4 KiB.
+- ⚠️ Reject `FileUpload` pipes that grow a chunk. A pipe must return Base64 that decodes to the same number of bytes as its input, so per-chunk encryption with an IV, a tag, or padding fails on the first chunk. Move such transforms to `onAfterUpload` on the server.
+- ⚠️ Emit only `error` and `end` when an upload fails. `pause`, `abort`, and `onAbort` now fire only when `abort()` is called.
+- ⚠️ Throw `Meteor.Error 404` from the synchronous `FilesCursor` methods (`get`, `fetch`, `first`, `last`, `next`, `previous`, `hasNext`, `count`, `forEach`, `each`, `map`, `current`, `remove`) and from `FileCursor#with()` and `FileCursor#remove()` on the server. They returned Promises or wrong values before. Use the `*Async` methods.
+- ⚠️ Reject `writeAsync()` and `loadAsync()` with `409` when `opts.fileId` already exists. Before, they overwrote the existing file.
+- ⚠️ Reject an upload Start with `file.size` `0` with `400`. An empty upload has no chunk to send and never finished. The client already refused empty files.
+- ⚠️ Stop retrying a chunk after 10 consecutive network failures and end the upload with an error. Before, the client retried without limit.
+
+## Other Changes
+
+### Fixed
+
+- 🔧 Accept Write, EOF, and abort requests only from the user who started the upload.
+- 🔧 Stop `_Abort` from removing finished files. It removes only the unfinished upload record, and answers `404` for unknown or foreign upload ids.
+- 🔧 Prevent an upload from overwriting or deleting another file. Start returns `409` if the file id, the target path, or a pending upload path already exists, and creates the file exclusively.
+- 🔧 Fail an upload with `410` or `409` when its file was removed or replaced on disk. The server compares device and inode on every reopen.
+- 🔧 Sanitize `namingFunction` output per path segment and require the final path to stay inside `storagePath`.
+- 🔧 Ignore client-supplied reserved file fields: `_id`, `fileId`, `path`, `_storagePath`, `_downloadRoute`, `_collectionName`, `versions`, `userId`, `public`, extension, mime, and type flags.
+- 🔧 Store the real size on disk, and reject chunks beyond the declared size.
+- 🔧 Validate chunk size, chunk count, `chunkId`, and chunk length.
+- 🔧 Reject oversized HTTP request bodies with `413` before buffering them.
+- 🔧 Run the same `check()` on HTTP Start as on DDP Start.
+- 🔧 Stop sending server paths to the client in Start and EOF responses.
+- 🔧 Destroy download streams when the client disconnects. Stream errors return a generic `500`.
+- 🔧 Match routes by URL pathname, so a query string or a route prefix can no longer match another route.
+- 🔧 Encode `Content-Disposition` with an ASCII `filename` and an RFC 8187 `filename*`.
+- 🔧 URI-encode `_id`, version, extension, and collection name in `link()` and the `fileURL` helper, and never produce protocol-relative URLs.
+- 🔧 Set the `x_mtok` cookie as `secure` on https pages.
+- 🔧 Ignore inherited keys in the session lookup and fail closed.
+- 🔧 Skip `__proto__`, `constructor`, and `prototype` in `fixJSONParse` and `fixJSONStringify`.
+- 🔧 Limit a numeric `protected` result to `400`-`599`.
+- 🔧 Return the stored file on a repeated EOF only to the authenticated owner, so a lost EOF response no longer fails a finished upload.
+- 🔧 Accept an object in `responseHeaders`.
+- 🔧 Serve suffix ranges (`bytes=-N`) and the last byte, clamp the range end to the file size, and return `200` for multi-range requests. Unsatisfiable ranges return `416` when `strict` is `true` and `200` when it is `false`.
+- 🔧 Make the integrity-check `400` response reachable again.
+- 🔧 Stop `loadAsync()` from throwing inside a timer. It opens the file only after a successful fetch, takes `size` from disk, and removes only partial files it created.
+- 🔧 Make `writeAsync()` create the directory and always close the file handle.
+- 🔧 Complete an upload when all chunk ids arrived instead of guessing from the file size. Uploads resume after a server restart.
+- 🔧 Return `503` when a chunk write fails.
+- 🔧 Make `WriteStream#end()` return `false` for aborted or incomplete streams, and stop `abort()` from deleting a finished file.
+- 🔧 Remove the uploaded file when the database insert fails, and rethrow insert errors.
+- 🔧 Run `namingFunction` and `storagePath` once per upload, at Start.
+- 🔧 Run `onInitiateUpload` after the server checked that the target does not exist.
+- 🔧 Find public route ids that contain `-`.
+- 🔧 Set `extensionWithDot` to an empty string for files without extension.
+- 🔧 Treat a `responseHeaders` function that returns nothing as `{}`.
+- 🔧 Catch version unlink failures and log index creation errors.
+- 🔧 Send one client request at a time: Start, chunks in order, then EOF. Network failures, `502`, `503`, and `504` retry with backoff from 500 ms up to 10 s.
+- 🔧 Prevent the client from sending a chunk before Start succeeds, and fire `end` and `uploaded` only after a successful EOF.
+- 🔧 Send Start when `continue()` follows a pause before Start.
+- 🔧 Stop `abort()` from causing an unhandled rejection when the server answers `404`.
+- 🔧 Pass the `reason` of HTTP `4xx` responses to `error`, `onError`, and `end`.
+- 🔧 Call `error` and `end` once per failed upload. A throwing callback is logged and does not stop the others.
+- 🔧 Keep a manual pause when the connection drops and comes back.
+- 🔧 Omit the `x-mtok` header when there is no session instead of sending the string `"null"`.
+- 🔧 Fix Base64 padding for chunk sizes not divisible by 4.
+- 🔧 Stop `insert()` and `insertAsync()` from changing the config object passed by the user.
+- 🔧 Keep `meta` Dates as Dates after an HTTP upload.
+- 🔧 Start the worker, the `beforeunload` listener, timers, and trackers only after `onBeforeUpload` passes, and always clean them up.
+- 🔧 Post worker errors to the main thread and share one Blob URL between collections.
+- 🔧 Stop the client constructor from crashing on `new FilesCollection()`.
+- 🔧 Update the `x_mtok` cookie after reconnect and login without overwriting the app's `onReconnect` hook.
+- 🔧 Reject client `removeAsync()` with `401` when `allowClientCode` is `false`.
+- 🔧 Accept `null`, `undefined`, and `FileCursor` in `link()`.
+- 🔧 Accept the same selectors in `countDocuments()` as in `find()`, including ObjectID.
+- 🔧 Honor `limit` and `skip` in `hasNextAsync()` and `lastAsync()`.
+- 🔧 Stop `estimatedDocumentCount()` from failing in debug mode.
+- 🔧 Fix typos in JSDoc and error messages.
+
+### Added
+
+- ✨ Add the `allowedCordovaOrigins` option on Server and Client, passed to `ostrio:cookies`. Cordova and Meteor-Desktop need it for query-string cookies. The Server default is the value of `allowedOrigins`.
+- ✨ Add the `uploadIdleTimeout` Server option (milliseconds, default `900000`). It closes file handles of idle uploads, and the next chunk reopens them.
+- ✨ Add the `nosniff` Server option. It sets `X-Content-Type-Options: nosniff` (default `false`, planned to default to `true` in v4).
+- ✨ Warn on server start when `allowClientCode` is on and `onBeforeRemove` is not set.
+- ✨ Add `userAsync()` to the client `_getUser()` result.
+
+### Changed
+
+- 👨‍💻 Use the stored `_downloadRoute` and `_collectionName` in `link()` when they are safe, otherwise the collection's own values.
+- 👨‍💻 Export types from `index.d.ts` at the top level. The old `declare module` wrapper exported nothing.
+- 👨‍💻 Keep `FileUpload` pipes in reverse order of registration. This changes in v4.
+
+### Docs
+
+- 📔 Add a security guide.
+- 📔 Rename the migration doc to `migration-to-v3.md`.
+- 📔 Rewrite the AWS S3 (`@aws-sdk/client-s3` v3), Dropbox, Google Cloud Storage, GridFS, and `sharp` thumbnail guides with async APIs and correct Range handling.
+- 📔 Document `updateAsync`, `countDocuments`, `estimatedDocumentCount`, `serve`, `download`, `allow`/`deny`, the exported helpers, and the `progress` event arguments.
+- 📔 Document upload rules, limits, and the HTTP error body in `about-transports.md`.
+- 📔 Fix wrong defaults, broken links, typos, and samples that did not run on Meteor 3.
+
+### Tests
+
+- 🧪 Add `tests/security.test.js` for upload ownership, path safety, request limits, Range parsing, and access checks.
+- 🧪 Port Tinytest helpers to mocha and fix tests that passed without asserting.
+- 🧪 Check types with `tsc` and `tsd` (`npm run typecheck`).
+- 🏗️ Run lint, typecheck, and tests in CI on Meteor 3.2.2 and 3.5.2.
+- 🏗️ Replace `.eslintrc` with an ESLint 9 flat config.
+
+### Dependencies
+
+- 📦 `ostrio:cookies` 3.0.0
+- 📦 `eventemitter3` 5.0.4
+- 📦 `meteortesting:mocha` 3.4.0, `chai` 6, `sinon` 22 for tests
+
+For the full changelog see [releases on GitHub](https://github.com/veliovgroup/Meteor-Files/releases).
