@@ -108,7 +108,7 @@ const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQuerySt
  * @locus Client
  * @class FilesCollection
  * @param config {FilesCollectionConfig} - [anywhere] configuration object with the following properties:
- * @param config.debug {boolean|function} - [anywhere] Turn on/of debugging and extra logging to console, or pass your own function to handle debug messages on your own
+ * @param config.debug {boolean|function} - [anywhere] Turn on/off debugging and extra logging to console, or pass your own function to handle debug messages on your own
  * @param config.ddp {DDP.DDPStatic} - [client] custom DDP connection; object returned from `DDP.connect()`
  * @param config.schema {object} - [anywhere] collection schema
  * @param config.public {boolean} - [anywhere] store files in folder accessible for proxy servers, for limits, etc.
@@ -236,7 +236,8 @@ class FilesCollection extends FilesCollectionCore {
       this.schema = FilesCollectionCore.schema;
     }
 
-    check(this.debug, Boolean);
+    // eslint-disable-next-line new-cap
+    check(this.debug, Match.OneOf(Boolean, Function));
     check(this.schema, Object);
     check(this.public, Boolean);
     check(this.chunkSize, Number);

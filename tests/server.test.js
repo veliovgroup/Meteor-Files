@@ -65,6 +65,34 @@ describe('FilesCollection Constructor', function() {
       expect(fc.storagePath()).to.equal(dir);
     });
 
+    it('accepts a function as debug and routes logs to it', function() {
+      const logger = sinon.spy();
+      const fc = new FilesCollection({ collectionName: `testserver-debugfn-${Random.id(4)}`, storagePath: tmpDir('debugfn'), debug: logger });
+      expect(fc.debug).to.equal(logger);
+      fc._debug('hello', 1);
+      expect(logger.calledWith('hello', 1)).to.equal(true);
+    });
+
+    it('keeps boolean debug and logs to console only when true', function() {
+      const info = sinon.stub(console, 'info');
+      try {
+        const off = new FilesCollection({ collectionName: `testserver-debugoff-${Random.id(4)}`, storagePath: tmpDir('debugoff'), debug: false });
+        off._debug('silent');
+        expect(info.called).to.equal(false);
+        const on = new FilesCollection({ collectionName: `testserver-debugon-${Random.id(4)}`, storagePath: tmpDir('debugon'), debug: true });
+        info.resetHistory();
+        on._debug('loud');
+        expect(info.calledWith('loud')).to.equal(true);
+      } finally {
+        info.restore();
+      }
+    });
+
+    it('resets a non-boolean, non-function debug to false', function() {
+      const fc = new FilesCollection({ collectionName: `testserver-debugbad-${Random.id(4)}`, storagePath: tmpDir('debugbad'), debug: 'yes' });
+      expect(fc.debug).to.equal(false);
+    });
+
     it('C2: keeps object responseHeaders', function() {
       const responseHeaders = { 'X-Custom': '1' };
       const fc = new FilesCollection({ collectionName: `testserver-rh-${Random.id(4)}`, storagePath: tmpDir('rh'), responseHeaders });

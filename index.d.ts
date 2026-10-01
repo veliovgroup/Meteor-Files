@@ -170,7 +170,7 @@ export class WriteStream {
 export class FilesCollectionCore extends EventEmitter {
   // Instance properties that are used in the class:
   collection: Mongo.Collection<FileObj>;
-  debug?: boolean;
+  debug?: boolean | ((...args: unknown[]) => void);
   downloadRoute?: string;
   collectionName?: string;
   storagePath: (data: Partial<FileObj>) => string;
@@ -339,7 +339,7 @@ export interface FilesCollectionConfig {
   /** [Client] Message shown when closing the tab during upload. */
   onbeforeunloadMessage?: string | ((this: FileUpload, fileData: FileData) => string);
   allowClientCode?: boolean;
-  debug?: boolean;
+  debug?: boolean | ((...args: unknown[]) => void);
   /** [Server] Serve the file from a custom source. Return `true` when the request is handled. */
   interceptDownload?: (http: ContextHTTP, fileObj: FileObj, version: string) => MaybePromise<boolean>;
   /** [Server] Intercept every incoming request to the collection routes. */
@@ -399,7 +399,7 @@ export interface FileUploadConfig {
   _Abort?: string;
   fileId?: string;
   fileLength?: number;
-  debug?: boolean;
+  debug?: boolean | ((...args: unknown[]) => void);
   ddp?: DDP.DDPStatic;
   chunkSize?: number | 'dynamic';
 }
@@ -461,7 +461,7 @@ export interface UploadInstanceConfig {
   allowWebWorkers: boolean;
   disableUpload?: boolean;
   _debug?: (...args: unknown[]) => void;
-  debug?: boolean;
+  debug?: boolean | ((...args: unknown[]) => void);
 }
 
 /**
