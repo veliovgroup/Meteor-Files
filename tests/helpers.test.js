@@ -4,7 +4,7 @@ import { FilesCollection } from '../server.js';
 
 const helpers = FilesCollection.__helpers;
 
-describe('Helpers - isUndefined', function () {
+describe('Helpers', function () {
   it('isUndefined', function () {
     expect(helpers.isUndefined(null), 'isUndefined - null false').to.equal(false);
     expect(helpers.isUndefined(true), 'isUndefined - true false').to.equal(false);
@@ -23,9 +23,7 @@ describe('Helpers - isUndefined', function () {
     expect(helpers.isUndefined(new Date()), 'isUndefined - new Date()').to.equal(false);
     expect(helpers.isUndefined(+new Date()), 'isUndefined - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isObject', function () {
   it('isObject', function () {
     expect(helpers.isObject(null), 'isObject - null false').to.equal(false);
     expect(helpers.isObject(true), 'isObject - true false').to.equal(false);
@@ -44,9 +42,7 @@ describe('Helpers - isObject', function () {
     expect(helpers.isObject(new Date()), 'isObject - new Date()').to.equal(true);
     expect(helpers.isObject(+new Date()), 'isObject - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isArray', function () {
   it('isArray', function () {
     expect(helpers.isArray(null), 'isArray - null false').to.equal(false);
     expect(helpers.isArray(true), 'isArray - true false').to.equal(false);
@@ -65,9 +61,7 @@ describe('Helpers - isArray', function () {
     expect(helpers.isArray(new Date()), 'isArray - new Date()').to.equal(false);
     expect(helpers.isArray(+new Date()), 'isArray - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isBoolean', function () {
   it('isBoolean', function () {
     expect(helpers.isBoolean(null), 'isBoolean - null false').to.equal(false);
     expect(helpers.isBoolean(true), 'isBoolean - true false').to.equal(true);
@@ -86,9 +80,7 @@ describe('Helpers - isBoolean', function () {
     expect(helpers.isBoolean(new Date()), 'isBoolean - new Date()').to.equal(false);
     expect(helpers.isBoolean(+new Date()), 'isBoolean - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isString', function () {
   it('isString', function () {
     expect(helpers.isString(null), 'isString - null false').to.equal(false);
     expect(helpers.isString(true), 'isString - true false').to.equal(false);
@@ -107,9 +99,7 @@ describe('Helpers - isString', function () {
     expect(helpers.isString(new Date()), 'isString - new Date()').to.equal(false);
     expect(helpers.isString(+new Date()), 'isString - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isNumber', function () {
   it('isNumber', function () {
     expect(helpers.isNumber(null), 'isNumber - null false').to.equal(false);
     expect(helpers.isNumber(true), 'isNumber - true false').to.equal(false);
@@ -128,9 +118,7 @@ describe('Helpers - isNumber', function () {
     expect(helpers.isNumber(new Date()), 'isNumber - new Date()').to.equal(false);
     expect(helpers.isNumber(+new Date()), 'isNumber - +new Date()').to.equal(true);
   });
-});
 
-describe('Helpers - isDate', function () {
   it('isDate', function () {
     expect(helpers.isDate(null), 'isDate - null false').to.equal(false);
     expect(helpers.isDate(true), 'isDate - true false').to.equal(false);
@@ -149,9 +137,7 @@ describe('Helpers - isDate', function () {
     expect(helpers.isDate(new Date()), 'isDate - new Date()').to.equal(true);
     expect(helpers.isDate(+new Date()), 'isDate - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isFunction', function () {
   it('isFunction', function () {
     expect(helpers.isFunction(null), 'isFunction - null false').to.equal(false);
     expect(helpers.isFunction(true), 'isFunction - true false').to.equal(false);
@@ -170,9 +156,7 @@ describe('Helpers - isFunction', function () {
     expect(helpers.isFunction(new Date()), 'isFunction - new Date()').to.equal(false);
     expect(helpers.isFunction(+new Date()), 'isFunction - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - isEmpty', function () {
   it('isEmpty', function () {
     expect(helpers.isEmpty(null), 'isEmpty - null false').to.equal(false);
     expect(helpers.isEmpty(true), 'isEmpty - true false').to.equal(false);
@@ -191,9 +175,7 @@ describe('Helpers - isEmpty', function () {
     expect(helpers.isEmpty(new Date()), 'isEmpty - new Date()').to.equal(false);
     expect(helpers.isEmpty(+new Date()), 'isEmpty - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - has', function () {
   it('has', function () {
     expect(helpers.has(null, 'needle'), 'has - null false').to.equal(false);
     expect(helpers.has(true, 'needle'), 'has - true false').to.equal(false);
@@ -214,9 +196,7 @@ describe('Helpers - has', function () {
     expect(helpers.has(new Date(), 'needle'), 'has - new Date()').to.equal(false);
     expect(helpers.has(+new Date(), 'needle'), 'has - +new Date()').to.equal(false);
   });
-});
 
-describe('Helpers - omit', function () {
   it('omit', function () {
     expect(helpers.isEmpty(helpers.omit({}, 'needle')), 'omit - 1').to.equal(true);
     const test1 = helpers.omit({needle: 1, hay: 2, hey: 3, bar: 4}, 'needle', 'hay');
@@ -231,9 +211,7 @@ describe('Helpers - omit', function () {
     expect(helpers.isUndefined(test2.hay)).to.equal(true);
     expect(helpers.isUndefined(test2.hey)).to.equal(true);
   });
-});
 
-describe('Helpers - now', function () {
   it('now', function () {
     expect(helpers.now(), 'helpers.now() ~ +new Date()').to.be.closeTo(+new Date(), 50);
   });
