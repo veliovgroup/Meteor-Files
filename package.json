@@ -6,6 +6,7 @@
   "scripts": {
     "test:mocha": "meteor test-packages ./ --driver-package meteortesting:mocha --once",
     "test:mocha:watch": "meteor test-packages ./ --driver-package meteortesting:mocha",
+    "test:browser": "TEST_BROWSER_DRIVER=playwright meteor test-packages ./ --driver-package meteortesting:mocha --once",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit -p . && tsd"
@@ -21,6 +22,7 @@
     "eventemitter3": "^5.0.4",
     "globals": "^17.0.0",
     "mongodb": "^6.21.0",
+    "playwright": "^1.63.0",
     "simpl-schema": "^3.4.7",
     "sinon": "^22.0.0",
     "tsd": "^0.33.0",
