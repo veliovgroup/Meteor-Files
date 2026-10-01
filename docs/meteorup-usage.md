@@ -1,16 +1,16 @@
-# Example on using [MeteorUp](https://github.com/kadirahq/meteor-up)
+# Example on using [MeteorUp](https://github.com/zodern/meteor-up)
 
 Add persistent storage/volume to meteor up (MUP) configuration
 
 ## Brief
 
-[MeteorUp (MUP)](https://github.com/kadirahq/meteor-up) uses Docker, and by default, there is no volume mounted on the server. Therefore, even if `storagePath` is declared in constructor, files that are being uploaded are still being stored in cache, and on every deploy, all the uploaded files __get erased__.
+[MeteorUp (MUP)](https://github.com/zodern/meteor-up) uses Docker, and by default, there is no volume mounted on the server. Therefore, even if `storagePath` is declared in constructor, files that are being uploaded are still being stored in cache, and on every deploy, all the uploaded files __get erased__.
 
-Read more at [Issue #270](https://github.com/veliovgroup/Meteor-Files/issues/72) and [Issue #290](https://github.com/veliovgroup/Meteor-Files/issues/290).
+Read more at [Issue #72](https://github.com/veliovgroup/Meteor-Files/issues/72) and [Issue #290](https://github.com/veliovgroup/Meteor-Files/issues/290).
 
-To solve this issue, a volume has to be declared in `project-root/mup.json`. In this example, images will be stored at `/images` directory.
+To solve this issue, a volume has to be declared in `project-root/mup.js`. In this example, images will be stored at `/images` directory.
 
-## `mup.json` example:
+## `mup.js` example:
 
 ```javascript
 module.exports = {
@@ -20,7 +20,7 @@ module.exports = {
       username: 'root',
       // pem:
       // password:
-      // or leave blank for authenticate from ssh-agent
+      // or leave blank to authenticate from ssh-agent
     }
   },
 
@@ -41,7 +41,7 @@ module.exports = {
       MONGO_URL: 'mongodb://localhost/meteor'
     },
 
-    //dockerImage: 'kadirahq/meteord',
+    //dockerImage: 'zodern/meteor',
     deployCheckWaitTime: 60
   },
 

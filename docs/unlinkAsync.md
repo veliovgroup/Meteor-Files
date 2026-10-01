@@ -1,6 +1,6 @@
 ### `unlinkAsync` [*Server*]
 
-Unlink file an its subversions from FS.
+Unlink file and its subversions from FS.
 
 ```ts
 FilesCollection#unlinkAsync(fileRef: FileObj, version?: string): Promise<FilesCollection>
@@ -17,7 +17,7 @@ FilesCollection#unlinkAsync(fileRef: FileObj, version?: string): Promise<FilesCo
 import { FilesCollection } from 'meteor/ostrio:files';
 
 const imagesCollection = new FilesCollection({collectionName: 'images'});
-await imagesCollection.unlinkAsync(await Images.collection.findOneAsync({}));
+await imagesCollection.unlinkAsync(await imagesCollection.collection.findOneAsync({}));
 // Unlink a version of the file:
-await imagesCollection.unlinkAsync(await Images.collection.findOneAsync({}), 'thumbnail');
+await imagesCollection.unlinkAsync(await imagesCollection.collection.findOneAsync({}), 'thumbnail');
 ```

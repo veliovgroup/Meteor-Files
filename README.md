@@ -14,6 +14,8 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 - [📔 Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/toc.md) - Docs, API, Demos, Examples
 - [✨ Key features](https://github.com/veliovgroup/Meteor-Files#key-features)
 - [📔 API Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
+- [🔒 Security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
+- [🚚 Migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md)
 - __⚡️ Quick start__:
   - [🔧 Installation](https://github.com/veliovgroup/Meteor-Files#installation)
   - [👨‍💻 Usage example](https://github.com/veliovgroup/Meteor-Files#api-overview)
@@ -32,8 +34,8 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 - Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/about-transports.md)
 - Sustainable and "resumable" uploads will auto-resume when connection interrupted or server rebooted
 - Upload files through computing cloud without persistent File System, like Heroku (*"resumable" uploads are not supported on Heroku and alike*)
-- Use *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)* and other (*[3rd-party storage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
-- APIs for checking file mime-type, size, extension, an other file's properties before upload using *[`onBeforeUpload` hook](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)*
+- Use *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)* and other (*[3rd-party storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
+- APIs for checking file mime-type, size, extension, and other file's properties before upload using *[`onBeforeUpload` hook](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)*
 - APIs for [resizing images](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js#L19), *[subversions management](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/file-subversions.md)*, and other post-processing tasks using *[`onAfterUpload`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* and *[`onAfterRemove`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)* hooks
 
 ## Installation:
@@ -43,6 +45,8 @@ Install [`ostrio:files` from Atmosphere](https://atmospherejs.com/ostrio/files)
 ```shell
 meteor add ostrio:files
 ```
+
+Requires Meteor 3.2 or newer (v3.1.0 and later).
 
 ### ES6 Import:
 
@@ -54,23 +58,23 @@ import { FilesCollection } from 'meteor/ostrio:files';
 
 ## API overview
 
-For detailed docs, examples, and API — read [documentation section](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md).
+For detailed docs, examples, and API, read the [documentation section](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md).
 
 __Main methods:__
 
-- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Anywhere*] - Initialize FilesCollection
-- [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload a file to server, returns `FileUpload` instance
-- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Anywhere*] - Generate downloadable link
-- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Find all files matching selector, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
-- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find a single file record matching selector, returns [`FileCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
-- [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Anywhere*] - Asynchronously remove files from FilesCollection and "unlink" (e.g. remove) from Server
+- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Isomorphic*] - Initialize FilesCollection
+- [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload a file to server, returns a `Promise` that resolves with the `UploadInstance` (`FileUpload`) when `autoStart` is `true`
+- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Isomorphic*] - Generate downloadable link
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Isomorphic*] - Find all files matching selector, returns [`FilesCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Isomorphic*] - Find a single file record matching selector, returns [`FileCursor` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
+- [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Isomorphic*] - Asynchronously remove files from FilesCollection and "unlink" (e.g. remove) from Server
 - [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
 - [`loadAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/loadAsync.md) [*Server*] - Write file to FS and FilesCollection from remote URL
 - [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
 
 ### Constructor
 
-__[*Anywhere*]__. Initiate file's collection in the similar way to `Mongo.Collection` with optional settings related to file-uploads. Read full docs for [`FilesCollection` Constructor in the API documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
+__[*Isomorphic*]__. Initiate file's collection in the similar way to `Mongo.Collection` with optional settings related to file-uploads. Read full docs for [`FilesCollection` Constructor in the API documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -103,6 +107,7 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
   // PUBLISH ALL UPLOADED FILES ON THE SERVER
+  // Demo only: publishes every file record to every client. Filter by `userId` in production, see docs/security.md
   Meteor.publish('files.images.all', function () {
     return imagesCollection.collection.find();
   });
@@ -191,7 +196,7 @@ Upload base64 string (*introduced in v1.7.1*):
 ```js
 // As dataURI
 await imagesCollection.insertAsync({
-  file: 'data:image/png,base64str…',
+  file: 'data:image/png;base64,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
@@ -230,11 +235,12 @@ Template:
 Shared code:
 
 ```js
+// imports/lib/collections/files.collection.js
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
-const imagesCollection = new FilesCollection({ collectionName: 'images' });
-const videosCollection = new FilesCollection({ collectionName: 'videos' });
+export const imagesCollection = new FilesCollection({ collectionName: 'images' });
+export const videosCollection = new FilesCollection({ collectionName: 'videos' });
 
 if (Meteor.isServer) {
   // Upload sample files on server's startup:
@@ -242,11 +248,12 @@ if (Meteor.isServer) {
     await imagesCollection.loadAsync('https://raw.githubusercontent.com/veliovgroup/Meteor-Files/master/logo.png', {
       fileName: 'logo.png'
     });
-    await videosCollection.loadAsync('http://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_5mb.mp4', {
+    await videosCollection.loadAsync('https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4', {
       fileName: 'Big-Buck-Bunny.mp4'
     });
   });
 
+  // Demo only: publishes every file record to every client. Filter by `userId` in production, see docs/security.md
   Meteor.publish('files.images.all', function () {
     return imagesCollection.collection.find();
   });
@@ -261,12 +268,13 @@ if (Meteor.isServer) {
 }
 ```
 
-Client's code:
+Client's code. The synchronous `findOne()` works on the Client only. Use [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) on the Server.
 
 ```js
 // imports/client/file/file.js
+import { Template } from 'meteor/templating';
 import '/imports/client/file/file.html';
-import imagesCollection from '/imports/lib/collections/images.collection.js';
+import { imagesCollection, videosCollection } from '/imports/lib/collections/files.collection.js';
 
 Template.file.helpers({
   imageFile() {
@@ -289,6 +297,7 @@ Create collection available to Client and Server
 import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({ collectionName: 'images' });
+export default imagesCollection;
 
 if (Meteor.isServer) {
   // Load sample image into FilesCollection on server's startup:
@@ -298,6 +307,7 @@ if (Meteor.isServer) {
     });
   });
 
+  // Demo only: publishes every file record to every client. Filter by `userId` in production, see docs/security.md
   Meteor.publish('files.images.all', function () {
     return imagesCollection.collection.find();
   });
@@ -322,6 +332,7 @@ Create controller for `file` template with `file` helper that returns `FileCurso
 
 ```js
 // imports/client/file/file.js
+import { Template } from 'meteor/templating';
 import '/imports/client/file/file.html';
 import imagesCollection from '/imports/lib/collections/images.collection.js';
 
@@ -336,21 +347,21 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 
 ## FAQ:
 
-1. __Where are files stored by default?__: by default if `config.storagePath` isn't set in [*Constructor* options](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) it's equals to `assets/app/uploads` and relative to running script:
+1. __Where are files stored by default?__: by default if `config.storagePath` isn't set in [*Constructor* options](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) it equals `assets/app/uploads/<collectionName>` and is relative to the running script:
     - __a.__ On `development` stage: `yourDevAppDir/.meteor/local/build/programs/server`. __Note: All files will be removed as soon as your application rebuilds__ or you run `meteor reset`. To keep your storage persistent during development use an absolute path *outside of your project folder*, e.g. `/data` directory.
-    - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must to be added to__ `mup.json`, see [MUP usage](hhttps://github.com/veliovgroup/Meteor-Files/blob/master/docs/meteorup-usage.md)
-2. __Cordova usage and development__: With support of community we do regular testing on virtual and real devices. To make sure `Meteor-Files` library runs smoothly in Cordova environment — enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedOrigins: true}` on both `Client` and `Server`. For more details read [Cookie's repository FAQ](https://github.com/veliovgroup/Meteor-Cookies#faq)
+    - __b.__ On `production`: `yourProdAppDir/programs/server`. __Note: If using MeteorUp (MUP), Docker volumes must be added to__ `mup.js`, see [MUP usage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/meteorup-usage.md)
+2. __Cordova usage and development__: To use `Meteor-Files` in a Cordova app, enable [withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials); enable `{allowQueryStringCookies: true}` and `{allowedCordovaOrigins: true}` on both `Client` and `Server` (see [security notes](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)). For more details read [Cookie's repository FAQ](https://github.com/veliovgroup/Meteor-Cookies#faq)
 3. __meteor-desktop usage and development__: Meteor-Files can be used in [meteor-desktop](https://github.com/Meteor-Community-Packages/meteor-desktop) projects as well. As meteor-desktop works exactly like Cordova, all Cordova requirements and recommendations apply
 4. __How to pause/continue upload and get progress/speed/remaining time?__: see *FileUpload* instance returned from [`insertAsync` method](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md)
 5. When using any of `accounts` packages - package `accounts-base` must be explicitly added to `.meteor/packages` __above__ `ostrio:files`
 6. __cURL/POST uploads__ - Take a look on [POST-Example](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
-7. In __Safari__ (Mobile and Desktop) for `DDP` chunk size is reduced by algorithm, due to error thrown if frame is too big. This issue should be fixed in Safari 11. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/veliovgroup/Meteor-Files/issues/458)
+7. In __Safari__ (Mobile and Desktop) for `DDP` the algorithm reduces the chunk size, because Safari throws an error if a frame is too big. Switching to `http` transport (*which has no such issue*) is recommended for Safari. See [#458](https://github.com/veliovgroup/Meteor-Files/issues/458)
 8. Make sure you're using single domain for the Meteor app, and the same domain for hosting Meteor-Files endpoints, see [#737](https://github.com/veliovgroup/Meteor-Files/issues/737) for details
 9. When requests are proxied to `FilesCollection` endpoint make sure protocol `http/1.1` is used, see [#742](https://github.com/veliovgroup/Meteor-Files/issues/742) for details
 
 ## Awards:
 
-<a href="https://themeteorchef.com/blog/giant-cotton-apron-awards-show">
+<a href="https://github.com/themeteorchef">
   <img src="https://raw.githubusercontent.com/veliovgroup/Meteor-Files-Demos/master/GCAA.png" alt="GCAA award" width="120">
 </a>
 
@@ -358,7 +369,7 @@ For more expressive example see [Download demo](https://github.com/veliovgroup/M
 
 - [Ask a question or submit an issue](https://github.com/veliovgroup/Meteor-Files/issues)
 - [Releases / Changelog / History](https://github.com/veliovgroup/Meteor-Files/releases)
-- For more docs and examples [read wiki](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
+- For more docs and examples [read the documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
 
 ## Demo applications:
 
@@ -380,7 +391,7 @@ Other demos:
 
 ## Support Meteor-Files project:
 
-- 🗃️ Upload and share files using [meteor-files.com](https://meteor-files.com/?ref=github-files-repo-footer) — Continue interrupted file uploads without losing any progress. There is nothing that will stop Meteor from delivering your file to the desired destination
+- 🗃️ Upload and share files using [meteor-files.com](https://meteor-files.com/?ref=github-files-repo-footer). Continue interrupted file uploads without losing any progress. There is nothing that will stop Meteor from delivering your file to the desired destination
 - 👨‍💻 Improve your project using [ostr.io](https://ostr.io?ref=github-files-repo-footer) for [Server Monitoring](https://snmp-monitoring.com), [Web Analytics](https://ostr.io/info/web-analytics?ref=github-files-repo-footer), [WebSec](https://domain-protection.info), [Web-CRON](https://web-cron.info) and [SEO Pre-rendering](https://prerendering.com)
 - 💵 [Sponsor via GitHub](https://github.com/sponsors/dr-dimitru)
 - 💵 [Support via PayPal](https://paypal.me/veliovgroup)
@@ -394,7 +405,7 @@ Other demos:
 
 ## Supporters:
 
-We would like to thank everyone who support this project
+We would like to thank everyone who supports this project
 
 - [@vanshady](https://github.com/vanshady)
 - [@Neophen](https://github.com/Neophen)

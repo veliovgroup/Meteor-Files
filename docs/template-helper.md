@@ -11,7 +11,9 @@ if (Meteor.isClient) {
   Meteor.subscribe('files.all');
 
   Template.example.helpers({
-    fileRef: files.collection.findOne({})
+    fileRef() {
+      return files.collection.findOne({});
+    }
   });
 } else {
   Meteor.publish('files.all', function () {

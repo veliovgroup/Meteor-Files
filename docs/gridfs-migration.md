@@ -20,11 +20,13 @@ First create three Methods in P that each share one of the three crucial Parts o
 
 *This assumes the [default configuration of your GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md) which is by default using the `db.fs.files` and `db.fs.chunks` collections.*
 
-*For custom configuration you may consult the JS Mongo Native Driver documentation on [GridFSBucket](http://mongodb.github.io/node-mongodb-native/3.6/api/GridFSBucket.html).*
+*For custom configuration you may consult the JS Mongo Native Driver documentation on [GridFSBucket](https://mongodb.github.io/node-mongodb-native/6.0/classes/GridFSBucket.html).*
 
 #### P/server/sync.js
 
 ```js
+import { Meteor } from 'meteor/meteor'
+import { Mongo } from 'meteor/mongo'
 import { Meteor } from 'meteor/meteor'
 import { Mongo } from 'meteor/mongo'
 import { FilesCollection } from 'meteor/ostrio:files'
@@ -34,16 +36,16 @@ const ImageFiles = new FilesCollection({ ... })
 const FsFiles = new Mongo.Collection('fs.files')
 const FsChunks = new Mongo.Collection('fs.chunks')
 
-function getFilesDocuments () {
-  return ImageFiles.collection.find().fetch()
+async function getFilesDocuments () {
+  return await ImageFiles.collection.find().fetchAsync()
 }
 
-function getFilesMetadata () {
-  return FsFiles.find().fetch()
+async function getFilesMetadata () {
+  return await FsFiles.find().fetchAsync()
 }
 
-function getFilesChunks () {
-  return FsChunks.find().fetch()
+async function getFilesChunks () {
+  return await FsChunks.find().fetchAsync()
 }
 
 Meteor.methods({getFilesDocuments, getFilesMetadata, getFilesChunks})
@@ -57,7 +59,6 @@ Meteor.methods({getFilesDocuments, getFilesMetadata, getFilesChunks})
 import { Meteor } from 'meteor/meteor'
 import { Mongo } from 'meteor/mongo'
 import { DDP } from 'meteor/ddp-client'
-import { Tracker } from 'meteor/tracker'
 import { FilesCollection } from 'meteor/ostrio:files'
 
 const ImageFiles = new FilesCollection({ ... })
@@ -69,13 +70,13 @@ let remoteConnection // use to connect to P via DDP
 /**
  * Inserts a doc into a collection or updates the doc, if it already exists
  */
-function insertUpdate(collection, doc) {
-  if (!collection.findOne(doc._id)) {
-    console.log(`[${collection._name}]: insert ${collection.insert(doc)}`)
+async function insertUpdate(collection, doc) {
+  if (!(await collection.findOneAsync(doc._id))) {
+    console.log(`[${collection._name}]: insert ${await collection.insertAsync(doc)}`)
   } else {
     const docId = doc._id
     delete doc._id
-    const updated = collection.update(docId, { $set: doc })
+    const updated = await collection.updateAsync(docId, { $set: doc })
     console.log(`[${collection._name}]: update ${docId} ${updated}`)
   }
 }
@@ -83,27 +84,22 @@ function insertUpdate(collection, doc) {
 /**
  * Call the methods on the remote application and insert/update the received documents
  */
-function synchronize (trackerComputation) {
-  // skip if not yet connected
-  if (!remoteConnection.status().connected) return
-  
-  remoteConnection.call('getFilesDocuments', (err, filesDocuments) => {
-    // handle err
-    filesDocuments.forEach(filesDoc => insertUpdate(ImageFiles.collection, filesDoc))
-  })
-  
-  remoteConnection.call('getFilesMetadata', (err, filesMetdadata) => {
-    // handle err
-    filesMetdadata.forEach(metadataDoc => insertUpdate(FsFiles, metadataDoc))
-  })
+async function synchronize () {
+  // `callAsync` waits for the connection to P to be established
+  const filesDocuments = await remoteConnection.callAsync('getFilesDocuments')
+  for (const filesDoc of filesDocuments) {
+    await insertUpdate(ImageFiles.collection, filesDoc)
+  }
 
-  remoteConnection.call('getFilesChunks', (err, filesChunks) => {
-    // handle err
-    filesChunks.forEach(chunkDoc => insertUpdate(FsChunks, chunkDoc))
-  })
+  const filesMetadata = await remoteConnection.callAsync('getFilesMetadata')
+  for (const metadataDoc of filesMetadata) {
+    await insertUpdate(FsFiles, metadataDoc)
+  }
 
-  // stop the tracker because we don't need to watch the connection anymore
-  trackerComputation.stop()
+  const filesChunks = await remoteConnection.callAsync('getFilesChunks')
+  for (const chunkDoc of filesChunks) {
+    await insertUpdate(FsChunks, chunkDoc)
+  }
 }
 
 // ... code continues in the next step
@@ -116,20 +112,21 @@ In your Consumer application C you can now connect to the remote app on the serv
 #### C/server/sync.js (continued)
 
 ```javascript
-Meteor.startup(() => {
+Meteor.startup(async () => {
   const url = 'p.domain.tld' // get url of P, for example via process.env or Meteor.settings
   remoteConnection = DDP.connect(url)
 
-  // use Tracker to run the sync when the remoteConnection is "connected"
-  const synchronizeTracker = Meteor.bindEnvironment(synchronize)
-  Tracker.autorun(synchronizeTracker)
+  try {
+    await synchronize()
+  } catch (error) {
+    console.error('Sync from P failed', error)
+  }
 })
-
 ```
 
 ### Further considerations
 
-You may require authentication for the remote connection, which can be added using [`ongoworks:ddp-login`](https://github.com/reactioncommerce/meteor-ddp-login).
+You may require authentication for the remote connection, which can be added using [`accounts-base` login methods](https://docs.meteor.com/api/accounts.html#Meteor-loginWithPassword) with `remoteConnection` (set the connection with `Accounts.connection` or call `remoteConnection.callAsync('login', ...)`).
 A good pattern is to create a user that is only permitted to run the sync methods in P and login with that user from C. The credentials for login can be passed using `process.env` or `Meteor.settings`.
 
 From this point you can configure your methods to sync only a subset of documents or manipulate them before/after sync or remove them after sync.

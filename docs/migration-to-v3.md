@@ -6,7 +6,7 @@
 ### Summary
 
 - ✨ Refactor: Hook options: `protected`, `onBeforeRemove`, `onAfterRemove`, `onInitiateUpload`, `onAfterUpload`, `namingFunction` are now *async*
-- 🤝 Refactor: Compatibility with `meteor@3` and other modern packages
+- 🤝 Refactor: Compatibility with `meteor@3` and other modern packages. Since v3.1.0 the minimum Meteor version is `3.2` (`ostrio:cookies` 3.0.0 needs `fetch@0.1.6`, first shipped with Meteor 3.2)
 - ☄️ Refactor: Match `FilesCollection` APIs with new `*Async` methods of `Mongo.Collection`; Deprecate callback APIs on the Server
 - 👨‍💻 Refactor: Utilize node's async APIs where suitable
 - 👨‍💻 Refactor: Improve pause/resume logic on connection interruption/reconnect
@@ -45,7 +45,7 @@ __FileUpload__:
 
 __Callbacks and hooks__:
 
-- ⚠️ Anywhere: `this.user()` is deprecated, use `this.userAsync()` instead
+- ⚠️ Isomorphic: `this.user()` is deprecated, use `this.userAsync()` instead
 - ⚠️ Client: `FileUpload` now always triggers `end` even in the case of successful and failed uploads; *Before: `end` event wasn't called under certain conditions*
 - ⚠️ Client: All errors appeared during upload in all hooks and events of `FileUpload` are now instance of `Meteor.Error`; *Before: Errors had mixed type or were simply text*
 - ⚠️ Client: Errors are the same now (type, code, text, reason, details) within DDP and HTTP protocols; *Before: DDP and HTTP protocols had different errors*
@@ -56,11 +56,11 @@ __Callbacks and hooks__:
 __FilesCollection__:
 
 - ✨ Client: `FilesCollection#insertAsync()`
-- ✨ Anywhere: `FilesCollection#updateAsync()`
-- ✨ Anywhere: `FilesCollection#removeAsync()`
-- ✨ Anywhere: `FilesCollection#findOneAsync()`
-- ✨ Anywhere: `FilesCollection#countDocuments()`
-- ✨ Anywhere: `FilesCollection#estimatedDocumentCount()`
+- ✨ Isomorphic: `FilesCollection#updateAsync()`
+- ✨ Isomorphic: `FilesCollection#removeAsync()`
+- ✨ Isomorphic: `FilesCollection#findOneAsync()`
+- ✨ Isomorphic: `FilesCollection#countDocuments()`
+- ✨ Isomorphic: `FilesCollection#estimatedDocumentCount()`
 - ✨ Server: `FilesCollection#unlinkAsync()`
 - ✨ Server: `FilesCollection#writeAsync()`
 - ✨ Server: `FilesCollection#loadAsync()`
@@ -71,28 +71,28 @@ __FileUpload__:
 
 __FileCursor__:
 
-- ✨ Anywhere: `FileCursor#removeAsync()`
-- ✨ Anywhere: `FileCursor#fetchAsync()`
-- ✨ Anywhere: `FileCursor#withAsync()`
+- ✨ Isomorphic: `FileCursor#removeAsync()`
+- ✨ Isomorphic: `FileCursor#fetchAsync()`
+- ✨ Isomorphic: `FileCursor#withAsync()`
 
 __FilesCursor__:
 
-- ✨ Anywhere: `FilesCursor#getAsync()`
-- ✨ Anywhere: `FilesCursor#hasNextAsync()`
-- ✨ Anywhere: `FilesCursor#nextAsync()`
-- ✨ Anywhere: `FilesCursor#hasPreviousAsync()`
-- ✨ Anywhere: `FilesCursor#previousAsync()`
-- ✨ Anywhere: `FilesCursor#removeAsync()`
-- ✨ Anywhere: `FilesCursor#fetchAsync()`
-- ✨ Anywhere: `FilesCursor#firstAsync()`
-- ✨ Anywhere: `FilesCursor#lastAsync()`
-- ✨ Anywhere: `FilesCursor#countDocuments()`
-- ✨ Anywhere: `FilesCursor#forEachAsync()`
-- ✨ Anywhere: `FilesCursor#eachAsync()`
-- ✨ Anywhere: `FilesCursor#mapAsync()`
-- ✨ Anywhere: `FilesCursor#currentAsync()`
-- ✨ Anywhere: `FilesCursor#observeAsync()`
-- ✨ Anywhere: `FilesCursor#observeChangesAsync()`
+- ✨ Isomorphic: `FilesCursor#getAsync()`
+- ✨ Isomorphic: `FilesCursor#hasNextAsync()`
+- ✨ Isomorphic: `FilesCursor#nextAsync()`
+- ✨ Isomorphic: `FilesCursor#hasPreviousAsync()`
+- ✨ Isomorphic: `FilesCursor#previousAsync()`
+- ✨ Isomorphic: `FilesCursor#removeAsync()`
+- ✨ Isomorphic: `FilesCursor#fetchAsync()`
+- ✨ Isomorphic: `FilesCursor#firstAsync()`
+- ✨ Isomorphic: `FilesCursor#lastAsync()`
+- ✨ Isomorphic: `FilesCursor#countDocuments()`
+- ✨ Isomorphic: `FilesCursor#forEachAsync()`
+- ✨ Isomorphic: `FilesCursor#eachAsync()`
+- ✨ Isomorphic: `FilesCursor#mapAsync()`
+- ✨ Isomorphic: `FilesCursor#currentAsync()`
+- ✨ Isomorphic: `FilesCursor#observeAsync()`
+- ✨ Isomorphic: `FilesCursor#observeChangesAsync()`
 
 ### New features
 
@@ -102,7 +102,7 @@ __FilesCursor__:
 
 - 🐞 Bug: Fixed #885 — Upload empty file now `end` upload with error
 - 🐞 Bug: Fixed #901 — Caused by #894
-- 🔧 Security: Fixed #894 — now `x_mtok` cookie is set with `secure` and `httpOnly` flags
+- 🔧 Security: Fixed #894. The `x_mtok` cookie is set with `sameSite: 'Lax'` and, in production, the `secure` flag. The cookie is not `httpOnly` because the client sets it from JavaScript, see [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
 - 🔧 Refactor: Fixed `FileCursor#with` implementation
 - ✨ Refactor: `FileUpload#abort` is now `async`
 - ✨ Server: `FilesCollection#addFile` is now *async*
