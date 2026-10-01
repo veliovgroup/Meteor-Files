@@ -35,6 +35,7 @@ This release adds signed download links, storage adapters with a built-in GridFS
 
 - 🔧 Record written chunks instead of guessing them from the file size after a restart. A hole before the last written chunk no longer passes as complete.
 - 🔧 Make one database read per protected download.
+- 🔧 Finish an upload whose chunks reached several server instances: EOF reads the recorded chunks once before it gives up. Another instance finishing the upload no longer deletes the file or logs a failed write.
 
 ### Changed
 

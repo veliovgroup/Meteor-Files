@@ -1073,6 +1073,10 @@ describe('FilesCollection', function() {
       dir = tmpDir('write-stream');
     });
 
+    afterEach(function() {
+      sinon.restore();
+    });
+
     const create = async (name, maxLength = 2, options = {}) => {
       const stream = new WriteStream(nodePath.join(dir, name), maxLength, { chunkSize: 4 }, 0o644, 0o755, { fileId: name, exclusive: true, ...options });
       await stream.init();
@@ -1083,6 +1087,48 @@ describe('FilesCollection', function() {
       expect(chunkIdsFromBits([0b101, -2147483648], 64)).to.deep.equal([1, 3, 64]);
       expect(chunkIdsFromBits([0xff], 4)).to.deep.equal([1, 2, 3, 4]);
       expect(chunkIdsFromBits(undefined, 4)).to.deep.equal([]);
+    });
+
+    it('end() re-reads recorded chunks once before it gives up', async function() {
+      const reload = sinon.stub().resolves([1, 2]);
+      const stream = await create('reload-ok.txt', 2, { loadRecordedChunkIds: reload });
+      stream.maxEndRetries = 2;
+      // Another instance wrote chunk 2 into the same file and recorded it
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(true);
+      fs.writeFileSync(stream.path, 'abcdefgh');
+      expect(await stream.end()).to.equal(true);
+      expect(reload.calledOnce).to.equal(true);
+      expect(fs.readFileSync(stream.path, 'utf8')).to.equal('abcdefgh');
+    });
+
+    it('end() aborts when the recorded chunks are still incomplete', async function() {
+      const stream = await create('reload-partial.txt', 2, { loadRecordedChunkIds: async () => [1, 99, 'x'] });
+      stream.maxEndRetries = 2;
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(true);
+      expect(await stream.end()).to.equal(false);
+      expect(stream.aborted).to.equal(true);
+      expect(fs.existsSync(stream.path)).to.equal(false);
+    });
+
+    it('end() aborts when re-reading recorded chunks fails', async function() {
+      const stream = await create('reload-error.txt', 2, { loadRecordedChunkIds: async () => { throw new Error('db down'); } });
+      stream.maxEndRetries = 2;
+      sinon.stub(Meteor, '_debug');
+      expect(await stream.end()).to.equal(false);
+      expect(stream.aborted).to.equal(true);
+    });
+
+    it('a write cut off by stop(false) returns false quietly and keeps the file', async function() {
+      const stream = await create('stopped-write.txt', 2);
+      sinon.stub(stream.fh, 'write').callsFake(async () => {
+        await stream.stop(false);
+        throw Object.assign(new Error('EBADF'), { code: 'EBADF' });
+      });
+      const debug = sinon.stub(Meteor, '_debug');
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(false);
+      expect(debug.called).to.equal(false);
+      expect(stream.aborted).to.equal(false);
+      expect(fs.existsSync(stream.path)).to.equal(true);
     });
 
     it('C6: end() returns false after abort', async function() {

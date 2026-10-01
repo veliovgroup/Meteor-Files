@@ -801,6 +801,19 @@ describe('Security', function () {
     });
   });
 
+  describe('EOF reads chunks recorded by other instances', function () {
+    it('gives the stream the chunk ids stored in the upload record', async function () {
+      const fc = createCollection();
+      const _id = `rec${Random.id()}`;
+      const path = nodePath.join(fc.storagePath({}), `${_id}.bin`);
+      const stream = await fc._createStream(_id, path, { fileLength: 2, chunkSize: 4 }, { exclusive: true });
+      expect(await stream.loadRecordedChunkIds()).to.deep.equal([]);
+      await fc._preCollection.insertAsync({ _id, fileLength: 2, chunkBits: [0b11] });
+      expect(await stream.loadRecordedChunkIds()).to.deep.equal([1, 2]);
+      await stream.abort();
+    });
+  });
+
   describe('A2: Start registration and path index', function () {
     it('registers the stream before the upload record is saved', async function () {
       const fc = createCollection();

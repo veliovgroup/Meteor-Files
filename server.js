@@ -574,6 +574,11 @@ class FilesCollection extends FilesCollectionCore {
           idleTimeout: this.uploadIdleTimeout,
           identity: opts.fileIdentity,
           onChunkWritten: (chunkId) => this._recordChunk(_id, chunkId),
+          // Chunks of this upload can land on other instances, read their records before giving up at EOF
+          loadRecordedChunkIds: async () => {
+            const record = await this._preCollection.findOneAsync({ _id });
+            return helpers.isArray(record?.chunkBits) ? chunkIdsFromBits(record.chunkBits, opts.fileLength) : [];
+          },
           onAbort: async () => {
             // Aborted upload can not be continued, drop its record
             await this._preCollection.removeAsync({ _id });

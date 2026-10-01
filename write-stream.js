@@ -82,6 +82,7 @@ const chunkIdsFromBits = (bits, maxLength) => {
  * @param [options.fileId] {string} - Upload id, used as part of the file handle cache key
  * @param [options.onAbort] {function} - Called after the stream is aborted
  * @param [options.writtenChunkIds] {number[]} - Chunk ids already on disk, used when resuming. A resumed stream knows nothing else about the file content
+ * @param [options.loadRecordedChunkIds] {function} - Async, returns chunk ids recorded by any server instance. Read once before an incomplete `end()` gives up
  * @param [options.onChunkWritten] {function(number): Promise<boolean>} - Called after a chunk is on disk. The chunk counts as written only when it resolves `true`
  * @summary Writes chunks at their offsets into one file and tracks which chunks are written
  */
@@ -101,6 +102,7 @@ export default class WriteStream {
     this.identity = (helpers.isObject(options.identity) && options.identity.dev && options.identity.ino) ? fileIdentity(options.identity) : null;
     this.onAbort = helpers.isFunction(options.onAbort) ? options.onAbort : null;
     this.onChunkWritten = helpers.isFunction(options.onChunkWritten) ? options.onChunkWritten : null;
+    this.loadRecordedChunkIds = helpers.isFunction(options.loadRecordedChunkIds) ? options.loadRecordedChunkIds : null;
     this.writtenChunkIds = helpers.isArray(options.writtenChunkIds) ? options.writtenChunkIds : [];
     this.opening = null;
 
@@ -337,6 +339,11 @@ export default class WriteStream {
       this.writtenChunks = this.chunkIds.size;
       return true;
     } catch (error) {
+      if (this.ended && !this.aborted) {
+        // `stop(false)` closed the handle mid-write: the upload finished elsewhere, nothing to report
+        return false;
+      }
+
       const isFileLost = error?.error === 409 || error?.error === 410;
       if (!isFileLost) {
         Meteor._debug('[FilesCollection] [writeStream] [write] [Error:]', error);
@@ -388,8 +395,44 @@ export default class WriteStream {
       return await this.stop(false);
     }
 
+    if (!this.ended && await this._mergeRecordedChunkIds() && this.isComplete()) {
+      return await this.stop(false);
+    }
+
     await this.abort();
     return false;
+  }
+
+  /**
+   * @memberOf WriteStream
+   * @name _mergeRecordedChunkIds
+   * @summary Adds chunk ids that other server instances recorded for this upload
+   * @returns {Promise<boolean>} - `true` if the recorded ids were read
+   */
+  async _mergeRecordedChunkIds() {
+    if (!this.loadRecordedChunkIds) {
+      return false;
+    }
+
+    let ids;
+    try {
+      ids = await this.loadRecordedChunkIds();
+    } catch (loadError) {
+      Meteor._debug('[FilesCollection] [writeStream] [loadRecordedChunkIds] [ERROR:]', this.path, loadError);
+      return false;
+    }
+
+    if (!helpers.isArray(ids) || this.aborted || this.ended) {
+      return false;
+    }
+
+    for (const id of ids) {
+      if (Number.isInteger(id) && id >= 1 && id <= this.maxLength) {
+        this.chunkIds.add(id);
+      }
+    }
+    this.writtenChunks = this.chunkIds.size;
+    return true;
   }
 
   /**
