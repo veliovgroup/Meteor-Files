@@ -5,7 +5,7 @@ import { Tracker } from 'meteor/tracker';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
+import { applyPipes, fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -709,10 +709,7 @@ export class UploadInstance extends EventEmitter {
       }
 
       this.result.emit('data', evt.data.bin);
-      // Pipes run in reverse order of registration: the last added pipe runs first
-      for (let i = this.pipes.length - 1; i >= 0; i--) {
-        opts.binData = this.pipes[i](opts.binData);
-      }
+      opts.binData = applyPipes(this.pipes, opts.binData);
     } catch (pipeError) {
       this.inFlight = null;
       this.emit('error', toMeteorError(pipeError));
@@ -1110,7 +1107,7 @@ export class UploadInstance extends EventEmitter {
 
   /**
    * Adds a transformation function to the upload pipeline.
-   * Pipes run in reverse order of registration: the last added pipe runs first.
+   * Pipes run in the order they were added: the first added pipe runs first.
    * @param {function(string): string} func - A function to process the binary data.
    * @returns {UploadInstance} Returns the current UploadInstance for chaining.
    */

@@ -102,6 +102,19 @@ export const settle = (upload) => new Promise((resolve) => {
       expect(upload.state.get()).to.equal('aborted');
     });
 
+    it('runs pipes in the order they were added', async function () {
+      const order = [];
+      const upload = files.insert({ file: makeFile('pipes.txt', 1024, 'e'), chunkSize: 1024, transport }, false);
+      upload
+        .pipe((data) => { order.push('first'); return data; })
+        .pipe((data) => { order.push('second'); return data; });
+      const done = settle(upload);
+      await upload.start();
+      const { error } = await done;
+      expect(error).to.not.exist;
+      expect(order).to.deep.equal(['first', 'second']);
+    });
+
     it('gives up after 5 attempts when the server answers 503', async function () {
       const upload = files.insert({ file: makeFile('always-503.txt', 16), chunkSize: 1024, transport }, false);
       const done = settle(upload);

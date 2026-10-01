@@ -162,6 +162,15 @@ const helpers = {
 };
 
 /**
+ * @function applyPipes
+ * @param {Array<function(string): string>} pipes - Transform functions, in the order they were added
+ * @param {string} data - Base64 chunk
+ * @summary Run upload pipes in the order they were added: the first `pipe()` call runs first
+ * @returns {string}
+ */
+const applyPipes = (pipes, data) => pipes.reduce((value, pipe) => pipe(value), data);
+
+/**
  * @const {function} fixJSONParse - Fix issue with Date parse
  * @summary Revive `=--JSON-DATE--=` strings into `Date` objects in place. Walks own keys only and skips `__proto__`, `constructor`, and `prototype`
  */
@@ -323,4 +332,4 @@ const formatFileURL = (_fileRef, version = 'original', _uriBase = (__meteor_runt
   return `${_root}${route}/${collectionName}/${_id}/${_version}/${_id}${ext}`;
 };
 
-export { fixJSONParse, fixJSONStringify, formatFileURL, helpers };
+export { applyPipes, fixJSONParse, fixJSONStringify, formatFileURL, helpers };

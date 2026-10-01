@@ -345,7 +345,7 @@ The `FileUpload` instance is the `this` *context* in all callback functions (*se
         Pipe data before upload
       </td>
       <td>
-        All data must be in `data URI` scheme (*Base64*). A pipe must not change the decoded byte length of a chunk, see [Piping](#piping). Pipes run in reverse order of registration: the pipe added last runs first. This order changes in v4 (first added runs first)
+        All data must be in `data URI` scheme (*Base64*). A pipe must not change the decoded byte length of a chunk, see [Piping](#piping). Pipes run in the order they were added: the first added pipe runs first
       </td>
     </tr>
     <tr>
@@ -755,7 +755,7 @@ Note: data flow in `ddp` and `http` uses dataURI (e.g. *Base64*)
 
 Each pipe gets a chunk as a Base64 string and must return a Base64 string that decodes to the same number of bytes. The server writes chunk `N` at offset `(N - 1) * chunkSize` and rejects a chunk that is larger than `chunkSize` with `400 Invalid chunk size`. Over HTTP the server may close the connection instead, and the upload fails after 10 retries of that chunk. A shorter chunk leaves zero-filled gaps in the stored file. So per-chunk compression, and encryption that adds an IV, a tag, or padding, do not work as pipes. Run those on the server in `onAfterUpload`, or transform the whole file before calling `insert()`.
 
-Pipes run in reverse order of registration. In the example below `count` runs first, then `mask`. This order changes in v4, where the first registered pipe runs first.
+Pipes run in the order they were added. In the example below `mask` runs first, then `count`. Before v4 the last added pipe ran first, see [migration to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md).
 
 ```js
 import { Template } from 'meteor/templating';

@@ -546,7 +546,7 @@ export class UploadInstance extends EventEmitter {
   _prepare(): Promise<void>;
   /** @internal */
   _setup(): void;
-  /** Pipes run in reverse order of registration. */
+  /** Pipes run in the order they were added. */
   pipe(func: (data: string) => string): this;
   start(): Promise<FileUpload>;
   manual(): FileUpload;
