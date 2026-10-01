@@ -1,7 +1,16 @@
 import { EventEmitter } from 'eventemitter3';
+import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { check, Match } from 'meteor/check';
 import { formatFileURL, helpers } from './lib.js';
 import { FilesCursor, FileCursor } from './cursor.js';
+
+/* eslint-disable new-cap */
+/**
+ * @const {Match.Pattern} SELECTOR_PATTERN - Selectors accepted by `find`, `findOne`, `findOneAsync`, and `countDocuments`
+ */
+const SELECTOR_PATTERN = Match.Optional(Match.OneOf(Object, String, Boolean, Number, null, Mongo.ObjectID));
+/* eslint-enable new-cap */
 
 export default class FilesCollectionCore extends EventEmitter {
   constructor() {
@@ -170,7 +179,7 @@ export default class FilesCollectionCore extends EventEmitter {
       name: data.name,
       extension: data.extension,
       ext: data.extension,
-      extensionWithDot: `.${data.extension}`,
+      extensionWithDot: data.extension ? `.${data.extension}` : '',
       path: data.path,
       meta: data.meta,
       type: data.type,
@@ -211,7 +220,7 @@ export default class FilesCollectionCore extends EventEmitter {
   async findOneAsync(selector = {}, options) {
     this._debug(`[FilesCollection] [findOneAsync(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
     /* eslint-disable new-cap */
-    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(selector, SELECTOR_PATTERN);
     check(options, Match.Optional(Object));
     /* eslint-enable new-cap */
 
@@ -237,7 +246,7 @@ export default class FilesCollectionCore extends EventEmitter {
       throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
     }
     /* eslint-disable new-cap */
-    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(selector, SELECTOR_PATTERN);
     check(options, Match.Optional(Object));
     /* eslint-enable new-cap */
 
@@ -259,7 +268,7 @@ export default class FilesCollectionCore extends EventEmitter {
   find(selector = {}, options) {
     this._debug(`[FilesCollection] [find(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
     /* eslint-disable new-cap */
-    check(selector, Match.Optional(Match.OneOf(Object, String, Boolean, Number, null)));
+    check(selector, SELECTOR_PATTERN);
     check(options, Match.Optional(Object));
     /* eslint-enable new-cap */
 
@@ -300,10 +309,19 @@ export default class FilesCollectionCore extends EventEmitter {
   async countDocuments(_selector = {}, options) {
     this._debug(`[FilesCollection] [countDocuments(${JSON.stringify(_selector)}, ${JSON.stringify(options)})]`);
     /* eslint-disable new-cap */
-    check(_selector, Match.Optional(Match.OneOf(Object, String)));
+    check(_selector, SELECTOR_PATTERN);
     check(options, Match.Optional(Object));
     /* eslint-enable new-cap */
-    const selector = typeof _selector === 'string' && _selector.length ? { _id: _selector } : _selector;
+    let selector = _selector;
+    if (helpers.isString(selector) || helpers.isNumber(selector) || selector instanceof Mongo.ObjectID) {
+      // Same shorthand as `find()`: scalars match `_id`
+      selector = { _id: selector };
+    }
+
+    if (!selector || (helpers.isObject(selector) && Object.hasOwn(selector, '_id') && !selector._id)) {
+      // Same as `find()`: falsy selectors match nothing
+      return 0;
+    }
     return await this.collection.countDocuments(selector, options);
   }
 
@@ -317,7 +335,7 @@ export default class FilesCollectionCore extends EventEmitter {
   async estimatedDocumentCount(options) {
     /* eslint-disable-next-line new-cap */
     check(options, Match.Optional(Object));
-    this._collection._debug('[FilesCollection] [estimatedDocumentCount()]');
+    this._debug('[FilesCollection] [estimatedDocumentCount()]');
     return await this.collection.estimatedDocumentCount(options);
   }
 
@@ -325,18 +343,21 @@ export default class FilesCollectionCore extends EventEmitter {
    * Returns a downloadable URL for a file.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
-   * @param {Partial<FileObj>} fileObj - A partial file object reference
+   * @param {Partial<FileObj>|FileCursor|null} fileObj - A file object reference, or a FileCursor
    * @param {string} [version='original'] - The file version
    * @param {string} [uriBase] - Optional URI base
+   * @summary Uses the document's stored `_downloadRoute` and `_collectionName` when they are safe, otherwise this collection's values
    * @returns {string} The download URL, or an empty string if the file is not found
    */
   link(fileObj, version = 'original', uriBase) {
-    this._debug(`[FilesCollection] [link(${helpers.isObject(fileObj) ? fileObj._id : undefined}, ${version})]`);
-    check(fileObj, Object);
-
     if (!fileObj) {
       return '';
     }
-    return formatFileURL(fileObj, version, uriBase);
+
+    const fileRef = (fileObj instanceof FileCursor) ? fileObj._fileRef : fileObj;
+    this._debug(`[FilesCollection] [link(${helpers.isObject(fileRef) ? fileRef._id : undefined}, ${version})]`);
+    // eslint-disable-next-line new-cap
+    check(fileRef, Match.Where((obj) => helpers.isObject(obj)));
+    return formatFileURL(fileRef, version, uriBase, this);
   }
 }
