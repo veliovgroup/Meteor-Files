@@ -22,6 +22,7 @@ const config: FilesCollectionConfig = {
   chunkSize: 'dynamic',
   allowedCordovaOrigins: /^https:\/\/localhost:12[0-9]{3}$/,
   nosniff: true,
+  trustClientMimeType: false,
   uploadIdleTimeout: 900000,
   allowedOrigins: false,
   disableUpload: false,
@@ -78,6 +79,7 @@ expectAssignable<FilesCollectionConfig>({ allowedCordovaOrigins: true });
 expectAssignable<FilesCollectionConfig>({ allowedCordovaOrigins: 'https://example.com' });
 expectError<FilesCollectionConfig>({ allowedCordovaOrigins: 1 });
 expectError<FilesCollectionConfig>({ nosniff: 'yes' });
+expectError<FilesCollectionConfig>({ trustClientMimeType: 'yes' });
 expectError<FilesCollectionConfig>({ uploadIdleTimeout: '900000' });
 
 const files = new FilesCollection(config);

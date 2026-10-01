@@ -461,6 +461,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><code>file.type</code> is the type the uploader sent and is not verified</p>
         <p><del><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1 or chunkId=-1) and on eof (eof=true or chunkId=-1)</i></del> (<i>Fixed</i>. Since <code>v1.6.0</code> full file object is available in <code>onBeforeUpload</code> callback)</p>
       </td>
     </tr>
@@ -835,6 +836,23 @@
       </td>
       <td>
         Set <code>false</code> only when a proxy in front of the app adds this header
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.trustClientMimeType</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Store the mime type the uploader sent. When <code>false</code> the server reads the first 4100 bytes of the file and stores the detected type, the uploader's <code>text/*</code> or <code>application/json</code> type (or <code>text/plain</code>) for UTF-8 text, or <code>application/octet-stream</code>. Also applies to <code>writeAsync()</code>, <code>loadAsync()</code>, and <code>addFile()</code> without an explicit <code>type</code>
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        <code>onBeforeUpload</code> sees the type the uploader sent, which is not verified. <code>isImage</code>, <code>isVideo</code>, and the other flags follow the stored type
       </td>
     </tr>
     <tr>

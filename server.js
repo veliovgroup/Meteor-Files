@@ -9,6 +9,7 @@ import { check, Match } from 'meteor/check';
 import WriteStream, { fileIdentity, isSameFile } from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
+import { SNIFF_BYTES, resolveMimeType, sniffFile } from './mime.js';
 
 import fs from 'node:fs';
 import nodeQs from 'node:querystring';
@@ -157,6 +158,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
+ * @param config.trustClientMimeType {boolean} - [Server] Store the type the uploader sent. When `false` (default) the stored type comes from the file content
  * @param config.uploadIdleTimeout {number} - [Server] Close file handle of an upload after this many ms without new chunks, it is reopened on the next chunk. Default: 900000 (15 minutes)
  * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
@@ -229,6 +231,7 @@ class FilesCollection extends FilesCollectionCore {
         schema: this.schema,
         storagePath,
         strict: this.strict,
+        trustClientMimeType: this.trustClientMimeType,
         uploadIdleTimeout: this.uploadIdleTimeout,
       } = config);
     }
@@ -375,6 +378,10 @@ class FilesCollection extends FilesCollectionCore {
       this.nosniff = true;
     }
 
+    if (this.trustClientMimeType === void 0) {
+      this.trustClientMimeType = false;
+    }
+
     if (this.uploadIdleTimeout === void 0) {
       this.uploadIdleTimeout = 900000;
     }
@@ -466,6 +473,7 @@ class FilesCollection extends FilesCollectionCore {
     check(this.continueUploadTTL, Number);
     check(this.allowQueryStringCookies, Boolean);
     check(this.nosniff, Boolean);
+    check(this.trustClientMimeType, Boolean);
     check(this.uploadIdleTimeout, Number);
     /* eslint-disable new-cap */
     check(this.onAfterRemove, Match.OneOf(false, Function));
@@ -1814,9 +1822,10 @@ class FilesCollection extends FilesCollectionCore {
     if (helpers.isObject(result.versions) && helpers.isObject(result.versions.original)) {
       result.versions.original.size = size;
     }
-    result.type = this._getMimeType(opts.file);
+    const clientType = this._getMimeType(opts.file);
+    // The uploader's type is not verified: by default the stored type comes from the file content
+    this._setFileType(result, this.trustClientMimeType ? clientType : await sniffFile(result.path, clientType));
     result.public = this.public;
-    this._updateFileTypes(result);
 
     let _id;
     try {
@@ -1897,6 +1906,25 @@ class FilesCollection extends FilesCollectionCore {
       mime = 'application/octet-stream';
     }
     return mime;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _setFileType
+   * @param {Partial<FileObj>} fileObj - File object to update in place
+   * @param {string} type - Mime type to store
+   * @summary Internal method. Set `type`, `mime`, `mime-type`, `versions.original.type`, and the `is*` flags
+   * @returns {void}
+   */
+  _setFileType(fileObj, type) {
+    fileObj.type = type;
+    fileObj.mime = type;
+    fileObj['mime-type'] = type;
+    if (helpers.isObject(fileObj.versions) && helpers.isObject(fileObj.versions.original)) {
+      fileObj.versions.original.type = type;
+    }
+    this._updateFileTypes(fileObj);
   }
 
   /**
@@ -2020,7 +2048,9 @@ class FilesCollection extends FilesCollectionCore {
 
     const storagePath = await this.storagePath(opts);
     opts.path = `${storagePath}${nodePath.sep}${fsName}${extensionWithDot}`;
-    opts.type = this._getMimeType(opts);
+    if (!helpers.isString(opts.type) || !opts.type) {
+      opts.type = this.trustClientMimeType ? 'application/octet-stream' : resolveMimeType(buffer.subarray(0, SNIFF_BYTES), void 0, buffer.length <= SNIFF_BYTES);
+    }
     if (!helpers.isObject(opts.meta)) {
       opts.meta = {};
     }
@@ -2183,7 +2213,7 @@ class FilesCollection extends FilesCollectionCore {
         name: fileName,
         path: opts.path,
         meta: opts.meta,
-        type: opts.type || res.headers.get('content-type') || this._getMimeType({path: opts.path}),
+        type: opts.type || (this.trustClientMimeType ? (res.headers.get('content-type') || 'application/octet-stream') : await sniffFile(opts.path, res.headers.get('content-type'))),
         size,
         userId: opts.userId,
         extension,
@@ -2274,8 +2304,8 @@ class FilesCollection extends FilesCollectionCore {
 
     const { extension } = this._getExt(opts.fileName);
 
-    if (!helpers.isString(opts.type)) {
-      opts.type = this._getMimeType(opts);
+    if (!helpers.isString(opts.type) || !opts.type) {
+      opts.type = this.trustClientMimeType ? 'application/octet-stream' : await sniffFile(path);
     }
 
     if (!helpers.isObject(opts.meta)) {

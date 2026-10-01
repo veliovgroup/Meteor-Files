@@ -18,6 +18,7 @@ const tmpDir = (name) => {
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 };
+const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
 
 /**
  * Assert that a promise rejects, and return the error
@@ -486,6 +487,14 @@ describe('FilesCollection', function() {
       expect(naming.firstCall.args[0]).to.deep.equal({ file: { name: 'c.txt', type: 'text/plain', size: 3, meta: { k: 1 } }, fileId: 'ctx1', userId: 'u9' });
       expect(nodePath.basename(fileObj.path)).to.equal('ctx-name.txt');
     });
+
+    it('detects the type of a buffer written without opts.type', async function() {
+      collectionMock.restore();
+      const fileObj = await filesCollection.writeAsync(PNG_BYTES, { name: 'x.bin', fileId: 'sniff1' });
+      expect(fileObj.type).to.equal('image/png');
+      expect(fileObj.isImage).to.equal(true);
+      expect(fileObj.versions.original.type).to.equal('image/png');
+    });
   });
 
   describe('#loadAsync()', function() {
@@ -514,6 +523,12 @@ describe('FilesCollection', function() {
           const body = zlib.gzipSync(Buffer.alloc(5000, 97));
           res.writeHead(200, { 'Content-Type': 'text/plain', 'Content-Encoding': 'gzip', 'Content-Length': body.length });
           res.end(body);
+          return;
+        }
+
+        if (req.url === '/png') {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(PNG_BYTES);
           return;
         }
 
@@ -547,6 +562,11 @@ describe('FilesCollection', function() {
       expect(file).to.be.an('object');
       expect(file.size).to.equal(testdata.length);
       expect(fs.readFileSync(file.path, 'utf8')).to.equal(testdata);
+    });
+
+    it('detects the type instead of trusting the response Content-Type', async function() {
+      const fileObj = await filesCollection.loadAsync(`http://127.0.0.1:${port}/png`, { name: 'p.html', fileId: 'png1' });
+      expect(fileObj.type).to.equal('image/png');
     });
 
     it('C3: rejects with 408 on timeout instead of throwing inside a timer', async function() {
@@ -607,6 +627,14 @@ describe('FilesCollection', function() {
     afterEach(() => {
       // Restore the stubbed methods after each test
       sinon.restore();
+    });
+
+    it('detects the type of a file added without opts.type', async () => {
+      const pngPath = nodePath.join(nodePath.dirname(path), 'image.data');
+      fs.writeFileSync(pngPath, PNG_BYTES);
+      const result = await filesCollection.addFile(pngPath, {});
+      expect(result.type).to.equal('image/png');
+      expect(result.isImage).to.equal(true);
     });
 
     it('should add a file successfully', async () => {

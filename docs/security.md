@@ -105,7 +105,7 @@ HTTP routes identify the user with the `x_mtok` cookie. The client sets it to th
 
 ## Content-Type and downloads
 
-The uploader supplies the file `type`, and the server uses it as the `Content-Type` of the response. A file labeled `text/html` is rendered by the browser, which can lead to stored XSS. Reduce the risk:
+Since v4 the server detects the type from the first 4100 bytes of the file and stores it, unless `trustClientMimeType` is `true`. Text files are stored as `text/plain` unless the uploader said `text/*` or `application/json`, so an SVG or HTML upload labeled as an image is not served as one. `onBeforeUpload` still sees the uploader's type. Reduce the risk further:
 
 - `nosniff` is on by default since v4 and adds `X-Content-Type-Options: nosniff` to responses
 - Validate the type and extension in `onBeforeUpload`, and verify real content in `onAfterUpload`

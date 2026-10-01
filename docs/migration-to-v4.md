@@ -16,6 +16,7 @@ ostrio:files 4.0.0 requires Meteor 3.2 or newer, like 3.1.0. This page lists eve
 - Only the server names files. Remove `namingFunction` from client code (it is ignored with a warning). The server ignores `FSName` sent by v3 clients.
 - `namingFunction` receives one object `{ file, fileId, userId }` in upload Start, `writeAsync()`, and `loadAsync()`. v3 passed the upload options in Start and the call options in `writeAsync()`/`loadAsync()`.
 - The server keeps only `name`, `type`, `size`, and `meta` from the client `file` object. Other top-level keys are dropped. Move custom upload data into `meta`.
+- The stored `type`, `mime`, `mime-type`, `versions.original.type`, and `is*` flags come from the file content (first 4100 bytes), not from the uploader. SVG and other text uploaded with an image type are stored as `text/plain`. Unknown binary formats are stored as `application/octet-stream`. Office files and other zip, OLE, and mp4 based formats keep the uploader's type when it names a known format of the detected container. Set `trustClientMimeType: true` to keep the 3.x behavior. `writeAsync()`, `loadAsync()`, and `addFile()` detect the type when `opts.type` is not set.
 
 ## Deprecations
 

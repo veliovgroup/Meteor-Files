@@ -1490,6 +1490,63 @@ describe('Security', function () {
     });
   });
 
+  describe('stored type comes from the file content', function () {
+    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+
+    const upload = async (fc, data, file) => {
+      const opts = startOpts({ size: data.length, file });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: data.toString('base64') });
+      return call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+    };
+
+    it('stores the detected type and flags, not the client type', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('image/png');
+      expect(res.isImage).to.equal(true);
+      expect(res.isText).to.equal(false);
+      const doc = await fc.collection.findOneAsync(res._id);
+      expect(doc.mime).to.equal('image/png');
+      expect(doc['mime-type']).to.equal('image/png');
+      expect(doc.versions.original.type).to.equal('image/png');
+    });
+
+    it('stores text/plain for text sent as an image', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from('<svg onload="alert(1)"/>'), { name: 'x.svg', type: 'image/svg+xml' });
+      expect(res.type).to.equal('text/plain');
+      expect(res.isImage).to.equal(false);
+      expect(res.isText).to.equal(true);
+    });
+
+    it('stores application/octet-stream for unknown binary data', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from([0, 1, 2, 3]), { name: 'x.png', type: 'image/png' });
+      expect(res.type).to.equal('application/octet-stream');
+      expect(res.isImage).to.equal(false);
+    });
+
+    it('keeps the client type with trustClientMimeType: true', async function () {
+      const fc = createCollection({ trustClientMimeType: true });
+      const res = await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('text/html');
+    });
+
+    it('passes the client type to onBeforeUpload', async function () {
+      const seen = [];
+      const fc = createCollection({ onBeforeUpload(file) { seen.push(file.type); return true; } });
+      await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(seen.length).to.be.greaterThan(0);
+      expect(seen.every((type) => type === 'text/html')).to.equal(true);
+    });
+
+    it('validates trustClientMimeType', function () {
+      expect(createCollection().trustClientMimeType).to.equal(false);
+      expect(() => createCollection({ trustClientMimeType: 'yes' })).to.throw();
+    });
+  });
+
   describe('Misc hardening', function () {
     it('_getUserId: Map sessions resolve userId', function () {
       const fc = createCollection();

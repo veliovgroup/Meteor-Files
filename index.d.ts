@@ -331,6 +331,7 @@ export interface FilesCollectionConfig {
   /** [Server] A function that returns `true` to allow the download, or an HTTP status. `true` is deprecated: it allows any logged-in user. */
   protected?: boolean | ((this: ContextHTTP & ContextUser, fileObj: FileObj) => MaybePromise<boolean | number>);
   public?: boolean;
+  /** `fileData.type` is the type the uploader sent and is not verified. */
   onBeforeUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => MaybePromise<boolean | string>;
   onBeforeRemove?: (this: ContextUser, cursor: FilesCursor<unknown, unknown>) => MaybePromise<boolean>;
   onInitiateUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => MaybePromise<void>;
@@ -359,6 +360,8 @@ export interface FilesCollectionConfig {
   sanitize?: (str: string, max?: number, replacement?: string) => string;
   /** [Server] Send `X-Content-Type-Options: nosniff`. Default: `true`. */
   nosniff?: boolean;
+  /** [Server] Store the type the uploader sent instead of the type detected from the file content. Default: `false`. */
+  trustClientMimeType?: boolean;
   /** [Server] Milliseconds before an idle upload file handle is closed. Default: 900000. */
   uploadIdleTimeout?: number;
   _preCollection?: Mongo.Collection<{ _id?: string }>;
