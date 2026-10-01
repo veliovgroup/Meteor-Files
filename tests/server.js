@@ -4,6 +4,7 @@ import './core.test';
 import './cursor.test';
 import './server.test';
 import './helpers.test';
+import './mime.test';
 import './security.test';
 import './browser-fixtures';
 
