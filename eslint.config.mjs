@@ -220,7 +220,7 @@ export default [
   },
   // server code and tests
   {
-    files: ['server.js', 'write-stream.js', 'mime.js', 'tests/**/*.js'],
+    files: ['server.js', 'write-stream.js', 'mime.js', 'download-token.js', 'tests/**/*.js'],
     languageOptions: languageOptions({ ...globals.es2021, ...globals.node }),
   },
   // browser tests
