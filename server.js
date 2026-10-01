@@ -2723,7 +2723,8 @@ class FilesCollection extends FilesCollectionCore {
       respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
       break;
     default:
-      if (!readableStream && !http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
+      if (!http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
+        // As in 3.0, also for a caller's stream: it must send the whole stored file
         http.response.setHeader('Content-Length', `${vRef.size}`);
         http.response.removeHeader('Transfer-Encoding');
       }

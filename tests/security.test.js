@@ -1092,20 +1092,20 @@ describe('Security', function () {
       expect(res.headers['transfer-encoding']).to.equal('chunked');
     });
 
-    it('sends no Content-Length on 200 for a caller\'s stream', async function () {
+    it('sends Content-Length equal to the stored size on 200 for a caller\'s stream (3.0 behavior)', async function () {
       const res = await serveRequest(fc, { vRef: vRef(), readable: () => Readable.from([Buffer.from(content)]) });
       expect(res.status).to.equal(200);
       expect(res.body).to.equal(content);
-      expect(res.headers).to.not.have.property('content-length');
-      expect(res.headers['transfer-encoding']).to.equal('chunked');
+      expect(res.headers['content-length']).to.equal(`${content.length}`);
+      expect(res.headers).to.not.have.property('transfer-encoding');
     });
 
-    it('keeps a Content-Length set in responseHeaders for a caller\'s stream', async function () {
-      const custom = createCollection({ responseHeaders: { 'Content-Length': `${content.length}` } });
-      const res = await serveRequest(custom, { vRef: vRef(), readable: () => Readable.from([Buffer.from(content)]) });
-      expect(res.status).to.equal(200);
-      expect(res.headers['content-length']).to.equal(`${content.length}`);
-      expect(res.body).to.equal(content);
+    it('keeps a Content-Length set in responseHeaders on 206 for a caller\'s stream', async function () {
+      const custom = createCollection({ responseHeaders: { 'Content-Length': '4' } });
+      const res = await serveRequest(custom, { vRef: vRef(), headers: { range: 'bytes=2-5' }, readable: () => Readable.from([Buffer.from('2345')]) });
+      expect(res.status).to.equal(206);
+      expect(res.headers['content-length']).to.equal('4');
+      expect(res.body).to.equal('2345');
     });
 
     it('answers HEAD with the same status and Content-Length and no body', async function () {

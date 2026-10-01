@@ -46,8 +46,8 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Answer an EOF that arrives while the first EOF of the same upload is still running (for example after a DDP reconnect) with the result of the first one instead of `408`.
 - 🔧 Accept an object in `responseHeaders`.
 - 🔧 Serve suffix ranges (`bytes=-N`) and the last byte, clamp the range end to the file size, and return `200` for multi-range requests. Unsatisfiable ranges return `416` when `strict` is `true` and `200` when it is `false`.
-- 🔧 Send `Content-Length` on `200` and `206` responses that `serve()` reads from disk, instead of `Transfer-Encoding: chunked`. These responses never carry both headers.
-- 🔧 Send responses from a custom `readableStream` chunked, without `Content-Length`. Before, a `200` got `Content-Length` from the stored size, which did not match compressed or transformed streams. A `Content-Length` set in `responseHeaders` is kept.
+- 🔧 Send `Content-Length` on `206` responses that `serve()` reads from disk, instead of `Transfer-Encoding: chunked`. A response never carries both headers.
+- 🔧 Send `206` responses from a custom `readableStream` chunked, without `Content-Length`, because `serve()` can not know how many bytes the stream sends. A `Content-Length` set in `responseHeaders` is kept. A `200` still gets `Content-Length` from the stored size, as in 3.0.
 - 🔧 Give up a Start or EOF request, or a chunk answered with `502`, `503`, or `504`, after 5 failed attempts, as documented. Before, it took 6.
 - 🔧 Make the integrity-check `400` response reachable again.
 - 🔧 Stop `loadAsync()` from throwing inside a timer. It opens the file only after a successful fetch, takes `size` from disk, and removes only partial files it created.
@@ -110,7 +110,7 @@ This release closes several upload and download security holes, fixes the client
 - 📔 Document `updateAsync`, `countDocuments`, `estimatedDocumentCount`, `serve`, `download`, `allow`/`deny`, the exported helpers, and the `progress` event arguments.
 - 📔 Document upload rules, limits, and the HTTP error body in `about-transports.md`.
 - 📔 Document the event order: `abort()` emits `pause`, then `abort`, and no `end`. A failed upload emits `error`, then `end`. Document that `abort()` does not cancel an EOF or HTTP Start request that is already sent.
-- 📔 Document that a custom `readableStream` passed to `serve()` for a `Range` request should contain exactly the requested bytes, and that `Content-Length` is set only for responses read from disk.
+- 📔 Document that a custom `readableStream` passed to `serve()` for a `Range` request should contain exactly the requested bytes, and when `serve()` sets `Content-Length`.
 - 📔 Fix wrong defaults, broken links, typos, and samples that did not run on Meteor 3.
 
 ### Tests
