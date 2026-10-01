@@ -278,6 +278,27 @@ describe('FilesCollectionCore (3.1 fixes)', function() {
     it('accepts a FileCursor', function() {
       expect(formatFileURL(new FileCursor(doc(), files))).to.equal(`${ROOT}/cdn/storage/${collectionName}/abc123/original/abc123.jpg`);
     });
+
+    it('returns an empty string when the file has no _id', function() {
+      // A rejected upload's `end` callback gets a file object without `_id`
+      for (const _id of [undefined, null, '']) {
+        const ref = Object.assign(doc(), { _id });
+        expect(files.link(ref), JSON.stringify(_id)).to.equal('');
+        expect(formatFileURL(ref), JSON.stringify(_id)).to.equal('');
+        expect(files.link(Object.assign(ref, { public: true })), JSON.stringify(_id)).to.equal('');
+      }
+      const noId = doc();
+      delete noId._id;
+      expect(files.link(noId)).to.equal('');
+      expect(files.link({ name: 'note.txt', extension: 'txt' })).to.equal('');
+    });
+
+    it('rejects stored routes with "?" or "#"', function() {
+      for (const route of ['/cdn?x=1', '/cdn#x', '/a/b?']) {
+        expect(files.link(Object.assign(doc(), { _downloadRoute: route }))).to.equal(`${ROOT}/cdn/storage/${collectionName}/abc123/original/abc123.jpg`, JSON.stringify(route));
+        expect(formatFileURL(Object.assign(doc(), { _downloadRoute: route }))).to.equal('', JSON.stringify(route));
+      }
+    });
   });
 
   describe('M3/L18: Mongo.ObjectID and scalar selectors', function() {
