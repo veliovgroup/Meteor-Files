@@ -1678,7 +1678,7 @@ describe('Security', function () {
       const good = fc.createDownloadToken(doc, { userId: 'owner' });
       const [goodExp, goodUser, goodSig] = good.split('.');
       const tampered = `${goodExp}.${goodUser}.${goodSig[0] === 'A' ? 'B' : 'A'}${goodSig.slice(1)}`;
-      const expired = signToken(SECRET, { _id: doc._id, version: 'original', userId: 'owner', exp: Math.floor(Date.now() / 1000) - 5 });
+      const expired = signToken(SECRET, { collectionName: fc.collectionName, _id: doc._id, version: 'original', userId: 'owner', exp: Math.floor(Date.now() / 1000) - 5 });
       const otherFile = fc.createDownloadToken('another1', { userId: 'owner' });
       const otherVersion = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
       for (const token of [tampered, expired, otherFile, otherVersion, 'garbage']) {
@@ -1686,6 +1686,16 @@ describe('Security', function () {
         expect(res.status, token).to.equal(403);
         expect(res.body).to.equal('Access denied!');
       }
+    });
+
+    it('rejects a token minted by another collection for the same _id and version', async function () {
+      const { fc: fcA, doc } = await setup();
+      const fcB = createCollection({ downloadTokenSecret: SECRET, protected: ownerOnly });
+      await fcB.collection.insertAsync({ ...doc, _downloadRoute: fcB.downloadRoute, _collectionName: fcB.collectionName });
+      const docB = await fcB.collection.findOneAsync(doc._id);
+      const urlB = (token) => fcB.link(docB, 'original', '/', { token });
+      expect((await httpRequest(urlB(fcA.createDownloadToken(doc, { userId: 'owner' })))).status).to.equal(403);
+      expect((await httpRequest(urlB(fcB.createDownloadToken(doc, { userId: 'owner' })))).status).to.equal(200);
     });
 
     it('answers 404 for a token version the file does not have', async function () {

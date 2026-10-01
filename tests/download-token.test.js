@@ -5,8 +5,8 @@ import { createDownloadToken, verifyDownloadToken } from '../download-token.js';
 const SECRET = 's'.repeat(32);
 const NOW = Date.UTC(2026, 9, 1);
 const EXP = Math.floor(NOW / 1000) + 60;
-const TARGET = { _id: 'file1', version: 'original', now: NOW };
-const make = (overrides = {}) => createDownloadToken(SECRET, { _id: 'file1', version: 'original', userId: 'u1', exp: EXP, ...overrides });
+const TARGET = { collectionName: 'files', _id: 'file1', version: 'original', now: NOW };
+const make = (overrides = {}) => createDownloadToken(SECRET, { collectionName: 'files', _id: 'file1', version: 'original', userId: 'u1', exp: EXP, ...overrides });
 
 describe('download-token.js', function () {
   it('round-trips userId and exp for the same _id and version', function () {
@@ -27,6 +27,11 @@ describe('download-token.js', function () {
   it('rejects another _id or version', function () {
     expect(verifyDownloadToken(SECRET, make(), { ...TARGET, _id: 'file2' })).to.equal(null);
     expect(verifyDownloadToken(SECRET, make(), { ...TARGET, version: 'thumbnail' })).to.equal(null);
+  });
+
+  it('rejects another collection with the same _id and version', function () {
+    expect(verifyDownloadToken(SECRET, make(), { ...TARGET, collectionName: 'images' })).to.equal(null);
+    expect(verifyDownloadToken(SECRET, make({ collectionName: 'images' }), TARGET)).to.equal(null);
   });
 
   it('rejects an expired token', function () {

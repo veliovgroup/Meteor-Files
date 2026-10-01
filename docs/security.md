@@ -130,7 +130,7 @@ Meteor.methods({
 });
 ```
 
-- The token opens one `_id` and one version until it expires. Anyone who has the URL can use it, so keep `expiresIn` short
+- The token opens one `_id` and one version in one collection until it expires. Anyone who has the URL can use it, so keep `expiresIn` short
 - URLs end up in logs, proxies, and `Referer` headers
 - The token carries its `userId` in base64url, readable by whoever holds the link
 - An invalid or expired token gets `403`. Public collections ignore tokens

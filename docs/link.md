@@ -87,7 +87,7 @@ imagesCollection.link(fileRef, 'original', '/');
 
 ## Signed download links
 
-With `downloadTokenSecret` set on the server, `createDownloadToken()` returns a token that opens one `_id` and one version until it expires. Pass it as `{ token }` to get a link that works without the `x_mtok` cookie and on any server instance with the same secret. The token's `userId` becomes `this.userId` in `protected` and `http.userId` in `downloadCallback`. An invalid or expired token gets `403`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links).
+With `downloadTokenSecret` set on the server, `createDownloadToken()` returns a token that opens one `_id` and one version in this collection until it expires. Pass it as `{ token }` to get a link that works without the `x_mtok` cookie and on any server instance with the same secret. The token's `userId` becomes `this.userId` in `protected` and `http.userId` in `downloadCallback`. An invalid or expired token gets `403`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links).
 
 ```js
 const files = new FilesCollection({

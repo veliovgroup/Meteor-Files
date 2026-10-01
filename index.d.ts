@@ -793,7 +793,7 @@ export interface FilesCollection {
   /** Storage adapter, `FSStorage` unless the `storage` option is set. */
   storage: FilesStorageAdapter;
 
-  /** Signed token for `link(file, version, uriBase, { token })`. Needs `downloadTokenSecret`. */
+  /** Signed token for `link(file, version, uriBase, { token })`, valid for one file version in this collection. Needs `downloadTokenSecret`. */
   createDownloadToken(fileRef: Partial<FileObj> | FileCursor | string, opts?: DownloadTokenOptions): string;
 
   /**

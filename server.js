@@ -2096,7 +2096,7 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(400, '[FilesCollection] [createDownloadToken] "_id", "version", and "userId" can not contain line breaks');
     }
 
-    return signDownloadToken(this.downloadTokenSecret, { _id, version, userId, exp: Math.floor(Date.now() / 1000) + expiresIn });
+    return signDownloadToken(this.downloadTokenSecret, { collectionName: this.collectionName, _id, version, userId, exp: Math.floor(Date.now() / 1000) + expiresIn });
   }
 
   /**
@@ -2119,7 +2119,7 @@ class FilesCollection extends FilesCollectionCore {
       return null;
     }
 
-    http.downloadToken = verifyDownloadToken(this.downloadTokenSecret, token, { _id: http.params._id, version: http.params.version }) || false;
+    http.downloadToken = verifyDownloadToken(this.downloadTokenSecret, token, { collectionName: this.collectionName, _id: http.params._id, version: http.params.version }) || false;
     return http.downloadToken;
   }
 
