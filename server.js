@@ -145,7 +145,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.schema    {Object}   - [Both]   Collection Schema
  * @param config.public    {boolean}  - [Both]   Store files in folder accessible for proxy servers, for limits, and more - read docs
  * @param config.strict    {boolean}  - [Server] Strict mode for partial content. When `true` (default) the server responds `416` to a `Range` that starts outside of the file. When `false` it ignores such `Range` and responds `200`
- * @param config.protected {function} - [Server] If `true` - files will be served only to authorized users, if `function()` - you're able to check visitor's permissions in your own way function's context has:
+ * @param config.protected {boolean|function} - [Server] A function checks access per file. `true` (deprecated, removed in v5) allows any logged-in user. Function context has:
  *  - `request`
  *  - `response`
  *  - `userAsync()`
@@ -643,6 +643,11 @@ class FilesCollection extends FilesCollectionCore {
 
     if (this.public && this.protected) {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: Files can not be public and protected at the same time!`);
+    }
+
+    if (this.protected === true) {
+      // eslint-disable-next-line no-console
+      console.warn(`[FilesCollection.${this.collectionName}] "protected: true" is deprecated and will be removed in v5. It lets any logged-in user download any file. Pass a function that checks access, for example: protected(fileObj) { return !!fileObj && fileObj.userId === this.userId; }`);
     }
 
     if (!this.disableUpload && this.allowClientCode && !this.onBeforeRemove) {

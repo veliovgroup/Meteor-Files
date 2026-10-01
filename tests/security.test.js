@@ -1404,6 +1404,21 @@ describe('Security', function () {
     });
   });
 
+  describe('protected: true deprecation', function () {
+    it('warns once per collection for protected: true', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ protected: true });
+      const calls = warn.getCalls().filter((c) => String(c.args[0]).includes('"protected: true" is deprecated'));
+      expect(calls).to.have.length(1);
+    });
+
+    it('does not warn for a protected function', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ protected: () => true });
+      expect(warn.called).to.equal(false);
+    });
+  });
+
   describe('Misc hardening', function () {
     it('_getUserId: Map sessions resolve userId', function () {
       const fc = createCollection();

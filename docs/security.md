@@ -4,7 +4,7 @@ Read this page before you ship a `FilesCollection` to production. Defaults favor
 
 ## Protect downloads
 
-`protected: true` only checks that the visitor is logged in. Any signed-in user can download any file if they know or guess its URL (an IDOR risk). Pass a function to compare the file owner with the current user:
+`protected: true` is deprecated since v4 and will be removed in v5. It only checks that the visitor is logged in. Any signed-in user can download any file if they know or guess its URL (an IDOR risk). Pass a function to compare the file owner with the current user:
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';

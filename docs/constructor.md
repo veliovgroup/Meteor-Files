@@ -371,7 +371,7 @@
         <code>false</code>
       </td>
       <td>
-        If <code>true</code> - files will be served to any <em>signed-in</em> user, the check does not compare the user with the file's owner (see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>), if <code>function()</code> - you're able to check visitor's permissions in your own way.<br>
+        <code>true</code> is deprecated since v4 and will be removed in v5. It allows any <em>signed-in</em> user to download any file, the check does not compare the user with the file's owner (see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>). Pass a function to check visitor's permissions in your own way.<br>
         <ul>
           <li>
             <strong>return</strong> <code>true</code> to continue

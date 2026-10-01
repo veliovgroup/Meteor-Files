@@ -7,11 +7,11 @@ import './helpers.test';
 import './security.test';
 import './browser-fixtures';
 
-// Collections created in tests do not set `onBeforeRemove`, drop the S5 startup warning from the output
+// Collections created in tests trigger the allowClientCode and protected: true startup warnings, drop them from the output
 const originalWarn = console.warn;
 before(function () {
   console.warn = function (...args) {
-    if (typeof args[0] === 'string' && args[0].includes('"allowClientCode" is on')) {
+    if (typeof args[0] === 'string' && (args[0].includes('"allowClientCode" is on') || args[0].includes('"protected: true" is deprecated'))) {
       return;
     }
     originalWarn.apply(console, args);

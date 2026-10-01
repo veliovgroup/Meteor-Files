@@ -320,6 +320,7 @@ export interface FilesCollectionConfig {
   strict?: boolean;
   /** [Server] Called before file download. Return `false` to deny. */
   downloadCallback?: (this: FilesCollection, http: ContextHTTP & ContextUser, fileObj: FileObj) => MaybePromise<boolean>;
+  /** [Server] A function that returns `true` to allow the download, or an HTTP status. `true` is deprecated: it allows any logged-in user. */
   protected?: boolean | ((this: ContextHTTP & ContextUser, fileObj: FileObj) => MaybePromise<boolean | number>);
   public?: boolean;
   onBeforeUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => MaybePromise<boolean | string>;
