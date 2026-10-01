@@ -1264,7 +1264,7 @@ describe('Security', function () {
       const fc = createCollection();
       const path = nodePath.join(fc.storagePath({}), 'cd.txt');
       fs.writeFileSync(path, 'x');
-      const res = await serveRequest(fc, { vRef: { name: 'naïve (1)\'s *"f".txt', size: 1, path } });
+      const res = await serveRequest(fc, { vRef: { name: 'naïve (1)\'s *"f".txt', size: 1, path, type: 'text/plain' } });
       expect(res.headers['content-disposition']).to.equal('inline; filename="na_ve (1)\'s *_f_.txt"; filename*=UTF-8\'\'na%C3%AFve%20%281%29%27s%20%2A%22f%22.txt');
     });
 
@@ -1272,7 +1272,7 @@ describe('Security', function () {
       const fc = createCollection();
       const path = nodePath.join(fc.storagePath({}), 'cd3.txt');
       fs.writeFileSync(path, 'x');
-      const res = await serveRequest(fc, { vRef: { name: '100%25 done.txt', size: 1, path } });
+      const res = await serveRequest(fc, { vRef: { name: '100%25 done.txt', size: 1, path, type: 'text/plain' } });
       expect(res.headers['content-disposition']).to.equal('inline; filename="100_25 done.txt"; filename*=UTF-8\'\'100%2525%20done.txt');
     });
 
@@ -1282,6 +1282,53 @@ describe('Security', function () {
       fs.writeFileSync(path, 'x');
       const res = await serveRequest(fc, { vRef: { size: 1, path }, fileRef: { _id: 'abc' }, query: { download: 'true' } });
       expect(res.headers['content-disposition']).to.equal('attachment');
+    });
+  });
+
+  describe('Content-Disposition by type', function () {
+    let fc;
+    let path;
+    before(function () {
+      fc = createCollection();
+      path = nodePath.join(fc.storagePath({}), 'cd-type.bin');
+      fs.writeFileSync(path, 'x');
+    });
+
+    const dispositionOf = async (type, extra = {}) => {
+      const res = await serveRequest(fc, { vRef: { name: 'f.bin', size: 1, path, type }, ...extra });
+      return res.headers['content-disposition'].split(';')[0];
+    };
+
+    [
+      ['image/png', 'inline'],
+      ['IMAGE/JPEG', 'inline'],
+      ['image/svg+xml', 'attachment'],
+      ['video/mp4', 'inline'],
+      ['audio/mpeg', 'inline'],
+      ['application/pdf', 'inline'],
+      ['text/plain', 'inline'],
+      ['text/plain; charset=utf-8', 'inline'],
+      ['text/html', 'attachment'],
+      ['application/json', 'attachment'],
+      ['application/javascript', 'attachment'],
+      ['application/octet-stream', 'attachment'],
+      [undefined, 'attachment'],
+    ].forEach(([type, expected]) => {
+      it(`serves ${type} as ${expected}`, async function () {
+        expect(await dispositionOf(type)).to.equal(expected);
+      });
+    });
+
+    it('forces attachment with ?download=true', async function () {
+      expect(await dispositionOf('image/png', { query: { download: 'true' } })).to.equal('attachment');
+    });
+
+    it('lets responseHeaders override it', async function () {
+      const custom = createCollection({ responseHeaders: { 'Content-Disposition': 'inline' } });
+      const p = nodePath.join(custom.storagePath({}), 'cd-override.html');
+      fs.writeFileSync(p, 'x');
+      const res = await serveRequest(custom, { vRef: { name: 'o.html', size: 1, path: p, type: 'text/html' } });
+      expect(res.headers['content-disposition']).to.equal('inline');
     });
   });
 

@@ -109,7 +109,7 @@ The uploader supplies the file `type`, and the server uses it as the `Content-Ty
 
 - `nosniff` is on by default since v4 and adds `X-Content-Type-Options: nosniff` to responses
 - Validate the type and extension in `onBeforeUpload`, and verify real content in `onAfterUpload`
-- Serve untrusted files as downloads. Link with `?download=true`, or return `Content-Disposition: attachment` from [`responseHeaders`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md)
+- Files are served `inline` only when their type is `image/*` (except `image/svg+xml`), `video/*`, `audio/*`, `application/pdf`, or `text/plain`. Everything else gets `Content-Disposition: attachment`. `?download=true` always forces `attachment`, and [`responseHeaders`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md) can set its own `Content-Disposition`
 - Serve user files from a separate domain when possible
 
 ## Other options

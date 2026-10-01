@@ -54,6 +54,25 @@ const withCharset = (type) => {
 };
 
 /**
+ * @const {RegExp} INLINE_TYPE_RE - Types served `inline` by default: images except SVG, video, audio, PDF, and plain text
+ */
+const INLINE_TYPE_RE = /^(?:image\/(?!svg\+xml$)[a-z0-9.+-]+|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/pdf|text\/plain)$/;
+
+/**
+ * @function dispositionType
+ * @param {string} [type] - Mime type of the served version, parameters such as `charset` are ignored
+ * @param {boolean} forceDownload - `true` for `?download=true`
+ * @summary Returns `inline` for types a browser shows safely, `attachment` for everything else
+ * @returns {'inline'|'attachment'}
+ */
+const dispositionType = (type, forceDownload) => {
+  if (forceDownload || !helpers.isString(type)) {
+    return 'attachment';
+  }
+  return INLINE_TYPE_RE.test(type.split(';')[0].trim().toLowerCase()) ? 'inline' : 'attachment';
+};
+
+/**
  * @const {string[]} RESERVED_FILE_KEYS - Keys of client-supplied `file` object the server computes itself
  */
 const RESERVED_FILE_KEYS = ['_id', 'fileId', '_downloadRoute', '_collectionName', '_storagePath', 'path', 'versions', 'userId', 'public', 'extension', 'ext', 'extensionWithDot', 'isVideo', 'isAudio', 'isImage', 'isText', 'isJSON', 'isPDF', 'mime', 'mime-type', '__proto__', 'constructor', 'prototype'];
@@ -2616,7 +2635,7 @@ class FilesCollection extends FilesCollectionCore {
     let reqRange = false;
     let responseType = _responseType;
 
-    let disposition = (http.params?.query?.download === 'true') ? 'attachment' : 'inline';
+    let disposition = dispositionType(vRef.type || fileRef?.type, http.params?.query?.download === 'true');
     const name = vRef.name || fileRef.name;
     if (helpers.isString(name) && name.length) {
       // RFC 6266: ASCII fallback in `filename` (no `%`, some clients decode it), RFC 8187 encoded value in `filename*`
