@@ -137,7 +137,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.storagePath    {string|function}  - [Server] Storage path on file system. The function can be async
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
- * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `false`
+ * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
  * @param config.uploadIdleTimeout {number} - [Server] Close file handle of an upload after this many ms without new chunks, it is reopened on the next chunk. Default: 900000 (15 minutes)
  * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
@@ -353,7 +353,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (this.nosniff === void 0) {
-      this.nosniff = false;
+      this.nosniff = true;
     }
 
     if (this.uploadIdleTimeout === void 0) {

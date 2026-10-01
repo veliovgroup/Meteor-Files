@@ -833,10 +833,10 @@
         Adds the <code>X-Content-Type-Options: nosniff</code> header to file responses
       </td>
       <td>
-        <code>false</code>
+        <code>true</code>
       </td>
       <td>
-        Will default to <code>true</code> in v4. Enable it now, as <code>Content-Type</code> comes from the type the uploader sent
+        Set <code>false</code> only when a proxy in front of the app adds this header
       </td>
     </tr>
     <tr>

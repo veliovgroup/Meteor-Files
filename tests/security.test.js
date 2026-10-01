@@ -1319,9 +1319,19 @@ describe('Security', function () {
       expect(res.headers['x-content-type-options']).to.equal('nosniff');
     });
 
-    it('is off by default and validated', async function () {
+    it('is on by default, can be turned off, and is validated', async function () {
       const fc = createCollection();
-      expect(fc.nosniff).to.equal(false);
+      expect(fc.nosniff).to.equal(true);
+      const path = nodePath.join(fc.storagePath({}), 'ns-default.txt');
+      fs.writeFileSync(path, 'x');
+      const on = await serveRequest(fc, { vRef: { name: 'ns-default.txt', size: 1, path } });
+      expect(on.headers['x-content-type-options']).to.equal('nosniff');
+
+      const off = createCollection({ nosniff: false });
+      const offPath = nodePath.join(off.storagePath({}), 'ns-off.txt');
+      fs.writeFileSync(offPath, 'x');
+      const res = await serveRequest(off, { vRef: { name: 'ns-off.txt', size: 1, path: offPath } });
+      expect(res.headers).to.not.have.property('x-content-type-options');
       expect(() => createCollection({ nosniff: 'yes' })).to.throw();
     });
   });

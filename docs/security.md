@@ -107,7 +107,7 @@ HTTP routes identify the user with the `x_mtok` cookie. The client sets it to th
 
 The uploader supplies the file `type`, and the server uses it as the `Content-Type` of the response. A file labeled `text/html` is rendered by the browser, which can lead to stored XSS. Reduce the risk:
 
-- Set `nosniff: true` to add `X-Content-Type-Options: nosniff` to responses. It defaults to `false` in 3.x and will default to `true` in v4
+- `nosniff` is on by default since v4 and adds `X-Content-Type-Options: nosniff` to responses
 - Validate the type and extension in `onBeforeUpload`, and verify real content in `onAfterUpload`
 - Serve untrusted files as downloads. Link with `?download=true`, or return `Content-Disposition: attachment` from [`responseHeaders`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md)
 - Serve user files from a separate domain when possible

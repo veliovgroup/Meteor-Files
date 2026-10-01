@@ -348,7 +348,7 @@ export interface FilesCollectionConfig {
   /** [Client] Do not set the `x_mtok` cookie. */
   disableSetTokenCookie?: boolean;
   sanitize?: (str: string, max?: number, replacement?: string) => string;
-  /** [Server] Send `X-Content-Type-Options: nosniff`. Default: `false`. */
+  /** [Server] Send `X-Content-Type-Options: nosniff`. Default: `true`. */
   nosniff?: boolean;
   /** [Server] Milliseconds before an idle upload file handle is closed. Default: 900000. */
   uploadIdleTimeout?: number;

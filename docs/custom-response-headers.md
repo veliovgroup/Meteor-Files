@@ -101,4 +101,4 @@ The server answers `Range` requests with `206 Partial Content` and `Content-Rang
 
 ## Security headers
 
-Set `nosniff: true` in the constructor to add `X-Content-Type-Options: nosniff` to file responses. It will default to `true` in v4. To force browsers to download a file instead of rendering it, either request it with `?download=true` or return `Content-Disposition: attachment` from `responseHeaders`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md).
+File responses carry `X-Content-Type-Options: nosniff` by default since v4. Set `nosniff: false` in the constructor to turn it off. To force browsers to download a file instead of rendering it, either request it with `?download=true` or return `Content-Disposition: attachment` from `responseHeaders`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md).
