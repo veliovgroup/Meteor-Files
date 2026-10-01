@@ -166,9 +166,6 @@ export class WriteStream {
   stop(isAborted?: boolean): Promise<boolean>;
 }
 
-/**
- * Core class for FilesCollection. Most other classes extend and build on this one.
- */
 export interface LinkOptions {
   /** Token from the server `createDownloadToken()`, appended as `?token=`. */
   token?: string;
@@ -181,6 +178,9 @@ export interface DownloadTokenOptions {
   expiresIn?: number;
 }
 
+/**
+ * Core class for FilesCollection. Most other classes extend and build on this one.
+ */
 export class FilesCollectionCore extends EventEmitter {
   // Instance properties that are used in the class:
   collection: Mongo.Collection<FileObj>;
