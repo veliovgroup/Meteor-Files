@@ -11,6 +11,7 @@ import { Readable } from 'node:stream';
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
 import { FilesCollection, WriteStream, helpers } from '../server.js';
+import { chunkIdsFromBits } from '../write-stream.js';
 
 const TMP_ROOT = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-server-'));
 const tmpDir = (name) => {
@@ -1077,6 +1078,12 @@ describe('FilesCollection', function() {
       await stream.init();
       return stream;
     };
+
+    it('chunkIdsFromBits reads ids from int32 words, including bit 31', function() {
+      expect(chunkIdsFromBits([0b101, -2147483648], 64)).to.deep.equal([1, 3, 64]);
+      expect(chunkIdsFromBits([0xff], 4)).to.deep.equal([1, 2, 3, 4]);
+      expect(chunkIdsFromBits(undefined, 4)).to.deep.equal([]);
+    });
 
     it('C6: end() returns false after abort', async function() {
       const stream = await create('c6.txt');

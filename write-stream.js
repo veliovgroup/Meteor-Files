@@ -45,6 +45,28 @@ const isSameFile = (identity, stats) => {
 };
 
 /**
+ * @function chunkIdsFromBits
+ * @param {number[]} bits - `chunkBits` of an upload record: int32 words, bit `(id - 1) % 32` of word `Math.floor((id - 1) / 32)` marks chunk `id`
+ * @param {number} maxLength - Number of chunks of the upload
+ * @summary Chunk ids recorded as written
+ * @returns {number[]}
+ */
+const chunkIdsFromBits = (bits, maxLength) => {
+  const ids = [];
+  if (!helpers.isArray(bits)) {
+    return ids;
+  }
+
+  for (let id = 1; id <= maxLength; id++) {
+    const word = bits[Math.floor((id - 1) / 32)];
+    if (Number.isInteger(word) && (word & (1 << ((id - 1) % 32))) !== 0) {
+      ids.push(id);
+    }
+  }
+  return ids;
+};
+
+/**
  * @private
  * @locus Server
  * @class WriteStream
@@ -59,6 +81,8 @@ const isSameFile = (identity, stats) => {
  * @param [options.idleTimeout=0] {number} - Close the file handle after this many ms without writes, reopen on the next write. `0` disables
  * @param [options.fileId] {string} - Upload id, used as part of the file handle cache key
  * @param [options.onAbort] {function} - Called after the stream is aborted
+ * @param [options.writtenChunkIds] {number[]} - Chunk ids already on disk, used when resuming. A resumed stream knows nothing else about the file content
+ * @param [options.onChunkWritten] {function(number): Promise<boolean>} - Called after a chunk is on disk. The chunk counts as written only when it resolves `true`
  * @summary Writes chunks at their offsets into one file and tracks which chunks are written
  */
 export default class WriteStream {
@@ -76,6 +100,8 @@ export default class WriteStream {
     this.cacheKey = `${options.fileId || file?.fileId || file?._id || ''}:${this.path}`;
     this.identity = (helpers.isObject(options.identity) && options.identity.dev && options.identity.ino) ? fileIdentity(options.identity) : null;
     this.onAbort = helpers.isFunction(options.onAbort) ? options.onAbort : null;
+    this.onChunkWritten = helpers.isFunction(options.onChunkWritten) ? options.onChunkWritten : null;
+    this.writtenChunkIds = helpers.isArray(options.writtenChunkIds) ? options.writtenChunkIds : [];
     this.opening = null;
 
     this.fh = null;
@@ -127,15 +153,13 @@ export default class WriteStream {
         throw openError;
       }
 
-      const stats = await fh.stat();
-      if (stats.size > 0) {
-        // Chunks are written in order, so the existing size tells how many chunks are on disk
-        const written = Math.min(this.maxLength, Math.ceil(stats.size / this.file.chunkSize));
-        for (let i = 1; i <= written; i++) {
-          this.chunkIds.add(i);
+      // Only recorded chunks count: the file size says nothing about holes
+      for (const id of this.writtenChunkIds) {
+        if (Number.isInteger(id) && id >= 1 && id <= this.maxLength) {
+          this.chunkIds.add(id);
         }
-        this.writtenChunks = this.chunkIds.size;
       }
+      this.writtenChunks = this.chunkIds.size;
     }
 
     this.fh = fh;
@@ -301,6 +325,11 @@ export default class WriteStream {
 
       await this.fh.sync();
       if (bytesWritten !== chunk.byteLength) {
+        return false;
+      }
+
+      if (this.onChunkWritten && !(await this.onChunkWritten(num))) {
+        // Not recorded: the client sends this chunk again
         return false;
       }
 
@@ -475,4 +504,4 @@ export default class WriteStream {
   }
 }
 
-export { fileIdentity, isSameFile };
+export { chunkIdsFromBits, fileIdentity, isSameFile };

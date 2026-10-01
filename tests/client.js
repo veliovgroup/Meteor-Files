@@ -80,6 +80,34 @@ export const settle = (upload) => new Promise((resolve) => {
       expect((await Meteor.callAsync('mfTest.stored', fileObj._id)).content).to.equal('c'.repeat(8 * 1024));
     });
 
+    it('resumes after a server restart without sending acknowledged chunks again', async function () {
+      const content = 'f'.repeat(8 * 1024);
+      const upload = files.insert({ file: new File([content], 'restart.txt', { type: 'text/plain' }), chunkSize: 1024, transport }, false);
+      const fileId = upload.config.fileId;
+      const done = settle(upload);
+      let paused = false;
+      upload.on('progress', () => {
+        if (!paused) {
+          paused = true;
+          upload.pause();
+        }
+      });
+      await upload.start();
+      await waitUntil(() => upload.state.get() === 'paused');
+      await sleep(300);
+      const before = await Meteor.callAsync('mfTest.chunks', fileId);
+      expect(await Meteor.callAsync('mfTest.simulateRestart', fileId)).to.equal(true);
+
+      upload.continue();
+      const { error, fileObj } = await done;
+      expect(error).to.not.exist;
+      expect((await Meteor.callAsync('mfTest.stored', fileObj._id)).content).to.equal(content);
+      const after = (await Meteor.callAsync('mfTest.chunks', fileId)).slice(before.length);
+      // A chunk cancelled by pause() may be sent again, older ones never are
+      expect(after.every((id) => id >= Math.max(...before))).to.equal(true);
+      expect([...new Set([...before, ...after])].sort((a, b) => a - b)).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
     it('aborts and removes the pending upload on the server', async function () {
       const upload = files.insert({ file: makeFile('abort.txt', 16 * 1024, 'd'), chunkSize: 1024, transport }, false);
       const fileId = upload.config.fileId;

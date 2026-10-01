@@ -6,9 +6,9 @@ import { Random } from 'meteor/random';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 
-import WriteStream, { fileIdentity, isSameFile } from './write-stream.js';
+import WriteStream, { chunkIdsFromBits, fileIdentity, isSameFile } from './write-stream.js';
 import FilesCollectionCore from './core.js';
-import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
+import { MAX_UPLOAD_CHUNKS, fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 import { SNIFF_BYTES, resolveMimeType, sniffFile } from './mime.js';
 import { MIN_SECRET_LENGTH, createDownloadToken as signDownloadToken, verifyDownloadToken } from './download-token.js';
 import { FSStorage, GridFSStorage, isStorageAdapter } from './storage.js';
@@ -571,6 +571,7 @@ class FilesCollection extends FilesCollectionCore {
           fileId: _id,
           idleTimeout: this.uploadIdleTimeout,
           identity: opts.fileIdentity,
+          onChunkWritten: (chunkId) => this._recordChunk(_id, chunkId),
           onAbort: async () => {
             // Aborted upload can not be continued, drop its record
             await this._preCollection.removeAsync({ _id });
@@ -609,14 +610,14 @@ class FilesCollection extends FilesCollectionCore {
             }
 
             checkOwner(contUpld);
-            if (!helpers.isObject(contUpld.fileIdentity)) {
-              // Record from an older version, the file can not be verified
+            if (!helpers.isObject(contUpld.fileIdentity) || !helpers.isArray(contUpld.chunkBits)) {
+              // Record from an older version: its file or its written chunks can not be verified
               throw new Meteor.Error(410, 'Upload can not be resumed. Start upload again.');
             }
 
             let stream;
             try {
-              stream = await this._createStream(_id, contUpld.path, contUpld, { exclusive: false });
+              stream = await this._createStream(_id, contUpld.path, contUpld, { exclusive: false, writtenChunkIds: chunkIdsFromBits(contUpld.chunkBits, contUpld.fileLength) });
             } catch (streamError) {
               if (streamError?.error === 409 || streamError?.error === 410) {
                 // File is gone or replaced: drop the upload, do not touch the file
@@ -1264,6 +1265,10 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(400, 'Invalid fileLength');
     }
 
+    if (fileLength > MAX_UPLOAD_CHUNKS) {
+      throw new Meteor.Error(400, `Too many chunks, at most ${MAX_UPLOAD_CHUNKS}. Use a larger chunkSize`);
+    }
+
     const fileId = this.sanitize(opts.fileId, 20, 'a');
     if (!fileId) {
       throw new Meteor.Error(400, 'Invalid fileId');
@@ -1312,6 +1317,8 @@ class FilesCollection extends FilesCollectionCore {
       chunkSize,
       fileLength,
       maxLength: fileLength,
+      // Bit set of written chunk ids, see `_recordChunk()`
+      chunkBits: new Array(Math.ceil(fileLength / 32)).fill(0),
       userId: userId || null,
       path: result.path,
       _storagePath: result._storagePath,
@@ -1393,6 +1400,29 @@ class FilesCollection extends FilesCollectionCore {
       throw new Meteor.Error(403, 'Upload belongs to another user');
     }
     return session;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _recordChunk
+   * @param {string} fileId - Upload id
+   * @param {number} chunkId - Chunk on disk, 1-based
+   * @summary Internal method. Set the chunk bit in `chunkBits` of the upload record, so the upload can resume after a restart. Atomic, so concurrent chunks and instances do not lose bits
+   * @returns {Promise<boolean>} `false` when the record is gone, finished, or the update failed
+   */
+  async _recordChunk(fileId, chunkId) {
+    const index = chunkId - 1;
+    try {
+      const { matchedCount } = await this._preCollection.rawCollection().updateOne(
+        { _id: fileId, isFinished: { $ne: true } },
+        { $bit: { [`chunkBits.${Math.floor(index / 32)}`]: { or: (1 << (index % 32)) | 0 } } }
+      );
+      return matchedCount === 1;
+    } catch (recordError) {
+      this._debug(`[FilesCollection] [_recordChunk] Can not record chunk #${chunkId} of ${fileId}:`, recordError);
+      return false;
+    }
   }
 
   /**

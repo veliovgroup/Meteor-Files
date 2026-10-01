@@ -5,7 +5,7 @@ import { Tracker } from 'meteor/tracker';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { applyPipes, fixJSONParse, fixJSONStringify, helpers } from './lib.js';
+import { applyPipes, fitChunkSize, fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -1080,9 +1080,12 @@ export class UploadInstance extends EventEmitter {
       // 4 base64 characters are 3 bytes
       const maxBase64ChunkSize = Math.floor((MAX_CHUNK_SIZE / 3)) * 4;
       this.config.chunkSize = Math.min(Math.max(4, Math.floor(this.config.chunkSize / 4) * 4), maxBase64ChunkSize);
+      // The server accepts at most MAX_UPLOAD_CHUNKS chunks
+      this.config.chunkSize = fitChunkSize(this.config.file.length, this.config.chunkSize, 4, maxBase64ChunkSize);
       _len = Math.ceil(this.config.file.length / this.config.chunkSize);
     } else {
       this.config.chunkSize = Math.min(Math.max(8, Math.floor(this.config.chunkSize / 8) * 8), MAX_CHUNK_SIZE);
+      this.config.chunkSize = fitChunkSize(this.fileData.size, this.config.chunkSize, 8, MAX_CHUNK_SIZE);
       _len = Math.ceil(this.fileData.size / this.config.chunkSize);
     }
 

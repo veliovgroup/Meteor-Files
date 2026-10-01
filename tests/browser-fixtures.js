@@ -8,6 +8,7 @@ import { BROWSER_COLLECTION } from './browser-constants.js';
 
 const storagePath = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-browser-'));
 const startAttempts = new Map();
+const chunkLog = new Map();
 
 /**
  * Server half of the browser suite. File names select the behavior:
@@ -20,6 +21,10 @@ export const browserFiles = new FilesCollection({
   allowClientCode: true,
   onBeforeRemove: () => true,
   onBeforeUpload(file) {
+    if (this.chunkId > 0) {
+      chunkLog.set(file._id, [...(chunkLog.get(file._id) || []), this.chunkId]);
+    }
+
     if (file.name === 'reject.txt') {
       return 'Rejected by test server';
     }
@@ -39,6 +44,28 @@ Meteor.methods({
   'mfTest.attempts'(name) {
     check(name, String);
     return startAttempts.get(name) || 0;
+  },
+  'mfTest.chunks'(fileId) {
+    check(fileId, String);
+    return chunkLog.get(fileId) || [];
+  },
+  async 'mfTest.simulateRestart'(fileId) {
+    check(fileId, String);
+    const stream = browserFiles._currentUploads[fileId];
+    if (!stream) {
+      return false;
+    }
+    // Let a chunk that is still being written finish, closing the handle under it would abort the upload
+    while (stream.pendingWrites > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    // Same as a restart for this upload: the stream and its file handle are gone, the record stays
+    clearTimeout(stream.idleTimer);
+    stream.idleTimer = null;
+    await stream.fh?.close();
+    stream.fh = null;
+    delete browserFiles._currentUploads[fileId];
+    return true;
   },
   async 'mfTest.pending'(fileId) {
     check(fileId, String);

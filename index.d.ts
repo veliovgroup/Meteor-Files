@@ -108,7 +108,7 @@ export class WriteStream {
    * @param file - An object containing file properties such as `size` and `chunkSize`.
    * @param permissions - The file permissions (number, e.g. `0o644`) to use when creating the file.
    * @param parentDirPermissions - Permissions (number, e.g. `0o755`) of created parent directories.
-   * @param options - `exclusive` creates a new file and fails with 409 when it exists. `identity` is the expected `{dev, ino, birth}` of an existing file (`birth` is the birth time in nanoseconds, optional). `idleTimeout` closes the handle after this many ms without writes. `fileId` is part of the handle cache key. `onAbort` runs after `abort()`.
+   * @param options - `exclusive` creates a new file and fails with 409 when it exists. `identity` is the expected `{dev, ino, birth}` of an existing file (`birth` is the birth time in nanoseconds, optional). `idleTimeout` closes the handle after this many ms without writes. `fileId` is part of the handle cache key. `onAbort` runs after `abort()`. `writtenChunkIds` lists chunks already on disk when resuming. `onChunkWritten` runs after a chunk is on disk, the chunk counts as written only when it resolves `true`.
    */
   constructor(
     path: string,
@@ -122,6 +122,10 @@ export class WriteStream {
       idleTimeout?: number;
       fileId?: string;
       onAbort?: (stream: WriteStream) => unknown;
+      /** Chunk ids already on disk, used when resuming. */
+      writtenChunkIds?: number[];
+      /** Called after a chunk is on disk. The chunk counts as written only when it resolves `true`. */
+      onChunkWritten?: (chunkId: number) => Promise<boolean>;
     }
   );
 

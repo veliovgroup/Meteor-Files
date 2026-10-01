@@ -11,6 +11,7 @@ import { Random } from 'meteor/random';
 import { FilesCollection } from '../server.js';
 import { fixJSONParse } from '../lib.js';
 import { createDownloadToken as signToken } from '../download-token.js';
+import { chunkIdsFromBits } from '../write-stream.js';
 
 const TMP_ROOT = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-security-'));
 let counter = 0;
@@ -314,6 +315,73 @@ describe('Security', function () {
       await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 2, binData: chunk(98) });
       const res = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
       expect(res.size).to.equal(2048);
+    });
+
+    it('persists written chunk ids as a bit set', async function () {
+      const opts = startOpts({ size: 33 * 8, chunkSize: 8 });
+      await call(fc, '_Start', 'userA', opts);
+      expect((await fc._preCollection.findOneAsync(opts.fileId)).chunkBits).to.deep.equal([0, 0]);
+      for (const chunkId of [1, 32, 33]) {
+        await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId, binData: Buffer.alloc(8, chunkId).toString('base64') });
+      }
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(record.chunkBits).to.deep.equal([1 | (1 << 31), 1]);
+      expect(chunkIdsFromBits(record.chunkBits, 33)).to.deep.equal([1, 32, 33]);
+    });
+
+    it('records every bit when chunks of one word are written concurrently', async function () {
+      const opts = startOpts({ size: 40 * 8, chunkSize: 8 });
+      await call(fc, '_Start', 'userA', opts);
+      const ids = Array.from({ length: 40 }, (_, i) => i + 1);
+      await Promise.all(ids.map((chunkId) => call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId, binData: Buffer.alloc(8, chunkId).toString('base64') })));
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(chunkIdsFromBits(record.chunkBits, 40)).to.deep.equal(ids);
+      await simulateRestart(opts.fileId);
+      const res = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      expect(res.size).to.equal(40 * 8);
+    });
+
+    it('resumes from recorded chunk ids, not from the file size', async function () {
+      const opts = startOpts({ size: 3072, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      // Only the last chunk: the file is 3072 bytes long, chunks 1 and 2 are holes
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 3, binData: chunk(99) });
+      await simulateRestart(opts.fileId);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 2, binData: chunk(98) });
+      const stream = fc._currentUploads[opts.fileId];
+      expect([...stream.chunkIds].sort()).to.deep.equal([2, 3]);
+      stream.maxEndRetries = 2;
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }), 503);
+    });
+
+    it('completes after restart once the missing chunks arrive', async function () {
+      const opts = startOpts({ size: 3072, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 3, binData: chunk(99) });
+      await simulateRestart(opts.fileId);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) });
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 2, binData: chunk(98) });
+      const res = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      const doc = await fc.collection.findOneAsync(res._id);
+      expect(fs.readFileSync(doc.path, 'latin1')).to.equal(`${'a'.repeat(1024)}${'b'.repeat(1024)}${'c'.repeat(1024)}`);
+    });
+
+    it('does not count a chunk whose record failed, and keeps the upload', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      sinon.stub(fc, '_recordChunk').resolves(false);
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) }), 503);
+      const stream = fc._currentUploads[opts.fileId];
+      expect(stream.chunkIds.size).to.equal(0);
+      expect(stream.aborted).to.equal(false);
+    });
+
+    it('rejects resume of records without chunkBits (created before 4.0) with 410', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await simulateRestart(opts.fileId);
+      await fc._preCollection.updateAsync({ _id: opts.fileId }, { $unset: { chunkBits: '' } });
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) }), 410);
     });
 
     it('creates one WriteStream for concurrent resume requests', async function () {
@@ -862,6 +930,13 @@ describe('Security', function () {
     let fc;
     before(function () {
       fc = createCollection();
+    });
+
+    it('rejects Start with more than 100000 chunks', async function () {
+      const error = await expectMeteorError(call(fc, '_Start', 'userA', startOpts({ size: 100001, chunkSize: 1 })), 400);
+      expect(error.reason).to.include('Too many chunks');
+      const ok = await call(fc, '_Start', 'userA', startOpts({ size: 100000, chunkSize: 1 }));
+      expect(ok).to.deep.equal({ status: 204 });
     });
 
     it('rejects Start with invalid chunkSize (0, negative, fractional, NaN, > 16 MiB)', async function () {

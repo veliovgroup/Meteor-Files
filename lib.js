@@ -162,6 +162,28 @@ const helpers = {
 };
 
 /**
+ * @const {number} MAX_UPLOAD_CHUNKS - Most chunks one upload may have. Bounds the chunk bit set stored in the upload record
+ */
+const MAX_UPLOAD_CHUNKS = 100000;
+
+/**
+ * @function fitChunkSize
+ * @param {number} total - File size in bytes, or base64 length for base64 uploads
+ * @param {number} chunkSize - Chunk size the upload would use
+ * @param {number} step - Chunk size must stay a multiple of it (8 for files, 4 for base64)
+ * @param {number} maxChunkSize - Largest accepted chunk size
+ * @param {number} [maxChunks=MAX_UPLOAD_CHUNKS] - Most chunks allowed
+ * @summary Raise `chunkSize` so the upload has at most `maxChunks` chunks
+ * @returns {number}
+ */
+const fitChunkSize = (total, chunkSize, step, maxChunkSize, maxChunks = MAX_UPLOAD_CHUNKS) => {
+  if (Math.ceil(total / chunkSize) <= maxChunks) {
+    return chunkSize;
+  }
+  return Math.min(maxChunkSize, Math.ceil(total / maxChunks / step) * step);
+};
+
+/**
  * @function applyPipes
  * @param {Array<function(string): string>} pipes - Transform functions, in the order they were added
  * @param {string} data - Base64 chunk
@@ -332,4 +354,4 @@ const formatFileURL = (_fileRef, version = 'original', _uriBase = (__meteor_runt
   return `${_root}${route}/${collectionName}/${_id}/${_version}/${_id}${ext}`;
 };
 
-export { applyPipes, fixJSONParse, fixJSONStringify, formatFileURL, helpers };
+export { MAX_UPLOAD_CHUNKS, applyPipes, fitChunkSize, fixJSONParse, fixJSONStringify, formatFileURL, helpers };

@@ -40,9 +40,11 @@ An upload is one Start request, chunks `1..N` in order, and one EOF request. The
 - Write: each chunk needs a `chunkId` in `1..N` and a length of at most `chunkSize` (the last chunk is limited by the declared size). The total can not exceed the declared size. HTTP chunk bodies are limited to the base64 size of `chunkSize` plus 4 KiB, over that the server replies `413`
 - EOF: HTTP EOF bodies are limited to 64 KiB. The server stores the real size found on disk, not the one the client declared
 - Owner only: Write, EOF, and `_Abort` from a different user than the one who started the upload get `403`. `_Abort` on an unknown or foreign upload id gets `404`
-- Lost uploads: `408` means `_preCollection` has no record of the upload (it expired after `continueUploadTTL`, it finished, or the id is unknown). `410` means the record exists but the server can not resume it, because its file was removed or the record was created by 3.0.x. A replaced file gets `409`
+- Lost uploads: `408` means `_preCollection` has no record of the upload (it expired after `continueUploadTTL`, it finished, or the id is unknown). `410` means the record exists but the server can not resume it, because its file was removed or the record was created before 4.0. A replaced file gets `409`
 - Repeated EOF: when the response to EOF was lost, an authenticated owner can send EOF again and receives the stored file record. Anonymous uploads get `408`
 - Idle uploads: the server closes the file handle after `uploadIdleTimeout` and reopens it with the next chunk
+- Chunk limit: an upload has at most 100000 chunks. The client raises `chunkSize` for larger files (up to 16 MiB). The server rejects Start with more chunks with `400`
+- Resume: the server records each written chunk in the upload record. After a server restart, an unfinished upload continues within `continueUploadTTL`, and EOF succeeds once every chunk is recorded. When the server can not record a chunk, it replies `503` and the client sends the chunk again
 
 HTTP error responses have a JSON body `{ "error": <status code>, "reason": "<text>", "isClientSafe": true }`. `isClientSafe` is `true` only for `4xx` errors that are safe to show to users. The server replaces the reason of every `5xx` error with a generic text (`503` says to try again) and logs details when `debug` is on. A malformed Start request gets `400`.
 

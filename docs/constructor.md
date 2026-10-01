@@ -112,7 +112,7 @@
         Server
       </td>
       <td>
-        Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+        Time in seconds, during upload may be continued, default 3 hours (10800 seconds). Unfinished uploads resume after a server restart within this time: the server records each written chunk
       </td>
       <td>
         <code>10800</code> (3 hours)
@@ -214,7 +214,7 @@
         <code>524288</code> (512 KB)
       </td>
       <td>
-        The constructor rounds this option down to a multiple of 8 (at least 8 on the client). The server accepts upload chunk sizes from <code>1</code> byte to <code>16777216</code> (16 MiB) and rejects larger values with <code>400</code>. The client reduces larger values to the server maximum. Over HTTP, a chunk request body (base64 of <code>chunkSize</code> plus 4 KiB) larger than the limit gets <code>413</code>. Start requests (including <code>meta</code>) are limited to 1 MiB and EOF requests to 64 KiB
+        The constructor rounds this option down to a multiple of 8 (at least 8 on the client). The server accepts upload chunk sizes from <code>1</code> byte to <code>16777216</code> (16 MiB) and rejects larger values with <code>400</code>. The client reduces larger values to the server maximum. Over HTTP, a chunk request body (base64 of <code>chunkSize</code> plus 4 KiB) larger than the limit gets <code>413</code>. Start requests (including <code>meta</code>) are limited to 1 MiB and EOF requests to 64 KiB. An upload has at most 100000 chunks. The client raises the chunk size of larger files to fit (up to 16 MiB), and the server rejects Start with more chunks with <code>400</code>
       </td>
     </tr>
     <tr>

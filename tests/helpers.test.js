@@ -1,7 +1,7 @@
 /* global describe, it */
 import { expect } from 'chai';
 import { FilesCollection } from '../server.js';
-import { applyPipes } from '../lib.js';
+import { MAX_UPLOAD_CHUNKS, applyPipes, fitChunkSize } from '../lib.js';
 
 const helpers = FilesCollection.__helpers;
 
@@ -222,6 +222,18 @@ describe('Helpers', function () {
     expect(helpers.isUndefined(test2.needle)).to.equal(true);
     expect(helpers.isUndefined(test2.hay)).to.equal(true);
     expect(helpers.isUndefined(test2.hey)).to.equal(true);
+  });
+
+  it('fitChunkSize keeps the chunk count at or below MAX_UPLOAD_CHUNKS', function () {
+    const MiB = 1024 * 1024;
+    expect(MAX_UPLOAD_CHUNKS).to.equal(100000);
+    expect(fitChunkSize(10, 4, 8, 16 * MiB)).to.equal(4);
+    const total = (100000 * 512 * 1024) + 1;
+    const size = fitChunkSize(total, 512 * 1024, 8, 16 * MiB);
+    expect(size % 8).to.equal(0);
+    expect(Math.ceil(total / size)).to.be.at.most(100000);
+    expect(fitChunkSize(100000 * 20 * MiB, 512 * 1024, 8, 16 * MiB)).to.equal(16 * MiB);
+    expect(fitChunkSize(1000001, 4, 4, 1024, 1000) % 4).to.equal(0);
   });
 
   it('now', function () {
