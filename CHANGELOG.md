@@ -30,6 +30,7 @@ This release adds signed download links, storage adapters with a built-in GridFS
 - ✨ Add content-based type detection from a built-in signature table, and the `trustClientMimeType` option.
 - ✨ Resume uploads after a server restart. The server records every written chunk in the upload record.
 - ✨ Add a browser test suite to CI on Meteor 3.2.2 and 3.5.2.
+- ✨ Accept an async `responseHeaders` function (#861).
 
 ### Fixed
 
@@ -47,6 +48,8 @@ This release adds signed download links, storage adapters with a built-in GridFS
 - 📔 Rewrite the S3 recipe as a storage adapter and lead the GridFS guide with the built-in adapter.
 - 📔 Update the security guide for the new defaults, signed links, and content-based types.
 - 📔 Await `serve()` in the GridFS and Google Cloud Storage recipes.
+- 📔 Show S3-compatible services such as MinIO and Wasabi in the S3 recipe (#862, #799).
+- 📔 Point to upload scanning and the OWASP File Upload Cheat Sheet in the security guide (#753).
 
 ### Tests
 
