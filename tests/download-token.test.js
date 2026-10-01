@@ -44,6 +44,18 @@ describe('download-token.js', function () {
     expect(verifyDownloadToken('t'.repeat(32), make(), TARGET)).to.equal(null);
   });
 
+  it('accepts only the canonical form of exp and signature', function () {
+    const [exp, user, sig] = make().split('.');
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    // Flip the lowest bit of the last character: an unused bit, the decoded bytes stay the same
+    const lastSwapped = `${sig.slice(0, -1)}${ALPHABET[ALPHABET.indexOf(sig.at(-1)) ^ 1]}`;
+    expect(Buffer.from(lastSwapped, 'base64url').equals(Buffer.from(sig, 'base64url'))).to.equal(true);
+    expect(verifyDownloadToken(SECRET, `${exp}.${user}.${lastSwapped}`, TARGET)).to.equal(null);
+    expect(verifyDownloadToken(SECRET, `${exp}.${user}.${sig}=`, TARGET)).to.equal(null);
+    expect(verifyDownloadToken(SECRET, `0${exp}.${user}.${sig}`, TARGET)).to.equal(null);
+    expect(verifyDownloadToken(SECRET, `${exp}.${user}.${sig}`, TARGET)).to.deep.equal({ userId: 'u1', exp: EXP });
+  });
+
   it('rejects malformed input', function () {
     [undefined, null, 42, ['a'], '', 'a.b', 'a.b.c.d', `${EXP}..`, `x${EXP}.AA.AA`, '9'.repeat(20) + '.AA.AA', 'x'.repeat(600)].forEach((token) => {
       expect(verifyDownloadToken(SECRET, token, TARGET), String(token)).to.equal(null);

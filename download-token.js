@@ -53,7 +53,8 @@ export const verifyDownloadToken = (secret, token, { _id, version, now = Date.no
   }
 
   const parts = token.split('.');
-  if (parts.length !== 3 || !/^\d{1,12}$/.test(parts[0])) {
+  // Canonical form only: no leading zeros, an unpadded 43-character signature
+  if (parts.length !== 3 || !/^[1-9]\d{0,11}$/.test(parts[0]) || !/^[A-Za-z0-9_-]{43}$/.test(parts[2])) {
     return null;
   }
 
@@ -69,6 +70,10 @@ export const verifyDownloadToken = (secret, token, { _id, version, now = Date.no
 
   const expected = sign(secret, _id, version, userId, exp);
   const given = Buffer.from(parts[2], 'base64url');
+  // The last character has 2 unused bits, reject signatures that set them
+  if (given.toString('base64url') !== parts[2]) {
+    return null;
+  }
   if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
     return null;
   }
