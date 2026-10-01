@@ -16,7 +16,7 @@ This release adds signed download links, storage adapters with a built-in GridFS
 - ⚠️ Run `FileUpload#pipe()` functions in the order they were added. The first `pipe()` call runs first. Reverse chained `pipe()` calls written for 3.x.
 - ⚠️ Name files on the server only. The client `namingFunction` option and the `FSName` field are ignored. Set `namingFunction` on the server. It receives `{ file, fileId, userId }` in upload Start, `writeAsync()`, and `loadAsync()`.
 - ⚠️ Keep only `name`, `type`, `size`, and `meta` from the client `file` object. Send custom data in `meta`.
-- ⚠️ Store `type`, `mime`, `versions.original.type`, and the `is*` flags from the file content instead of the uploader's claim. Set `trustClientMimeType: true` to store the uploader's type as in 3.x.
+- ⚠️ Store `type`, `mime`, `versions.original.type`, and the `is*` flags from the file content instead of the uploader's claim. Text keeps the uploader's type only for a short list of passive types (`text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, `application/json`), other text is stored as `text/plain`. Set `trustClientMimeType: true` to store the uploader's type as in 3.x.
 - ⚠️ Make `serve()` async. Await it when code runs after it. `unlinkAsync()` and `removeAsync()` remove files through the storage adapter (`FSStorage` by default, same files as before). Custom adapters receive `{ source }` as the 4th `put()` argument and must keep the caller's file when `source` is `'addFile'`.
 - ⚠️ Restart uploads that were in progress during the upgrade from 3.x. They get `410` on their next chunk. Start rejects more than 100000 chunks with `400`, and the client raises `chunkSize` to stay below.
 
@@ -24,7 +24,7 @@ This release adds signed download links, storage adapters with a built-in GridFS
 
 ### Added
 
-- ✨ Add signed download links. Set `downloadTokenSecret`, call `createDownloadToken()`, and pass the token to `link(fileRef, version, uriBase, { token })`. Tokens work without the `x_mtok` cookie and on any server instance.
+- ✨ Add signed download links. Set `downloadTokenSecret`, call `createDownloadToken()`, and pass the token to `link(fileRef, version, uriBase, { token })`. Tokens work without the `x_mtok` cookie and on any server instance. A token opens one file version in one collection, and token downloads get `Cache-Control: private` until the token expires.
 - ✨ Add storage adapters with the `storage` option. `FSStorage` is the default and `GridFSStorage` keeps files in MongoDB GridFS.
 - ✨ Add content-based type detection from a built-in signature table, and the `trustClientMimeType` option.
 - ✨ Resume uploads after a server restart. The server records every written chunk in the upload record.

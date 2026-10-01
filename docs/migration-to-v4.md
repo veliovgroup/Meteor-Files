@@ -24,7 +24,7 @@ ostrio:files 4.0.0 requires Meteor 3.2 or newer, like 3.1.0. This page lists eve
 - Only the server names files. Remove `namingFunction` from client code (it is ignored with a warning). The server ignores `FSName` sent by v3 clients.
 - `namingFunction` receives one object `{ file, fileId, userId }` in upload Start, `writeAsync()`, and `loadAsync()`. v3 passed the upload options in Start and the call options in `writeAsync()`/`loadAsync()`.
 - The server keeps only `name`, `type`, `size`, and `meta` from the client `file` object. Other top-level keys are dropped. Move custom upload data into `meta`.
-- The stored `type`, `mime`, `mime-type`, `versions.original.type`, and `is*` flags come from the file content (first 4100 bytes), not from the uploader. Text is stored as `text/plain`, except when the uploader sent one of `text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, or `application/json`. SVG, HTML, XML, CSS, and JavaScript are therefore stored as `text/plain`. Unknown binary formats are stored as `application/octet-stream`. Office files and other zip, OLE, and mp4 based formats keep the uploader's type when it names a known format of the detected container. Set `trustClientMimeType: true` to keep the 3.x behavior. `writeAsync()`, `loadAsync()`, and `addFile()` detect the type when `opts.type` is not set.
+- The stored `type`, `mime`, `mime-type`, `versions.original.type`, and `is*` flags come from the file content (first 4100 bytes), not from the uploader. Text is stored as `text/plain`, except when the uploader sent one of `text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, or `application/json`. SVG, HTML, XML, CSS, and JavaScript are therefore stored as `text/plain`. Unknown binary formats are stored as `application/octet-stream`. Office files and other zip, OLE, and mp4 based formats keep the uploader's type when it names a known format of the detected container. Set `trustClientMimeType: true` to keep the 3.x behavior. `writeAsync()`, `loadAsync()`, and `addFile()` detect the type when `opts.type` is not set. Documents stored by 3.x keep their stored type, the server does not detect it again. The new `Content-Disposition` rule applies to them on download.
 - `serve()` is `async` and returns a Promise. Without a `readableStream` it reads the file through the storage adapter (`FSStorage` by default, same files as before). Await it if your code runs after it, for example in an `interceptDownload` recipe.
 - `unlinkAsync()` and `removeAsync()` remove files through the storage adapter. `unlink()` (deprecated) still unlinks local paths only.
 - Uploads that were in progress during the upgrade from 3.x get `410` on their next chunk and must start again. 4.0 records written chunks in the upload record and does not guess from the file size.
@@ -42,10 +42,12 @@ ostrio:files 4.0.0 requires Meteor 3.2 or newer, like 3.1.0. This page lists eve
 
 ## Upgrade checklist
 
-1. Move `namingFunction` to the server constructor and change it to `({ file, fileId, userId })`.
-2. Set `allowClientCode: true` and `onBeforeRemove` only if clients remove files, and pass an `_id` to `remove()`.
-3. Check code that reads `type` or `isImage` after upload: the server now detects them from content.
-4. Check links to files that are not images, video, audio, PDF, or plain text: they download as attachments.
-5. Reverse chained `pipe()` calls.
-6. Replace `protected: true` with a function.
-7. Ask users to restart uploads that were running during the deploy.
+1. Replace `cursor.hasNext()` with `await cursor.hasNextAsync()` and `cursor.countAsync()` with `await cursor.countDocuments()`.
+2. Move `namingFunction` to the server constructor and change it to `({ file, fileId, userId })`.
+3. Set `allowClientCode: true` and `onBeforeRemove` only if clients remove files, and pass an `_id` to `remove()`.
+4. Check code that reads `type` or `isImage` after upload: the server now detects them from content. If your app relies on uploads stored as `text/html` or `image/svg+xml`, set `trustClientMimeType: true`. Documents stored by 3.x keep their old `type`, the server does not detect it again.
+5. Check links to files that are not images, video, audio, PDF, or plain text: they download as attachments. This also applies to documents stored by 3.x.
+6. Add `await` to `serve()` calls in `interceptDownload` and in your own download handlers when code runs after them.
+7. Reverse chained `pipe()` calls.
+8. Replace `protected: true` with a function.
+9. Ask users to restart uploads that were running during the deploy.
