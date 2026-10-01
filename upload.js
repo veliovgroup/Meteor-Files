@@ -19,7 +19,7 @@ const RETRY_BASE_DELAY = 500;
  */
 const RETRY_MAX_DELAY = 10000;
 /**
- * @const {number} MAX_ATTEMPTS - Max retries of Start and EOF requests, and of chunks rejected by the server with a retryable status
+ * @const {number} MAX_ATTEMPTS - Max consecutive failed attempts of a Start or EOF request, and of a chunk rejected by the server with a retryable status
  */
 const MAX_ATTEMPTS = 5;
 /**
@@ -655,7 +655,7 @@ export class UploadInstance extends EventEmitter {
 
     this.retryAttempt++;
     const isLimited = outcome.kind === 'retry' || request?.kind !== 'chunk';
-    if (isLimited && this.retryAttempt > MAX_ATTEMPTS) {
+    if (isLimited && this.retryAttempt >= MAX_ATTEMPTS) {
       this.emit('error', outcome.error || new Meteor.Error(503, 'Upload failed after several attempts, try again later'));
       return;
     }
