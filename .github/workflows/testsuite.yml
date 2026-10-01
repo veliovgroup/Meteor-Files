@@ -39,3 +39,35 @@ jobs:
 
       - run: meteor npm ci
       - run: meteor npm run test:mocha
+
+  browser-tests:
+    name: Meteor ${{ matrix.meteor-release }} browser tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        meteor-release: ['3.2.2', '3.5.2']
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-meteor-browser-${{ matrix.meteor-release }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-browser-${{ matrix.meteor-release }}-
+
+      - name: Setup meteor
+        uses: meteorengineer/setup-meteor@v3
+        with:
+          meteor-release: ${{ matrix.meteor-release }}
+
+      - run: meteor npm ci
+      - run: meteor npx playwright install --with-deps chromium
+      - run: meteor npm run test:browser
+        env:
+          TEST_SERVER: '0'
