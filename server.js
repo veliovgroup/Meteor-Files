@@ -2980,7 +2980,11 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!headers['Cache-Control']) {
       if (!http.response.headersSent) {
-        http.response.setHeader('Cache-Control', this.cacheControl);
+        // A shared cache must not keep a token response past the token expiry
+        const cacheControl = http.downloadToken
+          ? `private, max-age=${Math.max(0, http.downloadToken.exp - Math.floor(Date.now() / 1000))}`
+          : this.cacheControl;
+        http.response.setHeader('Cache-Control', cacheControl);
       }
     }
 

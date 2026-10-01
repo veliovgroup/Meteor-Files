@@ -1698,6 +1698,22 @@ describe('Security', function () {
       expect((await httpRequest(urlB(fcB.createDownloadToken(doc, { userId: 'owner' })))).status).to.equal(200);
     });
 
+    it('sends a private Cache-Control that ends with the token', async function () {
+      const { fc, doc, url } = await setup();
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner', expiresIn: 120 })));
+      expect(res.status).to.equal(200);
+      const match = /^private, max-age=(\d+)$/.exec(res.headers['cache-control']);
+      expect(match, res.headers['cache-control']).to.not.equal(null);
+      expect(Number(match[1])).to.be.within(118, 120);
+    });
+
+    it('keeps a Cache-Control set by responseHeaders on token downloads', async function () {
+      const { fc, doc, url } = await setup({ responseHeaders: { 'Cache-Control': 'no-store' } });
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner' })));
+      expect(res.status).to.equal(200);
+      expect(res.headers['cache-control']).to.equal('no-store');
+    });
+
     it('answers 404 for a token version the file does not have', async function () {
       const { fc, doc } = await setup();
       const token = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
