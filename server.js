@@ -158,7 +158,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.parentDirPermissions {number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `0o611` or `0o777`. Default: 0755
  * @param config.storagePath    {string|function}  - [Server] Storage path on file system. The function can be async
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header. Default: `private, max-age=31536000` for `protected` collections, `public, max-age=31536000, s-maxage=31536000` otherwise
- * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
+ * @param config.responseHeaders {object|function} - [Server] Custom response headers. A function returns an Object, or a Promise that resolves to one
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
  * @param config.trustClientMimeType {boolean} - [Server] Store the type the uploader sent. When `false` (default) the stored type comes from the file content
  * @param config.downloadTokenSecret {string} - [Server] HMAC secret for signed download links (`createDownloadToken()`), at least 32 characters. Without it `?token=` is ignored
@@ -2979,7 +2979,7 @@ class FilesCollection extends FilesCollectionCore {
       }
     }
 
-    const headers = (helpers.isFunction(this.responseHeaders) ? this.responseHeaders(responseType, fileRef, vRef, version, http) : this.responseHeaders) || {};
+    const headers = (helpers.isFunction(this.responseHeaders) ? await this.responseHeaders(responseType, fileRef, vRef, version, http) : this.responseHeaders) || {};
 
     if (this.nosniff && !http.response.headersSent) {
       http.response.setHeader('X-Content-Type-Options', 'nosniff');

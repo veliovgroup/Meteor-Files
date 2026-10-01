@@ -904,6 +904,13 @@ describe('FilesCollection', function() {
       expect(res.body).to.equal('testfile');
     });
 
+    it('awaits an async responseHeaders function', async function() {
+      sinon.stub(filesCollection, 'responseHeaders').value(async () => ({ 'X-Async-Header': 'yes' }));
+      const res = await get(`http://127.0.0.1:${port}`);
+      expect(res.headers['x-async-header']).to.equal('yes');
+      expect(res.body).to.equal('testfile');
+    });
+
     it('C2: sends object responseHeaders', async function() {
       sinon.stub(filesCollection, 'responseHeaders').value({ 'X-Custom-Header': 'yes' });
       const res = await get(`http://127.0.0.1:${port}`);

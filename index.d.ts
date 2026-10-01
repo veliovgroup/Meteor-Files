@@ -384,7 +384,7 @@ export interface FilesCollectionConfig {
   ddp?: DDP.DDPStatic;
   /** Default `Cache-Control` header. Default: `private, max-age=31536000` when `protected` is set, otherwise `public, max-age=31536000, s-maxage=31536000`. */
   cacheControl?: string;
-  responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string });
+  responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string } | Promise<{ [x: string]: string }>);
   /** @deprecated No effect. */
   throttle?: number | boolean;
   downloadRoute?: string;

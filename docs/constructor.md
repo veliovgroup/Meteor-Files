@@ -165,7 +165,7 @@
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#default-function">Default <em>Function</em></a>
       </td>
       <td>
-        An <em>Object</em> sets the same headers on every response. A <em>Function</em> receives <code>(responseCode, fileRef, versionRef, version, http)</code> and returns an <em>Object</em> of headers. We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
+        An <em>Object</em> sets the same headers on every response. A <em>Function</em> receives <code>(responseCode, fileRef, versionRef, version, http)</code> and returns an <em>Object</em> of headers, or a <em>Promise</em> that resolves to one. We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
       </td>
     </tr>
     <tr>
