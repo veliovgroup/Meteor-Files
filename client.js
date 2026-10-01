@@ -410,20 +410,19 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Client
    * @memberOf FilesCollection
    * @name remove
-   * @param {MeteorFilesSelector} selector - mongo-style selector (see http://docs.meteor.com/api/collections.html#selectors)
+   * @param {string} _id - `_id` of the file to remove
    * @param {function(error, number): void} callback - callback with (error, number) arguments
-   * @summary Removes documents from the collection
+   * @summary Removes one file from the collection
    * @returns {FilesCollection} Instance
    */
-  remove(selector = {}, callback) {
-    this._debug(`[FilesCollection] [remove(${JSON.stringify(selector)})]`);
-    /* eslint-disable new-cap */
-    check(selector, Match.OneOf(Object, String));
+  remove(_id, callback) {
+    this._debug(`[FilesCollection] [remove(${JSON.stringify(_id)})]`);
+    check(_id, String);
+    // eslint-disable-next-line new-cap
     check(callback, Match.Optional(Function));
-    /* eslint-enable new-cap */
 
     if (this.allowClientCode) {
-      this.ddp.call(this._methodNames._Remove, selector, (callback || NOOP));
+      this.ddp.call(this._methodNames._Remove, _id, (callback || NOOP));
     } else {
       callback && callback(new Meteor.Error(401, '[FilesCollection] [remove] Run code from client is not allowed!'));
       this._debug('[FilesCollection] [remove] Run code from client is not allowed!');
@@ -437,18 +436,17 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name removeAsync
-   * @param {MeteorFilesSelector} selector - mongo-style selector (see http://docs.meteor.com/api/collections.html#selectors)
-   * @summary Removes documents from the collection
+   * @param {string} _id - `_id` of the file to remove
+   * @summary Removes one file from the collection
    * @throws {Meteor.Error} 401 when `allowClientCode` is `false`
-   * @returns {Promise<number>} number of matched and removed files/records
+   * @returns {Promise<number>} number of removed files, `0` or `1`
    */
-  async removeAsync(selector = {}) {
-    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
-    // eslint-disable-next-line new-cap
-    check(selector, Match.OneOf(Object, String));
+  async removeAsync(_id) {
+    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(_id)})]`);
+    check(_id, String);
 
     if (this.allowClientCode) {
-      return await this.ddp.callAsync(this._methodNames._Remove, selector);
+      return await this.ddp.callAsync(this._methodNames._Remove, _id);
     }
 
     this._debug('[FilesCollection] [removeAsync] Run code from client is not allowed!');

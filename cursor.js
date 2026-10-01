@@ -382,18 +382,51 @@ export class FilesCursor {
   remove(callback = () => {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
     clientOnly('FilesCursor', 'remove');
-    this._collection.remove(this._selector, callback);
+    // The client removes one `_id` per call
+    const ids = this.cursor.map((doc) => doc._id);
+    if (!ids.length) {
+      callback(null, 0);
+      return this;
+    }
+
+    let pending = ids.length;
+    let removed = 0;
+    let failed = false;
+    ids.forEach((_id) => {
+      this._collection.remove(_id, (error, count) => {
+        if (failed) {
+          return;
+        }
+        if (error) {
+          failed = true;
+          callback(error);
+          return;
+        }
+        removed += count || 0;
+        if (--pending === 0) {
+          callback(null, removed);
+        }
+      });
+    });
     return this;
   }
 
   /**
-   * Asynchronously removes all file documents that match the query.
+   * Asynchronously removes all file documents that match the query. The client removes them one `_id` at a time
    * @locus Anywhere
    * @returns {Promise<number>}
    */
   async removeAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [removeAsync()]');
-    return await this._collection.removeAsync(this._selector);
+    if (Meteor.isServer) {
+      return await this._collection.removeAsync(this._selector);
+    }
+
+    let removed = 0;
+    for (const { _id } of await this.cursor.fetchAsync()) {
+      removed += await this._collection.removeAsync(_id);
+    }
+    return removed;
   }
 
   /**

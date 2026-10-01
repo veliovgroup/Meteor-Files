@@ -1319,6 +1319,27 @@ describe('Security', function () {
     });
   });
 
+  describe('_Remove accepts only a String _id', function () {
+    it('rejects an object selector with a Match error', async function () {
+      const fc = createCollection({ allowClientCode: true });
+      let caught;
+      try {
+        await call(fc, '_Remove', 'userA', { _id: { $ne: null } });
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught?.errorType).to.equal('Match.Error');
+    });
+
+    it('removes one file by String _id', async function () {
+      const fc = createCollection({ allowClientCode: true });
+      const fileObj = await fc.writeAsync(Buffer.from('bye'), { name: 'bye.txt', type: 'text/plain' });
+      expect(await call(fc, '_Remove', 'userA', fileObj._id)).to.equal(1);
+      expect(await fc.collection.findOneAsync(fileObj._id)).to.equal(undefined);
+      expect(fs.existsSync(fileObj.path)).to.equal(false);
+    });
+  });
+
   describe('Misc hardening', function () {
     it('_getUserId: Map sessions resolve userId', function () {
       const fc = createCollection();

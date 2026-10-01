@@ -844,8 +844,8 @@ class FilesCollection extends FilesCollectionCore {
     // Method used to remove file
     // from Client side
     _methods[this._methodNames._Remove] = async function (selector) {
-      // eslint-disable-next-line new-cap
-      check(selector, Match.OneOf(String, Object));
+      // One file per call: a client can not pass a query selector
+      check(selector, String);
       self._debug(`[FilesCollection] [Unlink Method] [.removeAsync(${selector})]`);
 
       if (self.allowClientCode) {

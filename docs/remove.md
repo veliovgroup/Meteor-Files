@@ -1,12 +1,14 @@
-### `remove(selector[, cb])` [*Client*]
+### `remove(_id[, cb])` [*Client*]
 
 > __Deprecated.__ The callback API works on the Client only. There is no synchronous `remove()` on the Server. Use [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) everywhere.
 
 Remove records from FilesCollection and files from FS. Requires `allowClientCode: true` (default), and `onBeforeRemove` should authorize the user.
 
-- `selector` {*Object*|*String*} - See [Mongo Selectors](https://docs.meteor.com/api/collections.html#selectors)
+- `_id` {*String*} - `_id` of the file to remove
 - `cb` {*Function*} - Callback, with `error` and the number of removed records
 - Returns {*FilesCollection*} - Current FilesCollection instance
+
+Since v4 the client removes one file per call. Use `files.find(selector).removeAsync()` to remove several files; it calls the server once per `_id`.
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -15,12 +17,12 @@ const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage (Client):
 // Remove particular file
-imagesCollection.remove({_id: 'Rfy2HLutYK4XWkwhm'});
+imagesCollection.remove('Rfy2HLutYK4XWkwhm');
 // Equals to above
-imagesCollection.findOne({_id: 'Rfy2HLutYK4XWkwhm'}).remove();
+imagesCollection.findOne('Rfy2HLutYK4XWkwhm').remove();
 
 // Using callback
-imagesCollection.remove({_id: 'Rfy2HLutYK4XWkwhm'}, (error) => {
+imagesCollection.remove('Rfy2HLutYK4XWkwhm', (error) => {
   if (error) {
     console.error(`File wasn't removed, error:  ${error.reason}`);
   } else {

@@ -655,16 +655,17 @@ export interface FilesCollection {
   insertAsync(config: InsertOptions, autoStart?: boolean): Promise<FileUpload | UploadInstance>;
 
   /**
-   * Removes files/documents from the collection. Client only, throws on server.
-   * @param selector - A Mongo-style selector.
+   * Removes one file from the collection. Client only, throws on server.
+   * @param _id - `_id` of the file to remove.
    * @param callback - Optional callback function.
    */
-  remove<S>(selector?: MeteorFilesSelector<S>, callback?: (error: Meteor.Error | null, count?: number) => void): FilesCollection;
+  remove(_id: string, callback?: (error: Meteor.Error | null, count?: number) => void): FilesCollection;
 
   /**
    * Asynchronously removes files/documents from the collection.
-   * On client rejects with `Meteor.Error(401)` when `allowClientCode` is `false`.
-   * @param selector - A Mongo-style selector.
+   * On the client accepts only a String `_id` and rejects with `Meteor.Error(401)` when `allowClientCode` is `false`.
+   * On the server accepts any selector.
+   * @param selector - A Mongo-style selector. On the client, a String `_id`.
    */
   removeAsync<S>(selector?: MeteorFilesSelector<S>): Promise<number>;
 

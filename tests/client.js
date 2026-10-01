@@ -126,3 +126,43 @@ export const settle = (upload) => new Promise((resolve) => {
     });
   });
 });
+
+describe('remove from the client', function () {
+  this.timeout(30000);
+
+  const uploadOne = async (name) => {
+    const upload = files.insert({ file: makeFile(name, 16, 'r'), chunkSize: 1024, transport: 'ddp' }, false);
+    const done = settle(upload);
+    await upload.start();
+    const { error, fileObj } = await done;
+    expect(error).to.not.exist;
+    return fileObj._id;
+  };
+
+  it('rejects an object selector before calling the server', async function () {
+    let caught;
+    try {
+      await files.removeAsync({ _id: 'x' });
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught?.errorType).to.equal('Match.Error');
+  });
+
+  it('removes by _id', async function () {
+    const _id = await uploadOne('remove-me.txt');
+    expect(await files.removeAsync(_id)).to.equal(1);
+    expect(await Meteor.callAsync('mfTest.stored', _id)).to.equal(null);
+  });
+
+  it('FilesCursor#removeAsync() removes each matching file by _id', async function () {
+    const a = await uploadOne('cursor-a.txt');
+    const b = await uploadOne('cursor-b.txt');
+    const handle = Meteor.subscribe('mfTest.files');
+    await waitUntil(() => handle.ready() && files.collection.find({ _id: { $in: [a, b] } }).count() === 2);
+    expect(await files.find({ _id: { $in: [a, b] } }).removeAsync()).to.equal(2);
+    expect(await Meteor.callAsync('mfTest.stored', a)).to.equal(null);
+    expect(await Meteor.callAsync('mfTest.stored', b)).to.equal(null);
+    handle.stop();
+  });
+});

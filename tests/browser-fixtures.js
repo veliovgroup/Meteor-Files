@@ -53,3 +53,7 @@ Meteor.methods({
     return { size: doc.size, type: doc.type, content: await fs.promises.readFile(doc.path, 'utf8') };
   },
 });
+
+Meteor.publish('mfTest.files', function () {
+  return browserFiles.collection.find({});
+});
