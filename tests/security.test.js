@@ -317,6 +317,25 @@ describe('Security', function () {
       expect(res.size).to.equal(2048);
     });
 
+    it('keeps the file when another process finishes the upload', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) });
+      const stream = fc._currentUploads[opts.fileId];
+      // This process never sees chunk 2, so waiting for it would end in abort()
+      stream.maxEndRetries = 2;
+      // Another process wrote chunk 2, inserted the document, and marked the record finished
+      await fc.collection.insertAsync({ _id: opts.fileId, name: 'file.txt', path: stream.path, userId: 'userA' });
+      await fc._preCollection.updateAsync({ _id: opts.fileId }, { $set: { isFinished: true } });
+      for (let i = 0; i < 200 && fc._currentUploads[opts.fileId]; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(fc._currentUploads[opts.fileId]).to.equal(undefined);
+      expect(stream.ended).to.equal(true);
+      expect(stream.aborted).to.equal(false);
+      expect(fs.existsSync(stream.path)).to.equal(true);
+    });
+
     it('persists written chunk ids as a bit set', async function () {
       const opts = startOpts({ size: 33 * 8, chunkSize: 8 });
       await call(fc, '_Start', 'userA', opts);

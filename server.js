@@ -556,7 +556,8 @@ class FilesCollection extends FilesCollectionCore {
               self._debug(`[FilesCollection] [_preCollectionCursor.observe] [removeUnfinishedUpload]: ${doc._id}`);
               await upload.abort();
             } else {
-              await upload.end();
+              // Another process finished this upload, its chunks are not in this stream. Close the handle, keep the file
+              await upload.stop(false);
             }
           }
           delete self._currentUploads[doc._id];
