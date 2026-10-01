@@ -1332,14 +1332,12 @@ describe('Security', function () {
       }
     });
 
-    it('_getUserId: object sessions ignore inherited keys', function () {
+    it('_getUserId: throws on plain object sessions (Map only since v4)', function () {
       const fc = createCollection();
       const original = Meteor.server.sessions;
       try {
         Meteor.server.sessions = { tok: { userId: 'u2' } };
-        expect(fc._getUserId('tok')).to.equal('u2');
-        expect(fc._getUserId('constructor')).to.equal(null);
-        expect(fc._getUserId('__proto__')).to.equal(null);
+        expect(() => fc._getUserId('tok')).to.throw('incompatible');
       } finally {
         Meteor.server.sessions = original;
       }

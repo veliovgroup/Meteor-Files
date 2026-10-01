@@ -9,7 +9,7 @@ import { FilesCursor, FileCursor } from './cursor.js';
 /**
  * @const {Match.Pattern} SELECTOR_PATTERN - Selectors accepted by `find`, `findOne`, `findOneAsync`, and `countDocuments`
  */
-const SELECTOR_PATTERN = Match.Optional(Match.OneOf(Object, String, Boolean, Number, null, Mongo.ObjectID));
+export const SELECTOR_PATTERN = Match.Optional(Match.OneOf(Object, String, Boolean, Number, null, Mongo.ObjectID));
 /* eslint-enable new-cap */
 
 export default class FilesCollectionCore extends EventEmitter {
@@ -241,32 +241,6 @@ export default class FilesCollectionCore extends EventEmitter {
     /* eslint-enable new-cap */
 
     const doc = await this.collection.findOneAsync(selector, options);
-    if (doc) {
-      return new FileCursor(doc, this);
-    }
-    return null;
-  }
-
-  /**
-   * Finds and returns a FileCursor for a matching document (client only).
-   * @locus Client
-   * @memberOf FilesCollectionCore
-   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
-   * @param {MeteorFilesOptions} [options] - Mongo query options
-   * @returns {FileCursor|null} A FileCursor instance, or null if not found
-   * @throws {Meteor.Error} If called on the server
-   */
-  findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`, Meteor.isServer);
-    if (Meteor.isServer) {
-      throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
-    }
-    /* eslint-disable new-cap */
-    check(selector, SELECTOR_PATTERN);
-    check(options, Match.Optional(Object));
-    /* eslint-enable new-cap */
-
-    const doc = this.collection.findOne(selector, options);
     if (doc) {
       return new FileCursor(doc, this);
     }

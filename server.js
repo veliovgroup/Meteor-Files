@@ -974,6 +974,17 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
+   * @name findOne
+   * @summary Not available on the server, where collections are async only
+   * @throws {Meteor.Error} 404, always. Use `findOneAsync()`
+   */
+  findOne() {
+    throw new Meteor.Error(404, 'FilesCollection#findOne() is not available on the server! Use .findOneAsync() instead');
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
    * @name _parseRequestUrl
    * @param {IncomingMessage} httpReq - Incoming request
    * @summary Internal method. Returns `pathname` (without querystring) and raw `query` of the request
@@ -1868,22 +1879,13 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     const sessions = Meteor.server.sessions;
-    if (sessions instanceof Map) {
-      // to be used with >= Meteor 1.8.1 where Meteor.server.sessions is a Map
-      const session = sessions.get(xmtok);
-      return helpers.isObject(session) ? (session.userId || null) : null;
+    if (!(sessions instanceof Map)) {
+      // Meteor 3 keeps sessions in a Map. Fail loudly if that changes
+      throw new Error('Received incompatible type of Meteor.server.sessions');
     }
 
-    if (helpers.isObject(sessions)) {
-      // to be used with < Meteor 1.8.1 where Meteor.server.sessions is an Object
-      if (Object.hasOwn(sessions, xmtok) && helpers.isObject(sessions[xmtok])) {
-        return sessions[xmtok].userId || null;
-      }
-      return null;
-    }
-
-    // throw an error upon an unexpected type of Meteor.server.sessions in order to identify breaking changes
-    throw new Error('Received incompatible type of Meteor.server.sessions');
+    const session = sessions.get(xmtok);
+    return helpers.isObject(session) ? (session.userId || null) : null;
   }
 
   /**

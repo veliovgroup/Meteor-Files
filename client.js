@@ -4,7 +4,8 @@ import { Tracker } from 'meteor/tracker';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 import { UploadInstance } from './upload.js';
-import FilesCollectionCore from './core.js';
+import FilesCollectionCore, { SELECTOR_PATTERN } from './core.js';
+import { FileCursor } from './cursor.js';
 import { formatFileURL, helpers } from './lib.js';
 
 const NOOP = () => { };
@@ -304,6 +305,26 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     return result;
+  }
+
+  /**
+   * Finds and returns a FileCursor for a matching document.
+   * @locus Client
+   * @memberOf FilesCollection
+   * @name findOne
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FileCursor|null} A FileCursor instance, or null if not found
+   */
+  findOne(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
+    check(selector, SELECTOR_PATTERN);
+    check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
+
+    const doc = this.collection.findOne(selector, options);
+    return doc ? new FileCursor(doc, this) : null;
   }
 
   /**

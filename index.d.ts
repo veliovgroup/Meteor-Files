@@ -252,15 +252,6 @@ export class FilesCollectionCore extends EventEmitter {
   findOneAsync<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): Promise<(FileCursor & FileObj) | null>;
 
   /**
-   * Find and return a FileCursor for a matching document (client only).
-   * @param selector - Mongo-style selector.
-   * @param options - Mongo query options.
-   * @returns {FileCursor | null} The FileCursor instance or null if not found.
-   * @throws {Meteor.Error} If called on the server.
-   */
-  findOne<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): (FileCursor & FileObj) | null;
-
-  /**
    * Find and return a FilesCursor for matching documents.
    * @param selector - Mongo-style selector.
    * @param options - Mongo query options.
@@ -640,6 +631,11 @@ export class FilesCollection extends FilesCollectionCore {
 // Client/Browser-specific overloads for FilesCollection
 // --------------------------------------------------------------------------
 export interface FilesCollection {
+  /**
+   * Finds a document and wraps it in a FileCursor. Client only, throws `Meteor.Error(404)` on the server.
+   */
+  findOne<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): (FileCursor & FileObj) | null;
+
   /**
    * Inserts a file into the collection and returns an instance of FileUpload/UploadInstance.
    * @param config - The insert options.

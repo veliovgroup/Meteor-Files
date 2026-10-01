@@ -326,5 +326,9 @@ describe('FilesCollectionCore (3.1 fixes)', function() {
     it('throws a Meteor.Error', function() {
       expect(() => files.findOne({})).to.throw(Meteor.Error);
     });
+
+    it('is not part of the isomorphic core', function() {
+      expect(Object.prototype.hasOwnProperty.call(FilesCollectionCore.prototype, 'findOne')).to.equal(false);
+    });
   });
 });
