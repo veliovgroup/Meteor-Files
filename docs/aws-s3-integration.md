@@ -253,7 +253,7 @@ const UserFiles = new FilesCollection({
     // So, original link will always stay secure
 
     // To keep ?play and ?download parameters, original file name,
-    // content-type, content-disposition, chunked "streaming",
+    // content-type, content-disposition, Range responses,
     // and cache-control we use the low-level .serve() method
     const opts = {
       Bucket: s3Conf.bucket,

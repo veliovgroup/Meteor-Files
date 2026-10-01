@@ -22,7 +22,6 @@ function responseHeaders (responseCode, fileRef, versionRef, version, http) {
   switch (responseCode) {
     case '206':
       headers['Pragma'] = 'private';
-      headers['Transfer-Encoding'] = 'chunked';
       break;
     case '400':
       headers['Cache-Control'] = 'no-cache';
@@ -34,11 +33,18 @@ function responseHeaders (responseCode, fileRef, versionRef, version, http) {
       break;
   }
   headers['Connection'] = 'keep-alive';
-  headers['Content-Type'] = versionRef.type || 'application/octet-stream';
+  let type = versionRef.type || 'application/octet-stream';
+  // Text types without a charset get `; charset=utf-8`
+  if (/^(?:text\/[^;\s]+|application\/json|application\/javascript|image\/svg\+xml)\s*(?:;|$)/i.test(type) && !/;\s*charset=/i.test(type)) {
+    type = `${type.replace(/[;\s]+$/, '')}; charset=utf-8`;
+  }
+  headers['Content-Type'] = type;
   headers['Accept-Ranges'] = 'bytes';
   return headers;
 }
 ```
+
+`serve()` sets `Content-Length` (and `Content-Range` on `206`) itself, and removes `Transfer-Encoding` from `200` and `206` responses, because a response with `Content-Length` must not be chunked.
 
 ## Adding custom header example:
 
@@ -52,7 +58,6 @@ const UploadsFn = new FilesCollection({
     switch (responseCode) {
       case '206':
         headers['Pragma'] = 'private';
-        headers['Transfer-Encoding'] = 'chunked';
         break;
       case '400':
         headers['Cache-Control'] = 'no-cache';
@@ -64,6 +69,7 @@ const UploadsFn = new FilesCollection({
         break;
     }
     headers['Connection'] = 'keep-alive';
+    // Add `; charset=utf-8` to text types here, as the default function does
     headers['Content-Type'] = versionRef.type || 'application/octet-stream';
     headers['Accept-Ranges'] = 'bytes';
     headers['Access-Control-Allow-Origin'] = '*';// <-- Custom header

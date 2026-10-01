@@ -501,7 +501,7 @@ The `FileUpload` instance is the `this` *context* in all callback functions (*se
         `abort`
       </td>
       <td>
-        Triggered after upload is aborted.<br />
+        Triggered after upload is aborted with `abort()`. `abort()` emits `pause` first, then `abort`. `end` is not emitted after `abort()`<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`fileData` {*FileData*}</li>
@@ -528,7 +528,7 @@ The `FileUpload` instance is the `this` *context* in all callback functions (*se
         `error`
       </td>
       <td>
-        Triggered whenever upload has an error. After `error` the upload is over: the state is `aborted` and `end` follows. The `pause`, `abort` events and the `onAbort` callback are not called on error<br />
+        Triggered when the upload fails. A failed upload emits `error`, then `end`. After `error` the upload is over and the state is `aborted`. The `pause` and `abort` events and the `onAbort` callback are not called on error<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
@@ -542,7 +542,7 @@ The `FileUpload` instance is the `this` *context* in all callback functions (*se
         `end`
       </td>
       <td>
-        Triggered at the very end of a finished or failed upload. Not triggered by `.abort()`<br />
+        Triggered at the very end of a finished or failed upload. Not emitted after `abort()`, so reset your UI on `abort` as well<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
@@ -556,11 +556,12 @@ The `FileUpload` instance is the `this` *context* in all callback functions (*se
 
 #### Upload errors and retries
 
-- Network failures, `502`, `503`, and `504` responses are retried with backoff (500 ms, doubling up to 10 s). Start and EOF requests and `502`/`503`/`504` responses give up after 5 attempts. Chunks retry on network failure until the connection returns. The upload pauses by itself while the DDP connection is down and resumes after reconnect
+- Network failures, `502`, `503`, and `504` responses are retried with backoff (500 ms, doubling up to 10 s). Start and EOF requests and `502`/`503`/`504` responses give up after 5 attempts. A chunk that fails at the network level 10 times in a row ends the upload with an error. The upload pauses by itself while the DDP connection is down and resumes after reconnect
 - The `reason` of HTTP `400`, `403`, `404`, `405`, `408`, `409`, `410`, and `413` responses is the `error.reason` of the `Meteor.Error` passed to `error`, `onError`, and `end`. A `403` carries the message returned from `onBeforeUpload`
 - A `410` means the server no longer has the upload (the file was removed or replaced). The upload is not retried
-- Exceptions thrown by your callbacks and event handlers are logged and do not stop the remaining callbacks
+- Exceptions thrown by your callbacks and event handlers are reported with `console.error` and do not stop the remaining callbacks
 - Only the user who started an upload can send its chunks and abort it
+- `abort()` does not cancel a request that is already on its way. If you call it while the final (EOF) request is in flight, the server can still finish the upload and store the file. If you call it while an HTTP Start request is in flight, the upload record and its empty file can stay on the server until `continueUploadTTL` expires
 
 When `autoStart` *is* `false` *before calling* `.start()` you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. __Do not forget to change file name, extension and mime-type if required__.
 

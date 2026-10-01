@@ -18,11 +18,11 @@ FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
 - `fileRef` {*Object*} - Object returned from MongoDB collection or [after upload](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/client/upload/upload-form.js#L194-L205)
 - `version` {*String*|*void 0*} - [OPTIONAL] File's subversion name, default: `original`. If requested subversion isn't found, `original` will be returned
 - `URIBase` {*String*} - [OPTIONAL] base URI (domain), default: `ROOT_URL` or `MOBILE_ROOT_URL` on *Cordova*.
-- Returns {*String*} - Absolute URL to file. Returns an empty string for `null`/`undefined` and when no safe route is available
+- Returns {*String*} - Absolute URL to file. Returns an empty string for `null`/`undefined`, for a file object without `_id` (for example the file of a rejected upload), and when no safe route is available
 
 ## How the URL is built
 
-- The route and collection name stored in the document (`_downloadRoute`, `_collectionName`) are used when they are safe: the route is a local path (starts with a single `/`, without `..`, `//`, `@`, `:`, `\`, whitespace, or control characters) and the name has only letters, digits, `_`, `.`, and `-`
+- The route and collection name stored in the document (`_downloadRoute`, `_collectionName`) are used when they are safe: the route is a local path (starts with a single `/`, without `..`, `//`, `@`, `:`, `\`, `?`, `#`, whitespace, or control characters) and the name has only letters, digits, `_`, `.`, and `-`
 - Otherwise the `downloadRoute` and `collectionName` of the collection instance are used. The method returns an empty string if neither is available (for a public file the collection name is not needed)
 - `_id`, version name, extension, and collection name are URI-encoded
 
