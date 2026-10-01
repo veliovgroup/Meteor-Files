@@ -146,6 +146,20 @@ export const UserFiles = new FilesCollection({
 });
 ```
 
+### S3-compatible storage (MinIO, Wasabi, and others)
+
+`S3Storage` works with any S3-compatible service. Point the client at the service with `endpoint`. MinIO and most self-hosted services also need `forcePathStyle: true`:
+
+```js
+const s3 = new S3Client({
+  region: s3Conf.region, // Any value for MinIO, for example 'us-east-1'. Wasabi uses its own regions, like 'eu-central-1'
+  endpoint: s3Conf.endpoint, // For example 'https://minio.example.com' or 'https://s3.eu-central-1.wasabisys.com'
+  forcePathStyle: true,
+  credentials: { accessKeyId: s3Conf.key, secretAccessKey: s3Conf.secret },
+});
+```
+
+
 `stat()` is optional. Without it `download()` can not answer `404` or apply `integrityCheck` before streaming. The `stat()` above trusts the size stored in the document. Call `HeadObjectCommand` instead to check that the object exists.
 
 Files created by `onAfterUpload` subversions must be passed to `this.storage.put(fileRef, versionName, localPath)` and the result saved at `versions.<name>.meta.storage`. Pass `{ source: 'write' }` as the 4th argument to let the adapter delete the local file after the copy, or `{ source: 'addFile' }` to keep it. With the adapter above, `onAfterUpload` no longer finds the original file on local disk. Create subversions from the S3 object, or with the Lambda function below.

@@ -147,6 +147,8 @@ Since v4 the server detects the type from the first 4100 bytes of the file and s
 - Validate the type and extension in `onBeforeUpload`, and verify real content in `onAfterUpload`
 - Files are served `inline` only when their type is `image/*` (except `image/svg+xml`), `video/*`, `audio/*`, `application/pdf`, or `text/plain`. Everything else gets `Content-Disposition: attachment`. `?download=true` always forces `attachment`, and [`responseHeaders`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md) can set its own `Content-Disposition`
 - Serve user files from a separate domain when possible
+- Scan uploads that other users open (antivirus, document sanitizers) in `onAfterUpload`, before you mark the file as available
+- Follow the [OWASP File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) for the checks that depend on your app
 
 ## Other options
 
