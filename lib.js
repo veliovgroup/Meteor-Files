@@ -226,10 +226,10 @@ const fixJSONStringify = function(obj) {
  */
 const LOCAL_ROUTE_RE = /^\/[^/]/;
 /**
- * @const {RegExp} UNSAFE_ROUTE_RE - Parts not allowed in a stored route: `..`, `//`, `@`, `:`, `\`, `?`, `#`, whitespace, and control characters
+ * @const {RegExp} UNSAFE_ROUTE_RE - Parts not allowed in a stored route: `..`, `//`, `@`, `:`, `\`, `?`, `#`, encoded `.`, `/`, and `\` (`%2e`, `%2f`, `%5c`, any case), whitespace, and control characters
  */
 // eslint-disable-next-line no-control-regex
-const UNSAFE_ROUTE_RE = /\.\.|\/\/|[@:\\?#\s\x00-\x1f\x7f]/;
+const UNSAFE_ROUTE_RE = /\.\.|\/\/|%2e|%2f|%5c|[@:\\?#\s\x00-\x1f\x7f]/i;
 /**
  * @const {RegExp} PLAIN_NAME_RE - A plain collection name: letters, digits, `_`, `-`, and `.`
  */
@@ -259,7 +259,7 @@ const isPlainName = (name) => helpers.isString(name) && PLAIN_NAME_RE.test(name)
  * @param {string} [version] - [Optional] Version of file you would like build URL for
  * @param {string} [uriBase] - [Optional] URI base, see - https://github.com/veliovgroup/Meteor-Files/issues/626
  * @param {FilesCollection} [collection] - [Optional] Collection of the file. Its `downloadRoute` and `collectionName` replace the document's `_downloadRoute` and `_collectionName` when those are not safe
- * @summary Returns formatted URL for file. Uses the document's `_downloadRoute` when it is a safe local path (`/...` without `..`, `//`, `@`, `:`, `\`, `?`, `#`, whitespace, or control characters) and `_collectionName` when it is a plain name, otherwise the collection's values. Returns an empty string when neither is available or the file has no `_id`. `_id`, `version`, the extension, and the collection name are URI-encoded
+ * @summary Returns formatted URL for file. Uses the document's `_downloadRoute` when it is a safe local path (`/...` without `..`, `//`, `@`, `:`, `\`, `?`, `#`, `%2e`, `%2f`, `%5c`, whitespace, or control characters) and `_collectionName` when it is a plain name, otherwise the collection's values. Returns an empty string when neither is available or the file has no `_id`. `_id`, `version`, the extension, and the collection name are URI-encoded
  * @returns {string} Downloadable link
  */
 // eslint-disable-next-line camelcase, no-undef

@@ -293,8 +293,8 @@ describe('FilesCollectionCore (3.1 fixes)', function() {
       expect(files.link({ name: 'note.txt', extension: 'txt' })).to.equal('');
     });
 
-    it('rejects stored routes with "?" or "#"', function() {
-      for (const route of ['/cdn?x=1', '/cdn#x', '/a/b?']) {
+    it('rejects stored routes with "?", "#", or encoded ".", "/", "\\"', function() {
+      for (const route of ['/cdn?x=1', '/cdn#x', '/a/b?', '/%2e%2e/x', '/%2E%2E/x', '/a%2fb', '/a%2Fb', '/a%5cb', '/a%5Cb', '/.%2e/x']) {
         expect(files.link(Object.assign(doc(), { _downloadRoute: route }))).to.equal(`${ROOT}/cdn/storage/${collectionName}/abc123/original/abc123.jpg`, JSON.stringify(route));
         expect(formatFileURL(Object.assign(doc(), { _downloadRoute: route }))).to.equal('', JSON.stringify(route));
       }
