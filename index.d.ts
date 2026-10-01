@@ -5,6 +5,7 @@ import type { CountDocumentsOptions, EstimatedDocumentCountOptions } from 'mongo
 import type { ReactiveVar } from 'meteor/reactive-var';
 import type SimpleSchema from 'simpl-schema';
 import type * as http from 'node:http';
+import type { Readable } from 'node:stream';
 import type { IncomingMessage } from 'connect';
 import type { DDP } from 'meteor/ddp';
 import type { Tracker } from 'meteor/tracker';
@@ -202,28 +203,28 @@ export interface StoragePutOptions {
 export interface FilesStorageAdapter {
   /** Called after a file is complete on local disk, before the insert and `onAfterUpload`. An object result is stored at `versions[versionName].meta.storage`. */
   put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<Record<string, unknown> | void>;
-  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
   remove(fileRef: FileObj, versionName: string): Promise<void>;
   /** Optional. `null` when the stored file is missing. Enables the `404` and `integrityCheck` before streaming. */
   stat?(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
 }
 
-/** Default adapter: files stay at `versions[versionName].path`. Server only. */
+/** Default adapter: files stay at `versions[versionName].path`. Server only: the client build does not export it, so create it in server code or behind `Meteor.isServer`. */
 export class FSStorage implements FilesStorageAdapter {
   readonly name: 'fs';
   put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<void>;
-  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
   remove(fileRef: FileObj, versionName: string): Promise<void>;
   stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
 }
 
-/** Copies finished files into a GridFS bucket of the app database and deletes the local copy, except when `source` is `'addFile'`. Server only. */
+/** Copies finished files into a GridFS bucket of the app database and deletes the local copy, except when `source` is `'addFile'`. Server only: the client build does not export it, so create it in server code or behind `Meteor.isServer`. */
 export class GridFSStorage implements FilesStorageAdapter {
   constructor(opts?: { bucketName?: string; chunkSizeBytes?: number; db?: unknown });
   readonly name: 'gridfs';
   readonly bucketName: string;
   put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<{ name: 'gridfs'; bucketName: string; id: string }>;
-  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
   remove(fileRef: FileObj, versionName: string): Promise<void>;
   stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
 }

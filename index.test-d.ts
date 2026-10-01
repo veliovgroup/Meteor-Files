@@ -1,6 +1,7 @@
 import { expectType, expectError, expectAssignable } from 'tsd';
 import type { Meteor } from 'meteor/meteor';
 import type { ReactiveVar } from 'meteor/reactive-var';
+import type { Readable } from 'node:stream';
 import {
   FilesCollection,
   FileUpload,
@@ -184,7 +185,7 @@ void serverMethods;
 // storage adapters
 expectAssignable<FilesCollectionConfig>({ storage: new GridFSStorage({ bucketName: 'files' }) });
 expectAssignable<FilesCollectionConfig>({ storage: new FSStorage() });
-declare const someStream: NodeJS.ReadableStream;
+declare const someStream: Readable;
 const customStorage: FilesStorageAdapter = {
   async put(_fileRef, _versionName, _localPath, opts) {
     expectType<'upload' | 'write' | 'load' | 'addFile' | undefined>(opts?.source);
