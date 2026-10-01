@@ -88,6 +88,17 @@ describe('FilesCollection Constructor', function() {
       }
     });
 
+    it('keeps running when the custom debug function throws', function() {
+      const info = sinon.stub(console, 'info');
+      try {
+        const fc = new FilesCollection({ collectionName: `testserver-debugthrow-${Random.id(4)}`, storagePath: tmpDir('debugthrow'), debug: () => { throw new Error('boom'); } });
+        expect(() => fc._debug('x')).to.not.throw();
+        expect(info.called).to.equal(true);
+      } finally {
+        info.restore();
+      }
+    });
+
     it('resets a non-boolean, non-function debug to false', function() {
       const fc = new FilesCollection({ collectionName: `testserver-debugbad-${Random.id(4)}`, storagePath: tmpDir('debugbad'), debug: 'yes' });
       expect(fc.debug).to.equal(false);
@@ -142,6 +153,28 @@ describe('FilesCollection Constructor', function() {
       await fc.storagePath({});
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(fs.existsSync(dir)).to.equal(true);
+    });
+
+    it('_dataToSchema refuses a Promise storagePath result', function() {
+      const dir = tmpDir('async-sp-schema');
+      const fc = new FilesCollection({ collectionName: `testserver-asyncsps-${Random.id(4)}`, storagePath: async () => dir });
+      expect(() => fc._dataToSchema({ name: 'a.txt', path: `${dir}/a.txt`, size: 1, extension: 'txt' })).to.throw(/async "storagePath"/);
+    });
+
+    it('loadAsync stores the file in the resolved directory', async function() {
+      const base = tmpDir('async-sp-load');
+      const fc = new FilesCollection({ collectionName: `testserver-asyncspl-${Random.id(4)}`, storagePath: async () => base });
+      const server = http.createServer((req, res) => { res.setHeader('Content-Type', 'text/plain'); res.end('hello'); });
+      const port = await listen(server);
+      try {
+        const fileObj = await fc.loadAsync(`http://127.0.0.1:${port}/f.txt`, { fileName: 'f.txt', fileId: `l${Random.id(6)}` });
+        expect(nodePath.dirname(fileObj.path)).to.equal(base);
+        expect(fileObj._storagePath).to.equal(base);
+        expect(typeof fileObj._storagePath).to.equal('string');
+      } finally {
+        server.close();
+        await fc.collection.removeAsync({});
+      }
     });
 
     it('writeAsync stores the file in the resolved directory and saves _storagePath', async function() {

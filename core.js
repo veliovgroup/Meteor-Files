@@ -116,7 +116,18 @@ export default class FilesCollectionCore extends EventEmitter {
       // if debug is truthy but not true it should be a function
       const debugFn = this.debug === true ? null : this.debug;
       // eslint-disable-next-line no-console
-      (debugFn || console.info || console.log || function () {}).apply(undefined, args);
+      const logger = console.info || console.log || function () {};
+      if (!debugFn) {
+        logger.apply(undefined, args);
+        return;
+      }
+
+      try {
+        debugFn.apply(undefined, args);
+      } catch (error) {
+        // A failing custom logger must not break uploads or downloads
+        logger.call(undefined, '[FilesCollection] [debug] Custom debug function threw:', error);
+      }
     }
   }
 
@@ -208,6 +219,9 @@ export default class FilesCollectionCore extends EventEmitter {
 
     this._updateFileTypes(ds);
     ds._storagePath = data._storagePath || this.storagePath(Object.assign({}, data, ds));
+    if (typeof ds._storagePath?.then === 'function') {
+      throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}] async "storagePath" result must be resolved and passed as "_storagePath"`);
+    }
     return ds;
   }
 
