@@ -655,9 +655,11 @@ class FilesCollection extends FilesCollectionCore {
       console.warn(`[FilesCollection.${this.collectionName}] "allowClientCode" is on and "onBeforeRemove" is not set: any client can remove files. Set "onBeforeRemove" or remove "allowClientCode: true".`);
     }
 
+    // Returns `false` after it sent the denial, otherwise `{ fileRef }`:
+    // the document the protected function received (`null` when not found), or `undefined` when nothing was read
     this._checkAccess = async (http) => {
       if (!this.protected) {
-        return true;
+        return { fileRef: undefined };
       }
 
       if (!helpers.isObject(http)) {
@@ -666,37 +668,25 @@ class FilesCollection extends FilesCollectionCore {
       }
 
       let result;
-      const {userAsync, userId} = this._getUser(http);
+      let fileRef;
+      const { userAsync, userId } = this._getUser(http);
 
       if (helpers.isFunction(this.protected)) {
-        let fileObj;
+        fileRef = null;
         if (helpers.isObject(http.params) && http.params._id) {
-          fileObj = await this.collection.findOneAsync(http.params._id);
+          fileRef = (await this.collection.findOneAsync(http.params._id)) || null;
         }
 
-        result = await this.protected.call(Object.assign(http, {userAsync, userId}), (fileObj || null));
+        result = await this.protected.call(Object.assign(http, { userAsync, userId }), fileRef);
       } else {
         result = !!userId;
       }
 
       if (result === true) {
-        return true;
+        return { fileRef };
       }
 
-      const rc = toHttpErrorCode(result, 401);
-      this._debug('[FilesCollection._checkAccess] WARN: Access denied!');
-      const text = 'Access denied!';
-      if (!http.response.headersSent) {
-        http.response.writeHead(rc, {
-          'Content-Type': 'text/plain',
-          'Content-Length': text.length
-        });
-      }
-
-      if (!http.response.finished) {
-        http.response.end(text);
-      }
-
+      this._denyAccess(http, toHttpErrorCode(result, 401));
       return false;
     };
 
@@ -849,8 +839,11 @@ class FilesCollection extends FilesCollectionCore {
           return;
         }
 
-        if (await this._checkAccess(http)) {
-          await this.download(http, uris[1], await this.collection.findOneAsync(uris[0]));
+        const access = await this._checkAccess(http);
+        if (access) {
+          // The protected function already read the document, do not read it again
+          const fileRef = access.fileRef === undefined ? await this.collection.findOneAsync(uris[0]) : access.fileRef;
+          await this.download(http, uris[1], fileRef);
         }
       } catch (downloadError) {
         handleDownloadError(downloadError);
@@ -2509,6 +2502,30 @@ class FilesCollection extends FilesCollectionCore {
 
     if (!http.response.headersSent) {
       http.response.writeHead(404, {
+        'Content-Type': 'text/plain',
+        'Content-Length': text.length
+      });
+    }
+
+    if (!http.response.finished) {
+      http.response.end(text);
+    }
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _denyAccess
+   * @param {ContextHTTP} http - Server HTTP object
+   * @param {number} code - HTTP status, 400-599
+   * @summary Internal method. Answer a denied download with `code` and `Access denied!`
+   * @returns {void}
+   */
+  _denyAccess(http, code) {
+    this._debug('[FilesCollection._checkAccess] WARN: Access denied!');
+    const text = 'Access denied!';
+    if (!http.response.headersSent) {
+      http.response.writeHead(code, {
         'Content-Type': 'text/plain',
         'Content-Length': text.length
       });

@@ -903,14 +903,14 @@ describe('FilesCollection', function() {
 
     it('protected: true allows requests with a valid x-mtok', async function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: true });
-      expect(await fc._checkAccess(makeHttp({ 'x-mtok': token }))).to.equal(true);
+      expect(await fc._checkAccess(makeHttp({ 'x-mtok': token }))).to.deep.equal({ fileRef: undefined });
     });
 
     it('protected: true allows requests with a valid x_mtok cookie', async function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: true });
       const httpObj = makeHttp();
       httpObj.request.Cookies = { has: (name) => name === 'x_mtok', get: () => token };
-      expect(await fc._checkAccess(httpObj)).to.equal(true);
+      expect(await fc._checkAccess(httpObj)).to.deep.equal({ fileRef: undefined });
     });
 
     it('protected: true denies malformed or unknown x-mtok', async function() {
@@ -925,7 +925,7 @@ describe('FilesCollection', function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: () => answer });
 
       answer = true;
-      expect(await fc._checkAccess(makeHttp())).to.equal(true);
+      expect(await fc._checkAccess(makeHttp())).to.deep.equal({ fileRef: null });
 
       answer = false;
       let httpObj = makeHttp();
@@ -943,7 +943,7 @@ describe('FilesCollection', function() {
       expect(httpObj.response.codes).to.deep.equal([401]);
 
       answer = Promise.resolve(true);
-      expect(await fc._checkAccess(makeHttp())).to.equal(true);
+      expect(await fc._checkAccess(makeHttp())).to.deep.equal({ fileRef: null });
     });
 
     it('protected function gets null fileObj for unknown _id, the doc for known _id, and userId', async function() {

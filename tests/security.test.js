@@ -504,6 +504,33 @@ describe('Security', function () {
     });
   });
 
+  describe('protected downloads read the file once', function () {
+    const insertFile = async (fc, _id) => {
+      const path = nodePath.join(fc.storagePath({}), `${_id}.txt`);
+      fs.writeFileSync(path, 'once');
+      await fc.collection.insertAsync({ _id, name: `${_id}.txt`, size: 4, type: 'text/plain', path, versions: { original: { path, size: 4, type: 'text/plain', extension: 'txt' } } });
+    };
+
+    it('reuses the document fetched for the protected function', async function () {
+      const fc = createCollection({ protected(fileObj) { return !!fileObj; } });
+      await insertFile(fc, 'onceFn1');
+      const findOne = sinon.spy(fc.collection, 'findOneAsync');
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/onceFn1/original/onceFn1.txt`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal('once');
+      expect(findOne.callCount).to.equal(1);
+    });
+
+    it('reads once for protected: true', async function () {
+      const fc = createCollection({ protected: true });
+      await insertFile(fc, 'onceBool1');
+      const findOne = sinon.spy(fc.collection, 'findOneAsync');
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/onceBool1/original/onceBool1.txt`, { headers: { 'x-test-user': 'userA' } });
+      expect(res.status).to.equal(200);
+      expect(findOne.callCount).to.equal(1);
+    });
+  });
+
   describe('A2: idempotent EOF', function () {
     let fc;
     before(function () {
