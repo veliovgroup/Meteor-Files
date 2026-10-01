@@ -24,7 +24,7 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Accept Write, EOF, and abort requests only from the user who started the upload.
 - 🔧 Stop `_Abort` from removing finished files. It removes only the unfinished upload record, and answers `404` for unknown or foreign upload ids.
 - 🔧 Prevent an upload from overwriting or deleting another file. Start returns `409` if the file id, the target path, or a pending upload path already exists, and creates the file exclusively.
-- 🔧 Fail an upload with `410` or `409` when its file was removed or replaced on disk. The server compares device and inode on every reopen.
+- 🔧 Fail an upload with `410` or `409` when its file was removed or replaced on disk. The server compares device, inode, and birth time on every reopen.
 - 🔧 Sanitize `namingFunction` output per path segment and require the final path to stay inside `storagePath`.
 - 🔧 Ignore client-supplied reserved file fields: `_id`, `fileId`, `path`, `_storagePath`, `_downloadRoute`, `_collectionName`, `versions`, `userId`, `public`, extension, mime, and type flags.
 - 🔧 Store the real size on disk, and reject chunks beyond the declared size.

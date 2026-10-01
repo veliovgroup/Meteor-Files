@@ -14,6 +14,21 @@ const fhCache = new Map();
 const noop = () => {};
 
 /**
+ * @function fileIdentity
+ * @param {{dev: *, ino: *, birth?: *}} identity - Device, inode, and birth time in nanoseconds
+ * @summary Normalize a file identity to strings, so it can be stored in MongoDB and compared with BigInt stats.
+ * A birth time of `0` means the file system does not report it, so it is left out
+ * @returns {{dev: string, ino: string, birth?: string}}
+ */
+const fileIdentity = ({ dev, ino, birth }) => {
+  const identity = { dev: `${dev}`, ino: `${ino}` };
+  if (birth !== undefined && birth !== null && `${birth}` !== '0') {
+    identity.birth = `${birth}`;
+  }
+  return identity;
+};
+
+/**
  * @private
  * @locus Server
  * @class WriteStream
@@ -24,7 +39,7 @@ const noop = () => {};
  * @param parentDirPermissions {number} - Permissions which will be set to parent directory (octal), like: `0o611` or `0o777`. Default: 0755
  * @param [options] {Object} - Extra options
  * @param [options.exclusive=false] {boolean} - Create a new file, fail with `Meteor.Error(409)` if the file already exists. When `false` the file must already exist, it is never created
- * @param [options.identity] {{dev: string, ino: string}} - Expected identity of an existing file. When set, opening a different file fails with `Meteor.Error(409)`
+ * @param [options.identity] {{dev: string, ino: string, birth?: string}} - Expected identity of an existing file. When set, opening a different file fails with `Meteor.Error(409)`
  * @param [options.idleTimeout=0] {number} - Close the file handle after this many ms without writes, reopen on the next write. `0` disables
  * @param [options.fileId] {string} - Upload id, used as part of the file handle cache key
  * @param [options.onAbort] {function} - Called after the stream is aborted
@@ -43,7 +58,7 @@ export default class WriteStream {
     this.exclusive = options.exclusive === true;
     this.idleTimeout = (helpers.isNumber(options.idleTimeout) && options.idleTimeout > 0) ? options.idleTimeout : 0;
     this.cacheKey = `${options.fileId || file?.fileId || file?._id || ''}:${this.path}`;
-    this.identity = (helpers.isObject(options.identity) && options.identity.dev && options.identity.ino) ? { dev: `${options.identity.dev}`, ino: `${options.identity.ino}` } : null;
+    this.identity = (helpers.isObject(options.identity) && options.identity.dev && options.identity.ino) ? fileIdentity(options.identity) : null;
     this.onAbort = helpers.isFunction(options.onAbort) ? options.onAbort : null;
     this.opening = null;
 
@@ -86,7 +101,7 @@ export default class WriteStream {
       }
 
       const stats = await fh.stat({ bigint: true });
-      this.identity = { dev: `${stats.dev}`, ino: `${stats.ino}` };
+      this.identity = fileIdentity({ dev: stats.dev, ino: stats.ino, birth: stats.birthtimeNs });
     } else {
       // Resume: never create the file, it must be the same file created at the start of the upload
       try {
@@ -121,7 +136,12 @@ export default class WriteStream {
    * @returns {boolean}
    */
   _isSameFile(stats) {
-    return !!(this.identity && stats && stats.isFile() && `${stats.dev}` === this.identity.dev && `${stats.ino}` === this.identity.ino);
+    if (!this.identity || !stats || !stats.isFile() || `${stats.dev}` !== this.identity.dev || `${stats.ino}` !== this.identity.ino) {
+      return false;
+    }
+    // Linux reuses an inode number right after unlink, so a replaced file can have the same dev and ino.
+    // Birth time tells them apart. Records saved without it, and file systems without birth time, fall back to dev and ino
+    return !this.identity.birth || `${stats.birthtimeNs}` === this.identity.birth;
   }
 
   /**
