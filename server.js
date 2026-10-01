@@ -1105,7 +1105,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {Object} file - File data known so far
    * @param {string} fileId - `_id` of the future document
    * @param {string|null} [userId] - Uploader
-   * @summary Internal method. Argument of `namingFunction`, the same shape in upload Start, `writeAsync()`, and `loadAsync()`
+   * @summary Internal method. Argument of `namingFunction`, the same wrapper shape in upload Start, `writeAsync()`, and `loadAsync()`
    * @returns {{file: Object, fileId: string, userId: string|null}}
    */
   _namingContext(file, fileId, userId) {
