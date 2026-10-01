@@ -111,7 +111,7 @@ describe('mime.js', function () {
       expect(resolveMimeType(ftyp('isom'), 'audio/mp4')).to.equal('audio/mp4');
     });
 
-    it('stores text as text/plain unless the client said text/* or application/json', function () {
+    it('stores text as text/plain unless the client said an allowlisted text type', function () {
       expect(resolveMimeType(Buffer.from('<svg onload="alert(1)"/>'), 'image/svg+xml')).to.equal('text/plain');
       expect(resolveMimeType(Buffer.from('<html></html>'), 'image/png')).to.equal('text/plain');
       expect(resolveMimeType(Buffer.from('{"a":1}'), 'application/json')).to.equal('application/json');
@@ -119,6 +119,22 @@ describe('mime.js', function () {
       expect(resolveMimeType(Buffer.from('# hi'), 'TEXT/Markdown; charset=utf-8')).to.equal('text/markdown');
       expect(resolveMimeType(Buffer.from('plain'), undefined)).to.equal('text/plain');
       expect(resolveMimeType(Buffer.from('plain'), 'text/plain\r\nX: y')).to.equal('text/plain');
+      ['text/tab-separated-values', 'text/calendar', 'text/vtt'].forEach((type) => {
+        expect(resolveMimeType(Buffer.from('a'), type)).to.equal(type);
+      });
+    });
+
+    it('stores UTF-8 text labeled with an active text type as text/plain', function () {
+      ['text/html', 'text/xml', 'text/css', 'text/javascript', 'text/xsl', 'application/xhtml+xml'].forEach((type) => {
+        expect(resolveMimeType(Buffer.from('<script>alert(1)</script>'), type)).to.equal('text/plain');
+      });
+    });
+
+    it('does not keep a +xml client type for a container', function () {
+      expect(resolveMimeType(zip, 'application/vnd.ms-foo+xml')).to.equal('application/zip');
+      expect(resolveMimeType(zip, 'application/vnd.openxmlformats-officedocument.foo+xml')).to.equal('application/zip');
+      expect(resolveMimeType(zip, 'application/vnd.oasis.opendocument.foo+xml')).to.equal('application/zip');
+      expect(resolveMimeType(cfb, 'application/vnd.ms-foo+xml')).to.equal('application/x-cfb');
     });
 
     it('stores other binary data and empty files as application/octet-stream', function () {

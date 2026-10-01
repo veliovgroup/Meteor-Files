@@ -1520,6 +1520,13 @@ describe('Security', function () {
       expect(res.isText).to.equal(true);
     });
 
+    it('stores text/plain for a script labeled text/html', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from('<script>alert(1)</script>'), { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('text/plain');
+      expect(res.isText).to.equal(true);
+    });
+
     it('stores application/octet-stream for unknown binary data', async function () {
       const fc = createCollection();
       const res = await upload(fc, Buffer.from([0, 1, 2, 3]), { name: 'x.png', type: 'image/png' });

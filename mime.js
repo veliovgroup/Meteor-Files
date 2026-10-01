@@ -55,6 +55,11 @@ const REFINEMENTS = {
 };
 
 /**
+ * @const {Set<string>} TEXT_TYPES - Client types kept for UTF-8 text. Active types such as `text/html`, `text/xml`, `text/css`, and `text/javascript` are not listed
+ */
+const TEXT_TYPES = new Set(['text/plain', 'text/csv', 'text/markdown', 'text/tab-separated-values', 'text/calendar', 'text/vtt', 'application/json']);
+
+/**
  * @private
  * @summary Accepts a Buffer or any typed array view, returns a Buffer over the same memory, or `null`
  */
@@ -221,18 +226,18 @@ export const isUtf8Text = (input, isComplete) => {
  * @param {Buffer|Uint8Array} input - First bytes of a file, up to `SNIFF_BYTES`
  * @param {string} [clientType] - Type the uploader sent, not trusted
  * @param {boolean} [isComplete=true] - `false` when `input` is a prefix of a longer file
- * @summary Type to store: a detected signature (refined by the client type for known containers), `text/plain` or the client `text/*`/`application/json` type for UTF-8 text, otherwise `application/octet-stream`
+ * @summary Type to store: a detected signature (refined by the client type for known containers), `text/plain` or an allowlisted client type (`text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, `application/json`) for UTF-8 text, otherwise `application/octet-stream`
  * @returns {string}
  */
 export const resolveMimeType = (input, clientType, isComplete = true) => {
   const client = baseMimeType(clientType);
   const detected = detectMimeType(input);
   if (detected) {
-    return (REFINEMENTS[detected] && REFINEMENTS[detected].test(client)) ? client : detected;
+    return (REFINEMENTS[detected] && !client.endsWith('+xml') && REFINEMENTS[detected].test(client)) ? client : detected;
   }
 
   if (isUtf8Text(input, isComplete)) {
-    return (client.startsWith('text/') || client === 'application/json') ? client : 'text/plain';
+    return TEXT_TYPES.has(client) ? client : 'text/plain';
   }
   return 'application/octet-stream';
 };

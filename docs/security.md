@@ -105,7 +105,7 @@ HTTP routes identify the user with the `x_mtok` cookie. The client sets it to th
 
 ## Content-Type and downloads
 
-Since v4 the server detects the type from the first 4100 bytes of the file and stores it, unless `trustClientMimeType` is `true`. Text files are stored as `text/plain` unless the uploader said `text/*` or `application/json`, so an SVG or HTML upload labeled as an image is not served as one. `onBeforeUpload` still sees the uploader's type. Reduce the risk further:
+Since v4 the server detects the type from the first 4100 bytes of the file and stores it, unless `trustClientMimeType` is `true`. Text files are stored as `text/plain` unless the uploader said `text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, or `application/json`. An SVG, HTML, XML, CSS, or JavaScript file labeled as an image or as `text/html`, `text/xml`, `text/css`, or `text/javascript` is stored as `text/plain`, so the browser does not run it. `onBeforeUpload` still sees the uploader's type. Reduce the risk further:
 
 - `nosniff` is on by default since v4 and adds `X-Content-Type-Options: nosniff` to responses
 - Validate the type and extension in `onBeforeUpload`, and verify real content in `onAfterUpload`

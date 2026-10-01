@@ -846,7 +846,7 @@
         Server
       </td>
       <td>
-        Store the mime type the uploader sent. When <code>false</code> the server reads the first 4100 bytes of the file and stores the detected type, the uploader's <code>text/*</code> or <code>application/json</code> type (or <code>text/plain</code>) for UTF-8 text, or <code>application/octet-stream</code>. Also applies to <code>writeAsync()</code>, <code>loadAsync()</code>, and <code>addFile()</code> without an explicit <code>type</code>
+        Store the mime type the uploader sent. When <code>false</code> the server reads the first 4100 bytes of the file and stores the detected type, the uploader's type for UTF-8 text when it is <code>text/plain</code>, <code>text/csv</code>, <code>text/markdown</code>, <code>text/tab-separated-values</code>, <code>text/calendar</code>, <code>text/vtt</code>, or <code>application/json</code> (otherwise <code>text/plain</code>), or <code>application/octet-stream</code>. Also applies to <code>writeAsync()</code>, <code>loadAsync()</code>, and <code>addFile()</code> without an explicit <code>type</code>
       </td>
       <td>
         <code>false</code>
