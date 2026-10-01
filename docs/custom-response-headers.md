@@ -44,7 +44,9 @@ function responseHeaders (responseCode, fileRef, versionRef, version, http) {
 }
 ```
 
-`serve()` sets `Content-Length` (and `Content-Range` on `206`) itself, and removes `Transfer-Encoding` from `200` and `206` responses, because a response with `Content-Length` must not be chunked.
+`serve()` sets `Content-Range` on `206` itself. When `serve()` reads the file from disk, it also sets `Content-Length` (the range length on `206`, the file size on `200` when the size is known) and removes `Transfer-Encoding`, because a response with `Content-Length` must not be chunked. This replaces any `Content-Length` from `responseHeaders`, so do not combine these file-backed responses with a `Content-Encoding` such as `gzip`: the length would not match the encoded body.
+
+When you pass your own `readableStream` to `serve()`, it sets no `Content-Length`, and Node.js sends the body chunked. A `Content-Length` you set in `responseHeaders` is kept, so set it only when it matches the exact bytes your stream sends.
 
 ## Adding custom header example:
 

@@ -40,7 +40,7 @@ Meteor-Files library features and highlights
 - Get remaining upload time
 - Serving files (download):
   - Custom download `route`
-  - Download compatible with small and large files, including progressive (`chunked`) download
+  - Download compatible with small and large files, including `Range` requests for streaming and resumable downloads
   - Correct `mime-type` and `Content-Range` headers
   - Correct `206` and `416` responses
   - Following [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)

@@ -22,7 +22,7 @@ FilesCollection#link(fileRef, version, URIBase); // [*Isomorphic*]
 
 ## How the URL is built
 
-- The route and collection name stored in the document (`_downloadRoute`, `_collectionName`) are used when they are safe: the route is a local path (starts with a single `/`, without `..`, `//`, `@`, `:`, `\`, `?`, `#`, whitespace, or control characters) and the name has only letters, digits, `_`, `.`, and `-`
+- The route and collection name stored in the document (`_downloadRoute`, `_collectionName`) are used when they are safe: the route is a local path (starts with a single `/`, without `..`, `//`, `@`, `:`, `\`, `?`, `#`, encoded `.`, `/`, or `\` (`%2e`, `%2f`, `%5c`), whitespace, or control characters) and the name has only letters, digits, `_`, `.`, and `-`
 - Otherwise the `downloadRoute` and `collectionName` of the collection instance are used. The method returns an empty string if neither is available (for a public file the collection name is not needed)
 - `_id`, version name, extension, and collection name are URI-encoded
 
