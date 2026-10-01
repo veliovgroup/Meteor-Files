@@ -3051,7 +3051,16 @@ class FilesCollection extends FilesCollectionCore {
           stream.destroy();
         }
       });
-      stream.once('error', (error) => fail(stream, error));
+      // `on`, not `once`: a second error from an adapter stream without a listener would crash the process
+      let failed = false;
+      stream.on('error', (error) => {
+        if (failed) {
+          this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [500] another stream error`, error);
+          return;
+        }
+        failed = true;
+        fail(stream, error);
+      });
       stream.pipe(http.response);
     };
 

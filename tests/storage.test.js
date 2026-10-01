@@ -176,6 +176,26 @@ describe('Storage adapters', function () {
       expect(res.body).to.equal('Internal Server Error');
     });
 
+    it('answers 500 and survives an adapter stream that emits two errors', async function () {
+      const adapter = memoryAdapter();
+      const fc = create({ storage: adapter });
+      const doc = await fc.writeAsync(Buffer.from('x'), { name: 'e2.txt', type: 'text/plain' });
+      let emitted = 0;
+      adapter.createReadStream = async () => {
+        const stream = new Readable({ read() {} });
+        setTimeout(() => {
+          stream.emit('error', new Error('first'));
+          stream.emit('error', new Error('second'));
+          emitted = 2;
+        }, 5);
+        return stream;
+      };
+      const res = await get(fc.link(doc, 'original', '/'));
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal Server Error');
+      expect(emitted).to.equal(2);
+    });
+
     it('removeAsync() calls remove() for each version', async function () {
       const adapter = memoryAdapter();
       const fc = create({ storage: adapter });
