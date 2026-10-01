@@ -1,6 +1,6 @@
 # Security guide
 
-Read this page before you ship a `FilesCollection` to production. Defaults favor getting started quickly, not locked-down access.
+Read this page before you ship a `FilesCollection` to production. Since v4 the defaults are stricter: clients can not remove files, responses carry `nosniff`, the server detects file types, and only the server names files. Downloads and uploads still allow anonymous access unless you add the checks below. See [migration to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md) when you upgrade.
 
 ## Protect downloads
 
@@ -54,13 +54,14 @@ The server enforces these rules for in-progress uploads:
 - HTTP request bodies are limited: 1 MiB for Start (including `meta`), 64 KiB for EOF, and the base64 size of `chunkSize` plus 4 KiB for a chunk. Larger bodies get `413`
 - Start returns `409` if the target file already exists, if the file id is already in use, or if another pending upload claims the same path. The server creates the file exclusively, so it never overwrites an existing file
 - File names from `namingFunction` are sanitized per path segment, and the final path must resolve inside the `storagePath` of the collection. Otherwise Start returns `400`. Only the server names files: the client `namingFunction` option and the `FSName` field are ignored since v4
+- The server records every written chunk in the upload record, so a restarted server resumes from the record. An upload has at most 100000 chunks
 - The server remembers the device and inode of the file it created. If the file is removed or replaced before the upload ends, the upload fails with `410` or `409` and the other file is not touched
 - The abort call removes only the unfinished upload, never a finished file
 - A repeated EOF returns the stored file record only to the authenticated user who owns the upload. Anonymous callers get `408`
 - Responses to the client never contain server paths (`path`, `_storagePath`, `versions.*.path`), and HTTP errors with `5xx` status do not expose internal messages
 - An open file handle of an idle upload is closed after `uploadIdleTimeout`
 
-Client-supplied values such as `type`, `name`, and `meta` are still untrusted. Verify content in `onAfterUpload`, for example with the `file-type` package.
+The client-supplied `name` and `meta` are untrusted. The server detects `type` from the file content (see [Content-Type and downloads](#content-type-and-downloads)), but it knows only a built-in table of signatures. Verify content in `onAfterUpload` when you accept formats outside that table, for example with the `file-type` package.
 
 ## Protect removal
 
@@ -92,7 +93,7 @@ Also call `denyClient()` on the server, or define your own `allow`/`deny` rules,
 
 ### Do not call `allowClient()` in production
 
-`serve()` and `unlinkAsync()` trust the file paths stored in documents (`versions.*.path`). The server verifies that paths stay inside `storagePath` only when it creates an upload, not later. `allowClient()` lets any client update documents, including `path`, so a client could point a document at another file on the server and then download or delete it. The same applies to any `allow` rule or method that lets users write `path` or `versions` fields. Paths you pass to `addFile()`, `writeAsync()`, and `loadAsync()` are trusted too. Never build them from user input.
+`serve()` and `unlinkAsync()` trust the file paths stored in documents (`versions.*.path`) through `FSStorage`, the default `storage` adapter. The server verifies that paths stay inside `storagePath` only when it creates an upload, not later. `allowClient()` lets any client update documents, including `path`, so a client could point a document at another file on the server and then download or delete it. The same applies to any `allow` rule or method that lets users write `path` or `versions` fields. Paths you pass to `addFile()`, `writeAsync()`, and `loadAsync()` are trusted too. Never build them from user input.
 
 ## Authentication cookie
 

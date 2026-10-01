@@ -36,8 +36,8 @@ On the Server the synchronous methods `get()`, `next()`, `previous()`, `fetch()`
 - `currentAsync()` - {*Promise<object|undefined>*} - Resolves to current item on Cursor, if available
 - __Deprecated__ [*Client*] `count()` - {*number*} - Returns the number of documents that match a query
 - `countDocuments(opts: Mongo.CountDocumentsOptions)` - {*Promise<number>*} - Resolves to the number of documents that match a query
-- [*Client*] `remove(callback)` - {*FilesCursor*} - Removes all documents that match a query, [*Client*] only. Callback has `error` argument
-- `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query. Resolves into number of removed records
+- [*Client*] `remove(callback)` - {*FilesCursor*} - Removes all documents that match a query, [*Client*] only. Callback has `error` argument. The client sends one `_id` per server call, so N files take N calls, and the removal is not atomic: if one call fails, files already removed stay removed
+- `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query. Resolves into number of removed records. On the Client it sends one `_id` per server call, so N files take N calls, and the removal is not atomic: if one call fails, files already removed stay removed
 - [*Client*] `forEach(callback, context)` - {*FilesCursor*} - *Same as `forEachAsync` in arguments and context*
 - `forEachAsync(callback, context)` - {*Promise<FilesCursor>*} - Call `callback` once for each matching document, sequentially. The callback can be `async`
   - `callback` - {*Function*} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself

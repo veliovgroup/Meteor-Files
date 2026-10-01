@@ -1,3 +1,59 @@
+# 4.0.0
+
+## What's new
+
+This release adds signed download links, storage adapters with a built-in GridFS adapter, content-based file type detection, and uploads that resume after a server restart. It also tightens defaults: clients can not remove files, responses carry `nosniff`, risky types download as attachments, and only the server names files. Read "Major changes" before you upgrade, and follow the [migration guide to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md).
+
+## Major changes
+
+- ⚠️ Remove `FilesCursor#hasNext()` and `FilesCursor#countAsync()`. Use `hasNextAsync()` and `countDocuments()`.
+- ⚠️ Move `findOne()` from `FilesCollectionCore` to the client class. The server class still throws `Meteor.Error(404)`. Use `findOneAsync()`.
+- ⚠️ Support only a `Map` in `Meteor.server.sessions` (Meteor 3) in the default `x_mtok` lookup. A plain object throws.
+- ⚠️ Default `allowClientCode` to `false`. Clients can not call `remove()` unless `allowClientCode: true` is set on the server and the client. Set `onBeforeRemove` when you enable it.
+- ⚠️ Accept only a String `_id` in client `remove()` and `removeAsync()`. Use `find(selector).removeAsync()` to remove several files. It removes one `_id` per server call and is not atomic.
+- ⚠️ Send `X-Content-Type-Options: nosniff` by default. Set `nosniff: false` to turn it off.
+- ⚠️ Serve files `inline` only for `image/*` (not SVG), `video/*`, `audio/*`, `application/pdf`, and `text/plain`. Other files get `Content-Disposition: attachment`. Set `Content-Disposition` in `responseHeaders` to change it.
+- ⚠️ Run `FileUpload#pipe()` functions in the order they were added. The first `pipe()` call runs first. Reverse chained `pipe()` calls written for 3.x.
+- ⚠️ Name files on the server only. The client `namingFunction` option and the `FSName` field are ignored. Set `namingFunction` on the server. It receives `{ file, fileId, userId }` in upload Start, `writeAsync()`, and `loadAsync()`.
+- ⚠️ Keep only `name`, `type`, `size`, and `meta` from the client `file` object. Send custom data in `meta`.
+- ⚠️ Store `type`, `mime`, `versions.original.type`, and the `is*` flags from the file content instead of the uploader's claim. Set `trustClientMimeType: true` to store the uploader's type as in 3.x.
+- ⚠️ Make `serve()` async. Await it when code runs after it. `unlinkAsync()` and `removeAsync()` remove files through the storage adapter (`FSStorage` by default, same files as before). Custom adapters receive `{ source }` as the 4th `put()` argument and must keep the caller's file when `source` is `'addFile'`.
+- ⚠️ Restart uploads that were in progress during the upgrade from 3.x. They get `410` on their next chunk. Start rejects more than 100000 chunks with `400`, and the client raises `chunkSize` to stay below.
+
+## Other Changes
+
+### Added
+
+- ✨ Add signed download links. Set `downloadTokenSecret`, call `createDownloadToken()`, and pass the token to `link(fileRef, version, uriBase, { token })`. Tokens work without the `x_mtok` cookie and on any server instance.
+- ✨ Add storage adapters with the `storage` option. `FSStorage` is the default and `GridFSStorage` keeps files in MongoDB GridFS.
+- ✨ Add content-based type detection from a built-in signature table, and the `trustClientMimeType` option.
+- ✨ Resume uploads after a server restart. The server records every written chunk in the upload record.
+- ✨ Add a browser test suite to CI on Meteor 3.2.2 and 3.5.2.
+
+### Fixed
+
+- 🔧 Record written chunks instead of guessing them from the file size after a restart. A hole before the last written chunk no longer passes as complete.
+- 🔧 Make one database read per protected download.
+
+### Changed
+
+- 👨‍💻 Deprecate `protected: true`. It logs a warning at startup and will be removed in v5. Pass a function.
+
+### Docs
+
+- 📔 Add the [migration guide to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md) with an upgrade checklist.
+- 📔 Rewrite the S3 recipe as a storage adapter and lead the GridFS guide with the built-in adapter.
+- 📔 Update the security guide for the new defaults, signed links, and content-based types.
+- 📔 Await `serve()` in the GridFS and Google Cloud Storage recipes.
+
+### Tests
+
+- 🧪 Cover the client upload state machine in a browser with the `playwright` driver of `meteortesting:mocha`.
+
+### Dependencies
+
+- 📦 Add `playwright` as a dev dependency for browser tests. The runtime dependency list is unchanged.
+
 # 3.1.0
 
 ## What's new

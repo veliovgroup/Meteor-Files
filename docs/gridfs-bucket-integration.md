@@ -13,6 +13,8 @@ export const Images = new FilesCollection({
 
 `GridFSStorage` is server only. Uploads are written to `storagePath` first. When a file is complete, the adapter copies it into the bucket, deletes the local copy, and stores `{ name: 'gridfs', bucketName, id }` at `versions.<name>.meta.storage`. `addFile()` keeps the caller's file on disk. Downloads support `Range` (`206`), and `removeAsync()` deletes the bucket file. Options: `bucketName` (default `'fs'`), `chunkSizeBytes` (driver default when not set), and `db` (default: the app's database). See the [`storage` option](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
 
+The adapter runs before `onAfterUpload`, and it deletes the local file after the copy. `onAfterUpload` can not read `fileRef.path` with `GridFSStorage`, because the local file is already gone. Read it with `await this.storage.createReadStream(fileRef, 'original')` instead. The [AWS S3 guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md) describes the same limit.
+
 ## Custom GridFS handling
 
 The manual recipe below handles (stores, serves, removes) uploaded files via GridFS with hooks. Use it when the built-in adapter does not fit.
@@ -113,13 +115,13 @@ export const createOnAfterUpload = (bucket) => {
 ### 4. Create download handler
 
 We also need to handle to retrieve files from GridFS when a download is initiated. We will use the same
-factory function as in step 3. The handler uses `serve()` to set `Content-Disposition`, `Content-Type`, and `Cache-Control` headers. It deletes the `Range` header so `serve()` replies with `200` and the whole file. For `206` partial content see [GridFS streaming](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
+factory function as in step 3. The handler calls `await this.serve()`, which is async since v4. It sets the `Content-Disposition`, `Content-Type`, and `Cache-Control` headers. It deletes the `Range` header so `serve()` replies with `200` and the whole file. For `206` partial content see [GridFS streaming](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
 ```js
 import { createObjectId } from '../createObjectId';
 
 export const createInterceptDownload = (bucket) => {
-  return function interceptDownload (http, file, versionName) {
+  return async function interceptDownload (http, file, versionName) {
     const vRef = file.versions[versionName];
     const { gridFsFileId } = vRef.meta || {};
     if (!gridFsFileId) {
@@ -139,7 +141,7 @@ export const createInterceptDownload = (bucket) => {
     });
 
     delete http.request.headers.range;
-    this.serve(http, file, vRef, versionName, readStream);
+    await this.serve(http, file, vRef, versionName, readStream);
     return true;
   };
 };

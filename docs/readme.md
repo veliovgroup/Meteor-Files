@@ -9,6 +9,7 @@ Browse [documentation directory](https://github.com/veliovgroup/Meteor-Files/tre
 - [About Meteor-Files package](#about)
 - [Security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
   - [Signed download links](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links) - `createDownloadToken()` and `link(fileRef, version, uriBase, { token })`
+- [Migration to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md)
 - [Migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md)
 - [API](#api)
 - [Examples](#examples)

@@ -2,7 +2,7 @@
 
 > __Deprecated.__ The callback API works on the Client only. There is no synchronous `remove()` on the Server. Use [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) everywhere.
 
-Remove records from FilesCollection and files from FS. Requires `allowClientCode: true` (default), and `onBeforeRemove` should authorize the user.
+Remove records from FilesCollection and files from FS. Requires `allowClientCode: true` on the server and the client (default is `false` since v4), and `onBeforeRemove` must authorize the user.
 
 - `_id` {*String*} - `_id` of the file to remove
 - `cb` {*Function*} - Callback, with `error` and the number of removed records

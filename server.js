@@ -168,7 +168,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
  * @param config.collection     {Mongo.Collection} - [Both] Mongo Collection Instance
  * @param config.collectionName {string}  - [Both]   Collection name
- * @param config.namingFunction {function}- [Server] Returns the file name on disk. Called with `{ file, fileId, userId }` on upload Start, in `writeAsync` and `loadAsync`
+ * @param config.namingFunction {function}- [Server] Returns the file name on disk. Called with `{ file, fileId, userId }` on upload Start, in `writeAsync` and `loadAsync`. `file` differs per call: on Start it has the uploader's `name`, `type`, `size`, `meta` plus server-computed `extension`, `ext`, `_id`, `userId`; `writeAsync` passes `name`, `type`, `size`, `meta`; `loadAsync` passes `name`, `type`, `meta` (no `size`)
  * @param config.integrityCheck {boolean} - [Server] Check file's integrity before serving to users
  * @param config.onAfterUpload  {function}- [Server] Called right after file is ready on FS. Use to transfer file somewhere else, or do other thing with file directly
  * @param config.onAfterRemove  {function(fileObj[]): boolean} - [Server] Called with single argument with array of removed `fileObj[]` right after file(s) is removed. Return `true` to intercept `.unlinkAsync` method; return `false` to continue default behavior

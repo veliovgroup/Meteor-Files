@@ -49,7 +49,7 @@ const resolveRange = (header, size) => {
 };
 
 export const createInterceptDownload = (bucket) => {
-  return function interceptDownload(http, fileRef, versionName) {
+  return async function interceptDownload(http, fileRef, versionName) {
     const vRef = fileRef.versions[versionName];
     const gridFsFileId = (vRef.meta || {}).gridFsFileId;
     if (!gridFsFileId) {
@@ -87,7 +87,7 @@ export const createInterceptDownload = (bucket) => {
 
     // `.serve()` sets Content-Disposition, Content-Type, Cache-Control,
     // `Content-Range`, and the `200` or `206` status
-    this.serve(http, fileRef, vRef, versionName, stream);
+    await this.serve(http, fileRef, vRef, versionName, stream);
     return true;
   };
 };

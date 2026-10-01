@@ -362,7 +362,11 @@ export class FilesCollectionCore extends EventEmitter {
   link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string, opts?: LinkOptions): string;
 }
 
-/** Argument of `namingFunction`. `file` values come from the uploader and are not verified. */
+/**
+ * Argument of `namingFunction`. On upload Start `file` holds the uploader's `name`, `type`, `size`, and `meta` (not verified)
+ * plus the server-computed `extension`, `ext`, `_id`, and `userId`. In `writeAsync()` and `loadAsync()` it holds `name`, `type`, and `meta`
+ * from the call options, and only `writeAsync()` adds `size`.
+ */
 export interface NamingContext {
   file: Partial<FileObj> & { name?: string; type?: string; size?: number; meta?: MetadataType };
   fileId: string;
