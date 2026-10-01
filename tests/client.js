@@ -96,6 +96,9 @@ export const settle = (upload) => new Promise((resolve) => {
       await waitUntil(() => upload.state.get() === 'paused');
       await sleep(300);
       const before = await Meteor.callAsync('mfTest.chunks', fileId);
+      // Some chunks, not all: otherwise the check below passes without a resume
+      expect(before.length).to.be.greaterThan(0);
+      expect(before.length).to.be.lessThan(8);
       expect(await Meteor.callAsync('mfTest.simulateRestart', fileId)).to.equal(true);
 
       upload.continue();
