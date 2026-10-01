@@ -49,7 +49,7 @@ const files = new FilesCollection({
 The server enforces these rules for in-progress uploads:
 
 - Only the user who started an upload can send chunks, the end-of-file message, or abort it. Others get `403`. Aborting an unknown or foreign upload gets `404`. Uploads started without a logged-in user are anonymous and belong to any anonymous caller, so check `this.userId` in `onBeforeUpload` when that matters
-- The server ignores client-supplied reserved file fields: `_id`, `fileId`, `path`, `_storagePath`, `_downloadRoute`, `_collectionName`, `versions`, `userId`, `public`, the extension and mime fields, and the type flags (`isVideo`, `isImage`, and others)
+- The server keeps only `name`, `type`, `size`, and `meta` from the client `file` object and computes every other field
 - `chunkSize` must be an integer from 1 byte to 16 MiB. The declared `size` and the chunk count must agree, chunks must be in range, and the total written can not exceed the declared `size`. The stored `size` is the real size of the file on disk
 - HTTP request bodies are limited: 1 MiB for Start (including `meta`), 64 KiB for EOF, and the base64 size of `chunkSize` plus 4 KiB for a chunk. Larger bodies get `413`
 - Start returns `409` if the target file already exists, if the file id is already in use, or if another pending upload claims the same path. The server creates the file exclusively, so it never overwrites an existing file

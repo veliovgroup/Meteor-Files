@@ -1003,8 +1003,8 @@ describe('Security', function () {
     });
   });
 
-  describe('S8: reserved client fields', function () {
-    it('ignores reserved keys sent in opts.file and keeps user keys', async function () {
+  describe('S8: client file fields allow-list', function () {
+    it('keeps only name, type, size, and meta from opts.file', async function () {
       const fc = createCollection();
       const opts = startOpts({
         size: 4,
@@ -1020,10 +1020,13 @@ describe('Security', function () {
           isImage: true,
           mime: 'text/html',
           'mime-type': 'text/html',
-          custom: 'keep-me',
+          custom: 'dropped',
+          meta: { custom: 'kept' },
         },
       });
       await call(fc, '_Start', 'userA', opts);
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(Object.keys(record.file).sort()).to.deep.equal(['meta', 'name', 'size', 'type']);
       await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
       await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
       const doc = await fc.collection.findOneAsync(opts.fileId);
@@ -1034,7 +1037,8 @@ describe('Security', function () {
       expect(doc.extension).to.equal('txt');
       expect(doc.isImage).to.equal(false);
       expect(doc.mime).to.equal('text/plain');
-      expect(doc.custom).to.equal('keep-me');
+      expect(doc).to.not.have.property('custom');
+      expect(doc.meta).to.deep.equal({ custom: 'kept' });
       expect(fc._isPathInside(fc.storagePath({}), doc.path)).to.equal(true);
       expect(doc.versions.original.path).to.equal(doc.path);
     });

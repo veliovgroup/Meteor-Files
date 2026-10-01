@@ -150,3 +150,5 @@ const imagesCollection = new FilesCollection({
   schema: mySchema
 });
 ```
+
+Custom top-level fields are set on the server, for example in `onAfterUpload`. The server keeps only `name`, `type`, `size`, and `meta` from the file object a client sends, so send custom upload data from the client in `meta`.

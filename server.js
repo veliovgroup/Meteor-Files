@@ -73,9 +73,9 @@ const dispositionType = (type, forceDownload) => {
 };
 
 /**
- * @const {string[]} RESERVED_FILE_KEYS - Keys of client-supplied `file` object the server computes itself
+ * @const {string[]} CLIENT_FILE_KEYS - The only keys of a client-supplied `file` object the server keeps. It computes everything else
  */
-const RESERVED_FILE_KEYS = ['_id', 'fileId', '_downloadRoute', '_collectionName', '_storagePath', 'path', 'versions', 'userId', 'public', 'extension', 'ext', 'extensionWithDot', 'isVideo', 'isAudio', 'isImage', 'isText', 'isJSON', 'isPDF', 'mime', 'mime-type', '__proto__', 'constructor', 'prototype'];
+const CLIENT_FILE_KEYS = ['name', 'type', 'size', 'meta'];
 
 /**
  * Returns `code` if it is an HTTP error status (400-599), otherwise `fallback`
@@ -1083,7 +1083,7 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _pickClientFileFields
    * @param {Object} file - Client-supplied `file` object
-   * @summary Internal method. Deep copy of client `file` object without keys the server computes itself
+   * @summary Internal method. Deep copy of the allowed keys of a client `file` object: `name`, `type`, `size`, and `meta`
    * @returns {Object}
    */
   _pickClientFileFields(file) {
@@ -1092,8 +1092,8 @@ class FilesCollection extends FilesCollectionCore {
       return picked;
     }
 
-    for (const key of Object.keys(file)) {
-      if (!RESERVED_FILE_KEYS.includes(key)) {
+    for (const key of CLIENT_FILE_KEYS) {
+      if (Object.hasOwn(file, key)) {
         picked[key] = helpers.cloneDeep(file[key]);
       }
     }
