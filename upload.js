@@ -5,7 +5,7 @@ import { Tracker } from 'meteor/tracker';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { EventEmitter } from 'eventemitter3';
 import { check, Match } from 'meteor/check';
-import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
+import { applyPipes, fitChunkSize, fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
 const _rootUrl = (window.__meteor_runtime_config__.MOBILE_ROOT_URL || window.__meteor_runtime_config__.ROOT_URL).replace(/\/+$/, '');
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -709,10 +709,7 @@ export class UploadInstance extends EventEmitter {
       }
 
       this.result.emit('data', evt.data.bin);
-      // Pipes run in reverse order of registration: the last added pipe runs first
-      for (let i = this.pipes.length - 1; i >= 0; i--) {
-        opts.binData = this.pipes[i](opts.binData);
-      }
+      opts.binData = applyPipes(this.pipes, opts.binData);
     } catch (pipeError) {
       this.inFlight = null;
       this.emit('error', toMeteorError(pipeError));
@@ -1025,7 +1022,7 @@ export class UploadInstance extends EventEmitter {
 
     if (!this.isStarted) {
       if (!this.startOpts) {
-        // `_prepare()` is still running (async `namingFunction`), it sends Start when ready
+        // `_prepare()` has not built the Start payload yet, it sends Start when ready
         return this;
       }
       await this._sendStart();
@@ -1083,9 +1080,12 @@ export class UploadInstance extends EventEmitter {
       // 4 base64 characters are 3 bytes
       const maxBase64ChunkSize = Math.floor((MAX_CHUNK_SIZE / 3)) * 4;
       this.config.chunkSize = Math.min(Math.max(4, Math.floor(this.config.chunkSize / 4) * 4), maxBase64ChunkSize);
+      // The server accepts at most MAX_UPLOAD_CHUNKS chunks
+      this.config.chunkSize = fitChunkSize(this.config.file.length, this.config.chunkSize, 4, maxBase64ChunkSize);
       _len = Math.ceil(this.config.file.length / this.config.chunkSize);
     } else {
       this.config.chunkSize = Math.min(Math.max(8, Math.floor(this.config.chunkSize / 8) * 8), MAX_CHUNK_SIZE);
+      this.config.chunkSize = fitChunkSize(this.fileData.size, this.config.chunkSize, 8, MAX_CHUNK_SIZE);
       _len = Math.ceil(this.fileData.size / this.config.chunkSize);
     }
 
@@ -1099,18 +1099,13 @@ export class UploadInstance extends EventEmitter {
       fileLength: this.fileLength
     };
 
-    this.FSName = this.collection.namingFunction ? (await this.collection.namingFunction(this.fileData)) : this.fileId;
-    if (this.FSName !== this.fileId) {
-      opts.FSName = this.FSName;
-    }
-
     this.startOpts = opts;
     await this._upload();
   }
 
   /**
    * Adds a transformation function to the upload pipeline.
-   * Pipes run in reverse order of registration: the last added pipe runs first.
+   * Pipes run in the order they were added: the first added pipe runs first.
    * @param {function(string): string} func - A function to process the binary data.
    * @returns {UploadInstance} Returns the current UploadInstance for chaining.
    */

@@ -9,7 +9,7 @@ import { FilesCursor, FileCursor } from './cursor.js';
 /**
  * @const {Match.Pattern} SELECTOR_PATTERN - Selectors accepted by `find`, `findOne`, `findOneAsync`, and `countDocuments`
  */
-const SELECTOR_PATTERN = Match.Optional(Match.OneOf(Object, String, Boolean, Number, null, Mongo.ObjectID));
+export const SELECTOR_PATTERN = Match.Optional(Match.OneOf(Object, String, Boolean, Number, null, Mongo.ObjectID));
 /* eslint-enable new-cap */
 
 export default class FilesCollectionCore extends EventEmitter {
@@ -248,32 +248,6 @@ export default class FilesCollectionCore extends EventEmitter {
   }
 
   /**
-   * Finds and returns a FileCursor for a matching document (client only).
-   * @locus Client
-   * @memberOf FilesCollectionCore
-   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
-   * @param {MeteorFilesOptions} [options] - Mongo query options
-   * @returns {FileCursor|null} A FileCursor instance, or null if not found
-   * @throws {Meteor.Error} If called on the server
-   */
-  findOne(selector = {}, options) {
-    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`, Meteor.isServer);
-    if (Meteor.isServer) {
-      throw new Meteor.Error(404, 'FilesCollection#findOne() not available in server! Use .findOneAsync instead');
-    }
-    /* eslint-disable new-cap */
-    check(selector, SELECTOR_PATTERN);
-    check(options, Match.Optional(Object));
-    /* eslint-enable new-cap */
-
-    const doc = this.collection.findOne(selector, options);
-    if (doc) {
-      return new FileCursor(doc, this);
-    }
-    return null;
-  }
-
-  /**
    * Finds and returns a FilesCursor for matching documents.
    * @locus Anywhere
    * @memberOf FilesCollectionCore
@@ -362,18 +336,25 @@ export default class FilesCollectionCore extends EventEmitter {
    * @param {Partial<FileObj>|FileCursor|null} fileObj - A file object reference, or a FileCursor
    * @param {string} [version='original'] - The file version
    * @param {string} [uriBase] - Optional URI base
+   * @param {{token?: string}} [opts] - `token` from the server `createDownloadToken()`, appended as `?token=`
    * @summary Uses the document's stored `_downloadRoute` and `_collectionName` when they are safe, otherwise this collection's values
    * @returns {string} The download URL, or an empty string if the file is not found
    */
-  link(fileObj, version = 'original', uriBase) {
+  link(fileObj, version = 'original', uriBase, opts) {
     if (!fileObj) {
       return '';
     }
 
     const fileRef = (fileObj instanceof FileCursor) ? fileObj._fileRef : fileObj;
     this._debug(`[FilesCollection] [link(${helpers.isObject(fileRef) ? fileRef._id : undefined}, ${version})]`);
-    // eslint-disable-next-line new-cap
+    /* eslint-disable new-cap */
     check(fileRef, Match.Where((obj) => helpers.isObject(obj)));
-    return formatFileURL(fileRef, version, uriBase, this);
+    check(opts, Match.Optional(Match.ObjectIncluding({ token: Match.Optional(String) })));
+    /* eslint-enable new-cap */
+    const url = formatFileURL(fileRef, version, uriBase, this);
+    if (!url || !helpers.isString(opts?.token) || !opts.token) {
+      return url;
+    }
+    return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(opts.token)}`;
   }
 }

@@ -226,6 +226,12 @@ describe('FilesCollectionCore (3.1 fixes)', function() {
       expect(files.link(cursor, 'thumb')).to.equal(`${ROOT}/cdn/storage/${collectionName}/abc123/thumb/abc123.png`);
     });
 
+    it('appends an encoded token', function () {
+      const url = files.link({ _id: 'abc', extension: 'txt', _downloadRoute: '/cdn/storage', _collectionName: 'c1' }, 'original', 'https://example.com', { token: 'a b+c' });
+      expect(url).to.equal('https://example.com/cdn/storage/c1/abc/original/abc.txt?token=a%20b%2Bc');
+      expect(files.link({ _id: 'abc', _downloadRoute: '/cdn/storage', _collectionName: 'c1' }, 'original', 'https://example.com', {})).to.not.include('token');
+    });
+
     it('keeps URLs of normal files unchanged', function() {
       expect(files.link(doc())).to.equal(`${ROOT}/cdn/storage/${collectionName}/abc123/original/abc123.jpg`);
       expect(files.link(doc(), 'original', 'https://cdn.example.com/')).to.equal(`https://cdn.example.com/cdn/storage/${collectionName}/abc123/original/abc123.jpg`);
@@ -325,6 +331,10 @@ describe('FilesCollectionCore (3.1 fixes)', function() {
   describe('M1: findOne() on server', function() {
     it('throws a Meteor.Error', function() {
       expect(() => files.findOne({})).to.throw(Meteor.Error);
+    });
+
+    it('is not part of the isomorphic core', function() {
+      expect(Object.prototype.hasOwnProperty.call(FilesCollectionCore.prototype, 'findOne')).to.equal(false);
     });
   });
 });

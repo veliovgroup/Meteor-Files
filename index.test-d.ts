@@ -1,6 +1,7 @@
 import { expectType, expectError, expectAssignable } from 'tsd';
 import type { Meteor } from 'meteor/meteor';
 import type { ReactiveVar } from 'meteor/reactive-var';
+import type { Readable } from 'node:stream';
 import {
   FilesCollection,
   FileUpload,
@@ -12,6 +13,9 @@ import {
   InsertOptions,
   ContextUser,
   ContextHTTP,
+  FSStorage,
+  GridFSStorage,
+  FilesStorageAdapter,
 } from 'meteor/ostrio:files';
 
 // config options, including 3.1 additions
@@ -22,6 +26,8 @@ const config: FilesCollectionConfig = {
   chunkSize: 'dynamic',
   allowedCordovaOrigins: /^https:\/\/localhost:12[0-9]{3}$/,
   nosniff: true,
+  trustClientMimeType: false,
+  downloadTokenSecret: 'x'.repeat(32),
   uploadIdleTimeout: 900000,
   allowedOrigins: false,
   disableUpload: false,
@@ -37,8 +43,10 @@ const config: FilesCollectionConfig = {
     expectType<string>(http.params._id);
     return false;
   },
-  async namingFunction(fileData) {
-    return fileData.name;
+  async namingFunction({ file, fileId, userId }) {
+    expectType<string>(fileId);
+    expectType<string | null>(userId);
+    return file.name;
   },
   async protected(fileObj) {
     expectType<FileObj>(fileObj);
@@ -76,6 +84,8 @@ expectAssignable<FilesCollectionConfig>({ allowedCordovaOrigins: true });
 expectAssignable<FilesCollectionConfig>({ allowedCordovaOrigins: 'https://example.com' });
 expectError<FilesCollectionConfig>({ allowedCordovaOrigins: 1 });
 expectError<FilesCollectionConfig>({ nosniff: 'yes' });
+expectError<FilesCollectionConfig>({ trustClientMimeType: 'yes' });
+expectError<FilesCollectionConfig>({ downloadTokenSecret: 32 });
 expectError<FilesCollectionConfig>({ uploadIdleTimeout: '900000' });
 
 const files = new FilesCollection(config);
@@ -133,6 +143,8 @@ expectType<string[]>(cursor.map((file) => file.name));
 expectType<Promise<FileCursor[]>>(cursor.eachAsync());
 expectType<Promise<boolean>>(cursor.hasNextAsync());
 expectType<Promise<FileObj | undefined>>(cursor.lastAsync());
+expectError(cursor.countAsync());
+expectError(cursor.hasNext());
 
 declare const fileCursor: FileCursor;
 expectType<string>(fileCursor.link('original'));
@@ -146,6 +158,8 @@ async function findFile() {
     expectType<string>(file._id);
     expectType<string>(file.link());
     expectType<string>(files.link(file));
+    expectType<string>(files.link(file, 'original', undefined, { token: files.createDownloadToken(file, { userId: null, expiresIn: 60 }) }));
+    expectType<string>(file.link('original', undefined, { token: 't' }));
   }
   expectType<FilesCursor<unknown, unknown>>(files.find({}));
   expectType<Promise<number>>(files.countDocuments({}));
@@ -167,3 +181,18 @@ async function serverMethods() {
   files.deny({ remove: () => true });
 }
 void serverMethods;
+
+// storage adapters
+expectAssignable<FilesCollectionConfig>({ storage: new GridFSStorage({ bucketName: 'files' }) });
+expectAssignable<FilesCollectionConfig>({ storage: new FSStorage() });
+declare const someStream: Readable;
+const customStorage: FilesStorageAdapter = {
+  async put(_fileRef, _versionName, _localPath, opts) {
+    expectType<'upload' | 'write' | 'load' | 'addFile' | undefined>(opts?.source);
+    return { key: 'k' };
+  },
+  async createReadStream() { return someStream; },
+  async remove() {},
+};
+expectAssignable<FilesCollectionConfig>({ storage: customStorage });
+expectError<FilesCollectionConfig>({ storage: 'fs' });

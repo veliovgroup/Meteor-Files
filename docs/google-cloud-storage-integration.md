@@ -142,7 +142,7 @@ const Files = new FilesCollection({
     return docs.length > 0 && docs.every((doc) => doc.versions?.original?.meta?.pipePath);
   },
 
-  interceptDownload(http, fileRef, version) {
+  async interceptDownload(http, fileRef, version) {
     const vRef = fileRef.versions?.[version];
     const path = vRef?.meta?.pipePath;
 
@@ -173,7 +173,7 @@ const Files = new FilesCollection({
       remoteReadStream = bucket.file(path).createReadStream();
     }
 
-    this.serve(http, fileRef, vRef, version, remoteReadStream);
+    await this.serve(http, fileRef, vRef, version, remoteReadStream);
     return true;
   }
 });

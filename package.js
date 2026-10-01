@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ostrio:files',
-  version: '3.1.0',
+  version: '4.0.0',
   summary: 'Upload files to a server or 3rd party storage: AWS:S3, GridFS, DropBox, and other',
   git: 'https://github.com/veliovgroup/Meteor-Files',
   documentation: 'README.md'
@@ -30,6 +30,7 @@ Package.onTest((api) => {
   api.use('meteortesting:mocha@3.4.0');
   api.use(['ecmascript', 'ostrio:files'], ['client', 'server']);
   api.mainModule('tests/server.js', 'server');
+  api.mainModule('tests/client.js', 'client');
 
   Npm.depends({
     eventemitter3: '5.0.4',

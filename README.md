@@ -15,6 +15,7 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 - [✨ Key features](https://github.com/veliovgroup/Meteor-Files#key-features)
 - [📔 API Documentation](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
 - [🔒 Security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
+- [🚚 Migration to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md)
 - [🚚 Migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md)
 - __⚡️ Quick start__:
   - [🔧 Installation](https://github.com/veliovgroup/Meteor-Files#installation)
@@ -33,6 +34,10 @@ Stable, fast, robust, and well-maintained Meteor.js package for files management
 - Compatible with all front-end frameworks from Blaze to [React](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/react-example.md)
 - Upload via `HTTP` and `DDP` transports, [read about difference](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/about-transports.md)
 - Sustainable and "resumable" uploads will auto-resume when connection interrupted or server rebooted
+- Signed download links with `createDownloadToken()`, they work without a cookie and on any server instance, see the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links)
+- Built-in [GridFS storage adapter](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage) (`GridFSStorage`) and a `storage` option for your own adapter
+- Content-based MIME type detection, the server does not trust the type sent by the client
+- Uploads resume after a server restart, the server records every written chunk
 - Upload files through computing cloud without persistent File System, like Heroku (*"resumable" uploads are not supported on Heroku and alike*)
 - Use *[GridFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)*, *[AWS S3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)*, *[Google Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)* or *[DropBox](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)* and other (*[3rd-party storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/3rd-party-storage.md)*)
 - APIs for checking file mime-type, size, extension, and other file's properties before upload using *[`onBeforeUpload` hook](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md)*
@@ -47,6 +52,10 @@ meteor add ostrio:files
 ```
 
 Requires Meteor 3.2 or newer (v3.1.0 and later).
+
+### Upgrade
+
+Upgrading from 3.x to 4.0.0 changes defaults and removes APIs. Read the [migration guide to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md) and its upgrade checklist first. Coming from 2.x, read [migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md) as well.
 
 ### ES6 Import:
 

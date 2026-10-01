@@ -1,10 +1,22 @@
 /* global describe, it */
 import { expect } from 'chai';
 import { FilesCollection } from '../server.js';
+import { MAX_UPLOAD_CHUNKS, applyPipes, fitChunkSize } from '../lib.js';
 
 const helpers = FilesCollection.__helpers;
 
 describe('Helpers', function () {
+  it('applyPipes runs pipes in the order they were added', function () {
+    const order = [];
+    const result = applyPipes([
+      (data) => { order.push('first'); return `${data}1`; },
+      (data) => { order.push('second'); return `${data}2`; },
+    ], 'x');
+    expect(order).to.deep.equal(['first', 'second']);
+    expect(result).to.equal('x12');
+    expect(applyPipes([], 'same')).to.equal('same');
+  });
+
   it('isUndefined', function () {
     expect(helpers.isUndefined(null), 'isUndefined - null false').to.equal(false);
     expect(helpers.isUndefined(true), 'isUndefined - true false').to.equal(false);
@@ -210,6 +222,18 @@ describe('Helpers', function () {
     expect(helpers.isUndefined(test2.needle)).to.equal(true);
     expect(helpers.isUndefined(test2.hay)).to.equal(true);
     expect(helpers.isUndefined(test2.hey)).to.equal(true);
+  });
+
+  it('fitChunkSize keeps the chunk count at or below MAX_UPLOAD_CHUNKS', function () {
+    const MiB = 1024 * 1024;
+    expect(MAX_UPLOAD_CHUNKS).to.equal(100000);
+    expect(fitChunkSize(10, 4, 8, 16 * MiB)).to.equal(4);
+    const total = (100000 * 512 * 1024) + 1;
+    const size = fitChunkSize(total, 512 * 1024, 8, 16 * MiB);
+    expect(size % 8).to.equal(0);
+    expect(Math.ceil(total / size)).to.be.at.most(100000);
+    expect(fitChunkSize(100000 * 20 * MiB, 512 * 1024, 8, 16 * MiB)).to.equal(16 * MiB);
+    expect(fitChunkSize(1000001, 4, 4, 1024, 1000) % 4).to.equal(0);
   });
 
   it('now', function () {

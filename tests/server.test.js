@@ -11,6 +11,7 @@ import { Readable } from 'node:stream';
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
 import { FilesCollection, WriteStream, helpers } from '../server.js';
+import { chunkIdsFromBits } from '../write-stream.js';
 
 const TMP_ROOT = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-server-'));
 const tmpDir = (name) => {
@@ -18,6 +19,7 @@ const tmpDir = (name) => {
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 };
+const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
 
 /**
  * Assert that a promise rejects, and return the error
@@ -246,6 +248,8 @@ describe('FilesCollection', function() {
       expect(newOpts).to.be.an('object');
       expect(result.path).to.equal(nodePath.join(filesCollection.storagePath({}), 'newName'));
       expect(namingFunctionStub.calledOnce).to.be.true;
+      expect(namingFunctionStub.firstCall.args[0]).to.deep.include({ fileId: '123', userId: 'user1' });
+      expect(namingFunctionStub.firstCall.args[0].file.name).to.equal('testFile');
       expect(onBeforeUploadStub.calledOnce).to.be.true;
       // onInitiateUpload runs in _startUpload, after the upload record is saved
       expect(onInitiateUploadStub.called).to.be.false;
@@ -475,6 +479,23 @@ describe('FilesCollection', function() {
       const fileObj = await fc.writeAsync(Buffer.from('n'), { name: 'n.txt' });
       expect(fileObj.path).to.equal(nodePath.join(fc.storagePath({}), 'sub', 'x-y.txt'));
     });
+
+    it('passes { file, fileId, userId } to namingFunction', async function() {
+      collectionMock.restore();
+      const naming = sinon.spy(() => 'ctx-name');
+      const fc = new FilesCollection({ collectionName: `testserver-naming-${Random.id(4)}`, storagePath: tmpDir('naming-ctx'), namingFunction: naming });
+      const fileObj = await fc.writeAsync(Buffer.from('abc'), { name: 'c.txt', type: 'text/plain', meta: { k: 1 }, userId: 'u9', fileId: 'ctx1' });
+      expect(naming.firstCall.args[0]).to.deep.equal({ file: { name: 'c.txt', type: 'text/plain', size: 3, meta: { k: 1 } }, fileId: 'ctx1', userId: 'u9' });
+      expect(nodePath.basename(fileObj.path)).to.equal('ctx-name.txt');
+    });
+
+    it('detects the type of a buffer written without opts.type', async function() {
+      collectionMock.restore();
+      const fileObj = await filesCollection.writeAsync(PNG_BYTES, { name: 'x.bin', fileId: 'sniff1' });
+      expect(fileObj.type).to.equal('image/png');
+      expect(fileObj.isImage).to.equal(true);
+      expect(fileObj.versions.original.type).to.equal('image/png');
+    });
   });
 
   describe('#loadAsync()', function() {
@@ -503,6 +524,12 @@ describe('FilesCollection', function() {
           const body = zlib.gzipSync(Buffer.alloc(5000, 97));
           res.writeHead(200, { 'Content-Type': 'text/plain', 'Content-Encoding': 'gzip', 'Content-Length': body.length });
           res.end(body);
+          return;
+        }
+
+        if (req.url === '/png') {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(PNG_BYTES);
           return;
         }
 
@@ -538,6 +565,11 @@ describe('FilesCollection', function() {
       expect(fs.readFileSync(file.path, 'utf8')).to.equal(testdata);
     });
 
+    it('detects the type instead of trusting the response Content-Type', async function() {
+      const fileObj = await filesCollection.loadAsync(`http://127.0.0.1:${port}/png`, { name: 'p.html', fileId: 'png1' });
+      expect(fileObj.type).to.equal('image/png');
+    });
+
     it('C3: rejects with 408 on timeout instead of throwing inside a timer', async function() {
       const error = await expectRejects(filesCollection.loadAsync(`http://127.0.0.1:${port}/hang`, { name: 'hang.txt', fileId: 'hang1', timeout: 100 }));
       expect(error.error).to.equal(408);
@@ -569,6 +601,14 @@ describe('FilesCollection', function() {
       const logged = debugSpy.getCalls().map((c) => c.args.map((a) => (typeof a === 'string' ? a : '')).join(' ')).join('\n');
       expect(logged).to.not.include('secret-token');
     });
+
+    it('passes { file, fileId, userId } to namingFunction', async function() {
+      const naming = sinon.spy(() => 'load-name');
+      const fc = new FilesCollection({ collectionName: `testserver-loadnaming-${Random.id(4)}`, storagePath: tmpDir('load-naming'), namingFunction: naming });
+      const fileObj = await fc.loadAsync(`http://127.0.0.1:${port}`, { name: 'l.txt', fileId: 'lctx1', userId: 'u8' });
+      expect(naming.firstCall.args[0]).to.deep.equal({ file: { name: 'l.txt', type: undefined, meta: undefined }, fileId: 'lctx1', userId: 'u8' });
+      expect(nodePath.basename(fileObj.path)).to.equal('load-name.txt');
+    });
   });
 
   describe('#addFile', () => {
@@ -588,6 +628,14 @@ describe('FilesCollection', function() {
     afterEach(() => {
       // Restore the stubbed methods after each test
       sinon.restore();
+    });
+
+    it('detects the type of a file added without opts.type', async () => {
+      const pngPath = nodePath.join(nodePath.dirname(path), 'image.data');
+      fs.writeFileSync(pngPath, PNG_BYTES);
+      const result = await filesCollection.addFile(pngPath, {});
+      expect(result.type).to.equal('image/png');
+      expect(result.isImage).to.equal(true);
     });
 
     it('should add a file successfully', async () => {
@@ -856,6 +904,13 @@ describe('FilesCollection', function() {
       expect(res.body).to.equal('testfile');
     });
 
+    it('awaits an async responseHeaders function', async function() {
+      sinon.stub(filesCollection, 'responseHeaders').value(async () => ({ 'X-Async-Header': 'yes' }));
+      const res = await get(`http://127.0.0.1:${port}`);
+      expect(res.headers['x-async-header']).to.equal('yes');
+      expect(res.body).to.equal('testfile');
+    });
+
     it('C2: sends object responseHeaders', async function() {
       sinon.stub(filesCollection, 'responseHeaders').value({ 'X-Custom-Header': 'yes' });
       const res = await get(`http://127.0.0.1:${port}`);
@@ -903,14 +958,14 @@ describe('FilesCollection', function() {
 
     it('protected: true allows requests with a valid x-mtok', async function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: true });
-      expect(await fc._checkAccess(makeHttp({ 'x-mtok': token }))).to.equal(true);
+      expect(await fc._checkAccess(makeHttp({ 'x-mtok': token }))).to.deep.equal({ fileRef: undefined });
     });
 
     it('protected: true allows requests with a valid x_mtok cookie', async function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: true });
       const httpObj = makeHttp();
       httpObj.request.Cookies = { has: (name) => name === 'x_mtok', get: () => token };
-      expect(await fc._checkAccess(httpObj)).to.equal(true);
+      expect(await fc._checkAccess(httpObj)).to.deep.equal({ fileRef: undefined });
     });
 
     it('protected: true denies malformed or unknown x-mtok', async function() {
@@ -925,7 +980,7 @@ describe('FilesCollection', function() {
       fc = new FilesCollection({ collectionName: `testserver-access-${Random.id(4)}`, storagePath: tmpDir('access'), protected: () => answer });
 
       answer = true;
-      expect(await fc._checkAccess(makeHttp())).to.equal(true);
+      expect(await fc._checkAccess(makeHttp())).to.deep.equal({ fileRef: null });
 
       answer = false;
       let httpObj = makeHttp();
@@ -943,7 +998,7 @@ describe('FilesCollection', function() {
       expect(httpObj.response.codes).to.deep.equal([401]);
 
       answer = Promise.resolve(true);
-      expect(await fc._checkAccess(makeHttp())).to.equal(true);
+      expect(await fc._checkAccess(makeHttp())).to.deep.equal({ fileRef: null });
     });
 
     it('protected function gets null fileObj for unknown _id, the doc for known _id, and userId', async function() {
@@ -1025,11 +1080,63 @@ describe('FilesCollection', function() {
       dir = tmpDir('write-stream');
     });
 
+    afterEach(function() {
+      sinon.restore();
+    });
+
     const create = async (name, maxLength = 2, options = {}) => {
       const stream = new WriteStream(nodePath.join(dir, name), maxLength, { chunkSize: 4 }, 0o644, 0o755, { fileId: name, exclusive: true, ...options });
       await stream.init();
       return stream;
     };
+
+    it('chunkIdsFromBits reads ids from int32 words, including bit 31', function() {
+      expect(chunkIdsFromBits([0b101, -2147483648], 64)).to.deep.equal([1, 3, 64]);
+      expect(chunkIdsFromBits([0xff], 4)).to.deep.equal([1, 2, 3, 4]);
+      expect(chunkIdsFromBits(undefined, 4)).to.deep.equal([]);
+    });
+
+    it('end() re-reads recorded chunks once before it gives up', async function() {
+      const reload = sinon.stub().resolves([1, 2]);
+      const stream = await create('reload-ok.txt', 2, { loadRecordedChunkIds: reload });
+      stream.maxEndRetries = 2;
+      // Another instance wrote chunk 2 into the same file and recorded it
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(true);
+      fs.writeFileSync(stream.path, 'abcdefgh');
+      expect(await stream.end()).to.equal(true);
+      expect(reload.calledOnce).to.equal(true);
+      expect(fs.readFileSync(stream.path, 'utf8')).to.equal('abcdefgh');
+    });
+
+    it('end() aborts when the recorded chunks are still incomplete', async function() {
+      const stream = await create('reload-partial.txt', 2, { loadRecordedChunkIds: async () => [1, 99, 'x'] });
+      stream.maxEndRetries = 2;
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(true);
+      expect(await stream.end()).to.equal(false);
+      expect(stream.aborted).to.equal(true);
+      expect(fs.existsSync(stream.path)).to.equal(false);
+    });
+
+    it('end() aborts when re-reading recorded chunks fails', async function() {
+      const stream = await create('reload-error.txt', 2, { loadRecordedChunkIds: async () => { throw new Error('db down'); } });
+      stream.maxEndRetries = 2;
+      sinon.stub(Meteor, '_debug');
+      expect(await stream.end()).to.equal(false);
+      expect(stream.aborted).to.equal(true);
+    });
+
+    it('a write cut off by stop(false) returns false quietly and keeps the file', async function() {
+      const stream = await create('stopped-write.txt', 2);
+      sinon.stub(stream.fh, 'write').callsFake(async () => {
+        await stream.stop(false);
+        throw Object.assign(new Error('EBADF'), { code: 'EBADF' });
+      });
+      const debug = sinon.stub(Meteor, '_debug');
+      expect(await stream.write(1, Buffer.from('abcd'))).to.equal(false);
+      expect(debug.called).to.equal(false);
+      expect(stream.aborted).to.equal(false);
+      expect(fs.existsSync(stream.path)).to.equal(true);
+    });
 
     it('C6: end() returns false after abort', async function() {
       const stream = await create('c6.txt');

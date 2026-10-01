@@ -72,12 +72,13 @@ export class FileCursor {
    * @locus Anywhere
    * @param {string} [version='original'] - Name of the file’s subversion.
    * @param {string} [uriBase] - Optional URI base.
+   * @param {{token?: string}} [opts] - `token` from the server `createDownloadToken()`
    * @returns {string}
    */
-  link(version = 'original', uriBase) {
+  link(version = 'original', uriBase, opts) {
     this._collection._debug(`[FilesCollection] [FileCursor] [link(${version})]`);
     if (this._fileRef && this._fileRef._id) {
-      return this._collection.link(this._fileRef, version, uriBase);
+      return this._collection.link(this._fileRef, version, uriBase, opts);
     }
     return '';
   }
@@ -185,20 +186,6 @@ export class FilesCursor {
   async getAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [getAsync()]');
     return await this.fetchAsync();
-  }
-
-  /**
-   * Returns `true` if there is a next item available.
-   * @locus Client
-   * @deprecated since v3.0.0. use {@link FilesCursor#hasNextAsync} instead.
-   * @throws {Meteor.Error} If called on the server
-   * @returns {boolean}
-   */
-  hasNext() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    clientOnly('FilesCursor', 'hasNext');
-    Meteor.deprecate('FilesCursor#hasNext() is deprecated! Use `hasNextAsync` instead');
-    return this._current < this.count() - 1;
   }
 
   /**
@@ -378,18 +365,6 @@ export class FilesCursor {
   /**
    * Asynchronously returns the number of file documents that match the query.
    * @locus Anywhere
-   * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
-   * @returns {Promise<number>}
-   */
-  async countAsync() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
-    Meteor.deprecate('FilesCursor#countAsync() is deprecated! Use `countDocuments` instead');
-    return await this.cursor.countAsync();
-  }
-
-  /**
-   * Asynchronously returns the number of file documents that match the query.
-   * @locus Anywhere
    * @param {Mongo.CountDocumentsOptions} [options] - CountDocumentsOptions
    * @returns {Promise<number>}
    */
@@ -408,18 +383,51 @@ export class FilesCursor {
   remove(callback = () => {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
     clientOnly('FilesCursor', 'remove');
-    this._collection.remove(this._selector, callback);
+    // The client removes one `_id` per call
+    const ids = this.cursor.map((doc) => doc._id);
+    if (!ids.length) {
+      callback(null, 0);
+      return this;
+    }
+
+    let pending = ids.length;
+    let removed = 0;
+    let failed = false;
+    ids.forEach((_id) => {
+      this._collection.remove(_id, (error, count) => {
+        if (failed) {
+          return;
+        }
+        if (error) {
+          failed = true;
+          callback(error);
+          return;
+        }
+        removed += count || 0;
+        if (--pending === 0) {
+          callback(null, removed);
+        }
+      });
+    });
     return this;
   }
 
   /**
-   * Asynchronously removes all file documents that match the query.
+   * Asynchronously removes all file documents that match the query. The client removes them one `_id` at a time
    * @locus Anywhere
    * @returns {Promise<number>}
    */
   async removeAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [removeAsync()]');
-    return await this._collection.removeAsync(this._selector);
+    if (Meteor.isServer) {
+      return await this._collection.removeAsync(this._selector);
+    }
+
+    let removed = 0;
+    for (const { _id } of await this.cursor.fetchAsync()) {
+      removed += await this._collection.removeAsync(_id);
+    }
+    return removed;
   }
 
   /**

@@ -1,6 +1,6 @@
 # Use AWS:S3 as storage
 
-The example below shows how to store and serve uploaded files via S3. It also removes the files from S3 when a record is removed from *FilesCollection*.
+The example below shows how to store and serve uploaded files via S3 with a `storage` adapter. The adapter also removes the files from S3 when a record is removed from *FilesCollection*.
 
 The example uses the modular [AWS SDK for JavaScript v3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/) (`@aws-sdk/client-s3`). The old `aws-sdk` v2 package is in maintenance mode, do not use it in new code.
 
@@ -59,22 +59,20 @@ if (process.env.S3) {
 }
 ```
 
-## Move a file to AWS:S3 after upload
+## Store files in AWS:S3 with a storage adapter
 
 File: `Server-side-file-store.js`.
 Use this in Meteor's `imports/server` directory, __NOT__ on the client.
 
+The adapter is passed as the [`storage` option](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md). Uploads are written to `storagePath` first. When a file is complete, `put()` copies it to S3 and deletes the local copy. Its result is stored at `versions.<name>.meta.storage`, before the document insert and before `onAfterUpload`. `serve()` streams through `createReadStream()` with the requested byte range, so `Range`, `responseHeaders`, and `Content-Disposition` work as with local files. `removeAsync()` and `unlinkAsync()` call `remove()`.
+
+`put()` gets `{ source }` as its 4th argument. When `source` is `'addFile'`, the local file belongs to the caller of `addFile()`, so the adapter keeps it.
+
 ```js
-import { Meteor } from 'meteor/meteor';
-import { Random } from 'meteor/random';
-import { FilesCollection } from 'meteor/ostrio:files';
 import fs from 'node:fs';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
+import { Meteor } from 'meteor/meteor';
+import { FilesCollection } from 'meteor/ostrio:files';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 /* Example: S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx"}}' meteor */
 if (process.env.S3) {
@@ -82,225 +80,89 @@ if (process.env.S3) {
 }
 
 const s3Conf = Meteor.settings.s3 || {};
-
-/* Check settings existence in `Meteor.settings` */
-/* This is the best practice for app security */
 if (!s3Conf.key || !s3Conf.secret || !s3Conf.bucket || !s3Conf.region) {
   throw new Meteor.Error(401, 'Missing Meteor file settings');
 }
 
-// Create a new S3 client
-const s3Client = new S3Client({
+class S3Storage {
+  constructor({ client, bucket, prefix = '' }) {
+    this.client = client;
+    this.bucket = bucket;
+    this.prefix = prefix;
+  }
+
+  async put(fileRef, versionName, localPath, { source } = {}) {
+    const vRef = fileRef.versions[versionName];
+    const key = `${this.prefix}${fileRef._id}/${versionName}${fileRef.extensionWithDot || ''}`;
+    const { size } = await fs.promises.stat(localPath);
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: fs.createReadStream(localPath),
+      ContentLength: size,
+      ContentType: vRef.type || fileRef.type,
+    }));
+    // Files passed to `addFile()` belong to the caller
+    if (source !== 'addFile') {
+      await fs.promises.unlink(localPath);
+    }
+    return { name: 's3', bucket: this.bucket, key };
+  }
+
+  async stat(fileRef, versionName) {
+    return fileRef.versions[versionName]?.meta?.storage?.key ? { size: fileRef.versions[versionName].size } : null;
+  }
+
+  async createReadStream(fileRef, versionName, { start, end } = {}) {
+    const key = fileRef.versions[versionName]?.meta?.storage?.key;
+    if (!key) {
+      throw new Meteor.Error(404, 'File not found');
+    }
+    const res = await this.client.send(new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Range: Number.isInteger(start) ? `bytes=${start}-${end}` : undefined,
+    }));
+    return res.Body;
+  }
+
+  async remove(fileRef, versionName) {
+    const key = fileRef.versions[versionName]?.meta?.storage?.key;
+    if (key) {
+      await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    }
+  }
+}
+
+const s3 = new S3Client({
   region: s3Conf.region,
-  credentials: {
-    accessKeyId: s3Conf.key,
-    secretAccessKey: s3Conf.secret,
-  },
+  credentials: { accessKeyId: s3Conf.key, secretAccessKey: s3Conf.secret },
 });
 
-/**
- * Resolve a `Range` header into an explicit, inclusive byte range.
- * Returns `null` when the full content must be sent (no header, a malformed header,
- * or a multi-range request), `false` when the range is not satisfiable, and `{ start, end }` otherwise.
- */
-const resolveRange = (header, size) => {
-  if (!header) {
-    return null;
-  }
-
-  if (header.includes(',')) {
-    // Multi-range requests are answered with full content
-    return null;
-  }
-
-  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (!match || (!match[1] && !match[2])) {
-    // Malformed header: ignored, same as `.serve()` does
-    return null;
-  }
-
-  let start;
-  let end;
-  if (!match[1]) {
-    // Suffix range: the last N bytes
-    const suffix = parseInt(match[2], 10);
-    if (suffix === 0) {
-      return false;
-    }
-    start = Math.max(size - suffix, 0);
-    end = size - 1;
-  } else {
-    start = parseInt(match[1], 10);
-    end = match[2] ? Math.min(parseInt(match[2], 10), size - 1) : size - 1;
-  }
-
-  if (start >= size || end < start) {
-    return false;
-  }
-
-  return { start, end };
-};
-
-// Declare the Meteor file collection on the Server
-const UserFiles = new FilesCollection({
-  debug: false, // Change to `true` for debugging
-  storagePath: 'assets/app/uploads/uploadedFiles',
+export const UserFiles = new FilesCollection({
   collectionName: 'userFiles',
-  // Disallow Client to execute remove, use a Meteor method
-  allowClientCode: false,
-
-  // Start moving files to AWS:S3
-  // after fully received by the Meteor server
-  async onAfterUpload(fileRef) {
-    // Run through each of the uploaded file
-    for (const version of Object.keys(fileRef.versions)) {
-      const vRef = fileRef.versions[version];
-      if (!vRef) {
-        continue;
-      }
-
-      // We use Random.id() instead of real file's _id
-      // to secure files from reverse engineering
-      // As after viewing this code it will be easy
-      // to get access to unlisted and protected files
-      const filePath = `files/${Random.id()}-${version}.${fileRef.extension}`;
-      const fileStream = fs.createReadStream(vRef.path);
-      fileStream.on('error', (error) => {
-        console.error('[onAfterUpload] [createReadStream] [ERROR:] File was not uploaded to S3', fileRef._id, error);
-      });
-
-      try {
-        await s3Client.send(new PutObjectCommand({
-          StorageClass: 'STANDARD',
-          Bucket: s3Conf.bucket,
-          Key: filePath,
-          Body: fileStream,
-          ContentLength: vRef.size,
-          ContentType: vRef.type,
-        }));
-      } catch (error) {
-        console.error('[onAfterUpload] [PutObjectCommand] Error:', fileRef._id, error);
-        continue;
-      }
-
-      try {
-        await this.collection.updateAsync({ _id: fileRef._id }, {
-          $set: {
-            [`versions.${version}.meta.pipePath`]: filePath
-          }
-        });
-        // Unlink original file from FS
-        // after successful upload to AWS:S3
-        await this.unlinkAsync(fileRef, version);
-      } catch (_unlinkError) {
-        // If file was removed before it was fully moved to S3
-        // `.updateAsync()` or `.unlinkAsync()` will throw an error
-        // Then we will need to remove that file from S3
-        try {
-          await s3Client.send(new DeleteObjectCommand({
-            Bucket: s3Conf.bucket,
-            Key: filePath,
-          }));
-          console.info('[onAfterUpload] [DeleteObjectCommand] unlinked file successfully removed from S3', fileRef._id);
-        } catch (deleteError) {
-          console.error('[onAfterUpload] [DeleteObjectCommand] Error:', fileRef._id, deleteError);
-        }
-      }
-    }
-  },
-
-  // Intercept calls to `.removeAsync()` to remove file from S3
-  // onAfterRemove is called right after the record is removed from the MongoDB Collection
-  // and before calling `.unlinkAsync()`,
-  // return `true` to prevent calling `.unlinkAsync()`
-  async onAfterRemove(docs) {
-    for (const doc of docs) {
-      for (const version of Object.keys(doc.versions || {})) {
-        const vRef = doc.versions[version];
-        if (vRef?.meta?.pipePath) {
-          try {
-            await s3Client.send(new DeleteObjectCommand({
-              Bucket: s3Conf.bucket,
-              Key: vRef.meta.pipePath,
-            }));
-            console.info('[onAfterRemove] [DeleteObjectCommand] Successfully removed from S3', vRef.path, vRef.meta.pipePath);
-          } catch (error) {
-            console.error('[onAfterRemove] [DeleteObjectCommand] Error:', error);
-          }
-        }
-      }
-    }
-
-    // Return `true` only if every record was moved to S3
-    // and its files were already removed from FS after upload
-    return docs.length > 0 && docs.every((doc) => doc.versions?.original?.meta?.pipePath);
-  },
-
-  // Intercept access to the file
-  // And serve the file from AWS:S3
-  async interceptDownload(http, fileRef, version) {
-    const vRef = fileRef?.versions?.[version];
-    const path = vRef?.meta?.pipePath;
-
-    if (!path) {
-      // While file is not yet uploaded to AWS:S3
-      // it will be served from FS
-      return false;
-    }
-
-    // If file is successfully moved to AWS:S3
-    // we will pipe the S3 response to the client
-    // So, original link will always stay secure
-
-    // To keep ?play and ?download parameters, original file name,
-    // content-type, content-disposition, Range responses,
-    // and cache-control we use the low-level .serve() method
-    const opts = {
-      Bucket: s3Conf.bucket,
-      Key: path,
-    };
-
-    const range = resolveRange(http.request.headers.range, vRef.size);
-    // With `strict: false` an unsatisfiable range gets the full content with `200`, as in `.serve()`
-    if (range === false && this.strict !== false) {
-      http.response.writeHead(416, { 'Content-Range': `bytes */${vRef.size}` });
-      http.response.end();
-      return true;
-    }
-
-    if (range) {
-      // Same explicit range for S3 and for .serve()
-      opts.Range = `bytes=${range.start}-${range.end}`;
-      http.request.headers.range = opts.Range;
-    } else {
-      // Full content requested: .serve() answers `200`
-      delete http.request.headers.range;
-    }
-
-    try {
-      const { Body } = await s3Client.send(new GetObjectCommand(opts));
-      Body.on('error', (error) => {
-        console.error('[interceptDownload] [GetObject stream]', error);
-        if (!http.response.writableEnded) {
-          http.response.end();
-        }
-      });
-
-      this.serve(http, fileRef, vRef, version, Body);
-    } catch (error) {
-      console.error('[interceptDownload] [GetObjectCommand]', error);
-      if (!http.response.headersSent) {
-        http.response.writeHead(404);
-      }
-      if (!http.response.writableEnded) {
-        http.response.end();
-      }
-    }
-
-    return true;
-  }
+  storagePath: 'assets/app/uploads/uploadedFiles',
+  storage: new S3Storage({ client: s3, bucket: s3Conf.bucket, prefix: 'files/' }),
 });
 ```
+
+### S3-compatible storage (MinIO, Wasabi, and others)
+
+`S3Storage` works with any S3-compatible service. Point the client at the service with `endpoint`. MinIO and most self-hosted services also need `forcePathStyle: true`:
+
+```js
+const s3 = new S3Client({
+  region: s3Conf.region, // Any value for MinIO, for example 'us-east-1'. Wasabi uses its own regions, like 'eu-central-1'
+  endpoint: s3Conf.endpoint, // For example 'https://minio.example.com' or 'https://s3.eu-central-1.wasabisys.com'
+  forcePathStyle: true,
+  credentials: { accessKeyId: s3Conf.key, secretAccessKey: s3Conf.secret },
+});
+```
+
+
+`stat()` is optional. Without it `download()` can not answer `404` or apply `integrityCheck` before streaming. The `stat()` above trusts the size stored in the document. Call `HeadObjectCommand` instead to check that the object exists.
+
+Files created by `onAfterUpload` subversions must be passed to `this.storage.put(fileRef, versionName, localPath)` and the result saved at `versions.<name>.meta.storage`. Pass `{ source: 'write' }` as the 4th argument to let the adapter delete the local file after the copy, or `{ source: 'addFile' }` to keep it. With the adapter above, `onAfterUpload` no longer finds the original file on local disk. Create subversions from the S3 object, or with the Lambda function below.
 
 ## Further image (JPEG, PNG) processing with AWS Lambda
 

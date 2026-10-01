@@ -101,4 +101,8 @@ The server answers `Range` requests with `206 Partial Content` and `Content-Rang
 
 ## Security headers
 
-Set `nosniff: true` in the constructor to add `X-Content-Type-Options: nosniff` to file responses. It will default to `true` in v4. To force browsers to download a file instead of rendering it, either request it with `?download=true` or return `Content-Disposition: attachment` from `responseHeaders`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md).
+File responses carry `X-Content-Type-Options: nosniff` by default since v4. Set `nosniff: false` in the constructor to turn it off. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md).
+
+## Default Content-Disposition
+
+Files are served `inline` only when their type is `image/*` (except `image/svg+xml`), `video/*`, `audio/*`, `application/pdf`, or `text/plain`. Everything else gets `Content-Disposition: attachment`. `?download=true` always forces `attachment`. Return `Content-Disposition` from `responseHeaders` to set your own value.

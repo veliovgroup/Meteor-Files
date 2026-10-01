@@ -1,3 +1,64 @@
+# 4.0.0
+
+## What's new
+
+This release adds signed download links, storage adapters with a built-in GridFS adapter, content-based file type detection, and uploads that resume after a server restart. It also tightens defaults: clients can not remove files, responses carry `nosniff`, risky types download as attachments, and only the server names files. Read "Major changes" before you upgrade, and follow the [migration guide to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md).
+
+## Major changes
+
+- ⚠️ Remove `FilesCursor#hasNext()` and `FilesCursor#countAsync()`. Use `hasNextAsync()` and `countDocuments()`.
+- ⚠️ Move `findOne()` from `FilesCollectionCore` to the client class. The server class still throws `Meteor.Error(404)`. Use `findOneAsync()`.
+- ⚠️ Support only a `Map` in `Meteor.server.sessions` (Meteor 3) in the default `x_mtok` lookup. A plain object throws.
+- ⚠️ Default `allowClientCode` to `false`. Clients can not call `remove()` unless `allowClientCode: true` is set on the server and the client. Set `onBeforeRemove` when you enable it.
+- ⚠️ Accept only a String `_id` in client `remove()` and `removeAsync()`. Use `find(selector).removeAsync()` to remove several files. It removes one `_id` per server call and is not atomic.
+- ⚠️ Send `Cache-Control: private, max-age=31536000` by default for `protected` collections, so shared caches do not keep protected files. Set `cacheControl` to restore the 3.x value.
+- ⚠️ Send `X-Content-Type-Options: nosniff` by default. Set `nosniff: false` to turn it off.
+- ⚠️ Serve files `inline` only for `image/*` (not SVG), `video/*`, `audio/*`, `application/pdf`, and `text/plain`. Other files get `Content-Disposition: attachment`. Set `Content-Disposition` in `responseHeaders` to change it.
+- ⚠️ Run `FileUpload#pipe()` functions in the order they were added. The first `pipe()` call runs first. Reverse chained `pipe()` calls written for 3.x.
+- ⚠️ Name files on the server only. The client `namingFunction` option and the `FSName` field are ignored. Set `namingFunction` on the server. It receives `{ file, fileId, userId }` in upload Start, `writeAsync()`, and `loadAsync()`.
+- ⚠️ Keep only `name`, `type`, `size`, and `meta` from the client `file` object. Send custom data in `meta`.
+- ⚠️ Store `type`, `mime`, `versions.original.type`, and the `is*` flags from the file content instead of the uploader's claim. Text keeps the uploader's type only for a short list of passive types (`text/plain`, `text/csv`, `text/markdown`, `text/tab-separated-values`, `text/calendar`, `text/vtt`, `application/json`), other text is stored as `text/plain`. Set `trustClientMimeType: true` to store the uploader's type as in 3.x.
+- ⚠️ Make `serve()` async. Await it when code runs after it. `unlinkAsync()` and `removeAsync()` remove files through the storage adapter (`FSStorage` by default, same files as before). Custom adapters receive `{ source }` as the 4th `put()` argument and must keep the caller's file when `source` is `'addFile'`.
+- ⚠️ Restart uploads that were in progress during the upgrade from 3.x. They get `410` on their next chunk. Start rejects more than 100000 chunks with `400`, and the client raises `chunkSize` to stay below.
+
+## Other Changes
+
+### Added
+
+- ✨ Add signed download links. Set `downloadTokenSecret`, call `createDownloadToken()`, and pass the token to `link(fileRef, version, uriBase, { token })`. Tokens work without the `x_mtok` cookie and on any server instance. A token opens one file version in one collection, and token downloads get `Cache-Control: private` until the token expires.
+- ✨ Add storage adapters with the `storage` option. `FSStorage` is the default and `GridFSStorage` keeps files in MongoDB GridFS.
+- ✨ Add content-based type detection from a built-in signature table, and the `trustClientMimeType` option.
+- ✨ Resume uploads after a server restart. The server records every written chunk in the upload record.
+- ✨ Add a browser test suite to CI on Meteor 3.2.2 and 3.5.2.
+- ✨ Accept an async `responseHeaders` function. Thanks to @ToyboxZach, #861.
+
+### Fixed
+
+- 🔧 Record written chunks instead of guessing them from the file size after a restart. A hole before the last written chunk no longer passes as complete.
+- 🔧 Make one database read per protected download.
+- 🔧 Finish an upload whose chunks reached several server instances: EOF reads the recorded chunks once before it gives up. Another instance finishing the upload no longer deletes the file or logs a failed write.
+
+### Changed
+
+- 👨‍💻 Deprecate `protected: true`. It logs a warning at startup and will be removed in v5. Pass a function.
+
+### Docs
+
+- 📔 Add the [migration guide to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md) with an upgrade checklist.
+- 📔 Rewrite the S3 recipe as a storage adapter and lead the GridFS guide with the built-in adapter. Thanks to @ThaumRystra, #874.
+- 📔 Update the security guide for the new defaults, signed links, and content-based types.
+- 📔 Await `serve()` in the GridFS and Google Cloud Storage recipes.
+- 📔 Show S3-compatible services such as MinIO and Wasabi in the S3 recipe. Thanks to @xet7 and @dhana-exe, #862, #799.
+- 📔 Point to upload scanning and the OWASP File Upload Cheat Sheet in the security guide. Thanks to @jankapunkt, #753.
+
+### Tests
+
+- 🧪 Cover the client upload state machine in a browser with the `playwright` driver of `meteortesting:mocha`.
+
+### Dependencies
+
+- 📦 Add `playwright` as a dev dependency for browser tests. The runtime dependency list is unchanged.
+
 # 3.1.0
 
 ## What's new
@@ -10,7 +71,7 @@ This release closes several upload and download security holes, fixes the client
 - ⚠️ Restart uploads that were in progress during the upgrade from 3.0.x. The server answers `403` or `410` for upload records created by 3.0.x.
 - ⚠️ Return HTTP upload errors as `{ error: <status code>, reason, isClientSafe? }` instead of `{ error: "<text>" }`. `5xx` responses have a generic `reason`.
 - ⚠️ Limit upload sizes. `chunkSize` is at most 16 MiB. HTTP Start bodies, including `meta`, are at most 1 MiB. HTTP EOF bodies are at most 64 KiB. HTTP chunk bodies are at most the Base64 size of `chunkSize` plus 4 KiB.
-- ⚠️ Reject `FileUpload` pipes that grow a chunk. A pipe must return Base64 that decodes to the same number of bytes as its input, so per-chunk encryption with an IV, a tag, or padding fails on the first chunk. Move such transforms to `onAfterUpload` on the server.
+- ⚠️ Reject `FileUpload` pipes that grow a chunk. A pipe must return Base64 that decodes to the same number of bytes as its input, so per-chunk encryption with an IV, a tag, or padding fails on the first chunk. Move such transforms to `onAfterUpload` on the server. Thanks to @sylido, #505.
 - ⚠️ Emit only `error` and `end` when an upload fails. `pause`, `abort`, and `onAbort` now fire only when `abort()` is called.
 - ⚠️ Throw `Meteor.Error 404` from the synchronous `FilesCursor` methods (`get`, `fetch`, `first`, `last`, `next`, `previous`, `hasNext`, `count`, `forEach`, `each`, `map`, `current`, `remove`) and from `FileCursor#with()` and `FileCursor#remove()` on the server. They returned Promises or wrong values before. Use the `*Async` methods.
 - ⚠️ Reject `writeAsync()` and `loadAsync()` with `409` when `opts.fileId` already exists. Before, they overwrote the existing file.
@@ -112,7 +173,7 @@ This release closes several upload and download security holes, fixes the client
 
 - 📔 Add a security guide.
 - 📔 Rename the migration doc to `migration-to-v3.md`.
-- 📔 Rewrite the AWS S3 (`@aws-sdk/client-s3` v3), Dropbox, Google Cloud Storage, GridFS, and `sharp` thumbnail guides with async APIs and correct Range handling.
+- 📔 Rewrite the AWS S3 (`@aws-sdk/client-s3` v3), Dropbox, Google Cloud Storage, GridFS, and `sharp` thumbnail guides with async APIs and correct Range handling. Thanks to @ThaumRystra, #874.
 - 📔 Document `updateAsync`, `countDocuments`, `estimatedDocumentCount`, `serve`, `download`, `allow`/`deny`, the exported helpers, and the `progress` event arguments.
 - 📔 Document upload rules, limits, and the HTTP error body in `about-transports.md`.
 - 📔 Document the event order: `abort()` emits `pause`, then `abort`, and no `end`. A failed upload emits `error`, then `end`. Document that `abort()` does not cancel an EOF or HTTP Start request that is already sent.

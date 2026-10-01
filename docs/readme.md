@@ -8,6 +8,8 @@ Browse [documentation directory](https://github.com/veliovgroup/Meteor-Files/tre
 
 - [About Meteor-Files package](#about)
 - [Security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
+  - [Signed download links](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links) - `createDownloadToken()` and `link(fileRef, version, uriBase, { token })`
+- [Migration to v4](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v4.md)
 - [Migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md)
 - [API](#api)
 - [Examples](#examples)
@@ -76,7 +78,7 @@ Meteor-Files library features and highlights
   - [__See all *FileCursor* methods__](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
 - [`FilesCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md) - Instance of this class is returned from [`.find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) method
   - `fetchAsync()` - {*Promise<object[]>*} - Returns all matching document(s) as an Array
-  - `countDocuments()` - {*Promise<Number>*} - Returns the number of documents that match a query (`countAsync()` is deprecated)
+  - `countDocuments()` - {*Promise<Number>*} - Returns the number of documents that match a query
   - `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query, resolves to a number of removed records
   - `forEachAsync(callback, context)` - {*Promise<FilesCursor>*} - Call `callback` once for each matching document
   - `eachAsync()` - {*Promise<FileCursor[]>*} - Resolves to Array of `FileCursor` made for each document on current Cursor

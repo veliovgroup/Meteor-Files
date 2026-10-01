@@ -15,11 +15,10 @@ const cursor = imagesCollection.find(); // <-- Returns FilesCursor Instance
 
 #### Methods:
 
-On the Server the synchronous methods `get()`, `hasNext()`, `next()`, `previous()`, `fetch()`, `first()`, `last()`, `count()`, `remove()`, `forEach()`, `each()`, `map()`, and `current()` throw `Meteor.Error 404` with a message that names the `*Async` method to use. They work on the Client only. `hasPrevious()`, `observe()`, and `observeChanges()` work on both sides.
+On the Server the synchronous methods `get()`, `next()`, `previous()`, `fetch()`, `first()`, `last()`, `count()`, `remove()`, `forEach()`, `each()`, `map()`, and `current()` throw `Meteor.Error 404` with a message that names the `*Async` method to use. They work on the Client only. `hasPrevious()`, `observe()`, and `observeChanges()` work on both sides.
 
 - [*Client*] `get()` - {*object[]*} - Returns all matching document(s) as an Array. Alias of `.fetch()`
 - `getAsync()` - {*Promise<object[]>*} - Resolves to matching document(s) as an Array. Alias of `.fetchAsync()`
-- __Deprecated__ [*Client*] `hasNext()` - {*boolean*} - Returns `true` if there is next item available on Cursor
 - `hasNextAsync()` - {*Promise<boolean>*} - Resolves to `true` if there is next item available on Cursor
 - [*Client*] `next()` - {*object*|*undefined*} - Returns next available object on Cursor
 - `nextAsync()` - {*Promise<object|undefined>*} - Resolves to next available object on Cursor
@@ -36,10 +35,9 @@ On the Server the synchronous methods `get()`, `hasNext()`, `next()`, `previous(
 - [*Client*] `current()` - {*object*|*undefined*} - Returns current item on Cursor, if available
 - `currentAsync()` - {*Promise<object|undefined>*} - Resolves to current item on Cursor, if available
 - __Deprecated__ [*Client*] `count()` - {*number*} - Returns the number of documents that match a query
-- __Deprecated__ `countAsync()` - {*Promise<number>*} - Resolves to the number of documents that match a query. Use `countDocuments()`
 - `countDocuments(opts: Mongo.CountDocumentsOptions)` - {*Promise<number>*} - Resolves to the number of documents that match a query
-- [*Client*] `remove(callback)` - {*FilesCursor*} - Removes all documents that match a query, [*Client*] only. Callback has `error` argument
-- `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query. Resolves into number of removed records
+- [*Client*] `remove(callback)` - {*FilesCursor*} - Removes all documents that match a query, [*Client*] only. Callback has `error` argument. The client sends one `_id` per server call, so N files take N calls, and the removal is not atomic: if one call fails, files already removed stay removed
+- `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query. Resolves into number of removed records. On the Client it sends one `_id` per server call, so N files take N calls, and the removal is not atomic: if one call fails, files already removed stay removed
 - [*Client*] `forEach(callback, context)` - {*FilesCursor*} - *Same as `forEachAsync` in arguments and context*
 - `forEachAsync(callback, context)` - {*Promise<FilesCursor>*} - Call `callback` once for each matching document, sequentially. The callback can be `async`
   - `callback` - {*Function*} - Function to call. It will be called with three arguments: the `file`, a 0-based index, and cursor itself

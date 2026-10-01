@@ -10,6 +10,8 @@ import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
 import { FilesCollection } from '../server.js';
 import { fixJSONParse } from '../lib.js';
+import { createDownloadToken as signToken } from '../download-token.js';
+import { chunkIdsFromBits } from '../write-stream.js';
 
 const TMP_ROOT = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'mf-security-'));
 let counter = 0;
@@ -30,6 +32,8 @@ const createCollection = (config = {}) => {
     },
     // Keeps the S5 warning out of the test output, S5 tests pass `onBeforeRemove: undefined`
     onBeforeRemove: () => true,
+    // Tests pick the file name on disk through `meta.fsName`: since v4 only the server names files
+    namingFunction: ({ file }) => file?.meta?.fsName,
     ...config,
   });
 };
@@ -49,11 +53,10 @@ const startOpts = (overrides = {}) => {
   const size = overrides.size ?? 8;
   const chunkSize = overrides.chunkSize ?? 1024;
   return {
-    file: { name: 'file.txt', type: 'text/plain', size, meta: {}, ...(overrides.file || {}) },
+    file: { name: 'file.txt', type: 'text/plain', size, meta: overrides.FSName ? { fsName: overrides.FSName } : {}, ...(overrides.file || {}) },
     fileId: overrides.fileId || Random.id(),
     chunkSize,
     fileLength: overrides.fileLength ?? Math.max(1, Math.ceil(size / chunkSize)),
-    ...(overrides.FSName ? { FSName: overrides.FSName } : {}),
   };
 };
 
@@ -314,6 +317,92 @@ describe('Security', function () {
       expect(res.size).to.equal(2048);
     });
 
+    it('keeps the file when another process finishes the upload', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) });
+      const stream = fc._currentUploads[opts.fileId];
+      // This process never sees chunk 2, so waiting for it would end in abort()
+      stream.maxEndRetries = 2;
+      // Another process wrote chunk 2, inserted the document, and marked the record finished
+      await fc.collection.insertAsync({ _id: opts.fileId, name: 'file.txt', path: stream.path, userId: 'userA' });
+      await fc._preCollection.updateAsync({ _id: opts.fileId }, { $set: { isFinished: true } });
+      for (let i = 0; i < 200 && fc._currentUploads[opts.fileId]; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(fc._currentUploads[opts.fileId]).to.equal(undefined);
+      expect(stream.ended).to.equal(true);
+      expect(stream.aborted).to.equal(false);
+      expect(fs.existsSync(stream.path)).to.equal(true);
+    });
+
+    it('persists written chunk ids as a bit set', async function () {
+      const opts = startOpts({ size: 33 * 8, chunkSize: 8 });
+      await call(fc, '_Start', 'userA', opts);
+      expect((await fc._preCollection.findOneAsync(opts.fileId)).chunkBits).to.deep.equal([0, 0]);
+      for (const chunkId of [1, 32, 33]) {
+        await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId, binData: Buffer.alloc(8, chunkId).toString('base64') });
+      }
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(record.chunkBits).to.deep.equal([1 | (1 << 31), 1]);
+      expect(chunkIdsFromBits(record.chunkBits, 33)).to.deep.equal([1, 32, 33]);
+    });
+
+    it('records every bit when chunks of one word are written concurrently', async function () {
+      const opts = startOpts({ size: 40 * 8, chunkSize: 8 });
+      await call(fc, '_Start', 'userA', opts);
+      const ids = Array.from({ length: 40 }, (_, i) => i + 1);
+      await Promise.all(ids.map((chunkId) => call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId, binData: Buffer.alloc(8, chunkId).toString('base64') })));
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(chunkIdsFromBits(record.chunkBits, 40)).to.deep.equal(ids);
+      await simulateRestart(opts.fileId);
+      const res = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      expect(res.size).to.equal(40 * 8);
+    });
+
+    it('resumes from recorded chunk ids, not from the file size', async function () {
+      const opts = startOpts({ size: 3072, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      // Only the last chunk: the file is 3072 bytes long, chunks 1 and 2 are holes
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 3, binData: chunk(99) });
+      await simulateRestart(opts.fileId);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 2, binData: chunk(98) });
+      const stream = fc._currentUploads[opts.fileId];
+      expect([...stream.chunkIds].sort()).to.deep.equal([2, 3]);
+      stream.maxEndRetries = 2;
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }), 503);
+    });
+
+    it('completes after restart once the missing chunks arrive', async function () {
+      const opts = startOpts({ size: 3072, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 3, binData: chunk(99) });
+      await simulateRestart(opts.fileId);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) });
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 2, binData: chunk(98) });
+      const res = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      const doc = await fc.collection.findOneAsync(res._id);
+      expect(fs.readFileSync(doc.path, 'latin1')).to.equal(`${'a'.repeat(1024)}${'b'.repeat(1024)}${'c'.repeat(1024)}`);
+    });
+
+    it('does not count a chunk whose record failed, and keeps the upload', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      sinon.stub(fc, '_recordChunk').resolves(false);
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) }), 503);
+      const stream = fc._currentUploads[opts.fileId];
+      expect(stream.chunkIds.size).to.equal(0);
+      expect(stream.aborted).to.equal(false);
+    });
+
+    it('rejects resume of records without chunkBits (created before 4.0) with 410', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await simulateRestart(opts.fileId);
+      await fc._preCollection.updateAsync({ _id: opts.fileId }, { $unset: { chunkBits: '' } });
+      await expectMeteorError(call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) }), 410);
+    });
+
     it('creates one WriteStream for concurrent resume requests', async function () {
       const opts = startOpts({ size: 2048, chunkSize: 1024 });
       await call(fc, '_Start', 'userA', opts);
@@ -504,6 +593,33 @@ describe('Security', function () {
     });
   });
 
+  describe('protected downloads read the file once', function () {
+    const insertFile = async (fc, _id) => {
+      const path = nodePath.join(fc.storagePath({}), `${_id}.txt`);
+      fs.writeFileSync(path, 'once');
+      await fc.collection.insertAsync({ _id, name: `${_id}.txt`, size: 4, type: 'text/plain', path, versions: { original: { path, size: 4, type: 'text/plain', extension: 'txt' } } });
+    };
+
+    it('reuses the document fetched for the protected function', async function () {
+      const fc = createCollection({ protected(fileObj) { return !!fileObj; } });
+      await insertFile(fc, 'onceFn1');
+      const findOne = sinon.spy(fc.collection, 'findOneAsync');
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/onceFn1/original/onceFn1.txt`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal('once');
+      expect(findOne.callCount).to.equal(1);
+    });
+
+    it('reads once for protected: true', async function () {
+      const fc = createCollection({ protected: true });
+      await insertFile(fc, 'onceBool1');
+      const findOne = sinon.spy(fc.collection, 'findOneAsync');
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/onceBool1/original/onceBool1.txt`, { headers: { 'x-test-user': 'userA' } });
+      expect(res.status).to.equal(200);
+      expect(findOne.callCount).to.equal(1);
+    });
+  });
+
   describe('A2: idempotent EOF', function () {
     let fc;
     before(function () {
@@ -685,6 +801,19 @@ describe('Security', function () {
     });
   });
 
+  describe('EOF reads chunks recorded by other instances', function () {
+    it('gives the stream the chunk ids stored in the upload record', async function () {
+      const fc = createCollection();
+      const _id = `rec${Random.id()}`;
+      const path = nodePath.join(fc.storagePath({}), `${_id}.bin`);
+      const stream = await fc._createStream(_id, path, { fileLength: 2, chunkSize: 4 }, { exclusive: true });
+      expect(await stream.loadRecordedChunkIds()).to.deep.equal([]);
+      await fc._preCollection.insertAsync({ _id, fileLength: 2, chunkBits: [0b11] });
+      expect(await stream.loadRecordedChunkIds()).to.deep.equal([1, 2]);
+      await stream.abort();
+    });
+  });
+
   describe('A2: Start registration and path index', function () {
     it('registers the stream before the upload record is saved', async function () {
       const fc = createCollection();
@@ -835,6 +964,13 @@ describe('Security', function () {
       fc = createCollection();
     });
 
+    it('rejects Start with more than 100000 chunks', async function () {
+      const error = await expectMeteorError(call(fc, '_Start', 'userA', startOpts({ size: 100001, chunkSize: 1 })), 400);
+      expect(error.reason).to.include('Too many chunks');
+      const ok = await call(fc, '_Start', 'userA', startOpts({ size: 100000, chunkSize: 1 }));
+      expect(ok).to.deep.equal({ status: 204 });
+    });
+
     it('rejects Start with invalid chunkSize (0, negative, fractional, NaN, > 16 MiB)', async function () {
       for (const chunkSize of [0, -1, 1.5, NaN, 16 * 1024 * 1024 + 1]) {
         const opts = startOpts({ size: 4 });
@@ -890,18 +1026,25 @@ describe('Security', function () {
     });
   });
 
-  describe('S5: allowClientCode warning', function () {
-    it('warns once when allowClientCode is on and onBeforeRemove is missing', function () {
-      const warn = sinon.stub(console, 'warn');
-      createCollection({ onBeforeRemove: undefined });
-      expect(warn.calledOnce).to.equal(true);
-      expect(String(warn.firstCall.args[0])).to.include('onBeforeRemove');
+  describe('S5: allowClientCode', function () {
+    it('defaults to false and the remove method answers 405', async function () {
+      const fc = createCollection({ allowClientCode: undefined });
+      expect(fc.allowClientCode).to.equal(false);
+      await expectMeteorError(call(fc, '_Remove', 'userA', 'someId'), 405);
     });
 
-    it('does not warn when onBeforeRemove is set or allowClientCode is false', function () {
+    it('warns once when allowClientCode is true and onBeforeRemove is missing', function () {
       const warn = sinon.stub(console, 'warn');
-      createCollection({ onBeforeRemove: () => true });
-      createCollection({ onBeforeRemove: undefined, allowClientCode: false });
+      createCollection({ allowClientCode: true, onBeforeRemove: undefined });
+      expect(warn.calledOnce).to.equal(true);
+      expect(String(warn.firstCall.args[0])).to.include('onBeforeRemove');
+      expect(String(warn.firstCall.args[0])).to.not.include('v4');
+    });
+
+    it('does not warn when onBeforeRemove is set or allowClientCode is not true', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ allowClientCode: true, onBeforeRemove: () => true });
+      createCollection({ onBeforeRemove: undefined });
       expect(warn.called).to.equal(false);
     });
   });
@@ -968,8 +1111,8 @@ describe('Security', function () {
     });
   });
 
-  describe('S8: reserved client fields', function () {
-    it('ignores reserved keys sent in opts.file and keeps user keys', async function () {
+  describe('S8: client file fields allow-list', function () {
+    it('keeps only name, type, size, and meta from opts.file', async function () {
       const fc = createCollection();
       const opts = startOpts({
         size: 4,
@@ -985,10 +1128,13 @@ describe('Security', function () {
           isImage: true,
           mime: 'text/html',
           'mime-type': 'text/html',
-          custom: 'keep-me',
+          custom: 'dropped',
+          meta: { custom: 'kept' },
         },
       });
       await call(fc, '_Start', 'userA', opts);
+      const record = await fc._preCollection.findOneAsync(opts.fileId);
+      expect(Object.keys(record.file).sort()).to.deep.equal(['meta', 'name', 'size', 'type']);
       await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
       await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
       const doc = await fc.collection.findOneAsync(opts.fileId);
@@ -999,7 +1145,8 @@ describe('Security', function () {
       expect(doc.extension).to.equal('txt');
       expect(doc.isImage).to.equal(false);
       expect(doc.mime).to.equal('text/plain');
-      expect(doc.custom).to.equal('keep-me');
+      expect(doc).to.not.have.property('custom');
+      expect(doc.meta).to.deep.equal({ custom: 'kept' });
       expect(fc._isPathInside(fc.storagePath({}), doc.path)).to.equal(true);
       expect(doc.versions.original.path).to.equal(doc.path);
     });
@@ -1257,7 +1404,7 @@ describe('Security', function () {
       const fc = createCollection();
       const path = nodePath.join(fc.storagePath({}), 'cd.txt');
       fs.writeFileSync(path, 'x');
-      const res = await serveRequest(fc, { vRef: { name: 'naïve (1)\'s *"f".txt', size: 1, path } });
+      const res = await serveRequest(fc, { vRef: { name: 'naïve (1)\'s *"f".txt', size: 1, path, type: 'text/plain' } });
       expect(res.headers['content-disposition']).to.equal('inline; filename="na_ve (1)\'s *_f_.txt"; filename*=UTF-8\'\'na%C3%AFve%20%281%29%27s%20%2A%22f%22.txt');
     });
 
@@ -1265,7 +1412,7 @@ describe('Security', function () {
       const fc = createCollection();
       const path = nodePath.join(fc.storagePath({}), 'cd3.txt');
       fs.writeFileSync(path, 'x');
-      const res = await serveRequest(fc, { vRef: { name: '100%25 done.txt', size: 1, path } });
+      const res = await serveRequest(fc, { vRef: { name: '100%25 done.txt', size: 1, path, type: 'text/plain' } });
       expect(res.headers['content-disposition']).to.equal('inline; filename="100_25 done.txt"; filename*=UTF-8\'\'100%2525%20done.txt');
     });
 
@@ -1275,6 +1422,53 @@ describe('Security', function () {
       fs.writeFileSync(path, 'x');
       const res = await serveRequest(fc, { vRef: { size: 1, path }, fileRef: { _id: 'abc' }, query: { download: 'true' } });
       expect(res.headers['content-disposition']).to.equal('attachment');
+    });
+  });
+
+  describe('Content-Disposition by type', function () {
+    let fc;
+    let path;
+    before(function () {
+      fc = createCollection();
+      path = nodePath.join(fc.storagePath({}), 'cd-type.bin');
+      fs.writeFileSync(path, 'x');
+    });
+
+    const dispositionOf = async (type, extra = {}) => {
+      const res = await serveRequest(fc, { vRef: { name: 'f.bin', size: 1, path, type }, ...extra });
+      return res.headers['content-disposition'].split(';')[0];
+    };
+
+    [
+      ['image/png', 'inline'],
+      ['IMAGE/JPEG', 'inline'],
+      ['image/svg+xml', 'attachment'],
+      ['video/mp4', 'inline'],
+      ['audio/mpeg', 'inline'],
+      ['application/pdf', 'inline'],
+      ['text/plain', 'inline'],
+      ['text/plain; charset=utf-8', 'inline'],
+      ['text/html', 'attachment'],
+      ['application/json', 'attachment'],
+      ['application/javascript', 'attachment'],
+      ['application/octet-stream', 'attachment'],
+      [undefined, 'attachment'],
+    ].forEach(([type, expected]) => {
+      it(`serves ${type} as ${expected}`, async function () {
+        expect(await dispositionOf(type)).to.equal(expected);
+      });
+    });
+
+    it('forces attachment with ?download=true', async function () {
+      expect(await dispositionOf('image/png', { query: { download: 'true' } })).to.equal('attachment');
+    });
+
+    it('lets responseHeaders override it', async function () {
+      const custom = createCollection({ responseHeaders: { 'Content-Disposition': 'inline' } });
+      const p = nodePath.join(custom.storagePath({}), 'cd-override.html');
+      fs.writeFileSync(p, 'x');
+      const res = await serveRequest(custom, { vRef: { name: 'o.html', size: 1, path: p, type: 'text/html' } });
+      expect(res.headers['content-disposition']).to.equal('inline');
     });
   });
 
@@ -1312,10 +1506,316 @@ describe('Security', function () {
       expect(res.headers['x-content-type-options']).to.equal('nosniff');
     });
 
-    it('is off by default and validated', async function () {
+    it('is on by default, can be turned off, and is validated', async function () {
       const fc = createCollection();
-      expect(fc.nosniff).to.equal(false);
+      expect(fc.nosniff).to.equal(true);
+      const path = nodePath.join(fc.storagePath({}), 'ns-default.txt');
+      fs.writeFileSync(path, 'x');
+      const on = await serveRequest(fc, { vRef: { name: 'ns-default.txt', size: 1, path } });
+      expect(on.headers['x-content-type-options']).to.equal('nosniff');
+
+      const off = createCollection({ nosniff: false });
+      const offPath = nodePath.join(off.storagePath({}), 'ns-off.txt');
+      fs.writeFileSync(offPath, 'x');
+      const res = await serveRequest(off, { vRef: { name: 'ns-off.txt', size: 1, path: offPath } });
+      expect(res.headers).to.not.have.property('x-content-type-options');
       expect(() => createCollection({ nosniff: 'yes' })).to.throw();
+    });
+  });
+
+  describe('Cache-Control default', function () {
+    const cacheHeader = async (fc, name) => {
+      const path = nodePath.join(fc.storagePath({}), name);
+      fs.writeFileSync(path, 'x');
+      return (await serveRequest(fc, { vRef: { name, size: 1, path } })).headers['cache-control'];
+    };
+
+    it('is public for collections without protected', async function () {
+      expect(await cacheHeader(createCollection(), 'cc-public.txt')).to.equal('public, max-age=31536000, s-maxage=31536000');
+    });
+
+    it('is private for protected collections', async function () {
+      expect(await cacheHeader(createCollection({ protected: () => true }), 'cc-fn.txt')).to.equal('private, max-age=31536000');
+      sinon.stub(console, 'warn');
+      expect(await cacheHeader(createCollection({ protected: true }), 'cc-true.txt')).to.equal('private, max-age=31536000');
+    });
+
+    it('keeps an explicit cacheControl on protected collections', async function () {
+      expect(await cacheHeader(createCollection({ protected: () => true, cacheControl: 'no-store' }), 'cc-own.txt')).to.equal('no-store');
+    });
+  });
+
+  describe('_Remove accepts only a String _id', function () {
+    it('rejects an object selector with a Match error', async function () {
+      const fc = createCollection({ allowClientCode: true });
+      let caught;
+      try {
+        await call(fc, '_Remove', 'userA', { _id: { $ne: null } });
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught?.errorType).to.equal('Match.Error');
+    });
+
+    it('removes one file by String _id', async function () {
+      const fc = createCollection({ allowClientCode: true });
+      const fileObj = await fc.writeAsync(Buffer.from('bye'), { name: 'bye.txt', type: 'text/plain' });
+      expect(await call(fc, '_Remove', 'userA', fileObj._id)).to.equal(1);
+      expect(await fc.collection.findOneAsync(fileObj._id)).to.equal(undefined);
+      expect(fs.existsSync(fileObj.path)).to.equal(false);
+    });
+  });
+
+  describe('protected: true deprecation', function () {
+    it('warns once per collection for protected: true', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ protected: true });
+      const calls = warn.getCalls().filter((c) => String(c.args[0]).includes('"protected: true" is deprecated'));
+      expect(calls).to.have.length(1);
+    });
+
+    it('does not warn for a protected function', function () {
+      const warn = sinon.stub(console, 'warn');
+      createCollection({ protected: () => true });
+      expect(warn.called).to.equal(false);
+    });
+  });
+
+  describe('naming is server-only', function () {
+    it('ignores FSName sent over DDP', async function () {
+      const fc = createCollection();
+      const opts = { ...startOpts({ size: 4 }), FSName: 'client-chosen' };
+      await call(fc, '_Start', 'userA', opts);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal(`${opts.fileId}.txt`);
+    });
+
+    it('ignores FSName sent over HTTP', async function () {
+      const fc = createCollection();
+      const opts = { ...startOpts({ size: 4 }), FSName: 'client-chosen-http' };
+      const res = await httpRequest(`${fc.downloadRoute}/${fc.collectionName}/__upload`, {
+        method: 'POST',
+        headers: { 'x-start': '1', 'x-test-user': 'userA', 'content-type': 'application/json' },
+        body: JSON.stringify(opts),
+      });
+      expect(res.status).to.equal(204);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal(`${opts.fileId}.txt`);
+    });
+
+    it('calls namingFunction with { file, fileId, userId } on Start', async function () {
+      const naming = sinon.spy(() => 'named');
+      const fc = createCollection({ namingFunction: naming });
+      const opts = startOpts({ size: 4, file: { meta: { a: 1 } } });
+      await call(fc, '_Start', 'userA', opts);
+      const [ctx] = naming.firstCall.args;
+      expect(Object.keys(ctx).sort()).to.deep.equal(['file', 'fileId', 'userId']);
+      expect(ctx.fileId).to.equal(opts.fileId);
+      expect(ctx.userId).to.equal('userA');
+      expect(ctx.file.name).to.equal('file.txt');
+      expect(ctx.file.type).to.equal('text/plain');
+      expect(ctx.file.size).to.equal(4);
+      expect(ctx.file.meta).to.deep.equal({ a: 1 });
+      expect(ctx.file).to.not.have.property('path');
+      expect(naming.firstCall.thisValue).to.equal(fc);
+      expect(nodePath.basename(fc._currentUploads[opts.fileId].path)).to.equal('named.txt');
+    });
+  });
+
+  describe('stored type comes from the file content', function () {
+    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+
+    const upload = async (fc, data, file) => {
+      const opts = startOpts({ size: data.length, file });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: data.toString('base64') });
+      return call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+    };
+
+    it('stores the detected type and flags, not the client type', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('image/png');
+      expect(res.isImage).to.equal(true);
+      expect(res.isText).to.equal(false);
+      const doc = await fc.collection.findOneAsync(res._id);
+      expect(doc.mime).to.equal('image/png');
+      expect(doc['mime-type']).to.equal('image/png');
+      expect(doc.versions.original.type).to.equal('image/png');
+    });
+
+    it('stores text/plain for text sent as an image', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from('<svg onload="alert(1)"/>'), { name: 'x.svg', type: 'image/svg+xml' });
+      expect(res.type).to.equal('text/plain');
+      expect(res.isImage).to.equal(false);
+      expect(res.isText).to.equal(true);
+    });
+
+    it('stores text/plain for a script labeled text/html', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from('<script>alert(1)</script>'), { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('text/plain');
+      expect(res.isText).to.equal(true);
+    });
+
+    it('stores application/octet-stream for unknown binary data', async function () {
+      const fc = createCollection();
+      const res = await upload(fc, Buffer.from([0, 1, 2, 3]), { name: 'x.png', type: 'image/png' });
+      expect(res.type).to.equal('application/octet-stream');
+      expect(res.isImage).to.equal(false);
+    });
+
+    it('keeps the client type with trustClientMimeType: true', async function () {
+      const fc = createCollection({ trustClientMimeType: true });
+      const res = await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(res.type).to.equal('text/html');
+    });
+
+    it('passes the client type to onBeforeUpload', async function () {
+      const seen = [];
+      const fc = createCollection({ onBeforeUpload(file) { seen.push(file.type); return true; } });
+      await upload(fc, PNG, { name: 'x.html', type: 'text/html' });
+      expect(seen.length).to.be.greaterThan(0);
+      expect(seen.every((type) => type === 'text/html')).to.equal(true);
+    });
+
+    it('validates trustClientMimeType', function () {
+      expect(createCollection().trustClientMimeType).to.equal(false);
+      expect(() => createCollection({ trustClientMimeType: 'yes' })).to.throw();
+    });
+  });
+
+  describe('signed download tokens', function () {
+    const SECRET = 'k'.repeat(40);
+    const ownerOnly = function (fileObj) {
+      return !!fileObj && fileObj.userId === this.userId;
+    };
+
+    const setup = async (config = {}) => {
+      const fc = createCollection({ downloadTokenSecret: SECRET, protected: ownerOnly, ...config });
+      const _id = `tok${Random.id(6)}`;
+      const path = nodePath.join(fc.storagePath({}), `${_id}.txt`);
+      fs.writeFileSync(path, 'secret');
+      await fc.collection.insertAsync({ _id, name: `${_id}.txt`, size: 6, type: 'text/plain', extension: 'txt', userId: 'owner', path, _downloadRoute: fc.downloadRoute, _collectionName: fc.collectionName, versions: { original: { path, size: 6, type: 'text/plain', extension: 'txt' } } });
+      const doc = await fc.collection.findOneAsync(_id);
+      return { fc, doc, url: (token) => fc.link(doc, 'original', '/', { token }) };
+    };
+
+    it('serves the file to the token user without a session', async function () {
+      const { fc, doc, url } = await setup();
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner', expiresIn: 60 })));
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal('secret');
+    });
+
+    it('passes the token user to protected as this.userId and this.downloadToken', async function () {
+      const seen = [];
+      const { fc, doc, url } = await setup({
+        protected(fileObj) {
+          seen.push({ userId: this.userId, token: this.downloadToken });
+          return !!fileObj && fileObj.userId === this.userId;
+        },
+      });
+      const res = await httpRequest(url(fc.createDownloadToken(doc._id, { userId: 'intruder' })));
+      expect(res.status).to.equal(401);
+      expect(seen[0].userId).to.equal('intruder');
+      expect(seen[0].token.userId).to.equal('intruder');
+    });
+
+    it('lets protected: true accept a token with a userId', async function () {
+      const { fc, doc, url } = await setup({ protected: true });
+      expect((await httpRequest(url(fc.createDownloadToken(doc, { userId: 'someone' })))).status).to.equal(200);
+      expect((await httpRequest(url(fc.createDownloadToken(doc)))).status).to.equal(401);
+    });
+
+    it('answers 403 for a tampered, expired, or foreign token', async function () {
+      const { fc, doc, url } = await setup();
+      const good = fc.createDownloadToken(doc, { userId: 'owner' });
+      const [goodExp, goodUser, goodSig] = good.split('.');
+      const tampered = `${goodExp}.${goodUser}.${goodSig[0] === 'A' ? 'B' : 'A'}${goodSig.slice(1)}`;
+      const expired = signToken(SECRET, { collectionName: fc.collectionName, _id: doc._id, version: 'original', userId: 'owner', exp: Math.floor(Date.now() / 1000) - 5 });
+      const otherFile = fc.createDownloadToken('another1', { userId: 'owner' });
+      const otherVersion = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
+      for (const token of [tampered, expired, otherFile, otherVersion, 'garbage']) {
+        const res = await httpRequest(url(token));
+        expect(res.status, token).to.equal(403);
+        expect(res.body).to.equal('Access denied!');
+      }
+    });
+
+    it('rejects a token minted by another collection for the same _id and version', async function () {
+      const { fc: fcA, doc } = await setup();
+      const fcB = createCollection({ downloadTokenSecret: SECRET, protected: ownerOnly });
+      await fcB.collection.insertAsync({ ...doc, _downloadRoute: fcB.downloadRoute, _collectionName: fcB.collectionName });
+      const docB = await fcB.collection.findOneAsync(doc._id);
+      const urlB = (token) => fcB.link(docB, 'original', '/', { token });
+      expect((await httpRequest(urlB(fcA.createDownloadToken(doc, { userId: 'owner' })))).status).to.equal(403);
+      expect((await httpRequest(urlB(fcB.createDownloadToken(doc, { userId: 'owner' })))).status).to.equal(200);
+    });
+
+    it('sends a private Cache-Control that ends with the token', async function () {
+      const { fc, doc, url } = await setup();
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner', expiresIn: 120 })));
+      expect(res.status).to.equal(200);
+      const match = /^private, max-age=(\d+)$/.exec(res.headers['cache-control']);
+      expect(match, res.headers['cache-control']).to.not.equal(null);
+      expect(Number(match[1])).to.be.within(118, 120);
+    });
+
+    it('keeps a Cache-Control set by responseHeaders on token downloads', async function () {
+      const { fc, doc, url } = await setup({ responseHeaders: { 'Cache-Control': 'no-store' } });
+      const res = await httpRequest(url(fc.createDownloadToken(doc, { userId: 'owner' })));
+      expect(res.status).to.equal(200);
+      expect(res.headers['cache-control']).to.equal('no-store');
+    });
+
+    it('answers 404 for a token version the file does not have', async function () {
+      const { fc, doc } = await setup();
+      const token = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
+      const res = await httpRequest(fc.link(doc, 'thumbnail', '/', { token }));
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('File Not Found :(');
+    });
+
+    it('gives an invalid token no user, not the cookie user', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      const httpObj = { request: { headers: { 'x-test-user': 'u1' } }, params: { _id: 'id1', version: 'original', query: { token: 'garbage' } } };
+      expect(fc._getHttpUser(httpObj).userId).to.equal(null);
+      expect(fc._getHttpUser({ ...httpObj, downloadToken: undefined, params: { ...httpObj.params, query: {} } }).userId).to.equal('u1');
+    });
+
+    it('ignores the token when no secret is set', async function () {
+      const { doc, url } = await setup({ downloadTokenSecret: undefined });
+      expect(doc).to.be.an('object');
+      expect((await httpRequest(url('garbage'))).status).to.equal(401);
+    });
+
+    it('ignores the token on public collections', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET, public: true, downloadRoute: `/pub${Random.id(6)}` });
+      const httpObj = { params: { _id: 'id1', version: 'original', query: { token: 'garbage' } } };
+      expect(fc._readDownloadToken(httpObj)).to.equal(null);
+      expect(fc._getHttpUser({ ...httpObj, request: { headers: { 'x-test-user': 'u1' } } }).userId).to.equal('u1');
+    });
+
+    it('validates the secret and createDownloadToken() input', function () {
+      expect(() => createCollection({ downloadTokenSecret: 'short' })).to.throw();
+      expect(() => createCollection({ downloadTokenSecret: 42 })).to.throw();
+      const noSecret = createCollection();
+      expect(() => noSecret.createDownloadToken('id1')).to.throw(Meteor.Error);
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      expect(() => fc.createDownloadToken('id1', { expiresIn: 0 })).to.throw();
+      expect(() => fc.createDownloadToken('id1', { expiresIn: 1.5 })).to.throw();
+      expect(() => fc.createDownloadToken({})).to.throw();
+      for (const [ref, opts] of [['id\n1', {}], ['id1', { version: 'original\nx' }], ['id1', { userId: 'u\n1' }]]) {
+        expect(() => fc.createDownloadToken(ref, opts)).to.throw(Meteor.Error).with.property('error', 400);
+      }
+      expect(fc.createDownloadToken('id1')).to.match(/^\d+\.\.[A-Za-z0-9_-]+$/);
+    });
+
+    it('keeps the secret out of enumerable properties', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      expect(Object.keys(fc)).to.not.include('downloadTokenSecret');
+      expect(Object.values(fc).includes(SECRET)).to.equal(false);
+      expect(fc.downloadTokenSecret).to.equal(SECRET);
     });
   });
 
@@ -1332,14 +1832,12 @@ describe('Security', function () {
       }
     });
 
-    it('_getUserId: object sessions ignore inherited keys', function () {
+    it('_getUserId: throws on plain object sessions (Map only since v4)', function () {
       const fc = createCollection();
       const original = Meteor.server.sessions;
       try {
         Meteor.server.sessions = { tok: { userId: 'u2' } };
-        expect(fc._getUserId('tok')).to.equal('u2');
-        expect(fc._getUserId('constructor')).to.equal(null);
-        expect(fc._getUserId('__proto__')).to.equal(null);
+        expect(() => fc._getUserId('tok')).to.throw('incompatible');
       } finally {
         Meteor.server.sessions = original;
       }

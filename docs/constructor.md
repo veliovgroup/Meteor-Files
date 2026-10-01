@@ -112,7 +112,7 @@
         Server
       </td>
       <td>
-        Time in seconds, during upload may be continued, default 3 hours (10800 seconds)
+        Time in seconds, during upload may be continued, default 3 hours (10800 seconds). Unfinished uploads resume after a server restart within this time: the server records each written chunk
       </td>
       <td>
         <code>10800</code> (3 hours)
@@ -147,7 +147,7 @@
         Set <code>Cache-Control</code> header
       </td>
       <td>
-        <code>public, max-age=31536000, s-maxage=31536000</code>
+        <code>private, max-age=31536000</code> when <code>protected</code> is set, otherwise <code>public, max-age=31536000, s-maxage=31536000</code>
       </td>
       <td></td>
     </tr>
@@ -165,7 +165,7 @@
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#default-function">Default <em>Function</em></a>
       </td>
       <td>
-        An <em>Object</em> sets the same headers on every response. A <em>Function</em> receives <code>(responseCode, fileRef, versionRef, version, http)</code> and returns an <em>Object</em> of headers. We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
+        An <em>Object</em> sets the same headers on every response. A <em>Function</em> receives <code>(responseCode, fileRef, versionRef, version, http)</code> and returns an <em>Object</em> of headers, or a <em>Promise</em> that resolves to one. We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
       </td>
     </tr>
     <tr>
@@ -214,7 +214,7 @@
         <code>524288</code> (512 KB)
       </td>
       <td>
-        The constructor rounds this option down to a multiple of 8 (at least 8 on the client). The server accepts upload chunk sizes from <code>1</code> byte to <code>16777216</code> (16 MiB) and rejects larger values with <code>400</code>. The client reduces larger values to the server maximum. Over HTTP, a chunk request body (base64 of <code>chunkSize</code> plus 4 KiB) larger than the limit gets <code>413</code>. Start requests (including <code>meta</code>) are limited to 1 MiB and EOF requests to 64 KiB
+        The constructor rounds this option down to a multiple of 8 (at least 8 on the client). The server accepts upload chunk sizes from <code>1</code> byte to <code>16777216</code> (16 MiB) and rejects larger values with <code>400</code>. The client reduces larger values to the server maximum. Over HTTP, a chunk request body (base64 of <code>chunkSize</code> plus 4 KiB) larger than the limit gets <code>413</code>. Start requests (including <code>meta</code>) are limited to 1 MiB and EOF requests to 64 KiB. An upload has at most 100000 chunks. The client raises the chunk size of larger files to fit (up to 16 MiB), and the server rejects Start with more chunks with <code>400</code>
       </td>
     </tr>
     <tr>
@@ -222,18 +222,16 @@
         <code>config.namingFunction</code> {<em>Function</em>}
       </td>
       <td>
-        Isomorphic
+        Server
       </td>
       <td>
-        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>. The server sanitizes each path segment (<code>/</code> separates segments, <code>.</code> and <code>..</code> are dropped) and the result must stay inside <code>storagePath</code>. Upload start returns <code>409</code> if a file already exists at that path
+        Returns the file name on disk, without extension. Called as <code>namingFunction({ file, fileId, userId })</code> with <code>this</code> set to the collection, on upload Start, in <code>writeAsync()</code>, and in <code>loadAsync()</code>. <code>file</code> differs per call. On upload Start it holds <code>name</code>, <code>type</code>, <code>size</code>, and <code>meta</code> as sent by the uploader (not verified), plus the server-computed <code>extension</code>, <code>ext</code>, <code>_id</code>, and <code>userId</code>. In <code>writeAsync()</code> and <code>loadAsync()</code> it holds <code>name</code>, <code>type</code>, and <code>meta</code> from the call options, and only <code>writeAsync()</code> adds <code>size</code>. May return a Promise. <b>Note: file extension appended to returned value</b>. The server sanitizes each path segment (<code>/</code> separates segments, <code>.</code> and <code>..</code> are dropped) and the result must stay inside <code>storagePath</code>. Upload start returns <code>409</code> if a file already exists at that path
       </td>
       <td>
         <code>false</code>
       </td>
       <td>
-        Primarily sets file name on <code>FS</code><br />
-        if <code>namingFunction</code> is not set<br />
-        <code>FS</code>-name is equal to file's record <code>_id</code>
+        Without it, or when it returns an empty value, the name on disk is the file <code>_id</code>. The client ignores this option and logs a warning
       </td>
     </tr>
     <tr>
@@ -371,7 +369,7 @@
         <code>false</code>
       </td>
       <td>
-        If <code>true</code> - files will be served to any <em>signed-in</em> user, the check does not compare the user with the file's owner (see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>), if <code>function()</code> - you're able to check visitor's permissions in your own way.<br>
+        <code>true</code> is deprecated since v4 and will be removed in v5. It allows any <em>signed-in</em> user to download any file, the check does not compare the user with the file's owner (see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>). Pass a function to check visitor's permissions in your own way.<br>
         <ul>
           <li>
             <strong>return</strong> <code>true</code> to continue
@@ -463,6 +461,7 @@
             <strong>return</strong> <code>false</code> to abort or {<em>String</em>} to abort upload with message
           </li>
         </ul>
+        <p><code>file.type</code> is the type the uploader sent and is not verified</p>
         <p><del><i>note: Because sending <code>meta</code> data as part of every chunk would hit the performance, <code>meta</code> is always empty ({}) except on the first chunk (chunkId=1 or chunkId=-1) and on eof (eof=true or chunkId=-1)</i></del> (<i>Fixed</i>. Since <code>v1.6.0</code> full file object is available in <code>onBeforeUpload</code> callback)</p>
       </td>
     </tr>
@@ -616,10 +615,10 @@
         Isomorphic
       </td>
       <td>
-        Allow use <code>remove()</code> method on client
+        Allow clients to call <code>remove()</code> and <code>removeAsync()</code> with one file <code>_id</code>. Set <code>onBeforeRemove</code> when you turn it on
       </td>
       <td>
-        <code>true</code>
+        <code>false</code>
       </td>
       <td></td>
     </tr>
@@ -833,10 +832,61 @@
         Adds the <code>X-Content-Type-Options: nosniff</code> header to file responses
       </td>
       <td>
+        <code>true</code>
+      </td>
+      <td>
+        Set <code>false</code> only when a proxy in front of the app adds this header
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.trustClientMimeType</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Store the mime type the uploader sent. When <code>false</code> the server reads the first 4100 bytes of the file and stores the detected type, the uploader's type for UTF-8 text when it is <code>text/plain</code>, <code>text/csv</code>, <code>text/markdown</code>, <code>text/tab-separated-values</code>, <code>text/calendar</code>, <code>text/vtt</code>, or <code>application/json</code> (otherwise <code>text/plain</code>), or <code>application/octet-stream</code>. Also applies to <code>writeAsync()</code>, <code>loadAsync()</code>, and <code>addFile()</code> without an explicit <code>type</code>
+      </td>
+      <td>
         <code>false</code>
       </td>
       <td>
-        Will default to <code>true</code> in v4. Enable it now, as <code>Content-Type</code> comes from the type the uploader sent
+        <code>onBeforeUpload</code> sees the type the uploader sent, which is not verified. <code>isImage</code>, <code>isVideo</code>, and the other flags follow the stored type
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.downloadTokenSecret</code> {<em>String</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Secret for signed download links, at least 32 characters. <code>createDownloadToken(fileRef, { version, userId, expiresIn })</code> returns a token for <code>link(fileRef, version, uriBase, { token })</code>. The token opens one file version in this collection only. A valid token sets the request user to its <code>userId</code> for <code>protected</code> and <code>downloadCallback</code>. An invalid or expired token gets <code>403</code>
+      </td>
+      <td>
+        Not set: <code>?token=</code> is ignored
+      </td>
+      <td>
+        Load it from <code>Meteor.settings</code>. Every instance with the same secret accepts the token, so it works without sticky sessions
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.storage</code> {<em>Object</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Storage adapter with <code>put(fileRef, versionName, localPath, { source })</code>, <code>createReadStream(fileRef, versionName, { start, end })</code> (inclusive <code>end</code>), <code>remove(fileRef, versionName)</code>, and optional <code>stat(fileRef, versionName)</code>. Uploads always write chunks to <code>storagePath</code> first. <code>put()</code> runs before the document insert and <code>onAfterUpload</code>, and its result is stored at <code>versions.&lt;name&gt;.meta.storage</code>. <code>source</code> is <code>'upload'</code>, <code>'write'</code> (<code>writeAsync()</code>), <code>'load'</code> (<code>loadAsync()</code>), or <code>'addFile'</code>. An <code>addFile</code> file belongs to the caller, so an adapter must not delete it. <code>serve()</code> streams through <code>createReadStream()</code>, <code>removeAsync()</code> and <code>unlinkAsync()</code> call <code>remove()</code>. <code>interceptDownload</code> still runs first. Without <code>stat()</code>, <code>download()</code> can not answer <code>404</code> or apply <code>integrityCheck</code> before streaming
+      </td>
+      <td>
+        <code>new FSStorage()</code>
+      </td>
+      <td>
+        Built in: <code>FSStorage</code> and <code>new GridFSStorage({ bucketName })</code>, both exported from <code>meteor/ostrio:files</code> on the server only. In shared code, use <code>storage: Meteor.isServer ? new GridFSStorage() : undefined</code>. <code>GridFSStorage</code> deletes the local file after <code>put()</code> for uploads, <code>writeAsync()</code>, and <code>loadAsync()</code>, and keeps the file passed to <code>addFile()</code>. S3: see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md">AWS S3 integration</a>
       </td>
     </tr>
     <tr>
@@ -1078,10 +1128,9 @@ const imagesCollection = new FilesCollection({
     }
     return false;
   },
-  namingFunction(file) {
-    // MAKE SURE namingFunction IS SET ON Server
-    // OVERWRITE Client's namingFunction FOR SECURITY REASONS AGAINST REVERSE-ENGINEERING ACTIONS
-    return helpers.sanitize(file.fileId);
+  // Server only: the client ignores this option
+  namingFunction({ fileId, userId }) {
+    return `${helpers.sanitize(userId || 'anonymous')}/${fileId}`;
   },
 });
 

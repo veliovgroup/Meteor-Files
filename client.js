@@ -4,7 +4,8 @@ import { Tracker } from 'meteor/tracker';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 import { UploadInstance } from './upload.js';
-import FilesCollectionCore from './core.js';
+import FilesCollectionCore, { SELECTOR_PATTERN } from './core.js';
+import { FileCursor } from './cursor.js';
 import { formatFileURL, helpers } from './lib.js';
 
 const NOOP = () => { };
@@ -102,7 +103,7 @@ const watchTokenCookie = (connection, setCookie, accounts) => {
   }
 };
 
-const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
+const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
 
 /**
  * @locus Client
@@ -116,9 +117,8 @@ const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQuerySt
  * @param config.downloadRoute {string} - [anywhere] server route used to retrieve files
  * @param config.collection {Mongo.Collection} - [anywhere] mongo collection instance
  * @param config.collectionName {string} - [anywhere] collection name
- * @param config.namingFunction {function} - [anywhere] function that returns a string
  * @param config.onBeforeUpload {function} - [anywhere] function executed on server after receiving each chunk and on client before starting upload; return `true` to continue, `false` or `string` (error message) to abort
- * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client
+ * @param config.allowClientCode {boolean} - [anywhere] allow to run remove from client; default: false
  * @param config.onbeforeunloadMessage {string|function} - [client] message shown to user when closing window/tab during upload
  * @param config.disableUpload {boolean} - disable file upload; useful for server-only solutions
  * @param config.disableSetTokenCookie {boolean} - disable cookie setting; useful when using multiple file collections or custom authorization
@@ -171,6 +171,11 @@ class FilesCollection extends FilesCollectionCore {
     this.collection.filesCollection = this;
     check(this.collectionName, String);
 
+    if (config && config.namingFunction !== undefined) {
+      // eslint-disable-next-line no-console
+      console.warn(`[FilesCollection.${this.collectionName}] "namingFunction" is server-only since v4 and is ignored on the client. Set it in the server constructor.`);
+    }
+
     if (this.public && !this.downloadRoute) {
       throw new Meteor.Error(500, `[FilesCollection.${this.collectionName}]: "downloadRoute" must be precisely provided on "public" collections! Note: "downloadRoute" must be equal or be inside of your web/proxy-server (relative) root.`);
     }
@@ -189,16 +194,12 @@ class FilesCollection extends FilesCollectionCore {
 
     this.downloadRoute = this.downloadRoute.replace(/\/$/, '');
 
-    if (!helpers.isFunction(this.namingFunction)) {
-      this.namingFunction = false;
-    }
-
     if (!helpers.isFunction(this.onBeforeUpload)) {
       this.onBeforeUpload = false;
     }
 
     if (!helpers.isBoolean(this.allowClientCode)) {
-      this.allowClientCode = true;
+      this.allowClientCode = false;
     }
 
     if (!this.ddp) {
@@ -244,7 +245,6 @@ class FilesCollection extends FilesCollectionCore {
     check(this.downloadRoute, String);
     check(this.disableUpload, Boolean);
     /* eslint-disable new-cap */
-    check(this.namingFunction, Match.OneOf(false, Function));
     check(this.onBeforeUpload, Match.OneOf(false, Function));
     /* eslint-enable new-cap */
     check(this.allowClientCode, Boolean);
@@ -304,6 +304,26 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     return result;
+  }
+
+  /**
+   * Finds and returns a FileCursor for a matching document.
+   * @locus Client
+   * @memberOf FilesCollection
+   * @name findOne
+   * @param {MeteorFilesSelector} [selector={}] - Mongo-style selector
+   * @param {MeteorFilesOptions} [options] - Mongo query options
+   * @returns {FileCursor|null} A FileCursor instance, or null if not found
+   */
+  findOne(selector = {}, options) {
+    this._debug(`[FilesCollection] [findOne(${JSON.stringify(selector)}, ${JSON.stringify(options)})]`);
+    /* eslint-disable new-cap */
+    check(selector, SELECTOR_PATTERN);
+    check(options, Match.Optional(Object));
+    /* eslint-enable new-cap */
+
+    const doc = this.collection.findOne(selector, options);
+    return doc ? new FileCursor(doc, this) : null;
   }
 
   /**
@@ -389,20 +409,19 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Client
    * @memberOf FilesCollection
    * @name remove
-   * @param {MeteorFilesSelector} selector - mongo-style selector (see http://docs.meteor.com/api/collections.html#selectors)
+   * @param {string} _id - `_id` of the file to remove
    * @param {function(error, number): void} callback - callback with (error, number) arguments
-   * @summary Removes documents from the collection
+   * @summary Removes one file from the collection
    * @returns {FilesCollection} Instance
    */
-  remove(selector = {}, callback) {
-    this._debug(`[FilesCollection] [remove(${JSON.stringify(selector)})]`);
-    /* eslint-disable new-cap */
-    check(selector, Match.OneOf(Object, String));
+  remove(_id, callback) {
+    this._debug(`[FilesCollection] [remove(${JSON.stringify(_id)})]`);
+    check(_id, String);
+    // eslint-disable-next-line new-cap
     check(callback, Match.Optional(Function));
-    /* eslint-enable new-cap */
 
     if (this.allowClientCode) {
-      this.ddp.call(this._methodNames._Remove, selector, (callback || NOOP));
+      this.ddp.call(this._methodNames._Remove, _id, (callback || NOOP));
     } else {
       callback && callback(new Meteor.Error(401, '[FilesCollection] [remove] Run code from client is not allowed!'));
       this._debug('[FilesCollection] [remove] Run code from client is not allowed!');
@@ -416,18 +435,17 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name removeAsync
-   * @param {MeteorFilesSelector} selector - mongo-style selector (see http://docs.meteor.com/api/collections.html#selectors)
-   * @summary Removes documents from the collection
+   * @param {string} _id - `_id` of the file to remove
+   * @summary Removes one file from the collection
    * @throws {Meteor.Error} 401 when `allowClientCode` is `false`
-   * @returns {Promise<number>} number of matched and removed files/records
+   * @returns {Promise<number>} number of removed files, `0` or `1`
    */
-  async removeAsync(selector = {}) {
-    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(selector)})]`);
-    // eslint-disable-next-line new-cap
-    check(selector, Match.OneOf(Object, String));
+  async removeAsync(_id) {
+    this._debug(`[FilesCollection] [removeAsync(${JSON.stringify(_id)})]`);
+    check(_id, String);
 
     if (this.allowClientCode) {
-      return await this.ddp.callAsync(this._methodNames._Remove, selector);
+      return await this.ddp.callAsync(this._methodNames._Remove, _id);
     }
 
     this._debug('[FilesCollection] [removeAsync] Run code from client is not allowed!');

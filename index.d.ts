@@ -5,6 +5,7 @@ import type { CountDocumentsOptions, EstimatedDocumentCountOptions } from 'mongo
 import type { ReactiveVar } from 'meteor/reactive-var';
 import type SimpleSchema from 'simpl-schema';
 import type * as http from 'node:http';
+import type { Readable } from 'node:stream';
 import type { IncomingMessage } from 'connect';
 import type { DDP } from 'meteor/ddp';
 import type { Tracker } from 'meteor/tracker';
@@ -22,6 +23,8 @@ export interface ContextHTTP {
   request: IncomingMessage;
   response: http.ServerResponse;
   params: ParamsHTTP;
+  /** Result of the `?token=` check: the token data, `null` without a token or secret, `false` for an invalid token. */
+  downloadToken?: { userId: string | null; exp: number } | null | false;
 }
 
 export interface ContextUser {
@@ -106,7 +109,7 @@ export class WriteStream {
    * @param file - An object containing file properties such as `size` and `chunkSize`.
    * @param permissions - The file permissions (number, e.g. `0o644`) to use when creating the file.
    * @param parentDirPermissions - Permissions (number, e.g. `0o755`) of created parent directories.
-   * @param options - `exclusive` creates a new file and fails with 409 when it exists. `identity` is the expected `{dev, ino, birth}` of an existing file (`birth` is the birth time in nanoseconds, optional). `idleTimeout` closes the handle after this many ms without writes. `fileId` is part of the handle cache key. `onAbort` runs after `abort()`.
+   * @param options - `exclusive` creates a new file and fails with 409 when it exists. `identity` is the expected `{dev, ino, birth}` of an existing file (`birth` is the birth time in nanoseconds, optional). `idleTimeout` closes the handle after this many ms without writes. `fileId` is part of the handle cache key. `onAbort` runs after `abort()`. `writtenChunkIds` lists chunks already on disk when resuming. `onChunkWritten` runs after a chunk is on disk, the chunk counts as written only when it resolves `true`.
    */
   constructor(
     path: string,
@@ -120,6 +123,10 @@ export class WriteStream {
       idleTimeout?: number;
       fileId?: string;
       onAbort?: (stream: WriteStream) => unknown;
+      /** Chunk ids already on disk, used when resuming. */
+      writtenChunkIds?: number[];
+      /** Called after a chunk is on disk. The chunk counts as written only when it resolves `true`. */
+      onChunkWritten?: (chunkId: number) => Promise<boolean>;
     }
   );
 
@@ -162,6 +169,64 @@ export class WriteStream {
    * @returns A promise that resolves to true once the stream is stopped.
    */
   stop(isAborted?: boolean): Promise<boolean>;
+}
+
+export interface LinkOptions {
+  /** Token from the server `createDownloadToken()`, appended as `?token=`. */
+  token?: string;
+}
+
+export interface DownloadTokenOptions {
+  version?: string;
+  userId?: string | null;
+  /** Seconds, a positive integer. Default: 3600. */
+  expiresIn?: number;
+}
+
+/** Byte range for `createReadStream()`, `end` inclusive. */
+export interface StorageRange {
+  start?: number;
+  end?: number;
+}
+
+/**
+ * Origin of the local file passed to `put()`. The package created `upload`, `write` (`writeAsync()`), and `load` (`loadAsync()`) files.
+ * `addFile` is the caller's own file: an adapter must not delete it.
+ */
+export type StorageSource = 'upload' | 'write' | 'load' | 'addFile';
+
+export interface StoragePutOptions {
+  source: StorageSource;
+}
+
+/** Where finished files live. Methods get the file document and a version name, and read `versions[versionName]`. */
+export interface FilesStorageAdapter {
+  /** Called after a file is complete on local disk, before the insert and `onAfterUpload`. An object result is stored at `versions[versionName].meta.storage`. */
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<Record<string, unknown> | void>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  /** Optional. `null` when the stored file is missing. Enables the `404` and `integrityCheck` before streaming. */
+  stat?(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
+}
+
+/** Default adapter: files stay at `versions[versionName].path`. Server only: the client build does not export it, so create it in server code or behind `Meteor.isServer`. */
+export class FSStorage implements FilesStorageAdapter {
+  readonly name: 'fs';
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<void>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
+}
+
+/** Copies finished files into a GridFS bucket of the app database and deletes the local copy, except when `source` is `'addFile'`. Server only: the client build does not export it, so create it in server code or behind `Meteor.isServer`. */
+export class GridFSStorage implements FilesStorageAdapter {
+  constructor(opts?: { bucketName?: string; chunkSizeBytes?: number; db?: unknown });
+  readonly name: 'gridfs';
+  readonly bucketName: string;
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<{ name: 'gridfs'; bucketName: string; id: string }>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<Readable>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
 }
 
 /**
@@ -252,15 +317,6 @@ export class FilesCollectionCore extends EventEmitter {
   findOneAsync<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): Promise<(FileCursor & FileObj) | null>;
 
   /**
-   * Find and return a FileCursor for a matching document (client only).
-   * @param selector - Mongo-style selector.
-   * @param options - Mongo query options.
-   * @returns {FileCursor | null} The FileCursor instance or null if not found.
-   * @throws {Meteor.Error} If called on the server.
-   */
-  findOne<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): (FileCursor & FileObj) | null;
-
-  /**
    * Find and return a FilesCursor for matching documents.
    * @param selector - Mongo-style selector.
    * @param options - Mongo query options.
@@ -304,7 +360,18 @@ export class FilesCollectionCore extends EventEmitter {
    * @param uriBase - Optional URI base.
    * @returns {string} The download URL, or an empty string if the file is invalid.
    */
-  link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string): string;
+  link(fileRef: Partial<FileObj> | FileCursor | null | undefined, version?: string, uriBase?: string, opts?: LinkOptions): string;
+}
+
+/**
+ * Argument of `namingFunction`. On upload Start `file` holds the uploader's `name`, `type`, `size`, and `meta` (not verified)
+ * plus the server-computed `extension`, `ext`, `_id`, and `userId`. In `writeAsync()` and `loadAsync()` it holds `name`, `type`, and `meta`
+ * from the call options, and only `writeAsync()` adds `size`.
+ */
+export interface NamingContext {
+  file: Partial<FileObj> & { name?: string; type?: string; size?: number; meta?: MetadataType };
+  fileId: string;
+  userId: string | null;
 }
 
 export interface FilesCollectionConfig {
@@ -315,22 +382,26 @@ export interface FilesCollectionConfig {
   continueUploadTTL?: number;
   /** [Client] custom DDP connection. */
   ddp?: DDP.DDPStatic;
+  /** Default `Cache-Control` header. Default: `private, max-age=31536000` when `protected` is set, otherwise `public, max-age=31536000, s-maxage=31536000`. */
   cacheControl?: string;
-  responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string });
+  responseHeaders?: { [x: string]: string } | ((responseCode?: string, fileObj?: FileObj, versionRef?: Version, version?: string) => { [x: string]: string } | Promise<{ [x: string]: string }>);
   /** @deprecated No effect. */
   throttle?: number | boolean;
   downloadRoute?: string;
   schema?: SimpleSchema | Record<string, unknown>;
   chunkSize?: number | 'dynamic';
-  namingFunction?: (fileData: FileData) => MaybePromise<string>;
+  /** [Server] Name on disk, without extension. The client ignores this option and warns. */
+  namingFunction?: (this: FilesCollection, context: NamingContext) => MaybePromise<string | null | undefined | false>;
   permissions?: number;
   parentDirPermissions?: number;
   integrityCheck?: boolean;
   strict?: boolean;
   /** [Server] Called before file download. Return `false` to deny. */
   downloadCallback?: (this: FilesCollection, http: ContextHTTP & ContextUser, fileObj: FileObj) => MaybePromise<boolean>;
+  /** [Server] A function that returns `true` to allow the download, or an HTTP status. `true` is deprecated: it allows any logged-in user. */
   protected?: boolean | ((this: ContextHTTP & ContextUser, fileObj: FileObj) => MaybePromise<boolean | number>);
   public?: boolean;
+  /** `fileData.type` is the type the uploader sent and is not verified. */
   onBeforeUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => MaybePromise<boolean | string>;
   onBeforeRemove?: (this: ContextUser, cursor: FilesCursor<unknown, unknown>) => MaybePromise<boolean>;
   onInitiateUpload?: (this: ContextUpload & ContextUser, fileData: FileData) => MaybePromise<void>;
@@ -338,6 +409,7 @@ export interface FilesCollectionConfig {
   onAfterRemove?: (files: ReadonlyArray<FileObj>) => MaybePromise<boolean | void>;
   /** [Client] Message shown when closing the tab during upload. */
   onbeforeunloadMessage?: string | ((this: FileUpload, fileData: FileData) => string);
+  /** Allow clients to call `remove()` and `removeAsync()` with an `_id`. Set `onBeforeRemove` too. Default: `false`. */
   allowClientCode?: boolean;
   debug?: boolean | ((...args: unknown[]) => void);
   /** [Server] Serve the file from a custom source. Return `true` when the request is handled. */
@@ -356,8 +428,14 @@ export interface FilesCollectionConfig {
   /** [Client] Do not set the `x_mtok` cookie. */
   disableSetTokenCookie?: boolean;
   sanitize?: (str: string, max?: number, replacement?: string) => string;
-  /** [Server] Send `X-Content-Type-Options: nosniff`. Default: `false`. */
+  /** [Server] Send `X-Content-Type-Options: nosniff`. Default: `true`. */
   nosniff?: boolean;
+  /** [Server] Store the type the uploader sent instead of the type detected from the file content. Default: `false`. */
+  trustClientMimeType?: boolean;
+  /** [Server] HMAC secret for signed download links, at least 32 characters. Without it `?token=` is ignored. */
+  downloadTokenSecret?: string;
+  /** [Server] Storage adapter. Default: `new FSStorage()`. */
+  storage?: FilesStorageAdapter;
   /** [Server] Milliseconds before an idle upload file handle is closed. Default: 900000. */
   uploadIdleTimeout?: number;
   _preCollection?: Mongo.Collection<{ _id?: string }>;
@@ -501,7 +579,7 @@ export class UploadInstance extends EventEmitter {
   /** @internal `true` when a Start request failed without a response, so the server may have the upload. */
   startMaybeReceived: boolean;
   /** @internal */
-  startOpts?: { file: FileData; fileId: string; chunkSize: number; fileLength: number; FSName?: string };
+  startOpts?: { file: FileData; fileId: string; chunkSize: number; fileLength: number };
   /** @internal The one request in flight. */
   inFlight: { kind: 'start' | 'eof' } | { kind: 'chunk'; chunkId: number } | null;
   /** @internal */
@@ -513,7 +591,6 @@ export class UploadInstance extends EventEmitter {
   /** @internal */
   hasTimers: boolean;
   fileId: string;
-  FSName: string;
   pipes: Array<(data: string) => string>;
   fileData: FileData;
   result: FileUpload;
@@ -555,7 +632,7 @@ export class UploadInstance extends EventEmitter {
   _prepare(): Promise<void>;
   /** @internal */
   _setup(): void;
-  /** Pipes run in reverse order of registration. */
+  /** Pipes run in the order they were added. */
   pipe(func: (data: string) => string): this;
   start(): Promise<FileUpload>;
   manual(): FileUpload;
@@ -572,7 +649,7 @@ export class FileCursor {
   /** Client only, throws on server. */
   remove(callback?: (error: Meteor.Error | null, count?: number) => void): FileCursor;
   removeAsync(): Promise<FileCursor>;
-  link(version?: string, uriBase?: string): string;
+  link(version?: string, uriBase?: string, opts?: LinkOptions): string;
   get(): FileObj;
   get<K extends keyof FileObj>(property: K): FileObj[K];
   get(property: string): unknown;
@@ -599,8 +676,6 @@ export class FilesCursor<S = unknown, O = unknown> {
   /** Synchronous methods (`get`, `fetch`, `next`, `each`, `map`, and others) work on client only and throw `Meteor.Error` on server; use `*Async` on server. */
   get(): FileObj[];
   getAsync(): Promise<FileObj[]>;
-  /** @deprecated Client only. Prefer `hasNextAsync()`. */
-  hasNext(): boolean;
   hasNextAsync(): Promise<boolean>;
   next(): FileObj | undefined;
   nextAsync(): Promise<FileObj | undefined>;
@@ -616,8 +691,6 @@ export class FilesCursor<S = unknown, O = unknown> {
   lastAsync(): Promise<FileObj | undefined>;
   /** @deprecated Use `countDocuments()`. */
   count(): number;
-  /** @deprecated Use `countDocuments()`. */
-  countAsync(): Promise<number>;
   countDocuments(options?: CountDocumentsOptions): Promise<number>;
   /** Client only. */
   remove(callback?: (error: Meteor.Error | null, count?: number) => void): FilesCursor<S, O>;
@@ -645,6 +718,11 @@ export class FilesCollection extends FilesCollectionCore {
 // --------------------------------------------------------------------------
 export interface FilesCollection {
   /**
+   * Finds a document and wraps it in a FileCursor. Client only, throws `Meteor.Error(404)` on the server.
+   */
+  findOne<S, O>(selector?: MeteorFilesSelector<S>, options?: MeteorFilesOptions<O>): (FileCursor & FileObj) | null;
+
+  /**
    * Inserts a file into the collection and returns an instance of FileUpload/UploadInstance.
    * @param config - The insert options.
    * @param autoStart - Whether to start the upload immediately.
@@ -663,16 +741,17 @@ export interface FilesCollection {
   insertAsync(config: InsertOptions, autoStart?: boolean): Promise<FileUpload | UploadInstance>;
 
   /**
-   * Removes files/documents from the collection. Client only, throws on server.
-   * @param selector - A Mongo-style selector.
+   * Removes one file from the collection. Client only, throws on server.
+   * @param _id - `_id` of the file to remove.
    * @param callback - Optional callback function.
    */
-  remove<S>(selector?: MeteorFilesSelector<S>, callback?: (error: Meteor.Error | null, count?: number) => void): FilesCollection;
+  remove(_id: string, callback?: (error: Meteor.Error | null, count?: number) => void): FilesCollection;
 
   /**
    * Asynchronously removes files/documents from the collection.
-   * On client rejects with `Meteor.Error(401)` when `allowClientCode` is `false`.
-   * @param selector - A Mongo-style selector.
+   * On the client accepts only a String `_id` and rejects with `Meteor.Error(401)` when `allowClientCode` is `false`.
+   * On the server accepts any selector.
+   * @param selector - A Mongo-style selector. On the client, a String `_id`.
    */
   removeAsync<S>(selector?: MeteorFilesSelector<S>): Promise<number>;
 
@@ -713,6 +792,11 @@ export interface LoadOpts {
 // Server-specific overloads for FilesCollection
 // --------------------------------------------------------------------------
 export interface FilesCollection {
+  /** Storage adapter, `FSStorage` unless the `storage` option is set. */
+  storage: FilesStorageAdapter;
+
+  /** Signed token for `link(file, version, uriBase, { token })`, valid for one file version in this collection. Needs `downloadTokenSecret`. */
+  createDownloadToken(fileRef: Partial<FileObj> | FileCursor | string, opts?: DownloadTokenOptions): string;
 
   /**
    * Downloads a file by preparing HTTP response and piping file data.
@@ -740,7 +824,7 @@ export interface FilesCollection {
     readableStream?: NodeJS.ReadableStream | null,
     _responseType?: string,
     force200?: boolean
-  ): void;
+  ): Promise<void>;
 
   /**
    * Adds an existing file on disk to the FilesCollection.
