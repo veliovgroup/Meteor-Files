@@ -23,7 +23,7 @@ This release closes several upload and download security holes, fixes the client
 
 - 🔧 Accept Write, EOF, and abort requests only from the user who started the upload.
 - 🔧 Stop `_Abort` from removing finished files. It removes only the unfinished upload record and its partial file, and answers `404` for unknown or foreign upload ids.
-- 🔧 Remove the partial file when an upload is aborted after a server restart. The server removes it only when device, inode, and birth time match the file the upload created.
+- 🔧 Remove the partial file when an upload is aborted after a server restart. The server removes it only when device, inode, and birth time match the file the upload created. Without a stored birth time (file systems that do not report it), device and inode must match.
 - 🔧 Prevent an upload from overwriting or deleting another file. Start returns `409` if the file id, the target path, or a pending upload path already exists, and creates the file exclusively.
 - 🔧 Fail an upload with `410` or `409` when its file was removed or replaced on disk. The server compares device, inode, and birth time on every reopen.
 - 🔧 Sanitize `namingFunction` output per path segment and require the final path to stay inside `storagePath`.
@@ -46,7 +46,9 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Answer an EOF that arrives while the first EOF of the same upload is still running (for example after a DDP reconnect) with the result of the first one instead of `408`.
 - 🔧 Accept an object in `responseHeaders`.
 - 🔧 Serve suffix ranges (`bytes=-N`) and the last byte, clamp the range end to the file size, and return `200` for multi-range requests. Unsatisfiable ranges return `416` when `strict` is `true` and `200` when it is `false`.
-- 🔧 Send `Content-Length` on `206` responses instead of `Transfer-Encoding: chunked`. `200` and `206` responses never carry both headers.
+- 🔧 Send `Content-Length` on `200` and `206` responses that `serve()` reads from disk, instead of `Transfer-Encoding: chunked`. These responses never carry both headers.
+- 🔧 Send responses from a custom `readableStream` chunked, without `Content-Length`. Before, a `200` got `Content-Length` from the stored size, which did not match compressed or transformed streams. A `Content-Length` set in `responseHeaders` is kept.
+- 🔧 Give up a Start or EOF request, or a chunk answered with `502`, `503`, or `504`, after 5 failed attempts, as documented. Before, it took 6.
 - 🔧 Make the integrity-check `400` response reachable again.
 - 🔧 Stop `loadAsync()` from throwing inside a timer. It opens the file only after a successful fetch, takes `size` from disk, and removes only partial files it created.
 - 🔧 Make `writeAsync()` create the directory and always close the file handle.
@@ -93,9 +95,9 @@ This release closes several upload and download security holes, fixes the client
 
 ### Changed
 
-- 👨‍💻 Use the stored `_downloadRoute` and `_collectionName` in `link()` when they are safe, otherwise the collection's own values. A stored route with `?` or `#` is not safe.
+- 👨‍💻 Use the stored `_downloadRoute` and `_collectionName` in `link()` when they are safe, otherwise the collection's own values. A stored route with `?`, `#`, or an encoded `.`, `/`, or `\` (`%2e`, `%2f`, `%5c`) is not safe.
 - 👨‍💻 Answer `?play=true` requests without a `Range` header with `200` and the whole file, as RFC 9110 requires. Requests with `Range` still get `206`.
-- 👨‍💻 Add `; charset=utf-8` to the default `Content-Type` of `text/*`, `application/json`, `application/javascript`, and `image/svg+xml` files without a charset, so text files display correctly inline.
+- 👨‍💻 Add `; charset=utf-8` to the default `Content-Type` of `text/*`, `application/json`, `application/javascript`, and `image/svg+xml` files without a charset, so text files display correctly inline. Text files in another encoding, such as a Latin-1 CSV, need their charset set through `responseHeaders`.
 - 👨‍💻 Ask the user to check the connection when one chunk fails 10 times in a row, and name a chunk larger than `chunkSize` (for example from a pipe) as one possible cause.
 - 👨‍💻 Export types from `index.d.ts` at the top level. The old `declare module` wrapper exported nothing.
 - 👨‍💻 Keep `FileUpload` pipes in reverse order of registration. This changes in v4.
@@ -108,13 +110,14 @@ This release closes several upload and download security holes, fixes the client
 - 📔 Document `updateAsync`, `countDocuments`, `estimatedDocumentCount`, `serve`, `download`, `allow`/`deny`, the exported helpers, and the `progress` event arguments.
 - 📔 Document upload rules, limits, and the HTTP error body in `about-transports.md`.
 - 📔 Document the event order: `abort()` emits `pause`, then `abort`, and no `end`. A failed upload emits `error`, then `end`. Document that `abort()` does not cancel an EOF or HTTP Start request that is already sent.
+- 📔 Document that a custom `readableStream` passed to `serve()` for a `Range` request should contain exactly the requested bytes, and that `Content-Length` is set only for responses read from disk.
 - 📔 Fix wrong defaults, broken links, typos, and samples that did not run on Meteor 3.
 
 ### Tests
 
 - 🧪 Add `tests/security.test.js` for upload ownership, path safety, request limits, Range parsing, and access checks.
 - 🧪 Port Tinytest helpers to mocha and fix tests that passed without asserting.
-- 🧪 Cover `Content-Length` on `200` and `206`, `?play=true`, default charsets, racing EOFs, abort after restart, `link()` without `_id`, and unlink of missing files.
+- 🧪 Cover `Content-Length` on `200` and `206` for files and custom streams, `HEAD`, `?play=true`, default charsets, racing EOFs (also anonymous), abort after restart (also for records without file identity), `link()` without `_id`, encoded routes, and unlink of missing files.
 - 🧪 Check types with `tsc` and `tsd` (`npm run typecheck`).
 - 🏗️ Run lint, typecheck, and tests in CI on Meteor 3.2.2 and 3.5.2.
 - 🏗️ Replace `.eslintrc` with an ESLint 9 flat config, without the deprecated `no-extra-semi` and `no-native-reassign` rules.
