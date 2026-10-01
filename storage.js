@@ -163,7 +163,12 @@ export class GridFSStorage {
     );
     // The bucket holds the file now. `addFile()` files belong to the caller, keep them
     if (source !== 'addFile') {
-      await fs.promises.unlink(localPath);
+      try {
+        await fs.promises.unlink(localPath);
+      } catch (unlinkError) {
+        // Failing here would orphan the bucket file, a leftover local file is the smaller loss
+        Meteor._debug(`[GridFSStorage] [put] Can not delete the local file after the upload to "${this.bucketName}"`, localPath, unlinkError);
+      }
     }
     return { name: this.name, bucketName: this.bucketName, id: id.toHexString() };
   }

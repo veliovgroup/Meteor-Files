@@ -276,6 +276,18 @@ describe('Storage adapters', function () {
       expect(stored[0].length).to.equal(11);
     });
 
+    it('returns the bucket id when the local file can not be deleted', async function () {
+      const storage = new GridFSStorage({ bucketName });
+      const localPath = nodePath.join(TMP_ROOT, `unlink-${Random.id(6)}.txt`);
+      fs.writeFileSync(localPath, 'kept');
+      sinon.stub(fs.promises, 'unlink').rejects(Object.assign(new Error('EBUSY'), { code: 'EBUSY' }));
+      sinon.stub(Meteor, '_debug');
+      const ref = await storage.put({ _id: 'unlinkFails1', name: 'u.txt', type: 'text/plain' }, 'original', localPath, { source: 'upload' });
+      expect(ref.id).to.match(/^[a-f0-9]{24}$/);
+      expect(await bucket().find({ _id: new ObjectId(ref.id) }).toArray()).to.have.length(1);
+      expect(Meteor._debug.calledOnce).to.equal(true);
+    });
+
     it('serves the whole file and the last byte', async function () {
       const doc = await fc.writeAsync(Buffer.from('0123456789'), { name: 'g2.txt', type: 'text/plain' });
       expect((await get(fc.link(doc, 'original', '/'))).body).to.equal('0123456789');
