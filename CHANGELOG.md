@@ -22,7 +22,8 @@ This release closes several upload and download security holes, fixes the client
 ### Fixed
 
 - 🔧 Accept Write, EOF, and abort requests only from the user who started the upload.
-- 🔧 Stop `_Abort` from removing finished files. It removes only the unfinished upload record, and answers `404` for unknown or foreign upload ids.
+- 🔧 Stop `_Abort` from removing finished files. It removes only the unfinished upload record and its partial file, and answers `404` for unknown or foreign upload ids.
+- 🔧 Remove the partial file when an upload is aborted after a server restart. The server removes it only when device, inode, and birth time match the file the upload created.
 - 🔧 Prevent an upload from overwriting or deleting another file. Start returns `409` if the file id, the target path, or a pending upload path already exists, and creates the file exclusively.
 - 🔧 Fail an upload with `410` or `409` when its file was removed or replaced on disk. The server compares device, inode, and birth time on every reopen.
 - 🔧 Sanitize `namingFunction` output per path segment and require the final path to stay inside `storagePath`.
@@ -34,15 +35,18 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Stop sending server paths to the client in Start and EOF responses.
 - 🔧 Destroy download streams when the client disconnects. Stream errors return a generic `500`.
 - 🔧 Match routes by URL pathname, so a query string or a route prefix can no longer match another route.
-- 🔧 Encode `Content-Disposition` with an ASCII `filename` and an RFC 8187 `filename*`.
+- 🔧 Encode `Content-Disposition` with an ASCII `filename` and an RFC 8187 `filename*`. The ASCII fallback replaces `%` with `_`.
 - 🔧 URI-encode `_id`, version, extension, and collection name in `link()` and the `fileURL` helper, and never produce protocol-relative URLs.
+- 🔧 Return an empty string from `link()` and the `fileURL` helper for a file without `_id`, for example the file passed to `end` after a rejected upload. It returned `/undefined/original/undefined.txt` before.
 - 🔧 Set the `x_mtok` cookie as `secure` on https pages.
 - 🔧 Ignore inherited keys in the session lookup and fail closed.
 - 🔧 Skip `__proto__`, `constructor`, and `prototype` in `fixJSONParse` and `fixJSONStringify`.
 - 🔧 Limit a numeric `protected` result to `400`-`599`.
 - 🔧 Return the stored file on a repeated EOF only to the authenticated owner, so a lost EOF response no longer fails a finished upload.
+- 🔧 Answer an EOF that arrives while the first EOF of the same upload is still running (for example after a DDP reconnect) with the result of the first one instead of `408`.
 - 🔧 Accept an object in `responseHeaders`.
 - 🔧 Serve suffix ranges (`bytes=-N`) and the last byte, clamp the range end to the file size, and return `200` for multi-range requests. Unsatisfiable ranges return `416` when `strict` is `true` and `200` when it is `false`.
+- 🔧 Send `Content-Length` on `206` responses instead of `Transfer-Encoding: chunked`. `200` and `206` responses never carry both headers.
 - 🔧 Make the integrity-check `400` response reachable again.
 - 🔧 Stop `loadAsync()` from throwing inside a timer. It opens the file only after a successful fetch, takes `size` from disk, and removes only partial files it created.
 - 🔧 Make `writeAsync()` create the directory and always close the file handle.
@@ -56,12 +60,13 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Set `extensionWithDot` to an empty string for files without extension.
 - 🔧 Treat a `responseHeaders` function that returns nothing as `{}`.
 - 🔧 Catch version unlink failures and log index creation errors.
+- 🔧 Treat a file that is already gone as removed in `unlinkAsync()` and `removeAsync()`. The server logs one debug line without a stack trace.
 - 🔧 Send one client request at a time: Start, chunks in order, then EOF. Network failures, `502`, `503`, and `504` retry with backoff from 500 ms up to 10 s.
 - 🔧 Prevent the client from sending a chunk before Start succeeds, and fire `end` and `uploaded` only after a successful EOF.
 - 🔧 Send Start when `continue()` follows a pause before Start.
 - 🔧 Stop `abort()` from causing an unhandled rejection when the server answers `404`.
 - 🔧 Pass the `reason` of HTTP `4xx` responses to `error`, `onError`, and `end`.
-- 🔧 Call `error` and `end` once per failed upload. A throwing callback is logged and does not stop the others.
+- 🔧 Call `error` and `end` once per failed upload. A throwing callback is reported with `console.error` and does not stop the others.
 - 🔧 Keep a manual pause when the connection drops and comes back.
 - 🔧 Omit the `x-mtok` header when there is no session instead of sending the string `"null"`.
 - 🔧 Fix Base64 padding for chunk sizes not divisible by 4.
@@ -88,7 +93,10 @@ This release closes several upload and download security holes, fixes the client
 
 ### Changed
 
-- 👨‍💻 Use the stored `_downloadRoute` and `_collectionName` in `link()` when they are safe, otherwise the collection's own values.
+- 👨‍💻 Use the stored `_downloadRoute` and `_collectionName` in `link()` when they are safe, otherwise the collection's own values. A stored route with `?` or `#` is not safe.
+- 👨‍💻 Answer `?play=true` requests without a `Range` header with `200` and the whole file, as RFC 9110 requires. Requests with `Range` still get `206`.
+- 👨‍💻 Add `; charset=utf-8` to the default `Content-Type` of `text/*`, `application/json`, `application/javascript`, and `image/svg+xml` files without a charset, so text files display correctly inline.
+- 👨‍💻 Ask the user to check the connection when one chunk fails 10 times in a row, and name a chunk larger than `chunkSize` (for example from a pipe) as one possible cause.
 - 👨‍💻 Export types from `index.d.ts` at the top level. The old `declare module` wrapper exported nothing.
 - 👨‍💻 Keep `FileUpload` pipes in reverse order of registration. This changes in v4.
 
@@ -99,15 +107,17 @@ This release closes several upload and download security holes, fixes the client
 - 📔 Rewrite the AWS S3 (`@aws-sdk/client-s3` v3), Dropbox, Google Cloud Storage, GridFS, and `sharp` thumbnail guides with async APIs and correct Range handling.
 - 📔 Document `updateAsync`, `countDocuments`, `estimatedDocumentCount`, `serve`, `download`, `allow`/`deny`, the exported helpers, and the `progress` event arguments.
 - 📔 Document upload rules, limits, and the HTTP error body in `about-transports.md`.
+- 📔 Document the event order: `abort()` emits `pause`, then `abort`, and no `end`. A failed upload emits `error`, then `end`. Document that `abort()` does not cancel an EOF or HTTP Start request that is already sent.
 - 📔 Fix wrong defaults, broken links, typos, and samples that did not run on Meteor 3.
 
 ### Tests
 
 - 🧪 Add `tests/security.test.js` for upload ownership, path safety, request limits, Range parsing, and access checks.
 - 🧪 Port Tinytest helpers to mocha and fix tests that passed without asserting.
+- 🧪 Cover `Content-Length` on `200` and `206`, `?play=true`, default charsets, racing EOFs, abort after restart, `link()` without `_id`, and unlink of missing files.
 - 🧪 Check types with `tsc` and `tsd` (`npm run typecheck`).
 - 🏗️ Run lint, typecheck, and tests in CI on Meteor 3.2.2 and 3.5.2.
-- 🏗️ Replace `.eslintrc` with an ESLint 9 flat config.
+- 🏗️ Replace `.eslintrc` with an ESLint 9 flat config, without the deprecated `no-extra-semi` and `no-native-reassign` rules.
 
 ### Dependencies
 
