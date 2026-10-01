@@ -23,7 +23,7 @@ const RETRY_MAX_DELAY = 10000;
  */
 const MAX_ATTEMPTS = 5;
 /**
- * @const {number} MAX_CHUNK_NETWORK_ATTEMPTS - Max consecutive retries of one chunk after network failures (no response from the server)
+ * @const {number} MAX_CHUNK_NETWORK_ATTEMPTS - Max consecutive attempts of one chunk that fail at the network level (no response from the server)
  */
 const MAX_CHUNK_NETWORK_ATTEMPTS = 10;
 /**
@@ -594,7 +594,7 @@ export class UploadInstance extends EventEmitter {
   }
 
   /**
-   * Runs a user callback or event emit from `_end()`. A thrown exception is logged and does not stop the next callbacks
+   * Runs a user callback or event emit from `_end()`. A thrown exception is reported with `console.error` and does not stop the next callbacks
    * @param {string} name - Callback name, used in the log
    * @param {function} func - Callback
    * @returns {void}
@@ -603,7 +603,9 @@ export class UploadInstance extends EventEmitter {
     try {
       func();
     } catch (callbackError) {
-      Meteor._debug(`[FilesCollection] [insert] Exception in "${name}" callback:`, callbackError);
+      // A bug in user code: report it at error level, not as a debug message
+      // eslint-disable-next-line no-console
+      console.error(`[FilesCollection] [insert] Exception in "${name}" callback:`, callbackError);
     }
   }
 
@@ -658,9 +660,9 @@ export class UploadInstance extends EventEmitter {
       return;
     }
 
-    if (!isLimited && this.retryAttempt > MAX_CHUNK_NETWORK_ATTEMPTS) {
-      // The server may close the connection on a chunk body that is too large (for example a pipe that grows the chunk)
-      this.emit('error', new Meteor.Error(503, `Upload failed: chunk ${request.chunkId} got no response after ${MAX_CHUNK_NETWORK_ATTEMPTS} retries. Check the network. The server rejects chunks larger than chunkSize, so pipes must not increase the decoded chunk length`));
+    if (!isLimited && this.retryAttempt >= MAX_CHUNK_NETWORK_ATTEMPTS) {
+      // The server may also close the connection on a chunk body that is too large (for example a pipe that grows the chunk)
+      this.emit('error', new Meteor.Error(503, `Upload failed: chunk ${request.chunkId} failed after ${MAX_CHUNK_NETWORK_ATTEMPTS} attempts. Check your connection and try again. One possible cause is a chunk larger than chunkSize, for example from a pipe that grows the data, which the server rejects`));
       return;
     }
 
