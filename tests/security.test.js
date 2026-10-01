@@ -1613,6 +1613,21 @@ describe('Security', function () {
       }
     });
 
+    it('answers 404 for a token version the file does not have', async function () {
+      const { fc, doc } = await setup();
+      const token = fc.createDownloadToken(doc, { userId: 'owner', version: 'thumbnail' });
+      const res = await httpRequest(fc.link(doc, 'thumbnail', '/', { token }));
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('File Not Found :(');
+    });
+
+    it('gives an invalid token no user, not the cookie user', function () {
+      const fc = createCollection({ downloadTokenSecret: SECRET });
+      const httpObj = { request: { headers: { 'x-test-user': 'u1' } }, params: { _id: 'id1', version: 'original', query: { token: 'garbage' } } };
+      expect(fc._getHttpUser(httpObj).userId).to.equal(null);
+      expect(fc._getHttpUser({ ...httpObj, downloadToken: undefined, params: { ...httpObj.params, query: {} } }).userId).to.equal('u1');
+    });
+
     it('ignores the token when no secret is set', async function () {
       const { doc, url } = await setup({ downloadTokenSecret: undefined });
       expect(doc).to.be.an('object');
@@ -1635,6 +1650,9 @@ describe('Security', function () {
       expect(() => fc.createDownloadToken('id1', { expiresIn: 0 })).to.throw();
       expect(() => fc.createDownloadToken('id1', { expiresIn: 1.5 })).to.throw();
       expect(() => fc.createDownloadToken({})).to.throw();
+      for (const [ref, opts] of [['id\n1', {}], ['id1', { version: 'original\nx' }], ['id1', { userId: 'u\n1' }]]) {
+        expect(() => fc.createDownloadToken(ref, opts)).to.throw(Meteor.Error).with.property('error', 400);
+      }
       expect(fc.createDownloadToken('id1')).to.match(/^\d+\.\.[A-Za-z0-9_-]+$/);
     });
 

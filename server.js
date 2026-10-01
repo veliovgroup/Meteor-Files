@@ -2044,6 +2044,11 @@ class FilesCollection extends FilesCollectionCore {
     check(expiresIn, Match.Where((n) => Number.isInteger(n) && n > 0));
     /* eslint-enable new-cap */
 
+    // `\n` separates the signed fields
+    if ([_id, version, userId].some((value) => helpers.isString(value) && value.includes('\n'))) {
+      throw new Meteor.Error(400, '[FilesCollection] [createDownloadToken] "_id", "version", and "userId" can not contain line breaks');
+    }
+
     return signDownloadToken(this.downloadTokenSecret, { _id, version, userId, exp: Math.floor(Date.now() / 1000) + expiresIn });
   }
 
@@ -2076,11 +2081,15 @@ class FilesCollection extends FilesCollectionCore {
    * @memberOf FilesCollection
    * @name _getHttpUser
    * @param {ContextHTTP} http - Server HTTP object
-   * @summary Internal method. The user of a download: the token user for a valid token, otherwise `_getUser(http)`
+   * @summary Internal method. The user of a download: the token user for a valid token, no user for an invalid one, otherwise `_getUser(http)`
    * @returns {ContextUser}
    */
   _getHttpUser(http) {
     const token = helpers.isObject(http) ? this._readDownloadToken(http) : null;
+    if (token === false) {
+      // An invalid token never falls back to the cookie user
+      return { userId: null, async userAsync() { return null; } };
+    }
     if (!token) {
       return this._getUser(http);
     }
@@ -2695,6 +2704,9 @@ class FilesCollection extends FilesCollectionCore {
       if (helpers.has(fileRef, 'versions') && helpers.has(fileRef.versions, version)) {
         vRef = fileRef.versions[version];
         vRef._id = fileRef._id;
+      } else if (http.downloadToken && version !== 'original') {
+        // A token opens one version, do not fall back to the original
+        vRef = false;
       } else {
         vRef = fileRef;
       }
