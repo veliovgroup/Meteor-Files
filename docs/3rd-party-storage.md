@@ -3,6 +3,11 @@
 Meteor-Files package has flexible API, so it can be integrated with any 3rd party storage.
 Any 3rd party storage with REST API or Node.js SDK can be easily integrated.
 
+Since v4, pass a storage adapter as the [`storage` option](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md). An adapter is an object with `put()`, `createReadStream()`, `remove()`, and optional `stat()`. The package exports `FSStorage` (default) and `GridFSStorage` on the server. Recipes:
+
+- [AWS S3 adapter](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)
+- [Built-in GridFS adapter](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md)
+
 __Integration examples:__
 
 - [AWS S3 Bucket Integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md)

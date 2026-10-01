@@ -1,6 +1,21 @@
 # Use GridFS with `GridFSBucket` as a storage
 
-This example shows how to handle (store, serve, remove) uploaded files via GridFS.
+Since v4, use the built-in adapter: `new FilesCollection({ storage: new GridFSStorage({ bucketName: 'images' }) })`
+
+```js
+import { FilesCollection, GridFSStorage } from 'meteor/ostrio:files';
+
+export const Images = new FilesCollection({
+  collectionName: 'images',
+  storage: new GridFSStorage({ bucketName: 'images' }),
+});
+```
+
+`GridFSStorage` is server only. Uploads are written to `storagePath` first. When a file is complete, the adapter copies it into the bucket, deletes the local copy, and stores `{ name: 'gridfs', bucketName, id }` at `versions.<name>.meta.storage`. `addFile()` keeps the caller's file on disk. Downloads support `Range` (`206`), and `removeAsync()` deletes the bucket file. Options: `bucketName` (default `'fs'`), `chunkSizeBytes` (driver default when not set), and `db` (default: the app's database). See the [`storage` option](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
+
+## Custom GridFS handling
+
+The manual recipe below handles (stores, serves, removes) uploaded files via GridFS with hooks. Use it when the built-in adapter does not fit.
 The Javascript Mongo driver (the one that Meteor uses under the hood) allows to define
 [so called "Buckets"](https://mongodb.github.io/node-mongodb-native/6.0/classes/GridFSBucket.html).
 
