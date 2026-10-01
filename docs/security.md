@@ -137,7 +137,7 @@ Meteor.methods({
 - The token carries its `userId` in base64url, readable by whoever holds the link
 - An invalid or expired token gets `403`. Public collections ignore tokens
 - A token download gets `Cache-Control: private, max-age=<seconds until the token expires>`, so a CDN or shared proxy does not keep it after the token expires. A `Cache-Control` header from `responseHeaders` replaces this value
-- Downloads from `protected` collections without a token still get the `cacheControl` value, `public, max-age=31536000, s-maxage=31536000` by default. If a CDN or shared proxy sits in front of protected files, set `cacheControl` to `private` or `no-store`
+- Downloads from `protected` collections without a token get `Cache-Control: private, max-age=31536000` by default, so a CDN or shared proxy does not keep them. Browsers still cache them for the signed-in user. Set `cacheControl: 'no-store'` to turn that off
 
 ## Content-Type and downloads
 

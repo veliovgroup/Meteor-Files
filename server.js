@@ -157,7 +157,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.permissions    {number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
  * @param config.parentDirPermissions {number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `0o611` or `0o777`. Default: 0755
  * @param config.storagePath    {string|function}  - [Server] Storage path on file system. The function can be async
- * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
+ * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header. Default: `private, max-age=31536000` for `protected` collections, `public, max-age=31536000, s-maxage=31536000` otherwise
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
  * @param config.trustClientMimeType {boolean} - [Server] Store the type the uploader sent. When `false` (default) the stored type comes from the file content
@@ -331,7 +331,8 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!helpers.isString(this.cacheControl)) {
-      this.cacheControl = 'public, max-age=31536000, s-maxage=31536000';
+      // A shared cache must not hand one user's protected file to another user
+      this.cacheControl = this.protected ? 'private, max-age=31536000' : 'public, max-age=31536000, s-maxage=31536000';
     }
 
     if (!helpers.isFunction(this.onAfterUpload)) {

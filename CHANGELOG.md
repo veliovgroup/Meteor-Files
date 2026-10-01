@@ -11,6 +11,7 @@ This release adds signed download links, storage adapters with a built-in GridFS
 - ⚠️ Support only a `Map` in `Meteor.server.sessions` (Meteor 3) in the default `x_mtok` lookup. A plain object throws.
 - ⚠️ Default `allowClientCode` to `false`. Clients can not call `remove()` unless `allowClientCode: true` is set on the server and the client. Set `onBeforeRemove` when you enable it.
 - ⚠️ Accept only a String `_id` in client `remove()` and `removeAsync()`. Use `find(selector).removeAsync()` to remove several files. It removes one `_id` per server call and is not atomic.
+- ⚠️ Send `Cache-Control: private, max-age=31536000` by default for `protected` collections, so shared caches do not keep protected files. Set `cacheControl` to restore the 3.x value.
 - ⚠️ Send `X-Content-Type-Options: nosniff` by default. Set `nosniff: false` to turn it off.
 - ⚠️ Serve files `inline` only for `image/*` (not SVG), `video/*`, `audio/*`, `application/pdf`, and `text/plain`. Other files get `Content-Disposition: attachment`. Set `Content-Disposition` in `responseHeaders` to change it.
 - ⚠️ Run `FileUpload#pipe()` functions in the order they were added. The first `pipe()` call runs first. Reverse chained `pipe()` calls written for 3.x.

@@ -1510,6 +1510,28 @@ describe('Security', function () {
     });
   });
 
+  describe('Cache-Control default', function () {
+    const cacheHeader = async (fc, name) => {
+      const path = nodePath.join(fc.storagePath({}), name);
+      fs.writeFileSync(path, 'x');
+      return (await serveRequest(fc, { vRef: { name, size: 1, path } })).headers['cache-control'];
+    };
+
+    it('is public for collections without protected', async function () {
+      expect(await cacheHeader(createCollection(), 'cc-public.txt')).to.equal('public, max-age=31536000, s-maxage=31536000');
+    });
+
+    it('is private for protected collections', async function () {
+      expect(await cacheHeader(createCollection({ protected: () => true }), 'cc-fn.txt')).to.equal('private, max-age=31536000');
+      sinon.stub(console, 'warn');
+      expect(await cacheHeader(createCollection({ protected: true }), 'cc-true.txt')).to.equal('private, max-age=31536000');
+    });
+
+    it('keeps an explicit cacheControl on protected collections', async function () {
+      expect(await cacheHeader(createCollection({ protected: () => true, cacheControl: 'no-store' }), 'cc-own.txt')).to.equal('no-store');
+    });
+  });
+
   describe('_Remove accepts only a String _id', function () {
     it('rejects an object selector with a Match error', async function () {
       const fc = createCollection({ allowClientCode: true });

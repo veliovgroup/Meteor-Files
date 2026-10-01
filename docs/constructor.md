@@ -147,7 +147,7 @@
         Set <code>Cache-Control</code> header
       </td>
       <td>
-        <code>public, max-age=31536000, s-maxage=31536000</code>
+        <code>private, max-age=31536000</code> when <code>protected</code> is set, otherwise <code>public, max-age=31536000, s-maxage=31536000</code>
       </td>
       <td></td>
     </tr>
