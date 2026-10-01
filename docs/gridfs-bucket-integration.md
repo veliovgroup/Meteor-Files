@@ -1,6 +1,6 @@
 # Use GridFS with `GridFSBucket` as a storage
 
-Since v4, use the built-in adapter: `new FilesCollection({ storage: new GridFSStorage({ bucketName: 'images' }) })`
+Since v4, use the built-in adapter. Create it on the server only, the client build does not export `GridFSStorage`:
 
 ```js
 import { Meteor } from 'meteor/meteor';
