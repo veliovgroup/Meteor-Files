@@ -12,6 +12,9 @@ import {
   InsertOptions,
   ContextUser,
   ContextHTTP,
+  FSStorage,
+  GridFSStorage,
+  FilesStorageAdapter,
 } from 'meteor/ostrio:files';
 
 // config options, including 3.1 additions
@@ -177,3 +180,18 @@ async function serverMethods() {
   files.deny({ remove: () => true });
 }
 void serverMethods;
+
+// storage adapters
+expectAssignable<FilesCollectionConfig>({ storage: new GridFSStorage({ bucketName: 'files' }) });
+expectAssignable<FilesCollectionConfig>({ storage: new FSStorage() });
+declare const someStream: NodeJS.ReadableStream;
+const customStorage: FilesStorageAdapter = {
+  async put(_fileRef, _versionName, _localPath, opts) {
+    expectType<'upload' | 'write' | 'load' | 'addFile' | undefined>(opts?.source);
+    return { key: 'k' };
+  },
+  async createReadStream() { return someStream; },
+  async remove() {},
+};
+expectAssignable<FilesCollectionConfig>({ storage: customStorage });
+expectError<FilesCollectionConfig>({ storage: 'fs' });

@@ -178,6 +178,52 @@ export interface DownloadTokenOptions {
   expiresIn?: number;
 }
 
+/** Byte range for `createReadStream()`, `end` inclusive. */
+export interface StorageRange {
+  start?: number;
+  end?: number;
+}
+
+/**
+ * Origin of the local file passed to `put()`. The package created `upload`, `write` (`writeAsync()`), and `load` (`loadAsync()`) files.
+ * `addFile` is the caller's own file: an adapter must not delete it.
+ */
+export type StorageSource = 'upload' | 'write' | 'load' | 'addFile';
+
+export interface StoragePutOptions {
+  source: StorageSource;
+}
+
+/** Where finished files live. Methods get the file document and a version name, and read `versions[versionName]`. */
+export interface FilesStorageAdapter {
+  /** Called after a file is complete on local disk, before the insert and `onAfterUpload`. An object result is stored at `versions[versionName].meta.storage`. */
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<Record<string, unknown> | void>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  /** Optional. `null` when the stored file is missing. Enables the `404` and `integrityCheck` before streaming. */
+  stat?(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
+}
+
+/** Default adapter: files stay at `versions[versionName].path`. Server only. */
+export class FSStorage implements FilesStorageAdapter {
+  readonly name: 'fs';
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<void>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
+}
+
+/** Copies finished files into a GridFS bucket of the app database and deletes the local copy, except when `source` is `'addFile'`. Server only. */
+export class GridFSStorage implements FilesStorageAdapter {
+  constructor(opts?: { bucketName?: string; chunkSizeBytes?: number; db?: unknown });
+  readonly name: 'gridfs';
+  readonly bucketName: string;
+  put(fileRef: FileObj, versionName: string, localPath: string, opts?: StoragePutOptions): Promise<{ name: 'gridfs'; bucketName: string; id: string }>;
+  createReadStream(fileRef: FileObj, versionName: string, range?: StorageRange): Promise<NodeJS.ReadableStream>;
+  remove(fileRef: FileObj, versionName: string): Promise<void>;
+  stat(fileRef: FileObj, versionName: string): Promise<{ size: number } | null>;
+}
+
 /**
  * Core class for FilesCollection. Most other classes extend and build on this one.
  */
@@ -378,6 +424,8 @@ export interface FilesCollectionConfig {
   trustClientMimeType?: boolean;
   /** [Server] HMAC secret for signed download links, at least 32 characters. Without it `?token=` is ignored. */
   downloadTokenSecret?: string;
+  /** [Server] Storage adapter. Default: `new FSStorage()`. */
+  storage?: FilesStorageAdapter;
   /** [Server] Milliseconds before an idle upload file handle is closed. Default: 900000. */
   uploadIdleTimeout?: number;
   _preCollection?: Mongo.Collection<{ _id?: string }>;
@@ -734,6 +782,8 @@ export interface LoadOpts {
 // Server-specific overloads for FilesCollection
 // --------------------------------------------------------------------------
 export interface FilesCollection {
+  /** Storage adapter, `FSStorage` unless the `storage` option is set. */
+  storage: FilesStorageAdapter;
 
   /** Signed token for `link(file, version, uriBase, { token })`. Needs `downloadTokenSecret`. */
   createDownloadToken(fileRef: Partial<FileObj> | FileCursor | string, opts?: DownloadTokenOptions): string;
@@ -764,7 +814,7 @@ export interface FilesCollection {
     readableStream?: NodeJS.ReadableStream | null,
     _responseType?: string,
     force200?: boolean
-  ): void;
+  ): Promise<void>;
 
   /**
    * Adds an existing file on disk to the FilesCollection.

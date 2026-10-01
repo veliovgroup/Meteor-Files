@@ -1,6 +1,6 @@
 ### `unlinkAsync` [*Server*]
 
-Unlink file and its subversions from FS.
+Remove file and its subversions through the [storage adapter](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) (`remove()`). With the default `FSStorage` it unlinks the files from FS. A file that is already gone counts as removed.
 
 ```ts
 FilesCollection#unlinkAsync(fileRef: FileObj, version?: string): Promise<FilesCollection>

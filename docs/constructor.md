@@ -874,6 +874,23 @@
     </tr>
     <tr>
       <td align="right">
+        <code>config.storage</code> {<em>Object</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Storage adapter with <code>put(fileRef, versionName, localPath, { source })</code>, <code>createReadStream(fileRef, versionName, { start, end })</code> (inclusive <code>end</code>), <code>remove(fileRef, versionName)</code>, and optional <code>stat(fileRef, versionName)</code>. Uploads always write chunks to <code>storagePath</code> first. <code>put()</code> runs before the document insert and <code>onAfterUpload</code>, and its result is stored at <code>versions.&lt;name&gt;.meta.storage</code>. <code>source</code> is <code>'upload'</code>, <code>'write'</code> (<code>writeAsync()</code>), <code>'load'</code> (<code>loadAsync()</code>), or <code>'addFile'</code>. An <code>addFile</code> file belongs to the caller, so an adapter must not delete it. <code>serve()</code> streams through <code>createReadStream()</code>, <code>removeAsync()</code> and <code>unlinkAsync()</code> call <code>remove()</code>. <code>interceptDownload</code> still runs first. Without <code>stat()</code>, <code>download()</code> can not answer <code>404</code> or apply <code>integrityCheck</code> before streaming
+      </td>
+      <td>
+        <code>new FSStorage()</code>
+      </td>
+      <td>
+        Built in: <code>FSStorage</code> and <code>new GridFSStorage({ bucketName })</code>, both exported from <code>meteor/ostrio:files</code> on the server. <code>GridFSStorage</code> deletes the local file after <code>put()</code> for uploads, <code>writeAsync()</code>, and <code>loadAsync()</code>, and keeps the file passed to <code>addFile()</code>. S3: see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md">AWS S3 integration</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
         <code>config.uploadIdleTimeout</code> {<em>Number</em>}
       </td>
       <td>

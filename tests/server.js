@@ -7,6 +7,7 @@ import './helpers.test';
 import './mime.test';
 import './security.test';
 import './download-token.test';
+import './storage.test';
 import './browser-fixtures';
 
 // Collections created in tests trigger the allowClientCode and protected: true startup warnings, drop them from the output

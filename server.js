@@ -11,6 +11,7 @@ import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 import { SNIFF_BYTES, resolveMimeType, sniffFile } from './mime.js';
 import { MIN_SECRET_LENGTH, createDownloadToken as signDownloadToken, verifyDownloadToken } from './download-token.js';
+import { FSStorage, GridFSStorage, isStorageAdapter } from './storage.js';
 
 import fs from 'node:fs';
 import nodeQs from 'node:querystring';
@@ -161,6 +162,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `true`
  * @param config.trustClientMimeType {boolean} - [Server] Store the type the uploader sent. When `false` (default) the stored type comes from the file content
  * @param config.downloadTokenSecret {string} - [Server] HMAC secret for signed download links (`createDownloadToken()`), at least 32 characters. Without it `?token=` is ignored
+ * @param config.storage {FilesStorageAdapter} - [Server] Where finished files live: `put`, `createReadStream`, `remove`, optional `stat`. `put()` gets `{ source }` (`'upload'`, `'write'`, `'load'`, or `'addFile'`) as its 4th argument. Default: `new FSStorage()`
  * @param config.uploadIdleTimeout {number} - [Server] Close file handle of an upload after this many ms without new chunks, it is reopened on the next chunk. Default: 900000 (15 minutes)
  * @param config.throttle       {number}  - [Server] DEPRECATED bps throttle threshold
  * @param config.downloadRoute  {string}  - [Both]   Server Route used to retrieve files
@@ -233,6 +235,7 @@ class FilesCollection extends FilesCollectionCore {
         responseHeaders: this.responseHeaders,
         sanitize: this.sanitize,
         schema: this.schema,
+        storage: this.storage,
         storagePath,
         strict: this.strict,
         trustClientMimeType: this.trustClientMimeType,
@@ -386,6 +389,10 @@ class FilesCollection extends FilesCollectionCore {
       this.trustClientMimeType = false;
     }
 
+    if (this.storage === void 0) {
+      this.storage = new FSStorage();
+    }
+
     if (this.uploadIdleTimeout === void 0) {
       this.uploadIdleTimeout = 900000;
     }
@@ -478,6 +485,8 @@ class FilesCollection extends FilesCollectionCore {
     check(this.allowQueryStringCookies, Boolean);
     check(this.nosniff, Boolean);
     check(this.trustClientMimeType, Boolean);
+    // eslint-disable-next-line new-cap
+    check(this.storage, Match.Where(isStorageAdapter));
     check(this.uploadIdleTimeout, Number);
     /* eslint-disable new-cap */
     check(this.onAfterRemove, Match.OneOf(false, Function));
@@ -1842,16 +1851,24 @@ class FilesCollection extends FilesCollectionCore {
     this._setFileType(result, this.trustClientMimeType ? clientType : await sniffFile(result.path, clientType));
     result.public = this.public;
 
+    let storageMeta;
+    try {
+      storageMeta = await this._putVersion(result, 'original', result.path, 'upload');
+    } catch (putError) {
+      this._debug('[FilesCollection] [_finishUpload] [storage.put] Error:', putError);
+      await this._unlinkFile(result.path, '[_finishUpload]');
+      throw putError;
+    }
+
     let _id;
     try {
       _id = await this.collection.insertAsync(helpers.cloneDeep(result));
     } catch (colInsertError) {
       this._debug('[FilesCollection] [_finishUpload] [insert] Error:', colInsertError);
-      try {
-        await fs.promises.unlink(result.path);
-      } catch (unlinkError) {
-        this._debug('[FilesCollection] [_finishUpload] [unlink] Error:', unlinkError);
+      if (storageMeta) {
+        await this._removeVersion(result, 'original', '[_finishUpload]');
       }
+      await this._unlinkFile(result.path, '[_finishUpload]');
       throw colInsertError;
     }
 
@@ -2190,8 +2207,19 @@ class FilesCollection extends FilesCollectionCore {
       }
     }
 
+    let storageMeta;
+    let isInserted = false;
+    try {
+      storageMeta = await this._putVersion(result, 'original', opts.path, 'write');
+    } catch (putError) {
+      this._debug(`[FilesCollection] [writeAsync] [storage.put] Error: ${fileName} -> ${this.collectionName}`, putError);
+      await this._unlinkFile(opts.path, '[writeAsync]');
+      throw new Meteor.Error('writeAsync', putError);
+    }
+
     try {
       const _id = await this.collection.insertAsync(result);
+      isInserted = true;
       fileObj = await this.collection.findOneAsync(_id);
 
       if (proceedAfterUpload === true) {
@@ -2203,6 +2231,10 @@ class FilesCollection extends FilesCollectionCore {
       this._debug(`[FilesCollection] [write]: ${fileName} -> ${this.collectionName}`);
     } catch (insertErr) {
       this._debug(`[FilesCollection] [write] [insert] Error: ${fileName} -> ${this.collectionName}`, insertErr);
+      // The stored copy belongs to the document once it is inserted, an `onAfterUpload` error must not remove it
+      if (storageMeta && !isInserted) {
+        await this._removeVersion(result, 'original', '[writeAsync]');
+      }
       throw new Meteor.Error('writeAsync', insertErr);
     }
 
@@ -2269,6 +2301,9 @@ class FilesCollection extends FilesCollectionCore {
     opts.path = `${storagePath}${nodePath.sep}${fsName}${extensionWithDot}`;
 
     let fileObj;
+    let result;
+    let storageMeta;
+    let isInserted = false;
     let isFileCreated = false;
     const controller = new AbortController();
     let timer = null;
@@ -2309,7 +2344,7 @@ class FilesCollection extends FilesCollectionCore {
 
       // Content-Length is wrong for compressed responses, use size on disk
       const { size } = await fs.promises.stat(opts.path);
-      const result = this._dataToSchema({
+      result = this._dataToSchema({
         name: fileName,
         path: opts.path,
         meta: opts.meta,
@@ -2321,7 +2356,9 @@ class FilesCollection extends FilesCollectionCore {
       });
 
       result._id = fileId;
+      storageMeta = await this._putVersion(result, 'original', opts.path, 'load');
       const _id = await this.collection.insertAsync(result);
+      isInserted = true;
       fileObj = await this.collection.findOneAsync(_id);
       this._debug(`[FilesCollection] [load] [insert] ${fileName} -> ${this.collectionName}`);
     } catch (error) {
@@ -2333,6 +2370,10 @@ class FilesCollection extends FilesCollectionCore {
         } catch (unlinkError) {
           this._debug(`[FilesCollection] [loadAsync] [unlink(${url})] Error:`, unlinkError);
         }
+      }
+
+      if (storageMeta && !isInserted) {
+        await this._removeVersion(result, 'original', '[loadAsync]');
       }
 
       throw error;
@@ -2428,11 +2469,21 @@ class FilesCollection extends FilesCollectionCore {
       fileId: (opts.fileId && this.sanitize(opts.fileId, 20, 'a')) || null,
     });
 
+    // Adapters key stored copies by `_id`, so it is known before `put()`
+    if (!result._id) {
+      result._id = Random.id();
+    }
+    // The fs adapter keeps the file at `path`. Other adapters copy it and leave the caller's file in place
+    const storageMeta = await this._putVersion(result, 'original', path, 'addFile');
+
     let _id;
     try {
       _id = await this.collection.insertAsync(result);
     } catch (insertErr) {
       this._debug(`[FilesCollection] [addFile] [insertAsync] Error: ${result.name} -> ${this.collectionName}`, insertErr);
+      if (storageMeta) {
+        await this._removeVersion(result, 'original', '[addFile]');
+      }
       throw new Meteor.Error(insertErr.code, insertErr.message);
     }
 
@@ -2555,7 +2606,7 @@ class FilesCollection extends FilesCollectionCore {
    * @param {fileObj} fileRef - fileObj
    * @param {string} [version] - [Optional] file's version
    * @param {function} [callback] - [Optional] callback function
-   * @summary Unlink files and its versions from FS
+   * @summary Unlink files and its versions from FS. Works with the fs adapter only
    * @deprecated since v3.0.0. use {@link FilesCollection#unlinkAsync} instead.
    * @returns {FilesCollection} Instance
    */
@@ -2595,25 +2646,23 @@ class FilesCollection extends FilesCollectionCore {
    * @name unlinkAsync
    * @param {fileObj} fileRef - fileObj
    * @param {string} [version] - file's version
-   * @summary Remove files and all its versions from FS, or only particular version if `version` param is passed. Paths stored in the document are trusted, so do not let clients edit documents (see `allowClient()`)
+   * @summary Remove files and all versions through the storage adapter, or one version if `version` is passed. The fs adapter trusts paths stored in the document, so do not let clients edit documents (see `allowClient()`)
    * @returns {Promise<FilesCollection>} Instance
    */
   async unlinkAsync(fileRef, version) {
     this._debug(`[FilesCollection] [unlinkAsync(${fileRef._id}, ${version})]`);
     if (version) {
-      if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
-        await this._unlinkFile(fileRef.versions[version].path, `[${version}]`);
+      if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version])) {
+        await this._removeVersion(fileRef, version, `[${version}]`);
+      }
+    } else if (helpers.isObject(fileRef.versions)) {
+      for (const vKey of Object.keys(fileRef.versions)) {
+        if (helpers.isObject(fileRef.versions[vKey])) {
+          await this._removeVersion(fileRef, vKey, '[versions]');
+        }
       }
     } else {
-      if (helpers.isObject(fileRef.versions)) {
-        for(let vKey in fileRef.versions) {
-          if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
-            await this._unlinkFile(fileRef.versions[vKey].path, '[versions]');
-          }
-        }
-      } else {
-        await this._unlinkFile(fileRef.path, '');
-      }
+      await this._removeVersion(this._storageRef(fileRef, fileRef, 'original'), 'original', '');
     }
     return this;
   }
@@ -2636,6 +2685,68 @@ class FilesCollection extends FilesCollectionCore {
         return;
       }
       this._debug(`[FilesCollection] [unlinkAsync] ${label}${label ? ' ' : ''}Caught silent error`, unlinkError);
+    }
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _storageRef
+   * @param {FileObj} fileRef - File document
+   * @param {Object} vRef - Version object to serve
+   * @param {string} version - Version name
+   * @summary Internal method. File object whose `versions[version]` is `vRef`, so adapters read the same data `serve()` got
+   * @returns {Object}
+   */
+  _storageRef(fileRef, vRef, version) {
+    if (helpers.isObject(fileRef?.versions) && fileRef.versions[version] === vRef) {
+      return fileRef;
+    }
+    return Object.assign({}, fileRef, {
+      versions: Object.assign({}, helpers.isObject(fileRef?.versions) ? fileRef.versions : {}, { [version]: vRef }),
+    });
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _putVersion
+   * @param {Partial<FileObj>} fileRef - File object, updated in place
+   * @param {string} versionName - Version
+   * @param {string} localPath - File on disk
+   * @param {'upload'|'write'|'load'|'addFile'} source - Origin of the local file, passed to `put()` as `{ source }`
+   * @summary Internal method. Hand a finished file to the storage adapter, keep its result at `versions[versionName].meta.storage`
+   * @returns {Promise<Object|undefined>} The adapter result
+   */
+  async _putVersion(fileRef, versionName, localPath, source) {
+    const storageMeta = await this.storage.put(fileRef, versionName, localPath, { source });
+    if (helpers.isObject(storageMeta)) {
+      const vRef = fileRef.versions[versionName];
+      vRef.meta = Object.assign({}, helpers.isObject(vRef.meta) ? vRef.meta : {}, { storage: storageMeta });
+    }
+    return storageMeta;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _removeVersion
+   * @param {FileObj} fileRef - File document
+   * @param {string} versionName - Version
+   * @param {string} [label] - Log label
+   * @summary Internal method. Remove a version through the adapter. A file that is already gone counts as removed. Never throws
+   * @returns {Promise<void>}
+   */
+  async _removeVersion(fileRef, versionName, label = '') {
+    const prefix = `[FilesCollection] [unlinkAsync] ${label}${label ? ' ' : ''}`;
+    try {
+      await this.storage.remove(fileRef, versionName);
+    } catch (removeError) {
+      if (removeError?.code === 'ENOENT') {
+        this._debug(`${prefix}File is already removed: ${removeError.path}`);
+        return;
+      }
+      this._debug(`${prefix}Caught silent error`, removeError);
     }
   }
 
@@ -2725,29 +2836,24 @@ class FilesCollection extends FilesCollectionCore {
         return void 0;
       }
 
-      let stats;
-
-      try {
-        stats = await fs.promises.stat(vRef.path);
-      } catch (statErr){
-        if (statErr) {
+      let responseType = '200';
+      // Adapters without `stat()` skip the existence and integrity checks, a missing file fails while streaming
+      if (helpers.isFunction(this.storage.stat)) {
+        const stats = await this.storage.stat(this._storageRef(fileRef, vRef, version), version);
+        if (!stats) {
           return this._404(http);
         }
-      }
-      if (!stats.isFile()) {
-        return this._404(http);
-      }
-      let responseType;
 
-      if (stats.size !== vRef.size && !this.integrityCheck) {
-        vRef.size = stats.size;
-      }
-
-      if (stats.size !== vRef.size && this.integrityCheck) {
-        responseType = '400';
+        if (stats.size !== vRef.size) {
+          if (this.integrityCheck) {
+            responseType = '400';
+          } else {
+            vRef.size = stats.size;
+          }
+        }
       }
 
-      return this.serve(http, fileRef, vRef, version, null, responseType || '200');
+      return await this.serve(http, fileRef, vRef, version, null, responseType);
     }
     return this._404(http);
   }
@@ -2803,10 +2909,10 @@ class FilesCollection extends FilesCollectionCore {
    * @param {stream.Readable|null} readableStream - Readable stream, which serves binary file data
    * @param {string} responseType - Response code
    * @param {boolean} force200 - Force 200 response code over 206
-   * @summary Handle and reply to incoming request
-   * @returns {undefined}
+   * @summary Handle and reply to incoming request. Without `readableStream` the file is read through the storage adapter
+   * @returns {Promise<void>}
    */
-  serve(http, fileRef, vRef, version = 'original', readableStream = null, _responseType = '200', force200 = false) {
+  async serve(http, fileRef, vRef, version = 'original', readableStream = null, _responseType = '200', force200 = false) {
     let reqRange = false;
     let responseType = _responseType;
 
@@ -2854,17 +2960,54 @@ class FilesCollection extends FilesCollectionCore {
       }
     }
 
-    const respond = (stream, code) => {
-      const writeHead = () => {
+    const storageRef = readableStream ? null : this._storageRef(fileRef, vRef, version);
+
+    const fail = (stream, error) => {
+      this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [500]`, error);
+      if (stream && !stream.destroyed) {
+        stream.destroy();
+      }
+
+      if (!http.response.headersSent) {
+        const text = 'Internal Server Error';
+        http.response.removeHeader('Content-Length');
+        http.response.removeHeader('Content-Range');
+        http.response.writeHead(500, {
+          'Content-Type': 'text/plain',
+          'Content-Length': text.length
+        });
+        http.response.end(text);
+      } else if (!http.response.writableEnded) {
+        http.response.destroy();
+      }
+    };
+
+    const respond = async (code, range) => {
+      let stream = readableStream;
+      if (stream) {
         if (!http.response.headersSent) {
           http.response.writeHead(code);
         }
-      };
-
-      if (readableStream) {
-        writeHead();
       } else {
-        stream.once('open', writeHead);
+        try {
+          stream = await this.storage.createReadStream(storageRef, version, range ? { start: range.start, end: range.end } : {});
+        } catch (openError) {
+          if (openError?.error === 404) {
+            http.response.removeHeader('Content-Range');
+            this._404(http);
+            return;
+          }
+          fail(null, openError);
+          return;
+        }
+
+        if (http.response.destroyed) {
+          // The client left while the adapter opened the file
+          stream.destroy();
+          return;
+        }
+        // Headers go out with the first byte, so an error before it still answers 500
+        http.response.statusCode = code;
       }
 
       // Free the file descriptor when the client goes away
@@ -2873,27 +3016,7 @@ class FilesCollection extends FilesCollectionCore {
           stream.destroy();
         }
       });
-
-      stream.once('error', (error) => {
-        this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [500]`, error);
-        if (!stream.destroyed) {
-          stream.destroy();
-        }
-
-        if (!http.response.headersSent) {
-          const text = 'Internal Server Error';
-          http.response.removeHeader('Content-Length');
-          http.response.removeHeader('Content-Range');
-          http.response.writeHead(500, {
-            'Content-Type': 'text/plain',
-            'Content-Length': text.length
-          });
-          http.response.end(text);
-        } else if (!http.response.writableEnded) {
-          http.response.destroy();
-        }
-      });
-
+      stream.once('error', (error) => fail(stream, error));
       stream.pipe(http.response);
     };
 
@@ -2937,7 +3060,7 @@ class FilesCollection extends FilesCollectionCore {
           http.response.removeHeader('Transfer-Encoding');
         }
       }
-      respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
+      await respond(206, reqRange);
       break;
     default:
       if (!http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
@@ -2946,10 +3069,10 @@ class FilesCollection extends FilesCollectionCore {
         http.response.removeHeader('Transfer-Encoding');
       }
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
-      respond(readableStream || fs.createReadStream(vRef.path), 200);
+      await respond(200, null);
       break;
     }
   }
 }
 
-export { FilesCollection, WriteStream, helpers };
+export { FilesCollection, FSStorage, GridFSStorage, WriteStream, helpers };
