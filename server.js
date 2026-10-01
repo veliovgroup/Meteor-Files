@@ -134,7 +134,7 @@ const createIndex = async (_collection, keys, opts) => {
  * @param config.chunkSize      {number}  - [Both] Upload chunk size, default: 524288 bytes (0,5 Mb)
  * @param config.permissions    {number}  - [Server] Permissions which will be set to uploaded files (octal), like: `511` or `0o755`. Default: 0644
  * @param config.parentDirPermissions {number}  - [Server] Permissions which will be set to parent directory of uploaded files (octal), like: `0o611` or `0o777`. Default: 0755
- * @param config.storagePath    {string|function}  - [Server] Storage path on file system
+ * @param config.storagePath    {string|function}  - [Server] Storage path on file system. The function can be async
  * @param config.cacheControl   {string}  - [Server] Default `Cache-Control` header
  * @param config.responseHeaders {object|function} - [Server] Custom response headers, if function is passed, must return Object
  * @param config.nosniff        {boolean} - [Server] Send `X-Content-Type-Options: nosniff` header with served files. Default: `false`
@@ -398,26 +398,42 @@ class FilesCollection extends FilesCollectionCore {
       const normalizedStoragePath = nodePath.normalize(storagePath).replace(/(.)[\/\\]+$/, '$1');
       this.storagePath = () => normalizedStoragePath;
     } else {
-      this.storagePath = function () {
-        let sp = storagePath.apply(self, arguments);
+      const normalizeStoragePath = (sp) => {
         if (!helpers.isString(sp)) {
           throw new Meteor.Error(400, `[FilesCollection.${self.collectionName}] "storagePath" function must return a String!`);
         }
-        sp = sp.replace(/\/$/, '');
-        return nodePath.normalize(sp);
+        return nodePath.normalize(sp.replace(/\/$/, ''));
+      };
+
+      // Returns a String, or a Promise of a String when the function is async
+      this.storagePath = function () {
+        const sp = storagePath.apply(self, arguments);
+        return helpers.isFunction(sp?.then) ? sp.then(normalizeStoragePath) : normalizeStoragePath(sp);
       };
     }
 
-    this._debug('[FilesCollection.storagePath] Set to:', this.storagePath({}));
-
-    try {
-      fs.mkdirSync(this.storagePath({}), {
-        mode: this.parentDirPermissions,
-        recursive: true
+    const initialStoragePath = this.storagePath({});
+    if (helpers.isFunction(initialStoragePath?.then)) {
+      // Async `storagePath` may depend on the file, so the directory is created per upload.
+      // Creating the directory for an empty file is best effort and never throws
+      initialStoragePath.then((dir) => {
+        this._debug('[FilesCollection.storagePath] Set to:', dir);
+        return fs.promises.mkdir(dir, { mode: this.parentDirPermissions, recursive: true });
+      }).catch((error) => {
+        this._debug('[FilesCollection.storagePath] Skipped creating the directory for an empty file object:', error);
       });
-    } catch (error) {
-      if (error) {
-        throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${this.storagePath({})}" is not writable!`, error);
+    } else {
+      this._debug('[FilesCollection.storagePath] Set to:', initialStoragePath);
+
+      try {
+        fs.mkdirSync(initialStoragePath, {
+          mode: this.parentDirPermissions,
+          recursive: true
+        });
+      } catch (error) {
+        if (error) {
+          throw new Meteor.Error(401, `[FilesCollection.${self.collectionName}] Path "${initialStoragePath}" is not writable!`, error);
+        }
       }
     }
 
@@ -1106,7 +1122,7 @@ class FilesCollection extends FilesCollectionCore {
       }
       opts.FSName = FSName;
 
-      const storagePath = this.storagePath(result);
+      const storagePath = await this.storagePath(result);
       result._storagePath = storagePath;
       result.path = `${storagePath}${nodePath.sep}${FSName}${extensionWithDot}`;
       if (!this._isPathInside(storagePath, result.path)) {
@@ -1965,7 +1981,8 @@ class FilesCollection extends FilesCollectionCore {
 
     const {extension, extensionWithDot} = this._getExt(fileName);
 
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+    const storagePath = await this.storagePath(opts);
+    opts.path = `${storagePath}${nodePath.sep}${fsName}${extensionWithDot}`;
     opts.type = this._getMimeType(opts);
     if (!helpers.isObject(opts.meta)) {
       opts.meta = {};
@@ -1982,7 +1999,8 @@ class FilesCollection extends FilesCollectionCore {
       type: opts.type,
       size: opts.size,
       userId: opts.userId,
-      extension
+      extension,
+      _storagePath: storagePath
     });
 
     result._id = fileId;
@@ -2078,7 +2096,8 @@ class FilesCollection extends FilesCollectionCore {
     const fileName = (opts.name || opts.fileName) ? (opts.name || opts.fileName) : pathParts[pathParts.length - 1].split('?')[0] || fsName;
 
     const {extension, extensionWithDot} = this._getExt(fileName);
-    opts.path = `${this.storagePath(opts)}${nodePath.sep}${fsName}${extensionWithDot}`;
+    const storagePath = await this.storagePath(opts);
+    opts.path = `${storagePath}${nodePath.sep}${fsName}${extensionWithDot}`;
 
     let fileObj;
     let isFileCreated = false;
@@ -2128,7 +2147,8 @@ class FilesCollection extends FilesCollectionCore {
         type: opts.type || res.headers.get('content-type') || this._getMimeType({path: opts.path}),
         size,
         userId: opts.userId,
-        extension
+        extension,
+        _storagePath: storagePath
       });
 
       result._id = fileId;

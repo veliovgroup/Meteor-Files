@@ -99,6 +99,65 @@ describe('FilesCollection Constructor', function() {
       expect(fc.responseHeaders).to.equal(responseHeaders);
     });
   });
+
+  describe('async storagePath', function() {
+    it('returns a Promise of a normalized string for an async function', async function() {
+      const dir = tmpDir('async-sp');
+      const fc = new FilesCollection({ collectionName: `testserver-asyncsp-${Random.id(4)}`, storagePath: async () => `${dir}/` });
+      const result = fc.storagePath({});
+      expect(result).to.be.an.instanceof(Promise);
+      expect(await result).to.equal(dir);
+    });
+
+    it('still returns a string for a sync function', function() {
+      const dir = tmpDir('sync-sp');
+      const fc = new FilesCollection({ collectionName: `testserver-syncsp-${Random.id(4)}`, storagePath: () => dir });
+      expect(fc.storagePath({})).to.equal(dir);
+    });
+
+    it('rejects when an async function does not return a string', async function() {
+      const dir = tmpDir('async-sp-bad');
+      let ready = false;
+      const fc = new FilesCollection({ collectionName: `testserver-asyncspbad-${Random.id(4)}`, storagePath: async () => (ready ? 42 : dir) });
+      ready = true;
+      const error = await expectRejects(fc.storagePath({}));
+      expect(error).to.have.property('error', 400);
+    });
+
+    it('does not throw at startup when the async function rejects for an empty file object', function() {
+      expect(() => new FilesCollection({
+        collectionName: `testserver-asyncspthrow-${Random.id(4)}`,
+        storagePath: async (fileObj) => {
+          if (!fileObj?.userId) {
+            throw new Error('no user');
+          }
+          return tmpDir('async-sp-user');
+        }
+      })).to.not.throw();
+    });
+
+    it('creates the directory at startup when the async function resolves for an empty object', async function() {
+      const dir = nodePath.join(tmpDir('async-sp-mk'), 'made');
+      const fc = new FilesCollection({ collectionName: `testserver-asyncspmk-${Random.id(4)}`, storagePath: async () => dir });
+      await fc.storagePath({});
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(fs.existsSync(dir)).to.equal(true);
+    });
+
+    it('writeAsync stores the file in the resolved directory and saves _storagePath', async function() {
+      const base = tmpDir('async-sp-write');
+      const fc = new FilesCollection({
+        collectionName: `testserver-asyncspw-${Random.id(4)}`,
+        storagePath: async (fileObj) => nodePath.join(base, fileObj?.userId || 'anon')
+      });
+      const fileObj = await fc.writeAsync(Buffer.from('data'), { name: 'a.txt', type: 'text/plain', userId: 'u1', fileId: `f${Random.id(6)}` });
+      const dir = nodePath.join(base, 'u1');
+      expect(nodePath.dirname(fileObj.path)).to.equal(dir);
+      expect(fileObj._storagePath).to.equal(dir);
+      expect(fs.readFileSync(fileObj.path, 'utf8')).to.equal('data');
+      await fc.collection.removeAsync({});
+    });
+  });
 });
 
 

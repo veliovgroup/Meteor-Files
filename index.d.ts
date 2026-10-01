@@ -173,7 +173,7 @@ export class FilesCollectionCore extends EventEmitter {
   debug?: boolean | ((...args: unknown[]) => void);
   downloadRoute?: string;
   collectionName?: string;
-  storagePath: (data: Partial<FileObj>) => string;
+  storagePath: (data: Partial<FileObj>) => MaybePromise<string>;
 
   constructor();
 
@@ -308,7 +308,7 @@ export class FilesCollectionCore extends EventEmitter {
 }
 
 export interface FilesCollectionConfig {
-  storagePath?: string | ((fileObj?: Partial<FileObj>) => string);
+  storagePath?: string | ((fileObj?: Partial<FileObj>) => MaybePromise<string>);
   collection?: Mongo.Collection<FileObj>;
   collectionName?: string;
   /** Seconds an unfinished upload stays resumable. Default: 10800 (3 hours). */

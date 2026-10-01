@@ -150,7 +150,7 @@ const createThumbnails = async (collection, fileRef) => {
     }
   });
 
-  const path = `${collection.storagePath(fileRef)}/thumbnail-${fileRef._id}.${fileRef.extension}`;
+  const path = `${await collection.storagePath(fileRef)}/thumbnail-${fileRef._id}.${fileRef.extension}`;
 
   // Change width and height proportionally,
   // `rotate()` applies the EXIF orientation, metadata is stripped by default

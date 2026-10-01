@@ -92,6 +92,8 @@ This release closes several upload and download security holes, fixes the client
 - ✨ Add the `nosniff` Server option. It sets `X-Content-Type-Options: nosniff` (default `false`, planned to default to `true` in v4).
 - ✨ Warn on server start when `allowClientCode` is on and `onBeforeRemove` is not set.
 - ✨ Add `userAsync()` to the client `_getUser()` result.
+- ✨ Allow the `debug` option to be a function. The server and client pass log arguments to it instead of the console. Thanks to @jankapunkt, #907.
+- ✨ Allow the `storagePath` function to be `async`. `collection.storagePath(fileObj)` returns a Promise in this case, so `await` it. Thanks to @codeonprod, #909.
 
 ### Changed
 

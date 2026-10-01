@@ -51,7 +51,7 @@
         Server
       </td>
       <td>
-        Storage path on file system
+        Storage path on file system. The function can be <code>async</code> and receives the file object, for example to look up a directory in a database. The server calls it with an empty object once at startup and creates the directory when the call succeeds. Always <code>await</code> <code>collection.storagePath(fileObj)</code> when you call it yourself
       </td>
       <td>
         <code>function () { return 'assets/app/uploads/' + collectionName; }</code>
