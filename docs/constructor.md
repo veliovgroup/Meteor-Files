@@ -886,7 +886,7 @@
         <code>new FSStorage()</code>
       </td>
       <td>
-        Built in: <code>FSStorage</code> and <code>new GridFSStorage({ bucketName })</code>, both exported from <code>meteor/ostrio:files</code> on the server. <code>GridFSStorage</code> deletes the local file after <code>put()</code> for uploads, <code>writeAsync()</code>, and <code>loadAsync()</code>, and keeps the file passed to <code>addFile()</code>. S3: see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md">AWS S3 integration</a>
+        Built in: <code>FSStorage</code> and <code>new GridFSStorage({ bucketName })</code>, both exported from <code>meteor/ostrio:files</code> on the server only. In shared code, use <code>storage: Meteor.isServer ? new GridFSStorage() : undefined</code>. <code>GridFSStorage</code> deletes the local file after <code>put()</code> for uploads, <code>writeAsync()</code>, and <code>loadAsync()</code>, and keeps the file passed to <code>addFile()</code>. S3: see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/aws-s3-integration.md">AWS S3 integration</a>
       </td>
     </tr>
     <tr>

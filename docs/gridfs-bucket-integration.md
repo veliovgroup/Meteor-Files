@@ -3,11 +3,13 @@
 Since v4, use the built-in adapter: `new FilesCollection({ storage: new GridFSStorage({ bucketName: 'images' }) })`
 
 ```js
+import { Meteor } from 'meteor/meteor';
 import { FilesCollection, GridFSStorage } from 'meteor/ostrio:files';
 
+// Shared code. The client build does not export `GridFSStorage`, so create it on the server only
 export const Images = new FilesCollection({
   collectionName: 'images',
-  storage: new GridFSStorage({ bucketName: 'images' }),
+  storage: Meteor.isServer ? new GridFSStorage({ bucketName: 'images' }) : undefined,
 });
 ```
 

@@ -109,14 +109,16 @@ HTTP routes identify the user with the `x_mtok` cookie. The client sets it to th
 Set `downloadTokenSecret` on the server to hand out links that work without the `x_mtok` cookie, on any instance:
 
 ```js
+// Shared code. `Meteor.settings.private` is undefined on the client
 const files = new FilesCollection({
   collectionName: 'files',
-  downloadTokenSecret: Meteor.settings.private.filesTokenSecret,
+  downloadTokenSecret: Meteor.isServer ? Meteor.settings.private.filesTokenSecret : undefined,
   protected(fileObj) {
     return !!fileObj && fileObj.userId === this.userId;
   },
 });
 
+// Server only: `createDownloadToken()` does not exist on the client
 Meteor.methods({
   async 'files.downloadLink'(fileId) {
     check(fileId, String);

@@ -90,14 +90,16 @@ imagesCollection.link(fileRef, 'original', '/');
 With `downloadTokenSecret` set on the server, `createDownloadToken()` returns a token that opens one `_id` and one version in this collection until it expires. Pass it as `{ token }` to get a link that works without the `x_mtok` cookie and on any server instance with the same secret. The token's `userId` becomes `this.userId` in `protected` and `http.userId` in `downloadCallback`. An invalid or expired token gets `403`. A token download gets `Cache-Control: private, max-age=<seconds until the token expires>` unless `responseHeaders` sets `Cache-Control`. See the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md#signed-download-links).
 
 ```js
+// Shared code. `Meteor.settings.private` is undefined on the client
 const files = new FilesCollection({
   collectionName: 'files',
-  downloadTokenSecret: Meteor.settings.private.filesTokenSecret,
+  downloadTokenSecret: Meteor.isServer ? Meteor.settings.private.filesTokenSecret : undefined,
   protected(fileObj) {
     return !!fileObj && fileObj.userId === this.userId;
   },
 });
 
+// Server only: `createDownloadToken()` does not exist on the client
 Meteor.methods({
   async 'files.downloadLink'(fileId) {
     check(fileId, String);
