@@ -84,6 +84,9 @@ This release closes several upload and download security holes, fixes the client
 - 🔧 Honor `limit` and `skip` in `hasNextAsync()` and `lastAsync()`.
 - 🔧 Stop `estimatedDocumentCount()` from failing in debug mode.
 - 🔧 Fix typos in JSDoc and error messages.
+- 🔧 Match `index.d.ts` to the runtime API. Many options and method signatures were missing or wrong.
+- 🔧 Keep uploads, downloads, and writes running when a custom `debug` function throws. The error goes to the console.
+- 🔧 Throw from `_dataToSchema()` when `storagePath` resolves to a Promise that was not awaited, so a Promise never lands in a stored document.
 
 ### Added
 
@@ -103,6 +106,7 @@ This release closes several upload and download security holes, fixes the client
 - 👨‍💻 Ask the user to check the connection when one chunk fails 10 times in a row, and name a chunk larger than `chunkSize` (for example from a pipe) as one possible cause.
 - 👨‍💻 Export types from `index.d.ts` at the top level. The old `declare module` wrapper exported nothing.
 - 👨‍💻 Keep `FileUpload` pipes in reverse order of registration. This changes in v4.
+- 🤫 Ignore `docs/audits/` in git.
 
 ### Docs
 
@@ -114,6 +118,9 @@ This release closes several upload and download security holes, fixes the client
 - 📔 Document the event order: `abort()` emits `pause`, then `abort`, and no `end`. A failed upload emits `error`, then `end`. Document that `abort()` does not cancel an EOF or HTTP Start request that is already sent.
 - 📔 Document that a custom `readableStream` passed to `serve()` for a `Range` request should contain exactly the requested bytes, and when `serve()` sets `Content-Length`.
 - 📔 Fix wrong defaults, broken links, typos, and samples that did not run on Meteor 3.
+- 📔 Add `CLAUDE.md` with commands, architecture notes, and invariants for contributors and coding agents.
+- 📔 Update the README, the docs index, and `CONTRIBUTING.md`: Meteor 3.2 requirement, links to the security and migration guides, and `Isomorphic` instead of `Anywhere` in API labels.
+- 📔 Document the `debug` function and the async `storagePath` option in `docs/constructor.md`, and `await` `storagePath()` in the `sharp` thumbnail guide.
 
 ### Tests
 
@@ -121,6 +128,7 @@ This release closes several upload and download security holes, fixes the client
 - 🧪 Port Tinytest helpers to mocha and fix tests that passed without asserting.
 - 🧪 Cover `Content-Length` on `200` and `206` for files and custom streams, `HEAD`, `?play=true`, default charsets, racing EOFs (also anonymous), abort after restart (also for records without file identity), `link()` without `_id`, encoded routes, and unlink of missing files.
 - 🧪 Check types with `tsc` and `tsd` (`npm run typecheck`).
+- 🧪 Cover the `debug` function option and async `storagePath` (Promise return, rejection, startup, `writeAsync`, `loadAsync`).
 - 🏗️ Run lint, typecheck, and tests in CI on Meteor 3.2.2 and 3.5.2.
 - 🏗️ Replace `.eslintrc` with an ESLint 9 flat config, without the deprecated `no-extra-semi` and `no-native-reassign` rules.
 
@@ -129,5 +137,6 @@ This release closes several upload and download security holes, fixes the client
 - 📦 `ostrio:cookies` 3.0.0
 - 📦 `eventemitter3` 5.0.4
 - 📦 `meteortesting:mocha` 3.4.0, `chai` 6, `sinon` 22 for tests
+- 📦 Update the dev dependency lockfile (`js-yaml`, ESLint 9, TypeScript 5.9, `tsd`) and the package `npm-shrinkwrap.json`
 
 For the full changelog see [releases on GitHub](https://github.com/veliovgroup/Meteor-Files/releases).
