@@ -2713,14 +2713,17 @@ class FilesCollection extends FilesCollectionCore {
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [206]`);
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
-        http.response.setHeader('Content-Length', `${reqRange.end - reqRange.start + 1}`);
-        // A message with Content-Length must not be chunked
-        http.response.removeHeader('Transfer-Encoding');
+        if (!readableStream) {
+          // serve() reads exactly this range from the file. The length of a caller's stream is unknown, so it is sent chunked
+          http.response.setHeader('Content-Length', `${reqRange.end - reqRange.start + 1}`);
+          // A message with Content-Length must not be chunked
+          http.response.removeHeader('Transfer-Encoding');
+        }
       }
       respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
       break;
     default:
-      if (!http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
+      if (!readableStream && !http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
         http.response.setHeader('Content-Length', `${vRef.size}`);
         http.response.removeHeader('Transfer-Encoding');
       }

@@ -97,14 +97,14 @@ const httpRequest = (path, { method = 'GET', headers = {}, body } = {}) => {
 /**
  * Serve a vRef through `serve()` on a throwaway HTTP server and return the response
  */
-const serveRequest = (fc, { vRef, fileRef, headers = {}, query = {}, readable }) => {
+const serveRequest = (fc, { vRef, fileRef, headers = {}, query = {}, readable, method = 'GET' }) => {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       fc.serve({ request: req, response: res, params: { query } }, fileRef || { _id: 'abc', name: vRef.name }, vRef, 'original', readable ? readable() : null);
     });
     server.listen(0, '127.0.0.1', () => {
       const { port } = server.address();
-      http.get({ host: '127.0.0.1', port, headers }, (res) => {
+      http.get({ host: '127.0.0.1', port, headers, method }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
@@ -1056,6 +1056,43 @@ describe('Security', function () {
       expect(res.headers['content-length']).to.equal(`${content.length}`);
       expect(res.headers).to.not.have.property('transfer-encoding');
       expect(res.headers).to.not.have.property('content-range');
+    });
+
+    it('sends no Content-Length on 206 for a caller\'s stream, so a stream of another length can not break the connection', async function () {
+      const res = await serveRequest(fc, { vRef: vRef(), headers: { range: 'bytes=2-5' }, readable: () => Readable.from([Buffer.from('2345')]) });
+      expect(res.status).to.equal(206);
+      expect(res.body).to.equal('2345');
+      expect(res.headers['content-range']).to.equal('bytes 2-5/10');
+      expect(res.headers).to.not.have.property('content-length');
+      expect(res.headers['transfer-encoding']).to.equal('chunked');
+    });
+
+    it('sends no Content-Length on 200 for a caller\'s stream', async function () {
+      const res = await serveRequest(fc, { vRef: vRef(), readable: () => Readable.from([Buffer.from(content)]) });
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(content);
+      expect(res.headers).to.not.have.property('content-length');
+      expect(res.headers['transfer-encoding']).to.equal('chunked');
+    });
+
+    it('keeps a Content-Length set in responseHeaders for a caller\'s stream', async function () {
+      const custom = createCollection({ responseHeaders: { 'Content-Length': `${content.length}` } });
+      const res = await serveRequest(custom, { vRef: vRef(), readable: () => Readable.from([Buffer.from(content)]) });
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-length']).to.equal(`${content.length}`);
+      expect(res.body).to.equal(content);
+    });
+
+    it('answers HEAD with the same status and Content-Length and no body', async function () {
+      const full = await serveRequest(fc, { vRef: vRef(), method: 'HEAD' });
+      expect(full.status).to.equal(200);
+      expect(full.headers['content-length']).to.equal(`${content.length}`);
+      expect(full.body).to.equal('');
+      const part = await serveRequest(fc, { vRef: vRef(), method: 'HEAD', headers: { range: 'bytes=2-5' } });
+      expect(part.status).to.equal(206);
+      expect(part.headers['content-length']).to.equal('4');
+      expect(part.headers['content-range']).to.equal('bytes 2-5/10');
+      expect(part.body).to.equal('');
     });
 
     it('serves ?play=true without Range as 200 with the full body', async function () {
