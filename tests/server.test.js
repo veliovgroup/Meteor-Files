@@ -555,6 +555,34 @@ describe('FilesCollection', function() {
       const fileRef = { _id: 'u1', versions: { thumb: { path: nodePath.join(TMP_ROOT, 'gone.txt') } } };
       expect(await fc.unlinkAsync(fileRef, 'thumb')).to.equal(fc);
     });
+
+    it('treats a file that is already gone as removed and logs one line without a stack', async () => {
+      const fc = new FilesCollection({ collectionName: `testserver-unlink-${Random.id(4)}`, storagePath: tmpDir('unlink') });
+      const debug = sinon.stub(fc, '_debug');
+      try {
+        const gone = nodePath.join(TMP_ROOT, 'gone-again.txt');
+        expect(await fc.unlinkAsync({ _id: 'u2', path: gone })).to.equal(fc);
+        const calls = debug.getCalls().filter((c) => c.args.some((a) => a instanceof Error) || `${c.args[0]}`.includes('already removed'));
+        expect(calls).to.have.length(1);
+        expect(calls[0].args).to.have.length(1);
+        expect(calls[0].args[0]).to.include('already removed');
+      } finally {
+        debug.restore();
+      }
+    });
+
+    it('removeAsync() removes the record when its file is already gone', async () => {
+      const fc = new FilesCollection({ collectionName: `testserver-unlink-${Random.id(4)}`, storagePath: tmpDir('unlink') });
+      const debug = sinon.stub(fc, '_debug');
+      try {
+        const _id = await fc.collection.insertAsync({ name: 'gone.txt', path: nodePath.join(TMP_ROOT, 'gone-3.txt'), versions: { original: { path: nodePath.join(TMP_ROOT, 'gone-3.txt') } } });
+        expect(await fc.removeAsync({ _id })).to.equal(1);
+        expect(await fc.collection.findOneAsync(_id)).to.equal(undefined);
+        expect(debug.getCalls().some((c) => c.args.some((a) => a instanceof Error))).to.equal(false);
+      } finally {
+        debug.restore();
+      }
+    });
   });
 
   describe('#download', () => {

@@ -376,6 +376,41 @@ describe('Security', function () {
       expect(fs.readFileSync(path, 'utf8')).to.equal('victim-data');
     });
 
+    it('owner abort after restart removes the partial file and the record', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: chunk(97) });
+      const path = fc._currentUploads[opts.fileId].path;
+      await simulateRestart(opts.fileId);
+      expect(fs.existsSync(path)).to.equal(true);
+      expect(await call(fc, '_Abort', 'userA', opts.fileId)).to.deep.equal({ status: 499 });
+      expect(fs.existsSync(path)).to.equal(false);
+      expect(await fc._preCollection.findOneAsync(opts.fileId)).to.equal(undefined);
+    });
+
+    it('owner abort after restart keeps a file that replaced the upload file', async function () {
+      const opts = startOpts({ size: 2048, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      const path = fc._currentUploads[opts.fileId].path;
+      await simulateRestart(opts.fileId);
+      fs.unlinkSync(path);
+      fs.writeFileSync(path, 'victim-data');
+      expect(await call(fc, '_Abort', 'userA', opts.fileId)).to.deep.equal({ status: 499 });
+      expect(fs.readFileSync(path, 'utf8')).to.equal('victim-data');
+      expect(await fc._preCollection.findOneAsync(opts.fileId)).to.equal(undefined);
+    });
+
+    it('owner abort after restart keeps the file of a finished upload', async function () {
+      const opts = startOpts({ size: 1024, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      const path = fc._currentUploads[opts.fileId].path;
+      await simulateRestart(opts.fileId);
+      // Finished on another server, its record is not removed yet
+      await fc.collection.insertAsync({ _id: opts.fileId, name: 'file.txt', userId: 'userA', path });
+      await call(fc, '_Abort', 'userA', opts.fileId);
+      expect(fs.existsSync(path)).to.equal(true);
+    });
+
     it('rejects Start with 409 when a pending upload claims the path', async function () {
       const first = startOpts({ FSName: 'claimed', size: 4 });
       await call(fc, '_Start', 'userA', first);
@@ -494,6 +529,92 @@ describe('Security', function () {
       const again = await call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
       expect(again.status).to.equal(200);
       expect(again._id).to.equal(opts.fileId);
+    });
+
+    it('DDP: two EOFs sent together finish once and get the same result', async function () {
+      const opts = startOpts({ size: 4 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
+      const finish = sinon.spy(fc, '_finishUpload');
+      const [first, second] = await Promise.all([
+        call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }),
+        call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }),
+      ]);
+      expect(finish.callCount).to.equal(1);
+      expect(first._id).to.equal(opts.fileId);
+      expect(second).to.deep.equal(first);
+      expect(await fc.collection.countDocuments({ _id: opts.fileId })).to.equal(1);
+      expect(fc._finishingUploads.has(opts.fileId)).to.equal(false);
+    });
+
+    it('DDP: an EOF that arrives while the first EOF finishes waits for it instead of 408', async function () {
+      const opts = startOpts({ size: 4 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
+      let release;
+      const gate = new Promise((r) => { release = r; });
+      const originalFinish = fc._finishUpload.bind(fc);
+      let entered;
+      const enteredPromise = new Promise((r) => { entered = r; });
+      sinon.stub(fc, '_finishUpload').callsFake(async (...args) => {
+        entered();
+        await gate;
+        return originalFinish(...args);
+      });
+      const firstPromise = call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      await enteredPromise;
+      // The stream is ended and the document is not inserted yet
+      expect(fc._currentUploads[opts.fileId].ended).to.equal(true);
+      const secondPromise = call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      await expectMeteorError(call(fc, '_Write', 'userB', { fileId: opts.fileId, eof: true }), 408);
+      release();
+      const [first, second] = await Promise.all([firstPromise, secondPromise]);
+      expect(second).to.deep.equal(first);
+      expect(second._id).to.equal(opts.fileId);
+    });
+
+    it('DDP: an EOF that races a failing EOF gets the same error', async function () {
+      const opts = startOpts({ size: 4 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
+      sinon.stub(fc, '_finishUpload').callsFake(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+        throw new Meteor.Error(500, 'insert failed');
+      });
+      const results = await Promise.allSettled([
+        call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }),
+        call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true }),
+      ]);
+      expect(results.map((r) => r.status)).to.deep.equal(['rejected', 'rejected']);
+      expect(results[1].reason).to.equal(results[0].reason);
+      expect(fc._finishingUploads.has(opts.fileId)).to.equal(false);
+    });
+
+    it('HTTP: an EOF that arrives while the first EOF finishes gets 200', async function () {
+      const opts = startOpts({ size: 4 });
+      await call(fc, '_Start', 'userA', opts);
+      await call(fc, '_Write', 'userA', { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
+      let release;
+      const gate = new Promise((r) => { release = r; });
+      const originalFinish = fc._finishUpload.bind(fc);
+      let entered;
+      const enteredPromise = new Promise((r) => { entered = r; });
+      sinon.stub(fc, '_finishUpload').callsFake(async (...args) => {
+        entered();
+        await gate;
+        return originalFinish(...args);
+      });
+      const firstPromise = call(fc, '_Write', 'userA', { fileId: opts.fileId, eof: true });
+      await enteredPromise;
+      const secondPromise = httpRequest(`${fc.downloadRoute}/${fc.collectionName}/__upload`, {
+        method: 'POST',
+        headers: { 'x-fileid': opts.fileId, 'x-eof': '1', 'x-test-user': 'userA', 'content-type': 'text/plain' },
+      });
+      await new Promise((r) => setTimeout(r, 50));
+      release();
+      const [first, second] = await Promise.all([firstPromise, secondPromise]);
+      expect(second.status).to.equal(200);
+      expect(JSON.parse(second.body)._id).to.equal(first._id);
     });
 
     it('DDP: repeated EOF by another user or for unknown id keeps 408', async function () {
@@ -913,6 +1034,46 @@ describe('Security', function () {
       expect(res.body).to.equal(content);
     });
 
+    it('sends Content-Length on 206 and does not use chunked encoding', async function () {
+      const res = await serveRequest(fc, { vRef: vRef(), headers: { range: 'bytes=2-5' } });
+      expect(res.status).to.equal(206);
+      expect(res.body).to.equal('2345');
+      expect(res.headers['content-length']).to.equal('4');
+      expect(res.headers).to.not.have.property('transfer-encoding');
+    });
+
+    it('drops a custom Transfer-Encoding when it sends Content-Length', async function () {
+      const custom = createCollection({ responseHeaders: { 'Transfer-Encoding': 'chunked' } });
+      const res = await serveRequest(custom, { vRef: vRef(), headers: { range: 'bytes=0-0' } });
+      expect(res.status).to.equal(206);
+      expect(res.headers['content-length']).to.equal('1');
+      expect(res.headers).to.not.have.property('transfer-encoding');
+    });
+
+    it('sends Content-Length equal to the size on 200', async function () {
+      const res = await serveRequest(fc, { vRef: vRef() });
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-length']).to.equal(`${content.length}`);
+      expect(res.headers).to.not.have.property('transfer-encoding');
+      expect(res.headers).to.not.have.property('content-range');
+    });
+
+    it('serves ?play=true without Range as 200 with the full body', async function () {
+      const res = await serveRequest(fc, { vRef: vRef(), query: { play: 'true' } });
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(content);
+      expect(res.headers['content-length']).to.equal(`${content.length}`);
+      expect(res.headers).to.not.have.property('content-range');
+    });
+
+    it('serves ?play=true with Range as 206', async function () {
+      const res = await serveRequest(fc, { vRef: vRef(), query: { play: 'true' }, headers: { range: 'bytes=0-' } });
+      expect(res.status).to.equal(206);
+      expect(res.body).to.equal(content);
+      expect(res.headers['content-range']).to.equal('bytes 0-9/10');
+      expect(res.headers['content-length']).to.equal(`${content.length}`);
+    });
+
     it('C1: responds 400 on size mismatch when integrityCheck is on', async function () {
       const fileRef = { _id: 'abc', name: 'range.txt', versions: { original: { ...vRef(), size: 999 } } };
       const res = await new Promise((resolve) => {
@@ -1038,12 +1199,45 @@ describe('Security', function () {
       expect(res.headers['content-disposition']).to.equal('inline; filename="na_ve (1)\'s *_f_.txt"; filename*=UTF-8\'\'na%C3%AFve%20%281%29%27s%20%2A%22f%22.txt');
     });
 
+    it('replaces "%" in the ASCII fallback and keeps it encoded in filename*', async function () {
+      const fc = createCollection();
+      const path = nodePath.join(fc.storagePath({}), 'cd3.txt');
+      fs.writeFileSync(path, 'x');
+      const res = await serveRequest(fc, { vRef: { name: '100%25 done.txt', size: 1, path } });
+      expect(res.headers['content-disposition']).to.equal('inline; filename="100_25 done.txt"; filename*=UTF-8\'\'100%2525%20done.txt');
+    });
+
     it('omits filename parameters when the name is missing', async function () {
       const fc = createCollection();
       const path = nodePath.join(fc.storagePath({}), 'cd2.txt');
       fs.writeFileSync(path, 'x');
       const res = await serveRequest(fc, { vRef: { size: 1, path }, fileRef: { _id: 'abc' }, query: { download: 'true' } });
       expect(res.headers['content-disposition']).to.equal('attachment');
+    });
+  });
+
+  describe('Default Content-Type charset', function () {
+    const serveType = async (fc, type) => {
+      const path = nodePath.join(fc.storagePath({}), 'ct.txt');
+      fs.writeFileSync(path, 'x');
+      const res = await serveRequest(fc, { vRef: { name: 'ct.txt', size: 1, path, type } });
+      return res.headers['content-type'];
+    };
+
+    it('adds charset=utf-8 to text types without a charset', async function () {
+      const fc = createCollection();
+      expect(await serveType(fc, 'text/plain')).to.equal('text/plain; charset=utf-8');
+      expect(await serveType(fc, 'text/html')).to.equal('text/html; charset=utf-8');
+      expect(await serveType(fc, 'application/json')).to.equal('application/json; charset=utf-8');
+      expect(await serveType(fc, 'application/javascript')).to.equal('application/javascript; charset=utf-8');
+      expect(await serveType(fc, 'image/svg+xml')).to.equal('image/svg+xml; charset=utf-8');
+    });
+
+    it('keeps an existing charset and leaves binary types alone', async function () {
+      const fc = createCollection();
+      expect(await serveType(fc, 'text/plain; charset=iso-8859-1')).to.equal('text/plain; charset=iso-8859-1');
+      expect(await serveType(fc, 'image/png')).to.equal('image/png');
+      expect(await serveType(fc, undefined)).to.equal('application/octet-stream');
     });
   });
 

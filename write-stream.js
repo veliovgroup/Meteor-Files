@@ -29,6 +29,22 @@ const fileIdentity = ({ dev, ino, birth }) => {
 };
 
 /**
+ * @function isSameFile
+ * @param {{dev: string, ino: string, birth?: string}|null} identity - Stored identity, see `fileIdentity`
+ * @param {fs.BigIntStats|null} stats - Stats of an open or existing file
+ * @summary Check that `stats` belong to the file with this identity.
+ * Linux reuses an inode number right after unlink, so a replaced file can have the same dev and ino.
+ * Birth time tells them apart. Records saved without it, and file systems without birth time, fall back to dev and ino
+ * @returns {boolean}
+ */
+const isSameFile = (identity, stats) => {
+  if (!identity || !stats || !stats.isFile() || `${stats.dev}` !== identity.dev || `${stats.ino}` !== identity.ino) {
+    return false;
+  }
+  return !identity.birth || `${stats.birthtimeNs}` === identity.birth;
+};
+
+/**
  * @private
  * @locus Server
  * @class WriteStream
@@ -136,12 +152,7 @@ export default class WriteStream {
    * @returns {boolean}
    */
   _isSameFile(stats) {
-    if (!this.identity || !stats || !stats.isFile() || `${stats.dev}` !== this.identity.dev || `${stats.ino}` !== this.identity.ino) {
-      return false;
-    }
-    // Linux reuses an inode number right after unlink, so a replaced file can have the same dev and ino.
-    // Birth time tells them apart. Records saved without it, and file systems without birth time, fall back to dev and ino
-    return !this.identity.birth || `${stats.birthtimeNs}` === this.identity.birth;
+    return isSameFile(this.identity, stats);
   }
 
   /**
@@ -463,3 +474,5 @@ export default class WriteStream {
     return true;
   }
 }
+
+export { fileIdentity, isSameFile };

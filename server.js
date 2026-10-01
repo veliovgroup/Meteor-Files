@@ -6,7 +6,7 @@ import { Random } from 'meteor/random';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 
-import WriteStream from './write-stream.js';
+import WriteStream, { fileIdentity, isSameFile } from './write-stream.js';
 import FilesCollectionCore from './core.js';
 import { fixJSONParse, fixJSONStringify, helpers } from './lib.js';
 
@@ -34,6 +34,24 @@ const MAX_META_BODY_SIZE = 1024 * 1024;
  * @const {number} MAX_EOF_BODY_SIZE - Largest accepted HTTP body for EOF requests, in bytes. The body is not used
  */
 const MAX_EOF_BODY_SIZE = 64 * 1024;
+
+/**
+ * @const {RegExp} TEXT_TYPE_RE - Mime types that are text and need a charset to display non-ASCII characters
+ */
+const TEXT_TYPE_RE = /^(?:text\/[^;\s]+|application\/json|application\/javascript|image\/svg\+xml)\s*(?:;|$)/i;
+
+/**
+ * @function withCharset
+ * @param {string} type - Mime type
+ * @summary Add `; charset=utf-8` to text mime types without a charset
+ * @returns {string}
+ */
+const withCharset = (type) => {
+  if (helpers.isString(type) && TEXT_TYPE_RE.test(type) && !/;\s*charset=/i.test(type)) {
+    return `${type.replace(/[;\s]+$/, '')}; charset=utf-8`;
+  }
+  return type;
+};
 
 /**
  * @const {string[]} RESERVED_FILE_KEYS - Keys of client-supplied `file` object the server computes itself
@@ -319,6 +337,9 @@ class FilesCollection extends FilesCollectionCore {
       this._currentUploads = {};
     }
 
+    // EOFs in progress, keyed by fileId: `{ userId, promise }`. A repeated EOF waits for the first one
+    this._finishingUploads = new Map();
+
     if (!helpers.isFunction(this.downloadCallback)) {
       this.downloadCallback = false;
     }
@@ -345,7 +366,6 @@ class FilesCollection extends FilesCollectionCore {
         switch (responseCode) {
         case '206':
           headers.Pragma = 'private';
-          headers['Transfer-Encoding'] = 'chunked';
           break;
         case '400':
           headers['Cache-Control'] = 'no-cache';
@@ -358,7 +378,7 @@ class FilesCollection extends FilesCollectionCore {
         }
 
         headers.Connection = 'keep-alive';
-        headers['Content-Type'] = versionRef.type || 'application/octet-stream';
+        headers['Content-Type'] = withCharset(versionRef.type || 'application/octet-stream');
         headers['Accept-Ranges'] = 'bytes';
         return headers;
       };
@@ -917,8 +937,13 @@ class FilesCollection extends FilesCollectionCore {
       }
 
       const upload = self._currentUploads[fileId];
-      if (upload && !upload.ended && !upload.aborted) {
-        await upload.abort();
+      if (upload) {
+        if (!upload.ended && !upload.aborted) {
+          await upload.abort();
+        }
+      } else {
+        // No stream in memory (server restart): remove the partial file, but only the file this upload created
+        await self._removePartialFile(contUpld);
       }
 
       await self._preCollection.removeAsync({ _id: fileId });
@@ -1303,6 +1328,62 @@ class FilesCollection extends FilesCollectionCore {
   /**
    * @locus Server
    * @memberOf FilesCollection
+   * @name _removePartialFile
+   * @param {Object} record - Upload record from `_preCollection`
+   * @summary Internal method. Remove the partial file of an unfinished upload that has no stream in memory. Removes it only when its device, inode, and birth time match the stored identity, and never when the upload finished
+   * @returns {Promise<boolean>} - `true` if the file was removed
+   */
+  async _removePartialFile(record) {
+    if (!helpers.isObject(record) || record.isFinished || !helpers.isString(record.path) || !helpers.isObject(record.fileIdentity) || !record.fileIdentity.dev || !record.fileIdentity.ino) {
+      return false;
+    }
+
+    if ((await this.collection.countDocuments({ _id: record._id })) !== 0) {
+      // Finished on this or another server, the file is in use
+      return false;
+    }
+
+    let stats;
+    try {
+      stats = await fs.promises.lstat(record.path, { bigint: true });
+    } catch (_statError) {
+      return false;
+    }
+
+    if (!isSameFile(fileIdentity(record.fileIdentity), stats)) {
+      this._debug(`[FilesCollection] [_removePartialFile] File was replaced, keep it: ${record._id}`);
+      return false;
+    }
+
+    try {
+      await fs.promises.unlink(record.path);
+      return true;
+    } catch (unlinkError) {
+      this._debug(`[FilesCollection] [_removePartialFile] Can not remove partial file of ${record._id}:`, unlinkError?.code);
+      return false;
+    }
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _getFinishingUpload
+   * @param {string} fileId - Upload id
+   * @param {string|null} userId - Caller's userId
+   * @summary Internal method. Returns the in-progress EOF of this upload when the caller started the upload, used to answer an EOF that races the first one (DDP reconnect)
+   * @returns {Promise<Partial<FileObj>>|null}
+   */
+  _getFinishingUpload(fileId, userId) {
+    const finishing = this._finishingUploads.get(fileId);
+    if (finishing && finishing.userId === (userId ?? null)) {
+      return finishing.promise;
+    }
+    return null;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
    * @name _writeUpload
    * @param {Object} opts - `{fileId, eof, chunkId, binData}`, `binData` is a `Buffer`
    * @param {string|null} userId - Caller's userId
@@ -1314,11 +1395,31 @@ class FilesCollection extends FilesCollectionCore {
    */
   async _writeUpload(opts, userId, transport, unblock) {
     const eof = opts.eof === true;
+    const waitForFinishing = (finishing) => {
+      this._debug(`[FilesCollection] [Upload] [${transport}] Repeated EOF waits for the first one: ${opts.fileId}`);
+      if (helpers.isFunction(unblock)) {
+        unblock();
+      }
+      return finishing;
+    };
+
+    if (eof) {
+      const finishing = this._getFinishingUpload(opts.fileId, userId);
+      if (finishing) {
+        return await waitForFinishing(finishing);
+      }
+    }
+
     let session;
     try {
       session = await this._getUploadSession(opts.fileId, userId);
     } catch (sessionError) {
       if (eof && sessionError?.error === 408) {
+        // The first EOF may have ended the stream while this call waited for the session
+        const finishing = this._getFinishingUpload(opts.fileId, userId);
+        if (finishing) {
+          return await waitForFinishing(finishing);
+        }
         // EOF is idempotent: a retried EOF after a lost response gets the finished file of the same user
         const fileObj = await this._findFinishedUpload(opts.fileId, userId);
         if (fileObj) {
@@ -1345,6 +1446,14 @@ class FilesCollection extends FilesCollectionCore {
       }
     }
 
+    if (eof) {
+      // Checked again after the await above: two EOFs can pass the session check together
+      const finishing = this._getFinishingUpload(opts.fileId, userId);
+      if (finishing) {
+        return await waitForFinishing(finishing);
+      }
+    }
+
     const uploadOpts = Object.assign({}, session, {
       fileId: session.fileId || session._id,
       eof,
@@ -1352,24 +1461,41 @@ class FilesCollection extends FilesCollectionCore {
       binData: eof ? void 0 : opts.binData,
     });
 
-    const { result } = await this._prepareUpload(uploadOpts, userId, transport);
-    if (helpers.isFunction(unblock)) {
-      unblock();
+    const write = async () => {
+      const { result } = await this._prepareUpload(uploadOpts, userId, transport);
+      if (helpers.isFunction(unblock)) {
+        unblock();
+      }
+
+      let isWritten;
+      try {
+        isWritten = await this._handleUpload(result, uploadOpts);
+      } catch (handleUploadError) {
+        this._debug(`[FilesCollection] [Upload] [${transport}] [_handleUpload] Exception:`, handleUploadError);
+        throw handleUploadError;
+      }
+
+      if (!isWritten) {
+        throw new Meteor.Error(503, 'Corrupted chunk. Try again');
+      }
+      return result;
+    };
+
+    if (!eof) {
+      await write();
+      return null;
     }
 
-    let isWritten;
+    const promise = write();
+    const finishing = { userId: userId ?? null, promise };
+    this._finishingUploads.set(opts.fileId, finishing);
     try {
-      isWritten = await this._handleUpload(result, uploadOpts);
-    } catch (handleUploadError) {
-      this._debug(`[FilesCollection] [Upload] [${transport}] [_handleUpload] Exception:`, handleUploadError);
-      throw handleUploadError;
+      return await promise;
+    } finally {
+      if (this._finishingUploads.get(opts.fileId) === finishing) {
+        this._finishingUploads.delete(opts.fileId);
+      }
     }
-
-    if (!isWritten) {
-      throw new Meteor.Error(503, 'Corrupted chunk. Try again');
-    }
-
-    return eof ? result : null;
   }
 
   /**
@@ -1514,7 +1640,7 @@ class FilesCollection extends FilesCollectionCore {
           try {
             await this._getUploadSession(fileId, user.userId);
           } catch (sessionError) {
-            if (sessionError?.error !== 408 || !(await this._findFinishedUpload(fileId, user.userId))) {
+            if (sessionError?.error !== 408 || !(this._getFinishingUpload(fileId, user.userId) || await this._findFinishedUpload(fileId, user.userId))) {
               throw sessionError;
             }
           }
@@ -2243,22 +2369,31 @@ class FilesCollection extends FilesCollectionCore {
    * @deprecated since v3.0.0. use {@link FilesCollection#unlinkAsync} instead.
    * @returns {FilesCollection} Instance
    */
-  unlink(fileRef, version, callback) {
+  unlink(fileRef, version, _callback) {
     this._debug(`[FilesCollection] [unlink(${fileRef._id}, ${version})]`);
     Meteor.deprecate('FilesCollection#unlink() is deprecated! Use `unlinkAsync` instead');
+    // A file that is already gone counts as removed
+    const callback = (error) => {
+      if (error?.code === 'ENOENT') {
+        this._debug(`[FilesCollection] [unlink] File is already removed: ${error.path}`);
+        (_callback || noop)(null);
+        return;
+      }
+      (_callback || noop)(error);
+    };
     if (version) {
       if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
-        fs.unlink(fileRef.versions[version].path, (callback || noop));
+        fs.unlink(fileRef.versions[version].path, callback);
       }
     } else {
       if (helpers.isObject(fileRef.versions)) {
         for(let vKey in fileRef.versions) {
           if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
-            fs.unlink(fileRef.versions[vKey].path, (callback || noop));
+            fs.unlink(fileRef.versions[vKey].path, callback);
           }
         }
       } else {
-        fs.unlink(fileRef.path, (callback || noop));
+        fs.unlink(fileRef.path, callback);
       }
     }
     return this;
@@ -2277,32 +2412,41 @@ class FilesCollection extends FilesCollectionCore {
     this._debug(`[FilesCollection] [unlinkAsync(${fileRef._id}, ${version})]`);
     if (version) {
       if (helpers.isObject(fileRef.versions) && helpers.isObject(fileRef.versions[version]) && fileRef.versions[version].path) {
-        try {
-          await fs.promises.unlink(fileRef.versions[version].path);
-        } catch (unlinkError) {
-          this._debug(`[FilesCollection] [unlinkAsync] [${version}] Caught silent error`, unlinkError);
-        }
+        await this._unlinkFile(fileRef.versions[version].path, `[${version}]`);
       }
     } else {
       if (helpers.isObject(fileRef.versions)) {
         for(let vKey in fileRef.versions) {
           if (fileRef.versions[vKey] && fileRef.versions[vKey].path) {
-            try {
-              await fs.promises.unlink(fileRef.versions[vKey].path);
-            } catch (unlinkError) {
-              this._debug('[FilesCollection] [unlinkAsync] [versions] Caught silent error', unlinkError);
-            }
+            await this._unlinkFile(fileRef.versions[vKey].path, '[versions]');
           }
         }
       } else {
-        try {
-          await fs.promises.unlink(fileRef.path);
-        } catch (unlinkError) {
-          this._debug('[FilesCollection] [unlinkAsync] Caught silent error', unlinkError);
-        }
+        await this._unlinkFile(fileRef.path, '');
       }
     }
     return this;
+  }
+
+  /**
+   * @locus Server
+   * @memberOf FilesCollection
+   * @name _unlinkFile
+   * @param {string} path - File path
+   * @param {string} label - Log label
+   * @summary Internal method. Remove a file, a file that is already gone counts as removed. Never throws
+   * @returns {Promise<void>}
+   */
+  async _unlinkFile(path, label) {
+    try {
+      await fs.promises.unlink(path);
+    } catch (unlinkError) {
+      if (unlinkError?.code === 'ENOENT') {
+        this._debug(`[FilesCollection] [unlinkAsync] ${label}${label ? ' ' : ''}File is already removed: ${path}`);
+        return;
+      }
+      this._debug(`[FilesCollection] [unlinkAsync] ${label}${label ? ' ' : ''}Caught silent error`, unlinkError);
+    }
   }
 
   /**
@@ -2452,8 +2596,8 @@ class FilesCollection extends FilesCollectionCore {
     let disposition = (http.params?.query?.download === 'true') ? 'attachment' : 'inline';
     const name = vRef.name || fileRef.name;
     if (helpers.isString(name) && name.length) {
-      // RFC 6266: ASCII fallback in `filename`, RFC 8187 encoded value in `filename*`
-      const fallbackName = name.replace(/[^\x20-\x7e]|["\\]/g, '_');
+      // RFC 6266: ASCII fallback in `filename` (no `%`, some clients decode it), RFC 8187 encoded value in `filename*`
+      const fallbackName = name.replace(/[^\x20-\x7e]|["\\%]/g, '_');
       const encodedName = encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
       disposition += `; filename="${fallbackName}"; filename*=UTF-8''${encodedName}`;
     }
@@ -2472,9 +2616,6 @@ class FilesCollection extends FilesCollectionCore {
         } else if (range === false && this.strict) {
           responseType = '416';
         }
-      } else if (http.params?.query?.play === 'true' && size > 0) {
-        reqRange = { start: 0, end: size - 1 };
-        responseType = '206';
       }
     }
 
@@ -2572,12 +2713,16 @@ class FilesCollection extends FilesCollectionCore {
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [206]`);
       if (!http.response.headersSent) {
         http.response.setHeader('Content-Range', `bytes ${reqRange.start}-${reqRange.end}/${vRef.size}`);
+        http.response.setHeader('Content-Length', `${reqRange.end - reqRange.start + 1}`);
+        // A message with Content-Length must not be chunked
+        http.response.removeHeader('Transfer-Encoding');
       }
       respond(readableStream || fs.createReadStream(vRef.path, { start: reqRange.start, end: reqRange.end }), 206);
       break;
     default:
       if (!http.response.headersSent && Number.isInteger(vRef.size) && vRef.size >= 0) {
         http.response.setHeader('Content-Length', `${vRef.size}`);
+        http.response.removeHeader('Transfer-Encoding');
       }
       this._debug(`[FilesCollection] [serve(${vRef.path}, ${version})] [200]`);
       respond(readableStream || fs.createReadStream(vRef.path), 200);
