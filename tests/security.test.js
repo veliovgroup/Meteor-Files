@@ -400,6 +400,17 @@ describe('Security', function () {
       expect(await fc._preCollection.findOneAsync(opts.fileId)).to.equal(undefined);
     });
 
+    it('owner abort after restart keeps the file of a record without identity (created before 3.1)', async function () {
+      const opts = startOpts({ size: 1024, chunkSize: 1024 });
+      await call(fc, '_Start', 'userA', opts);
+      const path = fc._currentUploads[opts.fileId].path;
+      await simulateRestart(opts.fileId);
+      await fc._preCollection.updateAsync({ _id: opts.fileId }, { $unset: { fileIdentity: '' } });
+      expect(await call(fc, '_Abort', 'userA', opts.fileId)).to.deep.equal({ status: 499 });
+      expect(fs.existsSync(path)).to.equal(true);
+      expect(await fc._preCollection.findOneAsync(opts.fileId)).to.equal(undefined);
+    });
+
     it('owner abort after restart keeps the file of a finished upload', async function () {
       const opts = startOpts({ size: 1024, chunkSize: 1024 });
       await call(fc, '_Start', 'userA', opts);
@@ -571,6 +582,20 @@ describe('Security', function () {
       const [first, second] = await Promise.all([firstPromise, secondPromise]);
       expect(second).to.deep.equal(first);
       expect(second._id).to.equal(opts.fileId);
+    });
+
+    it('DDP: an anonymous owner\'s EOF that races the first EOF gets the same result', async function () {
+      const opts = startOpts({ size: 4 });
+      await call(fc, '_Start', null, opts);
+      await call(fc, '_Write', null, { fileId: opts.fileId, chunkId: 1, binData: b64('data') });
+      const [first, second] = await Promise.all([
+        call(fc, '_Write', null, { fileId: opts.fileId, eof: true }),
+        call(fc, '_Write', null, { fileId: opts.fileId, eof: true }),
+      ]);
+      expect(first._id).to.equal(opts.fileId);
+      expect(second).to.deep.equal(first);
+      // After the finish, anonymous replay still gets 408
+      await expectMeteorError(call(fc, '_Write', null, { fileId: opts.fileId, eof: true }), 408);
     });
 
     it('DDP: an EOF that races a failing EOF gets the same error', async function () {
