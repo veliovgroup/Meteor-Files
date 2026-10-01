@@ -188,20 +188,6 @@ export class FilesCursor {
   }
 
   /**
-   * Returns `true` if there is a next item available.
-   * @locus Client
-   * @deprecated since v3.0.0. use {@link FilesCursor#hasNextAsync} instead.
-   * @throws {Meteor.Error} If called on the server
-   * @returns {boolean}
-   */
-  hasNext() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
-    clientOnly('FilesCursor', 'hasNext');
-    Meteor.deprecate('FilesCursor#hasNext() is deprecated! Use `hasNextAsync` instead');
-    return this._current < this.count() - 1;
-  }
-
-  /**
    * Asynchronously returns `true` if there is a next item available.
    * @locus Anywhere
    * @returns {Promise<boolean>}
@@ -373,18 +359,6 @@ export class FilesCursor {
     clientOnly('FilesCursor', 'count', 'countDocuments');
     Meteor.deprecate('FilesCursor#count() is deprecated! Use `countDocuments` instead');
     return this.cursor.count();
-  }
-
-  /**
-   * Asynchronously returns the number of file documents that match the query.
-   * @locus Anywhere
-   * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
-   * @returns {Promise<number>}
-   */
-  async countAsync() {
-    this._collection._debug('[FilesCollection] [FilesCursor] [countAsync()]');
-    Meteor.deprecate('FilesCursor#countAsync() is deprecated! Use `countDocuments` instead');
-    return await this.cursor.countAsync();
   }
 
   /**

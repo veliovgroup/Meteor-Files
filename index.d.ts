@@ -599,8 +599,6 @@ export class FilesCursor<S = unknown, O = unknown> {
   /** Synchronous methods (`get`, `fetch`, `next`, `each`, `map`, and others) work on client only and throw `Meteor.Error` on server; use `*Async` on server. */
   get(): FileObj[];
   getAsync(): Promise<FileObj[]>;
-  /** @deprecated Client only. Prefer `hasNextAsync()`. */
-  hasNext(): boolean;
   hasNextAsync(): Promise<boolean>;
   next(): FileObj | undefined;
   nextAsync(): Promise<FileObj | undefined>;
@@ -616,8 +614,6 @@ export class FilesCursor<S = unknown, O = unknown> {
   lastAsync(): Promise<FileObj | undefined>;
   /** @deprecated Use `countDocuments()`. */
   count(): number;
-  /** @deprecated Use `countDocuments()`. */
-  countAsync(): Promise<number>;
   countDocuments(options?: CountDocumentsOptions): Promise<number>;
   /** Client only. */
   remove(callback?: (error: Meteor.Error | null, count?: number) => void): FilesCursor<S, O>;

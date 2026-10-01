@@ -117,7 +117,7 @@ describe('FilesCursor', function() {
   });
 
   describe('M1: synchronous methods on server', function() {
-    const syncMethods = ['get', 'hasNext', 'next', 'previous', 'fetch', 'first', 'last', 'count', 'forEach', 'each', 'map', 'current', 'remove'];
+    const syncMethods = ['get', 'next', 'previous', 'fetch', 'first', 'last', 'count', 'forEach', 'each', 'map', 'current', 'remove'];
     syncMethods.forEach((method) => {
       it(`#${method}() throws a Meteor.Error pointing to the async method`, function() {
         const cursor = new FilesCursor({}, {}, filesCollection);
@@ -263,12 +263,11 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#countAsync()', function() {
-    it('should return the number of documents that match a query', async function() {
+  describe('v4 removals', function() {
+    it('has no hasNext() and no countAsync()', function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
-      sandbox.stub(cursor.cursor, 'countAsync').returns(Promise.resolve(2));
-      const count = await cursor.countAsync();
-      expect(count).to.equal(2);
+      expect(cursor.hasNext).to.equal(undefined);
+      expect(cursor.countAsync).to.equal(undefined);
     });
   });
 

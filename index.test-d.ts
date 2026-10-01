@@ -133,6 +133,8 @@ expectType<string[]>(cursor.map((file) => file.name));
 expectType<Promise<FileCursor[]>>(cursor.eachAsync());
 expectType<Promise<boolean>>(cursor.hasNextAsync());
 expectType<Promise<FileObj | undefined>>(cursor.lastAsync());
+expectError(cursor.countAsync());
+expectError(cursor.hasNext());
 
 declare const fileCursor: FileCursor;
 expectType<string>(fileCursor.link('original'));
