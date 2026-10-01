@@ -5,6 +5,7 @@ import './cursor.test';
 import './server.test';
 import './helpers.test';
 import './security.test';
+import './browser-fixtures';
 
 // Collections created in tests do not set `onBeforeRemove`, drop the S5 startup warning from the output
 const originalWarn = console.warn;

@@ -14,18 +14,23 @@ npm run lint                 # ESLint 9 flat config (eslint.config.mjs)
 npm run typecheck            # tsc --noEmit -p . && tsd (index.test-d.ts)
 npm run test:mocha           # meteor test-packages ./ --driver-package meteortesting:mocha --once
 npm run test:mocha:watch     # same, re-runs on change
+npm run test:browser         # server + browser suite (playwright), TEST_SERVER=0 skips server tests
+npx playwright install chromium                 # once, downloads the browser test:browser uses
 npm run test:mocha -- --port 3456              # use another port when 3000 is busy
 MOCHA_GREP="_checkAccess" npm run test:mocha   # run tests whose name matches (works with meteortesting:mocha)
 meteor test-packages ./ --driver-package meteortesting:mocha --once --release 3.5.2   # pin a Meteor release
 ```
 
-Tests are server-only mocha (`chai`, `sinon`). `tests/server.js` is the entry point and imports these files. Add a new test file there.
+Tests are mocha (`chai`, `sinon`). `tests/server.js` is the server entry point and imports these files. Add a new server test file there.
 
 - `core.test.js`: `FilesCollectionCore`, `link()`, `formatFileURL`
 - `cursor.test.js`: `FileCursor` and `FilesCursor`, including the server-side sync method errors
 - `helpers.test.js`: `lib.js` helpers
 - `server.test.js`: server API, `_checkAccess`, `loadAsync`, `writeAsync`, `serve()`, `WriteStream`
 - `security.test.js`: upload ownership, path and file identity checks, size limits, Range, HTTP errors, idempotent EOF
+- `browser-fixtures.js`: server half of the browser suite (`mfBrowserTests` collection, `mfTest.*` methods)
+
+`tests/client.js` is the browser entry point. It runs only under `npm run test:browser`, which drives headless Chromium through `meteortesting:browser-tests` and the `playwright` devDependency.
 
 Run all three of lint, typecheck, and tests before finishing. `.versions` is not updated by `test-packages`. When dependencies change, regenerate it from a throwaway app (`meteor create --bare /tmp/x`, add `ostrio:files` and `meteortesting:mocha` with `METEOR_PACKAGE_DIRS` pointing at this repo's parent, copy the resolved versions, drop the `ostrio:files` line). `meteor publish` also rewrites it.
 

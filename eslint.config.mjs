@@ -223,4 +223,9 @@ export default [
     files: ['server.js', 'write-stream.js', 'tests/**/*.js'],
     languageOptions: languageOptions({ ...globals.es2021, ...globals.node }),
   },
+  // browser tests
+  {
+    files: ['tests/client.js'],
+    languageOptions: languageOptions({ ...globals.es2021, ...globals.browser }),
+  },
 ];

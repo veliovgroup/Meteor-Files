@@ -30,6 +30,7 @@ Package.onTest((api) => {
   api.use('meteortesting:mocha@3.4.0');
   api.use(['ecmascript', 'ostrio:files'], ['client', 'server']);
   api.mainModule('tests/server.js', 'server');
+  api.mainModule('tests/client.js', 'client');
 
   Npm.depends({
     eventemitter3: '5.0.4',
