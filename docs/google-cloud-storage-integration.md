@@ -1,201 +1,182 @@
 # Using Google Cloud Storage as your storage provider
 
 This example shows how to add and retrieve files using Google Cloud Storage.
-Additionally, this example will also show you how to list uploaded files and remove any of them.
-
-*See production-ready code below.*
+It also removes files from the bucket when a record is removed.
 
 ## Prerequisite
 
-We will use next packages: *Request* (NPM), *Random* (meteor), *Underscore* (meteor)
+Install the [`@google-cloud/storage`](https://github.com/googleapis/nodejs-storage) package. No `request` package is needed, the SDK returns promises and streams.
 
 ```shell
-meteor add underscore
-meteor add random
-meteor npm install request
+meteor npm install --save @google-cloud/storage
 ```
 
-### Step 1: install [google-cloud-storage](https://github.com/googleapis/nodejs-storage)
+### Setup your Google Cloud Storage
 
-```shell
-npm install @google-cloud/storage
-```
+- Sign into the [Google Cloud console](https://console.cloud.google.com)
+- Go to your project, open *Cloud Storage*, click *Create bucket*, and name your bucket
+  - Remember the name of this bucket, you need it later
+- Open *IAM & Admin*, then *Service Accounts*, and create a service account for your project (*if you don't already have one*)
+- Grant it the *Storage Object Admin* role on the bucket
+- Open the account's *Keys* tab, click *Add key*, then *Create new key*, and choose JSON
+  - This downloads a JSON file to your computer
+  - Keep this JSON file safe. Anyone who gets it has access to the bucket. Never commit it to git
+  - Alternatively, run on Google Cloud with an attached service account and skip the key file (Application Default Credentials)
 
-### Step 2: Setup your Google Cloud Storage
+## Code
 
-- Sign into the [Google Cloud Console site](https://console.developers.google.com)
-- Go to your project and under Storage click on Create Bucket, and name your Bucket
-  - Don't forget the name of this bucket, you'll need it later
-- Under APIs & Auth click on Credentials
-- Create an OAuth Service Account for your project (*if you don't already have one*)
-- If you do not have a private key, click "*Generate new key*"
-  - This will download a JSON file to your computer
-  - Keep this JSON file, it is your key to the account, and you will need it later
-  - Also, __GUARD THIS JSON FILE AS YOUR LIFE__. IF ANYONE GETS AHOLD OF IT, THEY WILL HAVE FULL ACCESS TO YOUR ACCOUNT!
+Use this in Meteor's `imports/server` directory, __NOT__ on the client.
 
 ```js
-let gcloud, gcs, bucket, bucketMetadata, Request, bound, Collections = {};
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { FilesCollection } from 'meteor/ostrio:files';
+import { Storage } from '@google-cloud/storage';
 
-if (Meteor.isServer) {
-  // use require() as "'import' and 'export' may only appear at the top level"
-  const Random = require('meteor/random');
-  const Storage = require('@google-cloud/storage');
-  gcs = new Storage('google-cloud')({
-    projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
-    keyFilename: 'YOUR_KEY_JSON'  // <-- Replace this with the path to your key.json
-  });
-  bucket = gcs.bucket('YOUR_BUCKET_NAME'); // <-- Replace this with your bucket name
-  bucket.getMetadata(function(error, metadata, apiResponse) {
-    if (error) {
-      console.error(error);
+const gcs = new Storage({
+  projectId: 'YOUR_PROJECT_ID', // <-- Replace this with your project ID
+  keyFilename: 'YOUR_KEY_JSON' // <-- Replace this with the path to your key.json
+});
+const bucket = gcs.bucket('YOUR_BUCKET_NAME'); // <-- Replace this with your bucket name
+
+Meteor.startup(async () => {
+  try {
+    await bucket.getMetadata();
+  } catch (error) {
+    console.error('[GCS] Can not access the bucket:', error);
+  }
+});
+
+/**
+ * Resolve a `Range` header into an explicit, inclusive byte range.
+ * Returns `null` when the full content must be sent (no header, a malformed header,
+ * or a multi-range request), `false` when the range is not satisfiable, and `{ start, end }` otherwise.
+ */
+const resolveRange = (header, size) => {
+  if (!header || header.includes(',')) {
+    return null;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!match || (!match[1] && !match[2])) {
+    // Malformed header: ignored, same as `.serve()` does
+    return null;
+  }
+
+  let start;
+  let end;
+  if (!match[1]) {
+    // Suffix range: the last N bytes
+    const suffix = parseInt(match[2], 10);
+    if (suffix === 0) {
+      return false;
     }
-  });
-  Request = Npm.require('request');
-  bound = Meteor.bindEnvironment(function(callback) {
-    return callback();
-  });
-}
+    start = Math.max(size - suffix, 0);
+    end = size - 1;
+  } else {
+    start = parseInt(match[1], 10);
+    end = match[2] ? Math.min(parseInt(match[2], 10), size - 1) : size - 1;
+  }
 
-Collections.files = new FilesCollection({
+  return (start >= size || end < start) ? false : { start, end };
+};
+
+const Files = new FilesCollection({
   debug: false, // Set to true to enable debugging messages
   storagePath: 'assets/app/uploads/uploadedFiles',
   collectionName: 'uploadedFiles',
   allowClientCode: false,
-  onAfterUpload(fileRef) {
-    // In the onAfterUpload callback, we will move the file to Google Cloud Storage
-    _.each(fileRef.versions, (vRef, version) => {
+
+  // In the onAfterUpload callback, we move the file to Google Cloud Storage
+  async onAfterUpload(fileRef) {
+    for (const version of Object.keys(fileRef.versions)) {
+      const vRef = fileRef.versions[version];
+      if (!vRef) {
+        continue;
+      }
+
       // We use Random.id() instead of real file's _id
       // to secure files from reverse engineering
       // As after viewing this code it will be easy
       // to get access to unlisted and protected files
-      const filePath = 'files/' + (Random.id()) + '-' + version + '.' + fileRef.extension;
-      // Here we set the neccesary options to upload the file, for more options, see
-      // https://googlecloudplatform.github.io/gcloud-node/#/docs/v0.36.0/storage/bucket?method=upload
-      const options = {
-        destination: filePath,
-        resumable: true
-      };
+      const filePath = `files/${Random.id()}-${version}.${fileRef.extension}`;
 
-      bucket.upload(fileRef.path, options, (error, file) => {
-        bound(() => {
-          let upd;
-          if (error) {
-            console.error(error);
-          } else {
-            upd = {
-              $set: {}
-            };
-            upd['$set'][`versions.${version}.meta.pipePath`] = filePath;
-            this.collection.update({
-              _id: fileRef._id
-            }, upd, (updError) => {
-              if (updError) {
-                console.error(updError);
-              } else {
-                // Unlink original files from FS
-                // after successful upload to Google Cloud Storage
-                this.unlink(this.collection.findOne(fileRef._id), version);
-              }
-            });
-          }
+      try {
+        // For more options, see
+        // https://cloud.google.com/nodejs/docs/reference/storage/latest/storage/bucket#_google_cloud_storage_Bucket_upload
+        await bucket.upload(vRef.path, {
+          destination: filePath,
+          resumable: true
         });
-      });
-    });
+
+        await this.collection.updateAsync({ _id: fileRef._id }, {
+          $set: { [`versions.${version}.meta.pipePath`]: filePath }
+        });
+
+        // Unlink original file from FS
+        // after successful upload to Google Cloud Storage
+        await this.unlinkAsync(await this.collection.findOneAsync(fileRef._id), version);
+      } catch (error) {
+        console.error('[onAfterUpload] GCS error, file stays on FS:', fileRef._id, error);
+      }
+    }
   },
+
+  // Remove files from the bucket right after the record is removed.
+  // Return `true` to skip .unlinkAsync(), as files were already removed from FS
+  async onAfterRemove(docs) {
+    for (const doc of docs) {
+      for (const version of Object.keys(doc.versions || {})) {
+        const pipePath = doc.versions[version]?.meta?.pipePath;
+        if (pipePath) {
+          try {
+            await bucket.file(pipePath).delete();
+          } catch (error) {
+            console.error('[onAfterRemove] GCS delete error:', pipePath, error);
+          }
+        }
+      }
+    }
+
+    // Files not yet moved to GCS are still on FS, let the default unlink run
+    return docs.length > 0 && docs.every((doc) => doc.versions?.original?.meta?.pipePath);
+  },
+
   interceptDownload(http, fileRef, version) {
-    let ref, ref1, ref2;
-    const path = (ref= fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipePath : void 0 : void 0 : void 0;
-    const vRef = ref1;
-    if (path) {
-      // If file is moved to Google Cloud Storage
-      // We will pipe request to Google Cloud Storage
-      // So, original link will stay always secure
-      const remoteReadStream = getReadableStream(http, path, vRef);
-      this.serve(http, fileRef, vRef, version, remoteReadStream);
+    const vRef = fileRef.versions?.[version];
+    const path = vRef?.meta?.pipePath;
+
+    if (!path) {
+      // While the file has not been uploaded to Google Cloud Storage,
+      // we serve it from the filesystem
+      return false;
+    }
+
+    // If file is moved to Google Cloud Storage
+    // we pipe the request to Google Cloud Storage
+    // So, original link will always stay secure
+    const range = resolveRange(http.request.headers.range, vRef.size);
+    // With `strict: false` an unsatisfiable range gets the full content with `200`, as in `.serve()`
+    if (range === false && this.strict !== false) {
+      http.response.writeHead(416, { 'Content-Range': `bytes */${vRef.size}` });
+      http.response.end();
       return true;
     }
-    // While the file has not been uploaded to Google Cloud Storage, we will serve it from the filesystem
-    return false;
+
+    let remoteReadStream;
+    if (range) {
+      // `start` and `end` are both inclusive in the GCS client
+      http.request.headers.range = `bytes=${range.start}-${range.end}`;
+      remoteReadStream = bucket.file(path).createReadStream({ start: range.start, end: range.end });
+    } else {
+      delete http.request.headers.range;
+      remoteReadStream = bucket.file(path).createReadStream();
+    }
+
+    this.serve(http, fileRef, vRef, version, remoteReadStream);
+    return true;
   }
 });
 
-if (Meteor.isServer) {
-  // Intercept file's collection remove method to remove file from Google Cloud Storage
-  const _origRemove = Collections.files.remove;
-
-  Collections.files.remove = function(search) {
-    const cursor = this.collection.find(search);
-    cursor.forEach((fileRef) => {
-      _.each(fileRef.versions, (vRef) => {
-        let ref;
-        if (vRef != null ? (ref = vRef.meta) != null ? ref.pipePath : void 0 : void 0) {
-          bucket.file(vRef.meta.pipePath).delete((error) => {
-            bound(() => {
-              if (error) {
-                console.error(error);
-              }
-            });
-          });
-        }
-      });
-    });
-    // Call the original removal method
-    _origRemove.call(this, search);
-  };
-}
-
-function getReadableStream(http, path, vRef){
-  let array, end, partial, remoteReadStream, reqRange, responseType, start, take;
-
-  if (http.request.headers.range) {
-    partial = true;
-    array = http.request.headers.range.split(/bytes=([0-9]*)-([0-9]*)/);
-    start = parseInt(array[1]);
-    end = parseInt(array[2]);
-    if (isNaN(end)) {
-      end = vRef.size - 1;
-    }
-    take = end - start;
-  } else {
-    start = 0;
-    end = vRef.size - 1;
-    take = vRef.size;
-  }
-
-  if (partial || (http.params.query.play && http.params.query.play === 'true')) {
-    reqRange = {
-      start: start,
-      end: end
-    };
-    if (isNaN(start) && !isNaN(end)) {
-      reqRange.start = end - take;
-      reqRange.end = end;
-    }
-    if (!isNaN(start) && isNaN(end)) {
-      reqRange.start = start;
-      reqRange.end = start + take;
-    }
-    if ((start + take) >= vRef.size) {
-      reqRange.end = vRef.size - 1;
-    }
-    if ((reqRange.start >= (vRef.size - 1) || reqRange.end > (vRef.size - 1))) {
-      responseType = '416';
-    } else {
-      responseType = '206';
-    }
-  } else {
-    responseType = '200';
-  }
-
-  if (responseType === '206') {
-    remoteReadStream = bucket.file(path).createReadStream({
-      start: reqRange.start,
-      end: reqRange.end
-    });
-  } else if (responseType === '200') {
-    remoteReadStream = bucket.file(path).createReadStream();
-  }
-
-  return remoteReadStream;
-}
+export default Files;
 ```

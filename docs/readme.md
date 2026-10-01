@@ -4,9 +4,11 @@ Explore documentation and examples for files' upload and its custom integration 
 
 ## ToC:
 
-Browse [documentation directory](https://github.com/veliovgroup/Meteor-Files/tree/master/docs) or navigate using lost of links below.
+Browse [documentation directory](https://github.com/veliovgroup/Meteor-Files/tree/master/docs) or navigate using a list of links below.
 
 - [About Meteor-Files package](#about)
+- [Security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
+- [Migration to v3](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/migration-to-v3.md)
 - [API](#api)
 - [Examples](#examples)
 - [Demos](#demos)
@@ -31,17 +33,17 @@ Meteor-Files library features and highlights
   - [DropBox Integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/dropbox-integration.md)
   - [GridFS using `GridFSBucket`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md#use-gridfs-with-gridfsbucket-as-a-storage)
   - [GridFS using `gridfs-stream` (legacy)](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-integration.md)
-  - Google Drive
+  - Google Drive, use its [JS/REST API](https://developers.google.com/drive/api/guides/about-sdk) the same way as other storages
   - [Google Cloud Storage Integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/google-cloud-storage-integration.md)
   - any other with JS/REST API
 - Get upload speed
 - Get remaining upload time
 - Serving files (download):
   - Custom download `route`
-  - Download compatible with small and large files, including progressive (`chunked`) download
+  - Download compatible with small and large files, including `Range` requests for streaming and resumable downloads
   - Correct `mime-type` and `Content-Range` headers
   - Correct `206` and `416` responses
-  - Following [RFC 2616](https://tools.ietf.org/html/rfc2616)
+  - Following [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)
   - Control access to files
   - Files CRC check (*integrity check*)
   - Serve public files with a server like __nginx__
@@ -56,7 +58,7 @@ Meteor-Files library features and highlights
 
 ### API:
 
-- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Anywhere*]
+- [`FilesCollection` Constructor](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) [*Isomorphic*]
 - [Template helper `fileURL`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/template-helper.md) [*Client*] - Generate downloadable link in a template
 - Initialize FilesCollection
   - [SimpleSchema Integration](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#attach-schema-isomorphic)
@@ -65,18 +67,18 @@ Meteor-Files library features and highlights
   - [Control upload access](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeupload-to-avoid-unauthorized-upload)
   - [Control remove access](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md#use-onbeforeremove-to-avoid-unauthorized-remove)
   - [Custom response headers](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#custom-response-headers) for CORS or anything else
-- [`FileCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) - Instance of this class is returned from [`.findOne()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOne.md) method
-  - `removeAsync()` - {*Promise<number>*} - Remove document, resolves to number of removed records
+- [`FileCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md) - Instance of this class is returned from [`.findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) method
+  - `removeAsync()` - {*Promise<FileCursor>*} - Remove document, resolves to the same `FileCursor`
   - `link()` - {*string*} - Returns downloadable URL to File
   - `get(property)` - {*object*|*mix*} - Returns current document as a plain object
   - `fetchAsync()` - {*Promise<object[]>*} - Resolves to current document as plain object in Array
-  - `with()` - {*FileCursor*} - Returns reactive version of current FileCursor
+  - `with()` - {*FileCursor*} - [*Client*] Returns reactive version of current FileCursor
   - [__See all *FileCursor* methods__](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
 - [`FilesCursor` Class](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md) - Instance of this class is returned from [`.find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) method
   - `fetchAsync()` - {*Promise<object[]>*} - Returns all matching document(s) as an Array
-  - `countAsync()` - {*Promise<Number>*} - Returns the number of documents that match a query
+  - `countDocuments()` - {*Promise<Number>*} - Returns the number of documents that match a query (`countAsync()` is deprecated)
   - `removeAsync()` - {*Promise<number>*} - Removes all documents that match a query, resolves to a number of removed records
-  - `forEachAsync(callback, context)` - {*undefined*} - Call `callback` once for each matching document
+  - `forEachAsync(callback, context)` - {*Promise<FilesCursor>*} - Call `callback` once for each matching document
   - `eachAsync()` - {*Promise<FileCursor[]>*} - Resolves to Array of `FileCursor` made for each document on current Cursor
   - `observeAsync(callbacks)` - {*Promise< object >*} - Functions to call to deliver the result set as it changes
   - `observeChangesAsync(callbacks)` - {*Promise< object >*} - Watch a query. Receive callbacks as the result set changes
@@ -85,12 +87,23 @@ Meteor-Files library features and highlights
   - [Extend Schema](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#extend-default-schema)
   - [Override Schema](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#pass-your-own-schema-not-recommended)
 
+### Other `FilesCollection` methods:
+
+- [`updateAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#updateasync) [*Isomorphic*] - Update records, wraps `Mongo.Collection#updateAsync`
+- [`countDocuments()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#countdocuments) [*Isomorphic*] - Count records matching a selector
+- [`estimatedDocumentCount()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#estimateddocumentcount) [*Isomorphic*] - Fast estimated count of all records
+- [`download()` and `serve()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#download-and-serve) [*Server*] - Respond to a download request from custom routes
+- [`allow`, `deny`, `allowClient`, `denyClient`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#allow-deny-allowclient-denyclient) [*Isomorphic*] - Collection access rules
+- [Exported helpers and `WriteStream`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md#exported-helpers-and-writestream)
+- [`FileUpload` events and `progress` arguments](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md)
+- [TypeScript definitions](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/typescript-definitions.md)
+
 ### Demos:
 
 - [Simplest upload app](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-upload)
 - [Simplest streaming app](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-streaming)
 - [Simplest download button](https://github.com/veliovgroup/Meteor-Files-Demos/tree/master/demo-simplest-download-button)
-- [Fully-featured file sharing app](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app) — [live: __files.veliov.com__](https://files.veliov.com)
+- [Fully-featured file sharing app](https://github.com/veliovgroup/meteor-files-website#file-sharing-web-app), [live: __files.veliov.com__](https://files.veliov.com)
 
 ### Examples:
 
@@ -99,8 +112,8 @@ Meteor-Files library features and highlights
 - `code-sample repo` [cURL/POST upload](https://github.com/noris666/Meteor-Files-POST-Example) by [@noris666](https://github.com/noris666)
 - `tutorial` [MUP/Docker Persistent Storage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/meteorup-usage.md) - Deploy via MeteorUp to Docker container with persistent `storagePath`
 - `tutorial` [React.js usage](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/react-example.md) - React with a progress bar and component with links to view, re-name, and delete the files
-- `tutorial` [Migrating from CollectionFS/CFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/convert-from-cfs-to-meteor-files.md) - Live conversion from the depreciated CFS to Meteor-Files (*Amazon S3 specifically, but applies to all*)
-- `tutorial` [Getting `FilesCollection` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection-instances.md#filescollection-instances-and-mongocollection-instances) - Retrieve the *FilesCollection* by it's underlying `Mongo.Collection` instance
+- `tutorial` [Migrating from CollectionFS/CFS](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/convert-from-cfs-to-meteor-files.md) - Live conversion from the deprecated CFS to Meteor-Files (*Amazon S3 specifically, but applies to all*)
+- `tutorial` [Getting `FilesCollection` instance](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection-instances.md#filescollection-instances-and-mongocollection-instances) - Retrieve the *FilesCollection* by its underlying `Mongo.Collection` instance
 - `tutorial` [Migrating / moving GridFS stored files](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-migration.md) - Three step way of moving/copying/syncing GridFS-stored files between multiple Meteor applications
 - `tutorial` [GridFS streaming](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md) - Implement `206` partial content response
 - __Post-processing:__

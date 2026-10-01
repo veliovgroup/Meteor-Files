@@ -1,5 +1,6 @@
-/* global describe, beforeEach, after, before it, afterEach */
+/* global describe, beforeEach, after, before, it, afterEach */
 import { expect } from 'chai';
+import { Meteor } from 'meteor/meteor';
 import sinon from 'sinon';
 import FilesCollectionCore from '../core.js';
 import { FileCursor, FilesCursor } from '../cursor.js';
@@ -115,15 +116,48 @@ describe('FilesCursor', function() {
     sandbox.restore();
   });
 
-  describe('#get()', function() {
-    it('should return all matching documents as an array', async function() {
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
+  describe('M1: synchronous methods on server', function() {
+    const syncMethods = ['get', 'hasNext', 'next', 'previous', 'fetch', 'first', 'last', 'count', 'forEach', 'each', 'map', 'current', 'remove'];
+    syncMethods.forEach((method) => {
+      it(`#${method}() throws a Meteor.Error pointing to the async method`, function() {
+        const cursor = new FilesCursor({}, {}, filesCollection);
+        let error;
+        try {
+          cursor[method](() => {});
+        } catch (err) {
+          error = err;
+        }
+        expect(error).to.be.instanceOf(Meteor.Error);
+        expect(error.reason).to.match(/(Async|countDocuments)\(\) instead/);
+      });
+    });
 
+    it('FileCursor#with() and #remove() throw a Meteor.Error pointing to the async method', function() {
+      const cursor = new FileCursor({ _id: 'test' }, filesCollection);
+      expect(() => cursor.with()).to.throw(Meteor.Error, /withAsync\(\) instead/);
+      expect(() => cursor.remove()).to.throw(Meteor.Error, /removeAsync\(\) instead/);
+    });
+  });
+
+  describe('M2: limit and skip', function() {
+    const documents = [{ _id: 'test1' }, { _id: 'test2' }, { _id: 'test3' }];
+
+    it('#hasNextAsync() honors limit', async function() {
       await filesCollection.collection.rawCollection().insertMany(documents);
+      const cursor = new FilesCursor({}, { limit: 2, sort: { _id: 1 } }, filesCollection);
+      expect(await cursor.nextAsync()).to.deep.equal(documents[0]);
+      expect(await cursor.hasNextAsync()).to.be.true;
+      expect(await cursor.nextAsync()).to.deep.equal(documents[1]);
+      expect(await cursor.hasNextAsync()).to.be.false;
+    });
 
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const fetched = await cursor.get();
-      expect(fetched).to.deep.equal(documents);
+    it('#lastAsync() honors limit and skip', async function() {
+      await filesCollection.collection.rawCollection().insertMany(documents);
+      let cursor = new FilesCursor({}, { limit: 2, sort: { _id: 1 } }, filesCollection);
+      expect(await cursor.lastAsync()).to.deep.equal(documents[1]);
+      cursor = new FilesCursor({}, { skip: 2, sort: { _id: 1 } }, filesCollection);
+      expect(await cursor.lastAsync()).to.deep.equal(documents[2]);
+      expect(cursor._current).to.equal(0);
     });
   });
 
@@ -142,19 +176,17 @@ describe('FilesCursor', function() {
 
   describe('#hasNextAsync()', function() {
     it('should return true if there is a next item available on the cursor', async function() {
-      // Mock the collection.find method to return a cursor with a countDocuments method
-      sandbox.stub(filesCollection.collection, 'countDocuments').resolves(2);
-
       const cursor = new FilesCursor({}, {}, filesCollection);
+      sandbox.stub(cursor.cursor, 'countAsync').resolves(2);
+
       const hasNext = await cursor.hasNextAsync();
       expect(hasNext).to.be.true;
     });
 
     it('should return false if there is no next item available on the cursor', async function() {
-      // Mock the collection.find method to return a cursor with a countDocuments method
-      sandbox.stub(filesCollection.collection, 'countDocuments').resolves(0);
-
       const cursor = new FilesCursor({}, {}, filesCollection);
+      sandbox.stub(cursor.cursor, 'countAsync').resolves(0);
+
       const hasNext = await cursor.hasNextAsync();
       expect(hasNext).to.be.false;
     });
@@ -191,14 +223,15 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#previous()', function() {
-    it('should return the previous item on the cursor', function() {
+  describe('#previousAsync()', function() {
+    it('should return the previous item on the cursor', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       cursor._current = 1;
       sandbox.stub(cursor.cursor, 'fetchAsync').resolves(documents);
-      cursor.previous();
+      const previous = await cursor.previousAsync();
       expect(cursor._current).to.equal(0);
+      expect(previous).to.deep.equal(documents[0]);
     });
   });
 
@@ -274,13 +307,13 @@ describe('FilesCursor', function() {
     });
   });
 
-  describe('#each()', function() {
+  describe('#eachAsync()', function() {
     it('should return an array of FileCursor for each document', async function() {
       const cursor = new FilesCursor({}, {}, filesCollection);
       const documents = [{ _id: 'test1' }, { _id: 'test2' }];
       await filesCollection.collection.rawCollection().insertMany(documents);
 
-      const result = await cursor.each();
+      const result = await cursor.eachAsync();
 
       expect(result).to.be.an('array');
       result.forEach((fileCursor, index) => {
@@ -298,16 +331,6 @@ describe('FilesCursor', function() {
 
       const result = await cursor.mapAsync((doc) => doc._id);
       expect(result).to.deep.equal(documents.map((doc) => doc._id));
-    });
-  });
-
-  describe('#current()', function() {
-    it('should return the current item on the cursor', async function() {
-      const cursor = new FilesCursor({}, {}, filesCollection);
-      const documents = [{ _id: 'test1' }, { _id: 'test2' }];
-      sandbox.stub(cursor, 'fetch').returns(documents);
-      const current = cursor.current();
-      expect(current).to.deep.equal(documents[0]);
     });
   });
 
