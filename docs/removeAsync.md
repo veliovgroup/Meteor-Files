@@ -1,4 +1,4 @@
-### `removeAsync` [*Anywhere*]
+### `removeAsync` [*Isomorphic*]
 
 ```ts
 FilesCollection#removeAsync(selector: MeteorFilesSelector): Promise<number>
@@ -6,8 +6,10 @@ FilesCollection#removeAsync(selector: MeteorFilesSelector): Promise<number>
 
 Remove records from FilesCollection and files from FS.
 
-- `selector` {*Object*} - See [Mongo Selectors](http://docs.meteor.com/#selectors)
+- `selector` {*Object*} - See [Mongo Selectors](https://docs.meteor.com/api/collections.html#selectors)
 - Returns {*Promise<number>*} - Number of removed records
+
+The `onAfterRemove` hook can return `true` to skip deleting files from FS, see [constructor options](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md).
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -16,11 +18,11 @@ const imagesCollection = new FilesCollection({collectionName: 'images'});
 
 // Usage:
 // Drop collection's data and remove all associated files from FS
-imagesCollection.removeAsync({});
+await imagesCollection.removeAsync({});
 // Remove particular file
-imagesCollection.removeAsync({_id: 'Rfy2HLutYK4XWkwhm'});
+await imagesCollection.removeAsync({_id: 'Rfy2HLutYK4XWkwhm'});
 // Equals to above
-const file = await imagesCollection.findOneAsync({_id: 'Rfy2HLutYK4XWkwhm'})
+const file = await imagesCollection.findOneAsync({_id: 'Rfy2HLutYK4XWkwhm'});
 await file.removeAsync();
 
 
@@ -38,26 +40,13 @@ const imagesCollection = new FilesCollection({
   collectionName: 'images',
   allowClientCode: true,
   async onBeforeRemove(cursor) {
-    const records = await cursor.fetchAsync();
-
-    if (records && records.length) {
-      if (this.userId) {
-        const user = await this.userAsync();
-
-        // Assuming user.profile.docs is array
-        // with file's records _id(s)
-        for (let i = 0, len = records.length; i < len; i++) {
-          const file = records[i];
-          if (!~user.profile.docs.indexOf(file._id)) {
-            // Return false if at least one document
-            // is not owned by current user
-            return false;
-          }
-        }
-      }
+    if (!this.userId) {
+      return false;
     }
 
-    return true;
+    const records = await cursor.fetchAsync();
+    // Allow removal only if the current user owns every file
+    return records.every((file) => file.userId === this.userId);
   }
 });
 ```

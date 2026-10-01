@@ -1,25 +1,34 @@
 {
   "name": "ostrio-meteor-files",
+  "version": "3.1.0",
+  "private": true,
   "types": "index.d.ts",
   "scripts": {
-    "test:tiny": "meteor test-packages ./",
     "test:mocha": "meteor test-packages ./ --driver-package meteortesting:mocha --once",
     "test:mocha:watch": "meteor test-packages ./ --driver-package meteortesting:mocha",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p . && tsd"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.10",
-    "@babel/eslint-parser": "^7.26.10",
-    "@typescript-eslint/eslint-plugin": "^8.27.0",
-    "@typescript-eslint/parser": "^8.27.0",
-    "chai": "^4.5.0",
-    "eslint": "^8.57.1",
-    "eventemitter3": "^5.0.1",
-    "mongodb": "^6.15.0",
-    "simpl-schema": "^3.4.6",
-    "sinon": "^7.5.0",
-    "tsd": "^0.31.2",
-    "tslint": "^5.20.1"
+    "@babel/core": "^7.29.0",
+    "@babel/eslint-parser": "^7.28.0",
+    "@types/connect": "^3.4.38",
+    "@types/meteor": "^2.9.11",
+    "@types/node": "^22.0.0",
+    "chai": "^6.3.0",
+    "eslint": "^9.39.0",
+    "eventemitter3": "^5.0.4",
+    "globals": "^17.0.0",
+    "mongodb": "^6.21.0",
+    "simpl-schema": "^3.4.7",
+    "sinon": "^22.0.0",
+    "tsd": "^0.33.0",
+    "typescript": "~5.9.0"
+  },
+  "tsd": {
+    "files": [
+      "index.test-d.ts"
+    ]
   }
 }

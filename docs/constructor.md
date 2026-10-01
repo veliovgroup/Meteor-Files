@@ -54,7 +54,7 @@
         Storage path on file system
       </td>
       <td>
-        <code>function { return 'assets/app/uploads'; }</code>
+        <code>function () { return 'assets/app/uploads/' + collectionName; }</code>
         <br />
         Always converted into the function since <code>v1.7.4</code>
       </td>
@@ -63,14 +63,14 @@
         If <em>Function</em> is passed it must return <em>String</em>, arguments:
         <ul>
           <li>
-            <code>defaultPath</code> - Default recommended path
+            <code>fileObj</code> - File record data (for an upload in progress, the fields known at that moment)
           </li>
         </ul>
         Context is current <em>FilesCollection</em> instance.<br /><br />
         Note: When running in development mode files stored at a relative path (within the Meteor project) are silently removed when Meteor is restarted.<br /><br />
         To preserve files in development mode store them outside of the Meteor application, e.g. <code>/data/Meteor/uploads/</code><br /><br />
         The Meteor-Files package operates on the host filesystem, unlike Meteor Assets. When a relative path is specified for <code>config.storagePath</code> (path starts with ./ or no slash) files will be located relative to the assets folder.<br /><br />  When an absolute path is used (path starts with /) files will be located starting at the root of the filesystem.
-        <br /><br />If using <a href="https://github.com/kadirahq/meteor-up">MeteorUp</a>, Docker volumes has to be created in <code>mup.json</code>, see <a href="https://github.com/bryanlimy/Meteor-Files/blob/master/docs/constructor.md#example-on-using-meteorup">Usage on MeteorUp</a>
+        <br /><br />If using <a href="https://github.com/zodern/meteor-up">MeteorUp</a>, Docker volumes have to be created in <code>mup.js</code>, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/meteorup-usage.md">Usage on MeteorUp</a>
       </td>
     </tr>
     <tr>
@@ -129,7 +129,7 @@
         Client
       </td>
       <td>
-        Custom DDP connection for Collection. Object returned form <code>DDP.connect()</code>
+        Custom DDP connection for Collection. Object returned from <code>DDP.connect()</code>
       </td>
       <td>
         <code>Meteor</code> (The default DDP connection)
@@ -165,22 +165,7 @@
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#default-function">Default <em>Function</em></a>
       </td>
       <td>
-        We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
-      </td>
-    </tr>
-    <tr>
-      <td align="right">
-        <b>DEPRECATED</b> <code>config.throttle</code> {<em>Number</em>|<em>false</em>}
-      </td>
-      <td>
-        Server
-      </td>
-      <td>
-        <b>DEPRECATED</b> Throttle download speed in <em>bps</em>
-      </td>
-      <td>-</td>
-      <td>
-        TEMPORARILY DEPRECATED SINCE v1.9.0
+        An <em>Object</em> sets the same headers on every response. A <em>Function</em> receives <code>(responseCode, fileRef, versionRef, version, http)</code> and returns an <em>Object</em> of headers. We recommend to keep original function structure, with your modifications, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/custom-response-headers.md#adding-custom-header-example">example altering default headers</a>
       </td>
     </tr>
     <tr>
@@ -226,9 +211,11 @@
         Upload &amp; Serve (<em>for 206 response</em>) chunk size
       </td>
       <td>
-        <code>272144</code>
+        <code>524288</code> (512 KB)
       </td>
-      <td></td>
+      <td>
+        The constructor rounds this option down to a multiple of 8 (at least 8 on the client). The server accepts upload chunk sizes from <code>1</code> byte to <code>16777216</code> (16 MiB) and rejects larger values with <code>400</code>. The client reduces larger values to the server maximum. Over HTTP, a chunk request body (base64 of <code>chunkSize</code> plus 4 KiB) larger than the limit gets <code>413</code>. Start requests (including <code>meta</code>) are limited to 1 MiB and EOF requests to 64 KiB
+      </td>
     </tr>
     <tr>
       <td align="right">
@@ -238,13 +225,13 @@
         Isomorphic
       </td>
       <td>
-        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>
+        Function which returns <code>String</code>. Use it to create nested directories in the storage folder. <b>Note: file extension appended to returned value</b>. The server sanitizes each path segment (<code>/</code> separates segments, <code>.</code> and <code>..</code> are dropped) and the result must stay inside <code>storagePath</code>. Upload start returns <code>409</code> if a file already exists at that path
       </td>
       <td>
         <code>false</code>
       </td>
       <td>
-        Primary sets file name on <code>FS</code><br />
+        Primarily sets file name on <code>FS</code><br />
         if <code>namingFunction</code> is not set<br />
         <code>FS</code>-name is equal to file's record <code>_id</code>
       </td>
@@ -260,10 +247,10 @@
         FS-permissions (access rights) in octal
       </td>
       <td>
-        <code>0644</code>
+        <code>0o644</code>
       </td>
       <td>
-        ex.: <code>0755</code>, <code>0777</code>
+        ex.: <code>0o755</code>, <code>0o777</code>
       </td>
     </tr>
     <tr>
@@ -277,10 +264,10 @@
         FS-permissions for parent directory (access rights) in octal
       </td>
       <td>
-        <code>0755</code>
+        <code>0o755</code>
       </td>
       <td>
-        ex.: <code>0777</code>
+        ex.: <code>0o777</code>
       </td>
     </tr>
     <tr>
@@ -309,10 +296,10 @@
         Strict mode for partial content
       </td>
       <td>
-        <code>false</code>
+        <code>true</code>
       </td>
       <td>
-        If is <code>true</code> server will return <code>416</code> response code, when <code>range</code> is not specified
+        If is <code>true</code> server will return <code>416</code> response code for an unsatisfiable <code>range</code> (start at or after the end of the file, start after end, <code>bytes=-0</code>). If is <code>false</code> server ignores an unsatisfiable <code>range</code> and replies <code>200</code> with the full file
       </td>
     </tr>
     <tr>
@@ -327,22 +314,16 @@
         <strong>Arguments</strong>:
         <ul>
           <li>
+            <code>http</code> {<em>Object</em>} - <code>{ request, response, params, userId, userAsync }</code>, the request context extended with the current user
+          </li>
+          <li>
             <code>fileObj</code> - see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">schema</a>
           </li>
         </ul><br>
         <strong>Context</strong>:
         <ul>
           <li>
-            <code>this.request</code>
-          </li>
-          <li>
-            <code>this.response</code>
-          </li>
-          <li>
-            <code>this.userAsync()</code>
-          </li>
-          <li>
-            <code>this.userId</code>
+            <code>this</code> is the <em>FilesCollection</em> instance
           </li>
         </ul>
       </td>
@@ -367,7 +348,7 @@
         <ul>
           <li>
             <code>fileObj</code> {<em>Object</em>|<em>null</em>} - If requested file exists - <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/schema.md#schema">file object</a>, otherwise -
-            <code>null</code>
+            <code>null</code>. The function can be <em>async</em>
           </li>
         </ul><br>
         <strong>Context</strong>:
@@ -390,13 +371,13 @@
         <code>false</code>
       </td>
       <td>
-        If <code>true</code> - files will be served only to authorized users, if <code>function()</code> - you're able to check visitor's permissions in your own way.<br>
+        If <code>true</code> - files will be served to any <em>signed-in</em> user, the check does not compare the user with the file's owner (see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>), if <code>function()</code> - you're able to check visitor's permissions in your own way.<br>
         <ul>
           <li>
             <strong>return</strong> <code>true</code> to continue
           </li>
           <li>
-            <strong>return</strong> <code>false</code> to abort or {<em>Number</em>} to abort upload with specific response code, default response code is <code>401</code>
+            <strong>return</strong> <code>false</code> to abort or {<em>Number</em>} to abort download with specific response code, default response code is <code>401</code>
           </li>
         </ul>
       </td>
@@ -431,7 +412,7 @@
           <li>
             <code>play</code> and force <code>download</code> features is <strong>not</strong> guaranteed!
           </li>
-          <li>Remember: <a href="https://www.google.ru/search?q=nodejs+is+bad+in+serving+files">NodeJS is not best solution for serving files</a>
+          <li>Remember: <a href="https://www.google.com/search?q=nodejs+is+bad+in+serving+files">NodeJS is not best solution for serving files</a>
           </li>
         </ul>
       </td>
@@ -493,7 +474,7 @@
         Server
       </td>
       <td>
-        Function which executes on server right before upload is begin and right after <code>onBeforeUpload</code> hook returns <code>true</code>. This hook <strong>called only once per upload</strong> and fully asynchronous.<br>
+        Function which executes on server right before upload begins and right after <code>onBeforeUpload</code> hook returns <code>true</code>. This hook <strong>called only once per upload</strong> and fully asynchronous.<br>
         <strong>Arguments</strong>:
         <ul>
           <li>
@@ -513,6 +494,9 @@
           </li>
           <li>
             <code>this.chunkId</code> {<em>Number</em>} - On <strong>server only</strong>
+          </li>
+          <li>
+            <code>this.eof</code> {<em>Boolean</em>} - On <strong>server only</strong>
           </li>
         </ul>
       </td>
@@ -535,10 +519,10 @@
         <strong>Arguments</strong>:
         <ul>
           <li>
-            <code>cursor</code> {<em>MongoCursor</em>} - Current files to be removed on cursor, <em>if has any</em>
+            <code>cursor</code> {<em>FilesCursor</em>|<em>null</em>} - Current files to be removed on cursor, <em>if has any</em>
           </li>
         </ul><br>
-        <strong>Context</strong>:
+        <strong>Context</strong>: <code>{ userId, userAsync }</code>
         <ul>
           <li>
             <code>this.userAsync()</code>
@@ -552,7 +536,7 @@
         <code>false</code>
       </td>
       <td>
-        Use with <code>allowClientCode</code> to control access to <code>remove()</code> method.
+        Use with <code>allowClientCode</code> to control access to <code>removeAsync()</code> method. When <code>allowClientCode</code> is <code>true</code> and this hook is not set, any client can remove any file.
         <ul>
           <li>
             <strong>return</strong> <code>true</code> to continue
@@ -605,7 +589,9 @@
       <td>
         <code>false</code>
       </td>
-      <td></td>
+      <td>
+        Return <code>true</code> to skip the default <code>unlinkAsync()</code> call, e.g. when files live in a 3rd-party storage and you delete them yourself. Return a falsy value to continue default behavior
+      </td>
     </tr>
     <tr>
       <td align="right">
@@ -660,7 +646,7 @@
         Server
       </td>
       <td>
-        Intercept download request.<br>
+        Intercept request. Runs on every request to the collection's download route, before any file lookup or access check.<br>
         <strong>Arguments</strong>:
         <ul>
           <li>
@@ -679,7 +665,10 @@
             <code>http.params._id</code> {<em>String</em>} - File's `_id`
           </li>
           <li>
-            <code>http.params.query</code> {<em>String</em>} - Request get query
+            <code>http.params.query</code> {<em>Object</em>} - Parsed query string, e.g. <code>{ download: 'true' }</code>
+          </li>
+          <li>
+            <code>http.params.file</code> {<em>String</em>} - File name with extension. Set on <code>public</code> collections only
           </li>
           <li>
             <code>http.params.name</code> {<em>String</em>} - Request file name from URI
@@ -731,7 +720,10 @@
             <code>http.params._id</code> {<em>String</em>} - File's `_id`
           </li>
           <li>
-            <code>http.params.query</code> {<em>String</em>} - Request get query
+            <code>http.params.query</code> {<em>Object</em>} - Parsed query string, e.g. <code>{ download: 'true' }</code>
+          </li>
+          <li>
+            <code>http.params.file</code> {<em>String</em>} - File name with extension. Set on <code>public</code> collections only
           </li>
           <li>
             <code>http.params.name</code> {<em>String</em>} - Request file name from URI
@@ -767,7 +759,7 @@
         <code>config.disableUpload</code> {<em>Boolean</em>}
       </td>
       <td>
-        Both
+        Isomorphic
       </td>
       <td>
         Disable upload from <em>Client</em> to <em>Server</em> (HTTP and DDP (WebSockets))
@@ -804,7 +796,7 @@
         Server
       </td>
       <td>
-        Regex of Origins that are allowed CORS access or `false` to disable completely.
+        Regex of Origins that are allowed CORS access or `false` to disable completely. Server-only, the Client ignores it.
       </td>
       <td>
         <code>/^http:\/\/localhost:12[0-9]{3}$/</code>
@@ -815,13 +807,64 @@
     </tr>
     <tr>
       <td align="right">
-        <code>config.allowQueryStringCookies</code> {<em>Regex</em>|<em>Boolean</em>}
+        <code>config.allowedCordovaOrigins</code> {<em>Boolean</em>|<em>RegExp</em>|<em>String</em>}
       </td>
       <td>
         Isomorphic
       </td>
       <td>
-        Allow passing Cookies in a query string (in URL). Primary should be used only in Cordova environment. Note: this option will be used only on Cordova. Directly passed to `ostrio:cookies` package
+        Origins of Cordova and Meteor-Desktop apps allowed to set cookies cross-site. Passed to <code>ostrio:cookies</code> v3
+      </td>
+      <td>
+        <em>Server</em>: value of <code>allowedOrigins</code>. <em>Client</em>: <code>undefined</code>
+      </td>
+      <td>
+        Required for query-string cookies (<code>allowQueryStringCookies</code>) in Cordova and Meteor-Desktop. <code>true</code> allows <code>^http://localhost:12[0-9]{3}$</code>. Pass a <code>RegExp</code> or <code>String</code> to allow other origins. Set the same value on <em>Client</em> and <em>Server</em>. See <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.nosniff</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Adds the <code>X-Content-Type-Options: nosniff</code> header to file responses
+      </td>
+      <td>
+        <code>false</code>
+      </td>
+      <td>
+        Will default to <code>true</code> in v4. Enable it now, as <code>Content-Type</code> comes from the type the uploader sent
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.uploadIdleTimeout</code> {<em>Number</em>}
+      </td>
+      <td>
+        Server
+      </td>
+      <td>
+        Time in milliseconds after which the server closes the file handle of an idle upload
+      </td>
+      <td>
+        <code>900000</code> (15 minutes)
+      </td>
+      <td>
+        The next chunk of the same upload reopens the handle. Keeps open handles bounded when clients disappear mid-upload
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        <code>config.allowQueryStringCookies</code> {<em>Boolean</em>}
+      </td>
+      <td>
+        Isomorphic
+      </td>
+      <td>
+        Allow passing Cookies in a query string (in URL). Primarily should be used only in Cordova and Desktop environments. Note: this option will be used only on Cordova and Meteor-Desktop. Directly passed to `ostrio:cookies` package. Needs <code>allowedCordovaOrigins</code> on the Client (the Server falls back to <code>allowedOrigins</code>). The token ends up in URLs, see <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md">security guide</a>
       </td>
       <td>
         <code>false</code>
@@ -857,7 +900,7 @@
       </td>
       <td>
         Useful when you want to auth user based on custom cookie (or other way).
-        Must return <code>null</code> or <code>{userId: null|String, userAsync: function => Promise&lte;null|user&gte; }</code>
+        Must return <code>null</code> or <code>{userId: null|String, userAsync: function => Promise&lt;null|user&gt; }</code>
       </td>
     </tr>
     <tr>
@@ -871,6 +914,7 @@
         Disable automatic cookie setting
       </td>
       <td>
+        <code>false</code>
       </td>
       <td>
        Useful when you use multiple file collections or when you want to implement your own authorization.
@@ -881,10 +925,10 @@
         <code>config.sanitize</code> {<em>Function</em>}
       </td>
       <td>
-        Server (*accepted, but no used on the Client*)
+        Server (*accepted, but not used on the Client*)
       </td>
       <td>
-        Sanitizer for sensitive Strings; Overrides default <code>sanitize()</code> method of <em>FilesCollection</em> instance. Primary used for <code>FSName</code> and <code>fileId</code>. <em>Very low-level</em>. <b>Warning: use with caution!</b>
+        Sanitizer for sensitive Strings; Overrides default <code>sanitize()</code> method of <em>FilesCollection</em> instance. Primarily used for <code>FSName</code> and <code>fileId</code>. <em>Very low-level</em>. <b>Warning: use with caution!</b>
       </td>
       <td>
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/313e842468f743c04a5310778ea63c7fd2d3c612/lib.js#L4-L6">Default function</a>
@@ -952,7 +996,7 @@
         <code>afterUpload</code>
       </td>
       <td>
-        Isomorphic
+        Server
       </td>
       <td>
         Triggered right after file is written to FS.<br>
@@ -975,20 +1019,20 @@ List of available methods on `FilesCollection` instance:
 - [`insert()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md) [*Client*] - Upload file(s) from client to server
 - [`insertAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insertAsync.md) [*Client*] - Upload file(s) from client to server
   - [`FileUpload#pipe()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#piping)
-- `write()` — [*DEPRECTAED IN `v3.0.0`*]
+- `write()` - [*DEPRECATED IN `v3.0.0`*]
 - [`writeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/writeAsync.md) [*Server*] - Write `Buffer` to FS and FilesCollection
 - `load()` - [*DEPRECATED IN `v3.0.0`*]
 - [`loadAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/loadAsync.md) [*Server*] - Write file to FS and FilesCollection from remote URL
 - [`addFile()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/addFile.md) [*Server*] - Add local file to FilesCollection from FS
-- `findOne()` — [*DEPRECATED IN `v3.0.0`*]
-- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Anywhere*] - Find one file in FilesCollection; Returns [`FileCursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
-- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Anywhere*] - Create cursor for FilesCollection; Returns [`File__s__Cursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
-- `remove()` — [*DEPRECATED IN `v3.0.0`*]
-- [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Anywhere*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
+- `findOne()` - [*DEPRECATED IN `v3.0.0`*]
+- [`findOneAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/findOneAsync.md) [*Isomorphic*] - Find one file in FilesCollection; Returns [`FileCursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FileCursor.md)
+- [`find()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/find.md) [*Isomorphic*] - Create cursor for FilesCollection; Returns [`File__s__Cursor`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/FilesCursor.md)
+- `remove()` - [*DEPRECATED IN `v3.0.0`*]
+- [`removeAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/removeAsync.md) [*Isomorphic*] - Remove files from FilesCollection and "unlink" (e.g. remove) from FS
 - `unlink()` - [*DEPRECATED IN `v3.0.0`*]
-- [`unlinkASync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlinkAsync.md) [*Server*] - "Unlink" (e.g. remove) file from FS
-- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Anywhere*] - Generate downloadable link
-- [`collection` property](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md) [*Anywhere*] - `Meteor.Collection` instance
+- [`unlinkAsync()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/unlinkAsync.md) [*Server*] - "Unlink" (e.g. remove) file from FS
+- [`link()`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/link.md) [*Isomorphic*] - Generate downloadable link
+- [`collection` property](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/collection.md) [*Isomorphic*] - `Mongo.Collection` instance
 
 ### Examples
 
@@ -1013,15 +1057,16 @@ const imagesCollection = new FilesCollection({
     // to check file's "magic-numbers" use `mmmagic` or `file-type` package
     // real extension and mime-type can be checked on client (untrusted side)
     // and on server at `onAfterUpload` hook (trusted side)
-    if (file.size <= 10485760 && /png|jpe?g/i.test(file.ext)) {
+    if (file.size <= 10485760 && /png|jpe?g/i.test(file.extension)) {
       return true;
     }
     return 'Please upload image, with size equal or less than 10MB';
   },
-  downloadCallback(fileObj) {
-    if (this.params.query.download == 'true') {
+  async downloadCallback(http, fileObj) {
+    // `this` is the FilesCollection instance, `http` has request, response, params, and userId
+    if (http.params.query.download === 'true') {
       // Increment downloads counter
-      imagesCollection.update(fileObj._id, {$inc: {'meta.downloads': 1}});
+      await imagesCollection.updateAsync(fileObj._id, {$inc: {'meta.downloads': 1}});
     }
     // Must return true to continue download
     return true;
@@ -1050,7 +1095,7 @@ Attach SimpleSchema and `.denyClient` insecure calls to limit window for error
 
 #### Attach schema [*Isomorphic*]:
 
-*To attach schema, use/install [`aldeed:collection2`](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.*
+*To attach schema, use/install [`aldeed:collection2`](https://github.com/aldeed/meteor-collection2) and [simpl-schema](https://www.npmjs.com/package/simpl-schema) packages.*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
@@ -1137,7 +1182,7 @@ import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({/* ... */});
 // Alias addListener
 imagesCollection.on('afterUpload', function (fileRef) {
-  /* `this` context is the imagesCollection (FilesCollection) instance */
+  /* fileRef is the new record from MongoDB */
 });
 ```
 
@@ -1191,27 +1236,21 @@ const imagesCollection = new FilesCollection({
 
 #### Use onAfterUpload to avoid mime-type and/or extension substitution:
 
-For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use [`mmmagic` package](https://github.com/mscdex/mmmagic) for this:
+For additional security, it's recommended to verify the mimetype by looking at the content of the file and delete it, if it looks malicious. E.g. you can use the [`file-type` package](https://www.npmjs.com/package/file-type) for this (`meteor npm install file-type`, ESM only):
 
 ```js
-import { Meteor } from 'meteor/meteor';
 import { FilesCollection } from 'meteor/ostrio:files';
 
 const imagesCollection = new FilesCollection({
   collectionName: 'images',
-  onAfterUpload(file) {
-    if (Meteor.isServer) {
-      // check real mimetype
-      const { Magic, MAGIC_MIME_TYPE } = require('mmmagic');
-      const magic = new Magic(MAGIC_MIME_TYPE);
-      magic.detectFile(file.path, Meteor.bindEnvironment((err, mimeType) => {
-        if (err || !mimeType.includes('image')) {
-          // is not a real image --> delete
-          console.log('onAfterUpload, not an image: ', file.path);
-          console.log('deleted', file.path);
-          this.remove(file._id);
-        }
-      }));
+  async onAfterUpload(file) {
+    // `onAfterUpload` runs on the server only
+    const { fileTypeFromFile } = await import('file-type');
+    const detected = await fileTypeFromFile(file.path);
+    if (!detected || !detected.mime.startsWith('image/')) {
+      // is not a real image --> delete
+      console.log('onAfterUpload, not an image, deleted:', file.path);
+      await this.removeAsync(file._id);
     }
   }
 });

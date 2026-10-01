@@ -1,6 +1,6 @@
 # *FilesCollection* Instances and *Mongo.Collection* Instances
 
-While *FilesCollection* has a direct reference to a [`Mongo.Collection`](http://docs.meteor.com/#/full/mongo_collection),
+While *FilesCollection* has a direct reference to a [`Mongo.Collection`](https://docs.meteor.com/api/collections.html#Mongo-Collection),
 the `Mongo.Collection` has a back-reference to the *FilesCollection* itself.
 
 The reference chain is as the following:

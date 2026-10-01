@@ -1,6 +1,6 @@
-import { DDP } from 'meteor/ddp-client';
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
+import { Tracker } from 'meteor/tracker';
 import { Cookies } from 'meteor/ostrio:cookies';
 import { check, Match } from 'meteor/check';
 import { UploadInstance } from './upload.js';
@@ -8,7 +8,101 @@ import FilesCollectionCore from './core.js';
 import { formatFileURL, helpers } from './lib.js';
 
 const NOOP = () => { };
-const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
+const WORKER_SOURCE = '!function(r){"use strict";r.onmessage=function(e){var n=e.data.cc,o=e.data.f.slice(e.data.cs*(n-1),e.data.cs*n),a;if(e.data.ib===!0){postMessage({bin:o,chunkId:n});return}r.FileReader?(a=new FileReader,a.onload=function(){postMessage({bin:String(a.result).split(",")[1],chunkId:n})},a.onerror=function(){postMessage({bin:null,chunkId:n,error:"FileReader error: "+(a.error&&a.error.message||"unknown")})},a.readAsDataURL(o)):r.FileReaderSync?function(){try{a=new FileReaderSync,postMessage({bin:a.readAsDataURL(o).split(",")[1],chunkId:n})}catch(t){postMessage({bin:null,chunkId:n,error:"FileReaderSync error: "+(t&&t.message)})}}():postMessage({bin:null,chunkId:n,error:"File API is not supported in WebWorker!"})}}(this);';
+
+/**
+ * @private
+ * @summary Web Worker script URL, created once per page and shared by all collections
+ * @type {{supported: boolean, url: string|undefined}|null}
+ */
+let webWorker = null;
+
+/**
+ * @private
+ * @summary Returns Web Worker support and the script URL. A Blob URL is created once and kept for the page lifetime, so it is never revoked
+ * @param {function} debug - Logger
+ * @returns {{supported: boolean, url: string|undefined}}
+ */
+const getWebWorker = (debug) => {
+  if (webWorker) {
+    return webWorker;
+  }
+
+  try {
+    const _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false;
+    if (window.Worker && window.Blob && _URL && helpers.isFunction(_URL.createObjectURL)) {
+      webWorker = { supported: true, url: _URL.createObjectURL(new window.Blob([WORKER_SOURCE], { type: 'application/javascript' })) };
+    } else if (window.Worker) {
+      webWorker = { supported: true, url: Meteor.absoluteUrl('packages/ostrio_files/worker.min.js') };
+    } else {
+      webWorker = { supported: false, url: undefined };
+    }
+  } catch (e) {
+    debug('[FilesCollection] [Check WebWorker Availability] Error:', e);
+    webWorker = { supported: false, url: undefined };
+  }
+  return webWorker;
+};
+
+/**
+ * @private
+ * @summary DDP connections that already have an `x_mtok` cookie setter. One setter per connection, shared by all collections
+ * @type {WeakSet<object>}
+ */
+const tokenCookieConnections = new WeakSet();
+
+/**
+ * @private
+ * @summary Keep the `x_mtok` cookie equal to the DDP session id of `connection`. Sets it on startup, on login, and after every reconnect
+ * @param {object} connection - DDP connection, always `Meteor.connection`
+ * @param {function(string): void} setCookie - Writes the cookie
+ * @param {object} [accounts] - `Accounts` from `accounts-base`, when installed
+ * @returns {void}
+ */
+const watchTokenCookie = (connection, setCookie, accounts) => {
+  if (!helpers.isObject(connection) || tokenCookieConnections.has(connection)) {
+    return;
+  }
+  tokenCookieConnections.add(connection);
+
+  let lastSessionId = null;
+  let pollTimer = null;
+  const sync = (force = false) => {
+    const sessionId = connection._lastSessionId;
+    if (helpers.isString(sessionId) && sessionId.length && (force || sessionId !== lastSessionId)) {
+      lastSessionId = sessionId;
+      setCookie(sessionId);
+      return true;
+    }
+    return false;
+  };
+
+  // Session id arrives after the socket connects (DDP "connected" message), poll for it briefly
+  const waitForNewSession = (attempt = 0) => {
+    pollTimer = null;
+    if (sync() || attempt >= 100 || !connection.status().connected) {
+      return;
+    }
+    pollTimer = setTimeout(() => waitForNewSession(attempt + 1), 100);
+  };
+
+  // Not owned by a computation that may be running while a collection is constructed
+  Tracker.nonreactive(() => {
+    Tracker.autorun(() => {
+      if (connection.status().connected && !pollTimer) {
+        Tracker.nonreactive(() => waitForNewSession());
+      }
+    });
+  });
+
+  Meteor.startup(() => sync());
+  if (accounts) {
+    // Always rewrite on login, like 3.0.x, in case app code cleared the cookie
+    accounts.onLogin(() => sync(true));
+  }
+};
+
+const allowedParams = ['allowClientCode', 'allowedCordovaOrigins', 'allowQueryStringCookies', 'chunkSize', 'collection', 'collectionName', 'ddp', 'debug', 'disableSetTokenCookie', 'disableUpload', 'downloadRoute', 'namingFunction', 'onBeforeUpload', 'onbeforeunloadMessage', 'public', 'sanitize', 'schema'];
 
 /**
  * @locus Client
@@ -28,6 +122,7 @@ const allowedParams = ['allowClientCode', 'allowQueryStringCookies', 'chunkSize'
  * @param config.onbeforeunloadMessage {string|function} - [client] message shown to user when closing window/tab during upload
  * @param config.disableUpload {boolean} - disable file upload; useful for server-only solutions
  * @param config.disableSetTokenCookie {boolean} - disable cookie setting; useful when using multiple file collections or custom authorization
+ * @param config.allowedCordovaOrigins {boolean|RegExp|string} - [Client] origins allowed to set cookies cross-site, passed to `ostrio:cookies`; default: `undefined`
  * @param config.allowQueryStringCookies {boolean} - allow passing cookies in query string (primarily in cordova); default: false
  * @param config.sanitize {function} - override default sanitize function
  * @summary Creates a new instance of FilesCollection
@@ -46,6 +141,7 @@ class FilesCollection extends FilesCollectionCore {
     const self = this;
     const cookie = new Cookies({
       allowQueryStringCookies: this.allowQueryStringCookies,
+      allowedCordovaOrigins: this.allowedCordovaOrigins,
     });
 
     if (!helpers.isBoolean(this.debug) && !helpers.isFunction(this.debug)) {
@@ -59,7 +155,8 @@ class FilesCollection extends FilesCollectionCore {
     if (!this.chunkSize) {
       this.chunkSize = 1024 * 512;
     }
-    this.chunkSize = Math.floor(this.chunkSize / 8) * 8;
+    // Server and upload code expect a multiple of 8 bytes, at least 8
+    this.chunkSize = Math.max(8, Math.floor(this.chunkSize / 8) * 8);
 
     if (!helpers.isString(this.collectionName) && !this.collection) {
       this.collectionName = 'MeteorUploadFiles';
@@ -109,47 +206,31 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     if (!this.onbeforeunloadMessage) {
-      this.onbeforeunloadMessage = 'Upload in a progress... Do you want to abort?';
+      this.onbeforeunloadMessage = 'Upload in progress... Do you want to abort?';
     }
 
-    if (!config.disableSetTokenCookie) {
-      const setTokenCookie = () => {
-        if (Meteor.connection._lastSessionId) {
-          cookie.set('x_mtok', Meteor.connection._lastSessionId, { path: '/', sameSite: 'Lax', secure: Meteor.isProduction });
-          if ((Meteor.isCordova || Meteor.isDesktop) && this.allowQueryStringCookies) {
-            cookie.send();
-          }
+    if (!this.disableSetTokenCookie) {
+      const setTokenCookie = (sessionId) => {
+        cookie.set('x_mtok', sessionId, { path: '/', sameSite: 'Lax', secure: window.location.protocol === 'https:' });
+        if ((Meteor.isCordova || Meteor.isDesktop) && this.allowQueryStringCookies) {
+          cookie.send();
         }
       };
 
       const _accounts = (Package && Package['accounts-base'] && Package['accounts-base'].Accounts) ? Package['accounts-base'].Accounts : undefined;
       if (_accounts) {
-        DDP.onReconnect((conn) => {
-          conn.onReconnect = setTokenCookie;
-        });
-        Meteor.startup(setTokenCookie);
-        _accounts.onLogin(setTokenCookie);
+        // Always the default connection: the cookie is page-wide and the server resolves it against its own sessions.
+        // HTTP uploads send the same id in `x-mtok`
+        watchTokenCookie(Meteor.connection, setTokenCookie, _accounts);
       }
     }
 
     // eslint-disable-next-line new-cap
     check(this.onbeforeunloadMessage, Match.OneOf(String, Function));
 
-    try {
-      const _URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL || false;
-      if (window.Worker && window.Blob && _URL && helpers.isFunction(_URL.createObjectURL)) {
-        this._supportWebWorker = true;
-        this._webWorkerUrl = _URL.createObjectURL(new window.Blob(['!function(a){"use strict";a.onmessage=function(b){var c=b.data.f.slice(b.data.cs*(b.data.cc-1),b.data.cs*b.data.cc);if(b.data.ib===!0)postMessage({bin:c,chunkId:b.data.cc});else{var d;a.FileReader?(d=new FileReader,d.onloadend=function(a){postMessage({bin:(d.result||a.srcElement||a.target).split(",")[1],chunkId:b.data.cc,s:b.data.s})},d.onerror=function(a){throw(a.target||a.srcElement).error},d.readAsDataURL(c)):a.FileReaderSync?(d=new FileReaderSync,postMessage({bin:d.readAsDataURL(c).split(",")[1],chunkId:b.data.cc})):postMessage({bin:null,chunkId:b.data.cc,error:"File API is not supported in WebWorker!"})}}}(this);'], { type: 'application/javascript' }));
-      } else if (window.Worker) {
-        this._supportWebWorker = true;
-        this._webWorkerUrl = Meteor.absoluteUrl('packages/ostrio_files/worker.min.js');
-      } else {
-        this._supportWebWorker = false;
-      }
-    } catch (e) {
-      self._debug('[FilesCollection] [Check WebWorker Availability] Error:', e);
-      this._supportWebWorker = false;
-    }
+    const _webWorker = getWebWorker((...args) => self._debug(...args));
+    this._supportWebWorker = _webWorker.supported;
+    this._webWorkerUrl = _webWorker.url;
 
     if (!this.schema) {
       this.schema = FilesCollectionCore.schema;
@@ -201,7 +282,7 @@ class FilesCollection extends FilesCollectionCore {
    * @locus Anywhere
    * @memberOf FilesCollection
    * @name _getUser
-   * @summary Returns an object with userId and a user() method that returns the user object
+   * @summary Returns an object with userId, a user() method that returns the user object, and userAsync(), same as on server
    * @returns {ContextUser}
    */
   _getUser() {
@@ -209,11 +290,15 @@ class FilesCollection extends FilesCollectionCore {
       user() {
         return null;
       },
+      async userAsync() {
+        return null;
+      },
       userId: null
     };
 
     if (helpers.isFunction(Meteor.userId)) {
       result.user = () => Meteor.user();
+      result.userAsync = async () => (helpers.isFunction(Meteor.userAsync) ? await Meteor.userAsync() : Meteor.user());
       result.userId = Meteor.userId();
     }
 
@@ -253,15 +338,17 @@ class FilesCollection extends FilesCollectionCore {
    */
   insert(config, autoStart = true) {
     this._debug('[FilesCollection] [insert()]', config, { autoStart });
+    let _config = config;
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insert()] Upload is disabled with [disableUpload]!');
-      config.disableUpload = true;
+      _config = Object.assign({}, config, { disableUpload: true });
     }
 
-    const uploadInstance = new UploadInstance(config, this);
+    const uploadInstance = new UploadInstance(_config, this);
     if (autoStart) {
       uploadInstance.start().catch((error) => {
-        uploadInstance.emit('error', new Meteor.Error(500, '[FilesCollection] [insert] Error starting upload:', error));
+        // Already emitted as `error` event and passed to `onError`
+        this._debug('[FilesCollection] [insert] Error starting upload:', error);
       });
       return uploadInstance;
     }
@@ -276,17 +363,18 @@ class FilesCollection extends FilesCollectionCore {
    * @name insertAsync
    * @param {InsertOptions} config - configuration object with properties:
    * @param {boolean} [autoStart=true] - whether to start upload immediately (if false, call .start() manually)
-   * @returns {Promise<FileUpload|UploadInstance>}
+   * @returns {Promise<FileUpload|UploadInstance>} Rejects after emitting `error` and cleaning up, if the upload can not start
    * @see FilesCollection#insert for usage
    */
   async insertAsync(config, autoStart = true) {
     this._debug('[FilesCollection] [insertAsync()]', config, { autoStart });
+    let _config = config;
     if (this.disableUpload) {
       this._debug('[FilesCollection] [insertAsync()] Upload is disabled with [disableUpload]!');
-      config.disableUpload = true;
+      _config = Object.assign({}, config, { disableUpload: true });
     }
 
-    const uploadInstance = new UploadInstance(config, this);
+    const uploadInstance = new UploadInstance(_config, this);
     if (autoStart) {
       await uploadInstance.start();
       return uploadInstance;
@@ -329,6 +417,7 @@ class FilesCollection extends FilesCollectionCore {
    * @name removeAsync
    * @param {MeteorFilesSelector} selector - mongo-style selector (see http://docs.meteor.com/api/collections.html#selectors)
    * @summary Removes documents from the collection
+   * @throws {Meteor.Error} 401 when `allowClientCode` is `false`
    * @returns {Promise<number>} number of matched and removed files/records
    */
   async removeAsync(selector = {}) {
@@ -341,7 +430,7 @@ class FilesCollection extends FilesCollectionCore {
     }
 
     this._debug('[FilesCollection] [removeAsync] Run code from client is not allowed!');
-    return 0;
+    throw new Meteor.Error(401, '[FilesCollection] [removeAsync] Run code from client is not allowed!');
   }
 }
 
@@ -355,7 +444,9 @@ Meteor.startup(() => {
 
       const version = (!helpers.isString(_version)) ? 'original' : _version;
       const uriBase = (!helpers.isString(_uriBase)) ? void 0 : _uriBase;
-      return formatFileURL(fileObj, version, uriBase);
+      // FileCursor knows its collection: use its route and name
+      const collection = (fileObj._collection instanceof FilesCollection) ? fileObj._collection : void 0;
+      return formatFileURL(fileObj, version, uriBase, collection);
     });
   }
 });

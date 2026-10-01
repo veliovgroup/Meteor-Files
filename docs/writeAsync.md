@@ -8,14 +8,15 @@ FilesCollection#writeAsync(buffer: Buffer, opts?: WriteOpts, proceedAfterUpload?
 
 - `buffer` {*Buffer*} - File data as `Buffer`
 - `opts` {*object*} - Recommended properties:
-  - `opts.fileName` {*string*} - File name with extension, like `name.ext`
+  - `opts.fileName` {*string*} - File name with extension, like `name.ext`. Alias: `opts.name`
   - `opts.type` {*string*} - Mime-type, like `image/png`
   - `opts.size` {*number*} - File size in bytes, if not set file size will be calculated from `Buffer`
   - `opts.meta` {*object*} - Object with custom meta-data
   - `opts.userId` {*string*} - UserId, default *null*
-  - `opts.fileId` {*string*} - id, optional - if not set - Random.id() will be used
+  - `opts.fileId` {*string*} - id, optional. Sanitized and cut to 20 characters. If not set, a random `_id` is generated
 - `proceedAfterUpload` {*boolean*} - Proceed `onAfterUpload` hook (*if defined*) after `Buffer` is written to FS
 - Returns {*Promise<FileObj>*} - newly created file's object from DB
+- Rejects with `Meteor.Error 409` if a file with `opts.fileId` already exists. The existing file is not overwritten
 
 ```js
 import { readFile } from 'node:fs/promises';

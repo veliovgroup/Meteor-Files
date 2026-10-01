@@ -1,1 +1,1 @@
-See [main README.md file](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
+See [documentation index](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/readme.md)
