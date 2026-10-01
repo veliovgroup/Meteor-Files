@@ -1,11 +1,12 @@
 ### Use GridFS with `gridfs-stream` as a storage
 
-> :warning: **Deprecation warning:** The `gridfs-stream` [has not been updated in a long time](https://github.com/aheckmann/gridfs-stream) and its implementation relies on the deprecated [`GridStore API`](https://mongodb.github.io/node-mongodb-native/3.6/api/GridStore.html). An alternative is to use the Mongo driver's native `GridFSBucket`, which is also [described in
-this wiki](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md).
+> :warning: **LEGACY, does not work with Meteor 3.** `gridfs-stream` and the `GridStore` API it relies on were removed in MongoDB Node.js driver 4 and newer. Meteor 3 ships driver 6, so the code below does not run. This page stays for apps on old Meteor releases. For Meteor 3 use the native `GridFSBucket` guide: [GridFS with `GridFSBucket`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-bucket-integration.md).
+>
+> The code on this page is not updated to the async APIs of Meteor 3.
 
 Example below shows how to handle (store, serve, remove) uploaded files via GridFS.
 
-Please note - by default all files will be served with `200` response code, which is fine if you planning to deal only with small files, or not planning to serve files back to users (*use only upload and storage*). For support of `206` partial content see [this article](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
+Please note - by default all files will be served with `200` response code, which is fine if you are planning to deal only with small files, or not planning to serve files back to users (*use only upload and storage*). For support of `206` partial content see [this article](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/gridfs-streaming.md).
 
 ### Preparation
 
@@ -44,7 +45,7 @@ if (Meteor.isServer) {
 }
 ```
 
-#### Get required packages and create up gfs instance
+#### Get required packages and create a gfs instance
 
 Import and set up required variables:
 

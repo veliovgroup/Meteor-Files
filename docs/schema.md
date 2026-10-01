@@ -1,8 +1,8 @@
 # Schema
 
-*Below is default Files collection schema. Please keep default schema structure when extending it!. To pass your own schema use* `schema` *property when passing config to* [`FilesCollection`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) *constructor.*
+*Below is default Files collection schema. Please keep default schema structure when extending it. To pass your own schema use* `schema` *property when passing config to* [`FilesCollection`](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/constructor.md) *constructor.*
 
-For more info see [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages.
+For more info see [Collection2](https://github.com/aldeed/meteor-collection2) and [simpl-schema](https://www.npmjs.com/package/simpl-schema) packages.
 
 ```js
 const defaultSchema = {
@@ -94,17 +94,17 @@ const defaultSchema = {
 
 ## Attach schema (*Recommended*):
 
-*Although this package comes with schema it isn't enabled (attached) by default (since v1.5.0), you're free to use it or not. To attach schema you need to install [Collection2](https://github.com/aldeed/meteor-collection2) and [simple-schema](https://atmospherejs.com/aldeed/simple-schema) packages separately.*
+*Although this package comes with schema it isn't enabled (attached) by default (since v1.5.0), you're free to use it or not. To attach schema you need to install [Collection2](https://github.com/aldeed/meteor-collection2) and [simpl-schema](https://www.npmjs.com/package/simpl-schema) packages separately.*
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';
 const imagesCollection = new FilesCollection({ collectionName: 'images'});
-imagesCollection.collection.attachSchema(new SimpleSchema(Images.schema));
+imagesCollection.collection.attachSchema(new SimpleSchema(imagesCollection.schema));
 ```
 
 ## Extend default schema:
 
-The default schema is available as a static property of `FilesCollection`, so you can extend it using a library like underscore:
+The default schema is available as a static property of `FilesCollection`, so you can extend it with `Object.assign`:
 
 ```js
 import { FilesCollection } from 'meteor/ostrio:files';

@@ -1,48 +1,19 @@
 # Create thumbnails after upload
 
-At this tutorial we will create thumbnails with GraphicksMagick/ImageMagick (*a.k.a. `gm`/`im`*) after file is fully uploaded to Server. Note: GraphicksMagick or ImageMagick should be installed on dev/prod machine before you implement code below.
+This tutorial creates thumbnails with [sharp](https://sharp.pixelplumbing.com/) after a file is fully uploaded to the Server. `sharp` ships prebuilt binaries for common platforms, so no ImageMagick or GraphicsMagick install is needed.
 
 Links:
 
-- [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/)
-- [ImageMagick](https://www.imagemagick.org/script/download.php)
-- See how this example [used in our demo app](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js)
-- [gm](https://www.npmjs.com/package/gm) NPM package
-- [im](https://www.npmjs.com/package/im) NPM package
-- [imagemagick-native](https://www.npmjs.com/package/imagemagick-native) NPM package
+- [sharp](https://sharp.pixelplumbing.com/) docs and [NPM package](https://www.npmjs.com/package/sharp)
+- See how this example is [used in our demo app](https://github.com/veliovgroup/meteor-files-website/blob/master/imports/server/image-processing.js)
 
-## Install image library
-
-__TL;TR;__ - There is various software solutions to accomplish this task. All links to make a decision is above. If you don't have time to deal with a choice - install [GraphicksMagick](https://sourceforge.net/projects/graphicsmagick/) as a library and [gm](https://www.npmjs.com/package/gm) as NPM package.
-
-Before you go - install ImageMagick or GraphicksMagick CLI tools. There are numerous ways to install it. For instance, if you're on OS X you can use Homebrew:
-
-```shell
-brew install graphicsmagick
-# or for ImageMagick:
-# brew install imagemagick
-```
-
-Some platforms may bundle ImageMagick into their tools (like Heroku). In this case you may use GraphicsMagick as ImageMagick in this way:
-
-```shell
-npm install gm --save
-```
-
-And then where you use it:
-
-```js
-const gm = require('gm');
-const im = gm.subClass({ imageMagick: true });
-```
-
-Please note that GM was considered slightly faster than IM so before you chose convenience over performance read the latest news about it, - [see the comparison](https://mazira.com/blog/comparing-speed-imagemagick-graphicsmagick).
+The old `gm`, `im`, and `imagemagick-native` packages are no longer maintained (`imagemagick-native` is abandoned). Use `sharp`.
 
 ## Install Meteor/NPM packages
 
 ```shell
 meteor add ostrio:files
-meteor npm install --save gm fs-extra
+meteor npm install --save sharp
 ```
 
 ## Create FilesCollection
@@ -50,9 +21,10 @@ meteor npm install --save gm fs-extra
 Initiate *FilesCollection* (`/lib/files.js`):
 
 ```js
-import { FilesCollection }   from 'meteor/ostrio:files';
+import { FilesCollection } from 'meteor/ostrio:files';
 
 const uploadsCollection = new FilesCollection({
+  collectionName: 'uploads',
   storagePath: 'assets/app/uploads/uploadedFiles'
 });
 
@@ -67,7 +39,7 @@ Simple upload form (`/client/upload.html`):
 <template name="uploadForm">
   {{#if upload}}
     <ul>
-      <span>{{upload.progress}}%</span>
+      <span>{{upload.progress.get}}%</span>
     </ul>
   {{else}}
     <input data-upload-file type="file"/>
@@ -90,14 +62,14 @@ Template.uploadForm.onCreated(function () {
 
 Template.uploadForm.helpers({
   upload() {
-    Template.instance().upload.get();
+    return Template.instance().upload.get();
   }
 });
 
 Template.uploadForm.events({
-  'change [data-upload-file]'(e, template) {
+  async 'change [data-upload-file]'(e, template) {
     if (e.currentTarget.files && e.currentTarget.files[0]) {
-      const uploader = uploadsCollection.insert({
+      const uploader = await uploadsCollection.insertAsync({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
       }, false);
@@ -120,7 +92,7 @@ Template.uploadForm.events({
         window.alert('Error during upload: ' + error);
       });
 
-      uploader.start();
+      await uploader.start();
     }
   }
 });
@@ -134,14 +106,14 @@ Catch `afterUpload` event (`/server/files.js`):
 import uploadsCollection from '/lib/files.js';
 import createThumbnails from '/server/image-processing.js';
 
-uploadsCollection.on('afterUpload', function(fileRef) {
+uploadsCollection.on('afterUpload', async (fileRef) => {
   // Run `createThumbnails` only over PNG, JPG and JPEG files
   if (/png|jpe?g/i.test(fileRef.extension || '')) {
-    createThumbnails(this, fileRef, (error, fileRef) => {
-      if (error) {
-        console.error(error);
-      }
-    });
+    try {
+      await createThumbnails(uploadsCollection, fileRef);
+    } catch (error) {
+      console.error(error);
+    }
   }
 });
 ```
@@ -151,126 +123,77 @@ uploadsCollection.on('afterUpload', function(fileRef) {
 Create thumbnails (`/server/image-processing.js`):
 
 ```js
-import { check }  from 'meteor/check';
+import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
+import fs from 'node:fs';
+import sharp from 'sharp';
 
-import fs from 'fs-extra';
-import gm from 'gm';
-
-const bound = Meteor.bindEnvironment((callback) => {
-  return callback();
-});
-
-const createThumbnails = (collection, fileRef, cb) => {
+const createThumbnails = async (collection, fileRef) => {
   check(fileRef, Object);
 
-  fs.exists(fileRef.path, (exists) => {
-    bound(() => {
-      if (!exists) {
-        throw Meteor.log.error('File ' + fileRef.path + ' not found in [createThumbnails] Method');
-      }
+  try {
+    await fs.promises.access(fileRef.path);
+  } catch (_error) {
+    throw new Meteor.Error(404, `File ${fileRef.path} not found in [createThumbnails]`);
+  }
 
-      const image = gm(fileRef.path);
+  // Read original image dimensions
+  const original = await sharp(fileRef.path).metadata();
 
-      image.size((error, features) => {
-        bound(() => {
-          if (error) {
-            console.error('[_app.createThumbnails] [_.each sizes]', error);
-            cb && cb(Meteor.Error('[_app.createThumbnails] [image.size]', error));
-            return;
-          }
-
-          // Update meta data if original image
-          collection.collection.update(fileRef._id, {
-            $set: {
-              'meta.width': features.width,
-              'meta.height': features.height,
-              'versions.original.meta.width': features.width,
-              'versions.original.meta.height': features.height
-            }
-          });
-
-          const path = `${collection.storagePath(fileRef)}/thumbnail-${fileRef._id}.${fileRef.extension}`;
-          const img = gm(fileRef.path)
-            .quality(70)
-            .define('filter:support=2')
-            .define('jpeg:fancy-upsampling=false')
-            .define('jpeg:fancy-upsampling=off')
-            .define('png:compression-filter=5')
-            .define('png:compression-level=9')
-            .define('png:compression-strategy=1')
-            .define('png:exclude-chunk=all')
-            .autoOrient()
-            .noProfile()
-            .strip()
-            .dither(false)
-            .interlace('Line')
-            .filter('Triangle');
-
-          // Change width and height proportionally
-          img.resize(250).interlace('Line').write(path, (resizeError) => {
-            bound(() => {
-              if (resizeError) {
-                console.error('[createThumbnails] [img.resize]', resizeError);
-                cb && cb(resizeError);
-                return;
-              }
-
-              fs.stat(path, (fsStatError, stat) => {
-                bound(() => {
-                  if (fsStatError) {
-                    console.error('[_app.createThumbnails] [img.resize] [fs.stat]', fsStatError);
-                    cb && cb(fsStatError);
-                    return;
-                  }
-
-                  gm(path).size((gmSizeError, imgInfo) => {
-                    bound(() => {
-                      if (gmSizeError) {
-                        console.error('[_app.createThumbnails] [_.each sizes] [img.resize] [fs.stat] [gm(path).size]', gmSizeError);
-                        cb && cb(gmSizeError);
-                        return;
-                      }
-
-                      fileRef.versions.thumbnail = {
-                        path: path,
-                        size: stat.size,
-                        type: fileRef.type,
-                        extension: fileRef.extension,
-                        name: fileRef.name, // <-- Name with extension used when file's version is being downloaded
-                        meta: {
-                          width: imgInfo.width,
-                          height: imgInfo.height
-                        }
-                      };
-
-                      const upd = {
-                        $set: {
-                          'versions.thumbnail': fileRef.versions.thumbnail
-                        }
-                      };
-
-                      collection.collection.update(fileRef._id, upd, (colUpdError) => {
-                        if (cb) {
-                          if (colUpdError) {
-                            cb(colUpdError);
-                          } else {
-                            cb(void 0, fileRef);
-                          }
-                        }
-                      });
-                    });
-                  });
-                });
-              });
-            });
-          });
-        });
-      });
-    });
+  // Update meta data of the original image
+  await collection.collection.updateAsync(fileRef._id, {
+    $set: {
+      'meta.width': original.width,
+      'meta.height': original.height,
+      'versions.original.meta.width': original.width,
+      'versions.original.meta.height': original.height
+    }
   });
-  return true;
+
+  const path = `${await collection.storagePath(fileRef)}/thumbnail-${fileRef._id}.${fileRef.extension}`;
+
+  // Change width and height proportionally,
+  // `rotate()` applies the EXIF orientation, metadata is stripped by default
+  let image = sharp(fileRef.path)
+    .rotate()
+    .resize({ width: 250 });
+
+  // Set format options for the original's format only. The last format call wins in sharp
+  const extension = fileRef.extension.toLowerCase();
+  if (extension === 'png') {
+    image = image.png({ compressionLevel: 9 });
+  } else if (extension === 'jpg' || extension === 'jpeg') {
+    image = image.jpeg({ quality: 70, progressive: true });
+  }
+
+  // Without a format call sharp picks the format from the file extension of `path`
+  const info = await image.toFile(path);
+
+  const stat = await fs.promises.stat(path);
+
+  const thumbnail = {
+    path,
+    size: stat.size,
+    type: fileRef.type,
+    extension: fileRef.extension,
+    name: fileRef.name, // <-- Name with extension used when file's version is being downloaded
+    meta: {
+      width: info.width,
+      height: info.height
+    }
+  };
+
+  await collection.collection.updateAsync(fileRef._id, {
+    $set: { 'versions.thumbnail': thumbnail }
+  });
+
+  return { ...fileRef, versions: { ...fileRef.versions, thumbnail } };
 };
 
 export default createThumbnails;
 ```
+
+Notes:
+
+- A format call such as `jpeg()` or `png()` sets the output format, and the last one wins. The example calls only the one that matches the original's extension, so the thumbnail keeps the original's format and `type`
+- The thumbnail path must be inside `storagePath`, as in the example

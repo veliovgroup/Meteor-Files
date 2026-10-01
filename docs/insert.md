@@ -55,7 +55,7 @@ Upload file to a Server via DDP or HTTP.
         Explicitly set the fileId for the file
       </td>
       <td>
-        This is an optional parameters `Random.id()` will be used otherwise
+        This is an optional parameter, `Random.id()` will be used otherwise. The server sanitizes `fileId` and cuts it to 20 characters. Use only letters, digits, `-`, and `_`
       </td>
     </tr>
     <tr>
@@ -78,6 +78,17 @@ Upload file to a Server via DDP or HTTP.
       </td>
       <td>
         <a href="https://github.com/veliovgroup/Meteor-Files/blob/master/docs/insert.md#upload-base64-string">See Examples</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="right">
+        `settings.type` {*String*}
+      </td>
+      <td>
+        Mime-type of the file, like `image/png`
+      </td>
+      <td>
+        [REQUIRED] for plain `base64` uploads (a `base64` string without the `data:` prefix). Ignored for dataURI strings, which carry their own type
       </td>
     </tr>
     <tr>
@@ -110,7 +121,7 @@ Upload file to a Server via DDP or HTTP.
         `settings.ddp` {*Object*}
       </td>
       <td>
-        Custom DDP connection for upload. Object returned form `DDP.connect()`
+        Custom DDP connection for upload. Object returned from `DDP.connect()`
       </td>
       <td>
         By default `Meteor` (The default DDP connection)
@@ -242,7 +253,7 @@ Upload file to a Server via DDP or HTTP.
   </tbody>
 </table>
 
-`FilesCollection#insert().start()` method returns `FileUpload` class instance. __Note__: same instance is used *context* in all callback functions (*see above*)
+The `FileUpload` instance is the `this` *context* in all callback functions (*see above*). `FileUpload#start()` is asynchronous and returns a `Promise`, handle its rejection.
 
 ## `FileUpload`
 
@@ -334,7 +345,7 @@ Upload file to a Server via DDP or HTTP.
         Pipe data before upload
       </td>
       <td>
-        All data must be in `data URI` scheme (*Base64*)
+        All data must be in `data URI` scheme (*Base64*). A pipe must not change the decoded byte length of a chunk, see [Piping](#piping). Pipes run in reverse order of registration: the pipe added last runs first. This order changes in v4 (first added runs first)
       </td>
     </tr>
     <tr>
@@ -454,6 +465,7 @@ Upload file to a Server via DDP or HTTP.
         <ul>
           <li>`progress` {*Number*} - Current progress from `0` to `100`</li>
           <li>`fileData` {*FileData*}</li>
+          <li>`stats` {*Object*} - `{ chunksSent, chunksLength, bytesSent }`</li>
         </ul>
       </td>
       <td></td>
@@ -489,7 +501,7 @@ Upload file to a Server via DDP or HTTP.
         `abort`
       </td>
       <td>
-        Triggered after upload is aborted.<br />
+        Triggered after upload is aborted with `abort()`. `abort()` emits `pause` first, then `abort`. `end` is not emitted after `abort()`<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`fileData` {*FileData*}</li>
@@ -516,7 +528,7 @@ Upload file to a Server via DDP or HTTP.
         `error`
       </td>
       <td>
-        Triggered whenever upload has an error.<br />
+        Triggered when the upload fails. A failed upload emits `error`, then `end`. After `error` the upload is over and the state is `aborted`. The `pause` and `abort` events and the `onAbort` callback are not called on error<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
@@ -530,8 +542,7 @@ Upload file to a Server via DDP or HTTP.
         `end`
       </td>
       <td>
-        Triggered at the very end of upload or by `.abort()`.<br />
-        In case if `end` triggered by `.abort()`, the server could return a `408` response code.<br />
+        Triggered at the very end of a finished or failed upload. Not emitted after `abort()`, so reset your UI on `abort` as well<br />
         <strong>Arguments</strong>:
         <ul>
           <li>`error`</li>
@@ -542,6 +553,15 @@ Upload file to a Server via DDP or HTTP.
     </tr>
   </tbody>
 </table>
+
+#### Upload errors and retries
+
+- Network failures, `502`, `503`, and `504` responses are retried with backoff (500 ms, doubling up to 10 s). Start and EOF requests and `502`/`503`/`504` responses give up after 5 attempts. A chunk that fails at the network level 10 times in a row ends the upload with an error. The upload pauses by itself while the DDP connection is down and resumes after reconnect
+- The `reason` of HTTP `400`, `403`, `404`, `405`, `408`, `409`, `410`, and `413` responses is the `error.reason` of the `Meteor.Error` passed to `error`, `onError`, and `end`. A `403` carries the message returned from `onBeforeUpload`
+- A `410` means the server no longer has the upload (the file was removed or replaced). The upload is not retried
+- Exceptions thrown by your callbacks and event handlers are reported with `console.error` and do not stop the remaining callbacks
+- Only the user who started an upload can send its chunks and abort it
+- `abort()` does not cancel a request that is already on its way. If you call it while the final (EOF) request is in flight, the server can still finish the upload and store the file. If you call it while an HTTP Start request is in flight, the upload record and its empty file can stay on the server until `continueUploadTTL` expires
 
 When `autoStart` *is* `false` *before calling* `.start()` you can "pipe" data through any function, data comes as Base64 string (DataURL). You must return Base64 string from piping function, for more info - see example below. __Do not forget to change file name, extension and mime-type if required__.
 
@@ -562,8 +582,8 @@ Upload form and `.insert()` method examples
 ```handlebars
 <template name="uploadForm">
   {{#if currentFile}}
-    {{#with currentFile}
-      <span id="progress">{{progress}}%</span>
+    {{#with currentFile}}
+      <span id="progress">{{progress.get}}%</span>
     {{/with}}
   {{else}}
     <input id="fileInput" type="file" />
@@ -595,7 +615,7 @@ Template.uploadForm.onCreated(function () {
 
 Template.uploadForm.helpers({
   currentFile() {
-    Template.instance().currentFile.get();
+    return Template.instance().currentFile.get();
   }
 });
 
@@ -651,7 +671,9 @@ Template.uploadForm.events({
           alert(`File "${fileObj.name}" successfully uploaded`);
         }
         template.currentFile.set(false);
-      }).start();
+      }).start().catch((error) => {
+        alert('Error during upload: ' + error);
+      });
     }
   }
 });
@@ -691,7 +713,9 @@ Template.uploadForm.events({
         alert('Error during upload: ' + error);
       });
 
-      uploader.start();
+      uploader.start().catch((error) => {
+        alert('Error during upload: ' + error);
+      });
     }
   }
 });
@@ -704,14 +728,14 @@ import { imagesCollection } from '/imports/collections/images.js';
 
 // As dataURI
 imagesCollection.insert({
-  file: 'data:image/png,base64str…',
+  file: 'data:image/png;base64,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
 
 // As base64:
 imagesCollection.insert({
-  file: 'image/png,base64str…',
+  file: 'image/png;base64,base64str…',
   isBase64: true, // <— Mandatory
   fileName: 'pic.png' // <— Mandatory
 });
@@ -729,16 +753,30 @@ imagesCollection.insert({
 
 Note: data flow in `ddp` and `http` uses dataURI (e.g. *Base64*)
 
+Each pipe gets a chunk as a Base64 string and must return a Base64 string that decodes to the same number of bytes. The server writes chunk `N` at offset `(N - 1) * chunkSize` and rejects a chunk that is larger than `chunkSize` with `400 Invalid chunk size`. Over HTTP the server may close the connection instead, and the upload fails after 10 retries of that chunk. A shorter chunk leaves zero-filled gaps in the stored file. So per-chunk compression, and encryption that adds an IV, a tag, or padding, do not work as pipes. Run those on the server in `onAfterUpload`, or transform the whole file before calling `insert()`.
+
+Pipes run in reverse order of registration. In the example below `count` runs first, then `mask`. This order changes in v4, where the first registered pipe runs first.
+
 ```js
 import { Template } from 'meteor/templating';
 import { imagesCollection } from '/imports/collections/images.js';
 
-const encrypt = function encrypt(data) {
-  return encryptAndReturnAsBase64(data);
+// XOR every byte with a fixed value. The output has the same byte length as the input.
+// This is obfuscation, not encryption
+const mask = function mask(base64) {
+  const binary = atob(base64);
+  let result = '';
+  for (let i = 0; i < binary.length; i++) {
+    result += String.fromCharCode(binary.charCodeAt(i) ^ 0x5a);
+  }
+  return btoa(result);
 };
 
-const zip = function zip(data) {
-  return zipAndReturnAsBase64(data);
+let uploadedBytes = 0;
+// Reads the chunk and returns it unchanged
+const count = function count(base64) {
+  uploadedBytes += atob(base64).length;
+  return base64;
 };
 
 Template.uploadForm.events({
@@ -749,7 +787,9 @@ Template.uploadForm.events({
       imagesCollection.insert({
         file: e.currentTarget.files[0],
         chunkSize: 'dynamic'
-      }, false).pipe(encrypt).pipe(zip).start();
+      }, false).pipe(mask).pipe(count).start().catch((error) => {
+        console.error('Upload failed to start', error);
+      });
     }
   }
 });

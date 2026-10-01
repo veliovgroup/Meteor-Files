@@ -1,194 +1,177 @@
-# Use DropBox As Storage
+# Use DropBox as storage
 
-Example below shows how to store and serve uploaded file via DropBox. This example also covers file removing from both your application and DropBox.
+The example below shows how to store and serve uploaded files via DropBox. It also covers removing files from both your application and DropBox.
 
 ## Prerequisite
 
-We will use next packages: request (NPM), Node-fetch (NPM) and Underscore (meteor)
+Install the [`dropbox` SDK](https://www.npmjs.com/package/dropbox). Meteor 3 runs on a Node.js version that ships a global `fetch`, so no `request` or `node-fetch` package is needed.
 
 ```shell
-meteor npm install request
-meteor npm install node-fetch
-meteor add underscore
+meteor npm install --save dropbox
 ```
 
-### Step 1: install [dropbox-js](https://www.npmjs.com/package/dropbox):
-
-```shell
-npm install --save dropbox@=4.0.30
-```
-
-Or:
-
-```shell
-meteor npm install dropbox@=4.0.30
-```
-
-### Step 2: Get access to DropBox API:
+### Get access to DropBox API
 
 - Go to [DropBox Developers](https://www.dropbox.com/developers) (*Sign(in|up) if required*)
-- Click on [Create your app](https://www.dropbox.com/developers/apps/create)
-- Choose "*Dropbox API*"
-- Choose "*App folder*"
-- Type-in your application name
-- Go to you application's *settings*
-- Click on "*Enable additional users*"
-- Obtain "*Generated access token*" (Click on "*Generate Access token*") for `accessToken` in `new Dropbox({})`
+- Click on [Create app](https://www.dropbox.com/developers/apps/create)
+- Choose "*Scoped access*", then "*App folder*"
+- Type in your application name
+- Open the app's *Permissions* tab and enable `files.content.write`, `files.content.read`, and `sharing.write`. Click "*Submit*"
+- Open the *Settings* tab and copy the "*App key*" and "*App secret*"
+- Dropbox access tokens are short-lived (about 4 hours). Generate a long-lived __refresh token__ once with the [OAuth code flow](https://developers.dropbox.com/oauth-guide) (`token_access_type=offline`). The SDK uses the refresh token to get new access tokens automatically
 
-```javascript
-var Dropbox, request, bound, client, fs, Collections = {};
+Store the credentials in `settings.json` and start Meteor with `meteor --settings settings.json`:
 
-if(Meteor.isServer){
-  Dropbox = require('dropbox').Dropbox;
-  const fetch = require("node-fetch");
-  bound = Meteor.bindEnvironment(function(callback){
-    return callback();
-  });
-  client = new Dropbox({
-    accessToken: 'xxxxxxxxxxxxxxxxxx',  // Use your token here
-    fetch: fetch
-  });
+```json
+{
+  "dropbox": {
+    "clientId": "APP_KEY",
+    "clientSecret": "APP_SECRET",
+    "refreshToken": "REFRESH_TOKEN"
+  }
+}
+```
+
+## Code
+
+Use this in Meteor's `imports/server` directory, __NOT__ on the client.
+
+```js
+import { Meteor } from 'meteor/meteor';
+import { FilesCollection } from 'meteor/ostrio:files';
+import { Readable } from 'node:stream';
+import fs from 'node:fs';
+import { Dropbox } from 'dropbox';
+
+const dropboxConf = Meteor.settings.dropbox || {};
+if (!dropboxConf.clientId || !dropboxConf.clientSecret || !dropboxConf.refreshToken) {
+  throw new Meteor.Error(401, 'Missing Dropbox settings');
 }
 
-request = require('request');
-fs = require('fs');
+const client = new Dropbox({
+  clientId: dropboxConf.clientId,
+  clientSecret: dropboxConf.clientSecret,
+  refreshToken: dropboxConf.refreshToken,
+});
 
-Collections.files = new FilesCollection({
-  debug: false,  // Change to `true` for debugging
+// Forward only what the download needs, not the visitor's other headers
+const FORWARD_REQUEST_HEADERS = ['range'];
+const FORWARD_RESPONSE_HEADERS = ['accept-ranges', 'content-range', 'content-disposition', 'content-length', 'content-type', 'etag'];
+
+const pick = (source, keys) => {
+  const result = {};
+  for (const key of keys) {
+    if (source[key]) {
+      result[key] = source[key];
+    }
+  }
+  return result;
+};
+
+const Files = new FilesCollection({
+  debug: false, // Change to `true` for debugging
   storagePath: 'assets/app/uploads/uploadedFiles',
   collectionName: 'uploadedFiles',
   allowClientCode: false,
-  onAfterUpload: function(fileRef){
-    // In onAfterUpload callback we will move file to DropBox
-    try{
-      var self = this;
-      var makeUrl = function(path, fileRef, version){
-        client.sharingCreateSharedLink({path: path, short_url: false}).then(function(response){
-          bound(function(){
-            const url = response.url.replace('dl=0','raw=1');
-            var upd = {
-              $set: {}
-            };
-            upd['$set']["versions." + version + ".meta.pipeFrom"] = url;
-            upd['$set']["versions." + version + ".meta.pipePath"] = path;
-            self.collection.update({
-              _id: fileRef._id
-            }, upd,
-            function(error){
-              if(error){
-                return console.error(error);
-              }
-              // Unlink original files from FS after successful upload to DropBox
-              self.unlink(self.collection.findOne(fileRef._id), version);
-            });
-          });
-        }).catch(function(error){
-          console.error(error);
-        });
-      };
 
-      var writeToDB = function(fileRef, version, data){
+  // In onAfterUpload callback we move the file to DropBox
+  async onAfterUpload(fileRef) {
+    for (const version of Object.keys(fileRef.versions)) {
+      const vRef = fileRef.versions[version];
+      if (!vRef) {
+        continue;
+      }
+
+      try {
+        const contents = await fs.promises.readFile(vRef.path);
+
         // DropBox already uses random URLs
         // No need to use random file names
-        client.filesUpload({path: '/' + fileRef._id + "-" + version + "." + fileRef.extension, contents: data, autorename:false}).then(function(response){
-          bound(function(){
-            // The file was successfully uploaded, generating a downloadable link
-            makeUrl(response.path_display, fileRef, version);
-          });
-        }).catch(function(error){
-          bound(function(){
-            console.error(error);
-          });
+        const upload = await client.filesUpload({
+          path: `/${fileRef._id}-${version}.${fileRef.extension}`,
+          contents,
+          autorename: false,
         });
-      };
+        const path = upload.result.path_display;
 
-      var readFile = function(fileRef, vRef, version){
-        fs.readFile(vRef.path, function(error, data){
-          bound(function(){
-            if(error){
-              return console.error(error)
-            }
-            writeToDB(fileRef, version, data);
-          });
+        // The file was successfully uploaded, generating a downloadable link
+        const link = await client.sharingCreateSharedLinkWithSettings({ path });
+        const url = link.result.url.replace('dl=0', 'raw=1');
+
+        await this.collection.updateAsync({ _id: fileRef._id }, {
+          $set: {
+            [`versions.${version}.meta.pipeFrom`]: url,
+            [`versions.${version}.meta.pipePath`]: path,
+          }
         });
-      };
 
-      var sendToStorage = function(fileRef){
-        _.each(fileRef.versions, function(vRef, version){
-          readFile(fileRef, vRef, version);
-        });
-      };
-
-      sendToStorage(fileRef);
-    } catch(error){
-      // There was an error while uploading the file to Dropbox, displaying the concerned file
-      console.log('The following error occurred while removing '+ fileRef.path);
-      // Removing the file from the file system
-      fs.unlink(fileRef.path, function(error){
-        if(error){
-          console.error(error);
-        }
-      });
-      // Removing the file from the collection
-      Collections.files.remove({
-        _id: fileRef._id
-      }, function(error){
-        if(error){
-          console.error(error);
-        }
-      });
+        // Unlink original file from FS after successful upload to DropBox
+        await this.unlinkAsync(await this.collection.findOneAsync(fileRef._id), version);
+      } catch (error) {
+        console.error('[onAfterUpload] DropBox error, file stays on FS:', fileRef._id, error);
+      }
     }
   },
-  onBeforeRemove: function(cursor){
-    return false;
-  },
-  interceptDownload: function(http, fileRef, version){
-    // Files are stored in Dropbox, intercepting the download to serve the file from Dropbox
-    var path, ref, ref1, ref2;
-    path = (ref = fileRef.versions) != null ? (ref1 = ref[version]) != null ? (ref2 = ref1.meta) != null ? ref2.pipeFrom : void 0 : void 0 : void 0;
-    if(path){
-      // If file is moved to DropBox
-      // We will pipe request to DropBox
-      // So, original link will stay always secure
-      request({
-        url: path,
-        headers: _.pick(http.request.headers, 'range', 'accept-language', 'accept', 'cache-control', 'pragma', 'connection', 'upgrade-insecure-requests', 'user-agent')
-      }).on('response', function(response){
-        if(response.statusCode == 200){
-          response.headers = _.pick(response.headers, 'accept-ranges', 'cache-control', 'connection', 'content-disposition', 'content-length', 'content-type', 'date', 'etag');
-          response.headers['Cache-control'] = "only-if-cached, public, max-age=2592000";
+
+  // Remove files from DropBox right after the record is removed.
+  // Return `true` to skip .unlinkAsync(), as files were already removed from FS
+  async onAfterRemove(docs) {
+    for (const doc of docs) {
+      for (const version of Object.keys(doc.versions || {})) {
+        const pipePath = doc.versions[version]?.meta?.pipePath;
+        if (pipePath) {
+          try {
+            await client.filesDeleteV2({ path: pipePath });
+          } catch (error) {
+            console.error('[onAfterRemove] DropBox delete error:', pipePath, error);
+          }
         }
-      }).pipe(http.response);
-      return true;
-    } else{
+      }
+    }
+
+    // Files not yet moved to DropBox are still on FS, let the default unlink run
+    return docs.length > 0 && docs.every((doc) => doc.versions?.original?.meta?.pipePath);
+  },
+
+  // Files are stored in DropBox, intercept the download to serve the file from DropBox
+  async interceptDownload(http, fileRef, version) {
+    const url = fileRef.versions?.[version]?.meta?.pipeFrom;
+    if (!url) {
       // While file is not yet uploaded to DropBox
-      // We will serve file from FS
+      // we serve the file from FS
       return false;
     }
+
+    // If file is moved to DropBox
+    // we pipe the request to DropBox
+    // So, original link will always stay secure
+    try {
+      const response = await fetch(url, { headers: pick(http.request.headers, FORWARD_REQUEST_HEADERS) });
+      if (!response.body) {
+        return false;
+      }
+
+      const headers = pick(Object.fromEntries(response.headers), FORWARD_RESPONSE_HEADERS);
+      headers['cache-control'] = 'public, max-age=2592000';
+      http.response.writeHead(response.status, headers);
+      Readable.fromWeb(response.body).on('error', () => http.response.end()).pipe(http.response);
+    } catch (error) {
+      console.error('[interceptDownload] DropBox fetch error:', error);
+      if (!http.response.headersSent) {
+        http.response.writeHead(502);
+      }
+      http.response.end();
+    }
+
+    return true;
   }
 });
 
-
-if (Meteor.isServer){
-  // Intercept File's collection remove method to remove file from DropBox
-
-  var _origRemove = Collections.files.remove;  // Catching the original remove method to call it after
-  Collections.files.remove = function(search){
-    var cursor = this.collection.find(search);
-    cursor.forEach(function(fileRef){
-      _.each(fileRef.versions, function(vRef){
-        var ref;
-        if (vRef != null ? (ref = vRef.meta) != null ? ref.pipePath : void 0 : void 0){
-          client.filesDeleteV2({path: vRef.meta.pipePath}).catch(function(error){
-            bound(function(){
-              console.error(error);
-            });
-          });
-        }
-      });
-    });
-    // Call original method
-    _origRemove.call(this, search);
-  };
-}
+export default Files;
 ```
+
+Notes:
+
+- `onBeforeRemove` is not needed with `allowClientCode: false`. Without it, set `allowClientCode: false` or add an `onBeforeRemove` check, see the [security guide](https://github.com/veliovgroup/Meteor-Files/blob/master/docs/security.md)
+- Shared links with `raw=1` are public URLs. The app serves them through `interceptDownload`, so keep the original link behind `protected` when files are private
+- Import the file only on the server. Do not `require` `dropbox` in client code

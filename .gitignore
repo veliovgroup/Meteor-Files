@@ -2,3 +2,6 @@
 .DS_Store
 .eslintcache
 node_modules
+
+# Local audit reports
+docs/audits/

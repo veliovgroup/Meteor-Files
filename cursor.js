@@ -1,6 +1,21 @@
 import { Meteor } from 'meteor/meteor';
 
 /**
+ * @private
+ * @summary Throw on server, where Meteor 3 cursors are async only
+ * @param {string} className - Class name used in the message
+ * @param {string} method - Name of the synchronous method
+ * @param {string} [alternative] - Name of the method to use instead, default: `${method}Async`
+ * @throws {Meteor.Error} When called on server
+ * @returns {void}
+ */
+const clientOnly = (className, method, alternative = `${method}Async`) => {
+  if (Meteor.isServer) {
+    throw new Meteor.Error(404, `${className}#${method}() is not available on the server! Use .${alternative}() instead`);
+  }
+};
+
+/**
  * @class FileCursor
  * @private
  * @locus Anywhere
@@ -27,6 +42,7 @@ export class FileCursor {
    */
   remove(callback) {
     this._collection._debug('[FilesCollection] [FileCursor] [remove()]');
+    clientOnly('FileCursor', 'remove');
     if (this._fileRef && this._fileRef._id) {
       this._collection.remove(this._fileRef._id, callback);
     } else {
@@ -104,10 +120,12 @@ export class FileCursor {
    * Returns a reactive version of the current FileCursor by merging in reactive fields.
    * Useful for Blaze template helpers (e.g. `{{#with}}`).
    * @locus Client
+   * @throws {Meteor.Error} If called on the server, use `withAsync()`
    * @returns {FileCursor}
    */
   with() {
     this._collection._debug('[FilesCollection] [FileCursor] [with()]');
+    clientOnly('FileCursor', 'with');
     const reactiveProps = this._collection.collection.findOne(this._fileRef._id);
     Object.assign(this, reactiveProps);
     return this;
@@ -149,11 +167,13 @@ export class FilesCursor {
   /**
    * Returns all matching file documents as an array.
    * Alias of `.fetch()`.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {Array<FileObj>}
    */
   get() {
     this._collection._debug('[FilesCollection] [FilesCursor] [get()]');
+    clientOnly('FilesCursor', 'get');
     return this.fetch();
   }
 
@@ -169,12 +189,14 @@ export class FilesCursor {
 
   /**
    * Returns `true` if there is a next item available.
-   * @locus Anywhere
+   * @locus Client
    * @deprecated since v3.0.0. use {@link FilesCursor#hasNextAsync} instead.
+   * @throws {Meteor.Error} If called on the server
    * @returns {boolean}
    */
   hasNext() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNext()]');
+    clientOnly('FilesCursor', 'hasNext');
     Meteor.deprecate('FilesCursor#hasNext() is deprecated! Use `hasNextAsync` instead');
     return this._current < this.count() - 1;
   }
@@ -186,17 +208,20 @@ export class FilesCursor {
    */
   async hasNextAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [hasNextAsync()]');
-    const count = await this.countDocuments();
+    // `countAsync()` of the underlying cursor honors `limit` and `skip`
+    const count = await this.cursor.countAsync();
     return this._current < count - 1;
   }
 
   /**
    * Returns the next file document, if available.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {FileObj | undefined}
    */
   next() {
     this._collection._debug('[FilesCollection] [FilesCursor] [next()]');
+    clientOnly('FilesCursor', 'next');
     const allFiles = this.fetch();
     this._current++;
     return allFiles[this._current];
@@ -236,11 +261,13 @@ export class FilesCursor {
 
   /**
    * Returns the previous file document, if available.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {FileObj | undefined}
    */
   previous() {
     this._collection._debug('[FilesCollection] [FilesCursor] [previous()]');
+    clientOnly('FilesCursor', 'previous');
     this._current = Math.max(this._current - 1, 0);
     return this.fetch()[this._current];
   }
@@ -259,11 +286,13 @@ export class FilesCursor {
 
   /**
    * Returns all matching file documents as an array.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {Array<FileObj>}
    */
   fetch() {
     this._collection._debug('[FilesCollection] [FilesCursor] [fetch()]');
+    clientOnly('FilesCursor', 'fetch');
     return this.cursor.fetch() || [];
   }
 
@@ -279,11 +308,13 @@ export class FilesCursor {
 
   /**
    * Returns the first file document, if available.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {FileObj | undefined}
    */
   first() {
     this._collection._debug('[FilesCollection] [FilesCursor] [first()]');
+    clientOnly('FilesCursor', 'first');
     this._current = 0;
     const allFiles = this.fetch();
     return allFiles[this._current];
@@ -303,11 +334,13 @@ export class FilesCursor {
 
   /**
    * Returns the last file document, if available.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {FileObj | undefined}
    */
   last() {
     this._collection._debug('[FilesCollection] [FilesCursor] [last()]');
+    clientOnly('FilesCursor', 'last');
     const count = this.count();
     this._current = count - 1;
     const allFiles = this.fetch();
@@ -321,20 +354,23 @@ export class FilesCursor {
    */
   async lastAsync() {
     this._collection._debug('[FilesCollection] [FilesCursor] [lastAsync()]');
-    const count = await this.countDocuments();
-    this._current = count - 1;
+    // Use fetched length, so `limit` and `skip` are honored
     const allFiles = await this.fetchAsync();
+    const count = allFiles.length;
+    this._current = count - 1;
     return count > 0 ? allFiles[this._current] : undefined;
   }
 
   /**
    * Returns the number of file documents that match the query.
-   * @locus Anywhere
+   * @locus Client
    * @deprecated since v3.0.0. use {@link FilesCursor#countDocuments} instead.
+   * @throws {Meteor.Error} If called on the server
    * @returns {number}
    */
   count() {
     this._collection._debug('[FilesCollection] [FilesCursor] [count()]');
+    clientOnly('FilesCursor', 'count', 'countDocuments');
     Meteor.deprecate('FilesCursor#count() is deprecated! Use `countDocuments` instead');
     return this.cursor.count();
   }
@@ -366,10 +402,12 @@ export class FilesCursor {
    * Removes all file documents that match the query.
    * @locus Client
    * @param {function} [callback=() => {}] - Callback with error and number of removed records.
+   * @throws {Meteor.Error} If called on the server
    * @returns {FilesCursor}
    */
   remove(callback = () => {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [remove()]');
+    clientOnly('FilesCursor', 'remove');
     this._collection.remove(this._selector, callback);
     return this;
   }
@@ -386,13 +424,15 @@ export class FilesCursor {
 
   /**
    * Synchronously iterates over each matching file document.
-   * @locus Anywhere
+   * @locus Client
    * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
+   * @throws {Meteor.Error} If called on the server
    * @returns {FilesCursor}
    */
   forEach(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [forEach()]');
+    clientOnly('FilesCursor', 'forEach');
     this.cursor.forEach(callback, context);
     return this;
   }
@@ -413,11 +453,13 @@ export class FilesCursor {
   /**
    * Returns an array of FileCursor instances (one per file document).
    * Useful for Blaze’s `{{#each}}` helper.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {Array<FileCursor>}
    */
   each() {
     this._collection._debug('[FilesCollection] [FilesCursor] [each()]');
+    clientOnly('FilesCursor', 'each');
     return this.map((file) => new FileCursor(file, this._collection));
   }
 
@@ -433,13 +475,15 @@ export class FilesCursor {
 
   /**
    * Synchronously maps a callback over all matching file documents.
-   * @locus Anywhere
+   * @locus Client
    * @param {function} callback - Function invoked with (file, index, cursor).
    * @param {Object} [context={}] - The context for the callback.
+   * @throws {Meteor.Error} If called on the server
    * @returns {Array<any>}
    */
   map(callback, context = {}) {
     this._collection._debug('[FilesCollection] [FilesCursor] [map()]');
+    clientOnly('FilesCursor', 'map');
     return this.cursor.map(callback, context);
   }
 
@@ -457,11 +501,13 @@ export class FilesCursor {
 
   /**
    * Returns the current file document in the cursor.
-   * @locus Anywhere
+   * @locus Client
+   * @throws {Meteor.Error} If called on the server
    * @returns {FileObj | undefined}
    */
   current() {
     this._collection._debug('[FilesCollection] [FilesCursor] [current()]');
+    clientOnly('FilesCursor', 'current');
     if (this._current < 0) {
       this._current = 0;
     }
