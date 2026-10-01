@@ -7,10 +7,10 @@ Package.describe({
 });
 
 Package.onUse((api) => {
-  api.versionsFrom(['3.0.1']);
+  api.versionsFrom(['3.2', '3.5']);
   api.use('webapp', 'server');
   api.use(['reactive-var', 'tracker', 'ddp-client'], 'client');
-  api.use(['mongo', 'check', 'random', 'ecmascript', 'fetch', 'ostrio:cookies@2.9.1'], ['client', 'server']);
+  api.use(['mongo', 'check', 'random', 'ecmascript', 'fetch', 'ostrio:cookies@3.0.0'], ['client', 'server']);
   api.addAssets('worker.min.js', 'client');
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');
@@ -22,20 +22,18 @@ Package.onUse((api) => {
   api.addAssets('index.d.ts', ['client', 'server']);
 
   Npm.depends({
-    eventemitter3: '5.0.1',
+    eventemitter3: '5.0.4',
   });
 });
 
 Package.onTest((api) => {
-  api.use('tinytest');
-  api.use('meteortesting:mocha@3.3.0');
+  api.use('meteortesting:mocha@3.4.0');
   api.use(['ecmascript', 'ostrio:files'], ['client', 'server']);
-  api.addFiles('tests/helpers.js', ['client', 'server']);
   api.mainModule('tests/server.js', 'server');
 
   Npm.depends({
-    eventemitter3: '5.0.1',
-    chai: '4.5.0',
-    sinon: '7.5.0',
+    eventemitter3: '5.0.4',
+    chai: '6.3.0',
+    sinon: '22.1.0',
   });
 });
